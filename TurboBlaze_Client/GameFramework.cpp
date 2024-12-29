@@ -25,6 +25,9 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CreateRenderTargetView();
 	CreateDepthStencilView();
 
+
+	m_GameTimer.Reset();
+
 	return true;
 }
 
@@ -274,6 +277,15 @@ void CGameFramework::CreateDepthStencilView()
 
 void CGameFramework::FixedUpdate()
 {
+	// 타이머 업데이트
+	m_GameTimer.Tick(60.0f);
+
+	// Scene 업데이트
+	for (auto& pScene : m_vecpScenes)
+	{
+		pScene->FixedUpdate(m_GameTimer.DeltaTime());
+	}
+
 	// Command Allocator 재사용
 	m_pd3dCommandAllocator->Reset();
 
@@ -283,6 +295,16 @@ void CGameFramework::FixedUpdate()
 	// Command List에 대한 명령들을 기록
 
 	// PreRendering [ Swap Chain Back Buffer를 렌더 타겟으로 사용하기 전 렌더링 단계 ]
+	// Shadow Map, Reflection Map, Refraction Map, Deferred Shading, G-buffer 등
+	
+	// Rendering [ G-buffer를 사용하여 합치는 단계 ]
+	for (auto& pScene : m_vecpScenes)
+	{
+		pScene->Render(m_pd3dCommandList.Get(), NULL);
+	}
+
+	// PostRendering [ 후처리 프로세싱 단계 ]
+	// Bloom, Depth of Field, Motion Blur 등
 
 	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
 	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
@@ -309,10 +331,10 @@ void CGameFramework::FixedUpdate()
 	// Clear Back Buffer
 	m_pd3dCommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, Colors::SteelBlue, 0, nullptr);
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-	
-	// Rendering [ 실제 SwapChain에 기록하는 단계 ]
-	
-	// PostRendering [ Swap Chain Back Buffer를 렌더 타겟으로 사용한 후 렌더링 단계 ]
+
+	// Scene Rendering
+
+
 
 	// Command List에 대한 명령들을 종료
 	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -331,6 +353,12 @@ void CGameFramework::FixedUpdate()
 	m_pdxgiSwapChain->Present(0, 0);
 
 	MoveToNextFrame();
+
+	// FPS 출력
+	std::wstring time = L"Time: " + std::to_wstring(m_GameTimer.GameTime());
+	std::wstring fps = L"FPS: " + std::to_wstring(m_GameTimer.calculateAverageFPS());
+	std::wstring text = time + L" " + fps;
+	::SetWindowText(m_hWnd, text.c_str());
 }
 
 void CGameFramework::WaitForGpuComplete()

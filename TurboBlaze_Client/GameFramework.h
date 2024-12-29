@@ -7,6 +7,7 @@
 #pragma once
 
 #include "stdafx.h"
+#include "GameTimer.h"
 #include "Scene.h"
 
 class CGameFramework
@@ -68,8 +69,11 @@ private:
 	D3D12_VIEWPORT											m_d3dViewport;
 	D3D12_RECT												m_d3dScissorRect;
 
+	// Timer
+	CGameTimer												m_GameTimer;
+
 	// Scene Management
-	std::shared_ptr<CScene> m_pScene;
+	std::vector<std::shared_ptr<CScene>> m_vecpScenes;
 
 };
 
