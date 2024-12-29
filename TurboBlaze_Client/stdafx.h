@@ -16,6 +16,10 @@
 #include <memory.h>
 #include <tchar.h>
 
+// C++ 런타임 헤더 파일
+#include <iostream>
+#include <fstream>
+
 // C++ STL Containers
 #include <array>
 #include <vector>
