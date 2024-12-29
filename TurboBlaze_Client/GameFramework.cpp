@@ -336,7 +336,7 @@ void CGameFramework::CreateDepthStencilView()
 	m_pd3dDevice->CreateDepthStencilView(m_pd3dDepthStencilBuffer.Get(), &d3dDepthStencilViewDesc, d3dDsvCPUDescriptorHandle);
 }
 
-void CGameFramework::FixedUpdate()
+void CGameFramework::AdvanceFrame()
 {
 	// 타이머 업데이트
 	m_GameTimer.Tick(60.0f);
@@ -347,6 +347,12 @@ void CGameFramework::FixedUpdate()
 		pScene->FixedUpdate(m_GameTimer.DeltaTime());
 	}
 
+	// PreRendering [ Swap Chain Back Buffer를 렌더 타겟으로 사용하기 전 렌더링 단계 ]
+	// Shadow Map, Reflection Map, Refraction Map, Deferred Shading, G-buffer 등
+	// PreRendering 단계에서는 자체적으로 SetOM과 ExecuteCommandLists를 호출.
+	// 따라서 이미 Command List에 대한 명령들이 실행된 후, Close 상태여야 함.
+
+
 	// Command Allocator 재사용
 	m_pd3dCommandAllocator->Reset();
 
@@ -355,9 +361,6 @@ void CGameFramework::FixedUpdate()
 
 	// Command List에 대한 명령들을 기록
 
-	// PreRendering [ Swap Chain Back Buffer를 렌더 타겟으로 사용하기 전 렌더링 단계 ]
-	// Shadow Map, Reflection Map, Refraction Map, Deferred Shading, G-buffer 등
-	
 	// Rendering [ G-buffer를 사용하여 합치는 단계 ]
 	for (auto& pScene : m_vecpScenes)
 	{

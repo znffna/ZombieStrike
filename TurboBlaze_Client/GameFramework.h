@@ -25,7 +25,7 @@ public:
 	void CreateRenderTargetView();
 	void CreateDepthStencilView();
 
-	void FixedUpdate();
+	void AdvanceFrame();
 
 	void WaitForGpuComplete();
 	void MoveToNextFrame();

@@ -61,7 +61,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             }
         }
         else {
-            gGameFramework.FixedUpdate();
+            gGameFramework.AdvanceFrame();
         }
     }
 

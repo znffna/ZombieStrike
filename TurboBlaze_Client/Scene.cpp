@@ -52,6 +52,8 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 	// Set Viewport and Scissor
 
+	// Update Camera Variables
+
 	// Update Shader Variables
 
 	// Render GameObjects [Through Batch Shader]
