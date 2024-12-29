@@ -7,6 +7,7 @@
 #pragma once
 
 #include "stdafx.h"
+#include "Scene.h"
 
 class CGameFramework
 {
@@ -66,5 +67,9 @@ private:
 
 	D3D12_VIEWPORT											m_d3dViewport;
 	D3D12_RECT												m_d3dScissorRect;
+
+	// Scene Management
+	std::shared_ptr<CScene> m_pScene;
+
 };
 

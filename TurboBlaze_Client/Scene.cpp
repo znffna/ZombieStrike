@@ -26,19 +26,39 @@ void CScene::ReleaseUploadBuffers()
 {
 }
 
-void CScene::FixedUpdate()
+void CScene::FixedUpdate(float deltaTime)
 {
+	if (false == CheckWorkUpdating())
+	{
+		// Scene is not running
+		return;
+	}
+
 	for (auto& pGameObject : m_vecpGameObjects)
 	{
-		//pGameObject->FixedUpdate();
+		pGameObject->FixedUpdate(deltaTime);
 	}
 }
 
 void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	if (false == CheckWorkRendering())
+	{
+		// Scene is not running or pausing
+		return;
+	}
+
+	// Set Root Signature
+
+	// Set Viewport and Scissor
+
+	// Update Shader Variables
+
+	// Render GameObjects [Through Batch Shader]
+
 	for (auto& pGameObject : m_vecpGameObjects)
 	{
-		//pGameObject->Render(pd3dCommandList, pCamera);
+		pGameObject->Render(pd3dCommandList);
 	}
 }
 
