@@ -7,10 +7,71 @@
 
 CGameFramework::CGameFramework()
 {
+	m_hInstance = NULL;
+	m_hWnd = NULL;
+
+	m_nWndClientWidth = 0;
+	m_nWndClientHeight = 0;
+
+	m_nSwapChainBufferIndex = 0;
+	m_nFenceValues[0] = m_nFenceValues[1] = 0;
+
+	m_nMsaa4xQualityLevels = 0;
+	m_bMsaa4xEnable = false;
+
+	m_hFenceEvent = nullptr;
+
+	m_pd3dDevice = nullptr;
+	m_pdxgiFactory = nullptr;
+	m_pdxgiAdapter = nullptr;
+	m_pdxgiSwapChain = nullptr;
+
+	m_pd3dCommandQueue = nullptr;
+	m_pd3dCommandAllocator = nullptr;
+	m_pd3dCommandList = nullptr;
+
+	m_pd3dRtvDescriptorHeap = nullptr;
+	m_pd3dDsvDescriptorHeap = nullptr;
+	m_pd3dDepthStencilBuffer = nullptr;
+	for (int i = 0; i < m_nSwapChainBuffers; ++i) {
+		m_ppd3dSwapChainBackBuffers[i] = nullptr;
+	}
+
+	m_pd3dFence = nullptr;
+
+	m_vecpScenes.push_back(std::make_unique<CScene>());
 }
 
 CGameFramework::~CGameFramework()
 {
+	// Scene들을 해제한다.
+	for (auto& pScene : m_vecpScenes)
+	{
+		pScene.reset();
+	}
+
+	// DirectX 12 자원들을 해제한다.
+	if (m_hFenceEvent != nullptr) {
+		CloseHandle(m_hFenceEvent);
+	}
+	if (m_pd3dFence)	m_pd3dFence.Reset();
+
+	if (m_pd3dCommandList)	m_pd3dCommandList.Reset();
+	if (m_pd3dCommandAllocator)	m_pd3dCommandAllocator.Reset();
+	if (m_pd3dCommandQueue)	m_pd3dCommandQueue.Reset();
+
+	if (m_pd3dDsvDescriptorHeap) m_pd3dDsvDescriptorHeap.Reset();
+	if (m_pd3dDepthStencilBuffer) m_pd3dDepthStencilBuffer.Reset();
+	if (m_pd3dRtvDescriptorHeap) m_pd3dRtvDescriptorHeap.Reset();
+	for (int i = 0; i < m_nSwapChainBuffers; ++i) {
+		if (m_ppd3dSwapChainBackBuffers[i])	m_ppd3dSwapChainBackBuffers[i].Reset();
+	}
+
+	if (m_pdxgiSwapChain)	m_pdxgiSwapChain.Reset();
+	if (m_pdxgiAdapter)	m_pdxgiAdapter.Reset();
+	if (m_pdxgiFactory)	m_pdxgiFactory.Reset();
+
+	if (m_pd3dDevice)	m_pd3dDevice.Reset();
 }
 
 bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)

@@ -53,7 +53,4 @@ private:
 	SCENE_STATE m_SceneState; // Scene State
 
 	std::vector<std::shared_ptr<CGameObject>> m_vecpGameObjects; // 게임 객체들의 배열
-	
-
 };
-
