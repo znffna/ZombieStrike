@@ -233,6 +233,7 @@ void CGameFramework::CreateRtvAndDsvDescriptorHeap()
 {
 	HRESULT hResult;
 
+	// SwapChain의 Back Buffer 개수만큼 RTV를 위한 Descriptor Heap 생성
 	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
 	::ZeroMemory(&d3dDescriptorHeapDesc, sizeof(D3D12_DESCRIPTOR_HEAP_DESC));
 	d3dDescriptorHeapDesc.NumDescriptors = m_nSwapChainBuffers;
@@ -241,6 +242,7 @@ void CGameFramework::CreateRtvAndDsvDescriptorHeap()
 	d3dDescriptorHeapDesc.NodeMask = 0;
 	hResult = m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, IID_PPV_ARGS(&m_pd3dRtvDescriptorHeap));
 
+	// Depth/Stencil Buffer를 위한 Descriptor Heap 생성
 	d3dDescriptorHeapDesc.NumDescriptors = 1;
 	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	hResult = m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, IID_PPV_ARGS(&m_pd3dDsvDescriptorHeap));
@@ -248,6 +250,7 @@ void CGameFramework::CreateRtvAndDsvDescriptorHeap()
 
 void CGameFramework::CreateSwapChain()
 {
+	// Window Client 영역의 크기를 얻는다.
 	RECT rcClient;
 	::GetClientRect(m_hWnd, &rcClient);
 	m_nWndClientWidth = rcClient.right - rcClient.left;
@@ -268,6 +271,7 @@ void CGameFramework::CreateSwapChain()
 	dxgiSwapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
 	dxgiSwapChainDesc.Flags = 0;
 
+	// Full Screen 모드 설정
 	DXGI_SWAP_CHAIN_FULLSCREEN_DESC dxgiSwapChainFullScreenDesc;
 	::ZeroMemory(&dxgiSwapChainFullScreenDesc, sizeof(DXGI_SWAP_CHAIN_FULLSCREEN_DESC));
 	dxgiSwapChainFullScreenDesc.RefreshRate.Numerator = 60;
@@ -275,16 +279,20 @@ void CGameFramework::CreateSwapChain()
 	dxgiSwapChainFullScreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	dxgiSwapChainFullScreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 	dxgiSwapChainFullScreenDesc.Windowed = TRUE;
-
+	
+	// Swap Chain 생성
 	m_pdxgiFactory->CreateSwapChainForHwnd(m_pd3dCommandQueue.Get(), m_hWnd,&dxgiSwapChainDesc, &dxgiSwapChainFullScreenDesc, NULL, (IDXGISwapChain1**)m_pdxgiSwapChain.GetAddressOf());
 
+	// Full Screen 모드에서 Alt+Enter 키를 통한 전체 화면 전환을 사용하지 않도록 설정
 	m_pdxgiFactory->MakeWindowAssociation(m_hWnd, DXGI_MWA_NO_ALT_ENTER);
 
+	// Swap Chain의 Back Buffer 인덱스를 얻는다.
 	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 }
 
 void CGameFramework::CreateRenderTargetView()
 {
+	// Swap Chain의 Back Buffer 개수만큼 RTV 생성
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	for (UINT i = 0; i < m_nSwapChainBuffers; i++)
 	{
@@ -411,11 +419,14 @@ void CGameFramework::AdvanceFrame()
 	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList.Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
+	// Command Queue의 명령들이 모두 실행될 때까지 대기
 	WaitForGpuComplete();
 
 	// Swap Chain의 Back Buffer를 화면에 표시
 	m_pdxgiSwapChain->Present(0, 0);
 
+	// 다음 Frame으로 이동 (Fence Value를 각 Swap Chain Buffer Index마다 생성하였기에,
+	// 이전 스왑체인 버퍼의 Present이 끝나기를 기다린다.)
 	MoveToNextFrame();
 
 	// FPS 출력
