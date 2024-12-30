@@ -97,19 +97,17 @@ public:
 	void Scale(const float fx, const float fy, const float fz) { Scale(XMFLOAT3(fx, fy, fz)); }
 
 	// 행렬 반환
-	XMFLOAT4X4 GetLocalMatrix() {
-		XMFLOAT4X4 xmf4x4Matrix;
-		XMMATRIX xmmtxScale = XMMatrixScaling(m_xmf3Scale.x, m_xmf3Scale.y, m_xmf3Scale.z);
-		XMMATRIX xmmtxRotation = XMMatrixRotationQuaternion(XMLoadFloat4(&m_xmf4Rotation));
-		XMMATRIX xmmtxTranslation = XMMatrixTranslation(m_xmf3Position.x, m_xmf3Position.y, m_xmf3Position.z);
+	XMFLOAT4X4 GetLocalMatrix();
+	XMFLOAT4X4 GetWorldMatrix() { return m_xmf4x4WorldMatrix; }
 
-		XMStoreFloat4x4(&xmf4x4Matrix, xmmtxScale * xmmtxRotation * xmmtxTranslation);
-
-		return xmf4x4Matrix;
-	}
+	void UpdateWorldMatrix(const CTransform* transformParent = nullptr);
 
 private:
 	XMFLOAT3 m_xmf3Position; // 위치
 	XMFLOAT4 m_xmf4Rotation; // 회전 [ 사원수, Quaternion ]
 	XMFLOAT3 m_xmf3Scale; // 크기
+
+	XMFLOAT4X4 m_xmf4x4WorldMatrix; // 월드 행렬
+
+	std::vector<std::shared_ptr<CTransform>> m_vecpChildTransforms; // 자식 Transform
 };
