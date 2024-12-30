@@ -7,6 +7,7 @@
 #pragma once
 
 #include "stdafx.h"
+#include "Component.h"
 
 enum OBJECT_TAG
 {
@@ -37,10 +38,10 @@ std::string GetStringFromLayer(OBJECT_LAYER layer);
 //////////////////////////////////////////////////////////////////////////////////
 // CGameObject Class Definition
 
-class CComponent;
 class CTransform;
 
-class CGameObject
+class CGameObject : public std::enable_shared_from_this<CGameObject> 
+	// Class의 멤버함수에서 (this를)shared_ptr를 사용하기 위해 enable_shared_from_this를 상속받는다.
 {
 public:
 	///////////////////////////////////////////////////////////////////////////
