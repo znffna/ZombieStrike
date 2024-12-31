@@ -59,6 +59,9 @@ public:
 ///////////////////////////////////////////////////////////////////////////
 // CTransform setter / getter
 ///////////////////////////////////////////////////////////////////////////
+	// Dirty
+	bool IsDirty() { return m_bLocalDirty; }
+
 	// Position
 	void SetPosition(const XMFLOAT3& xmf3Position) { m_xmf3Position = xmf3Position; }
 	void SetPosition(const float fx, const float fy, const float fz) { m_xmf3Position = XMFLOAT3(fx, fy, fz); }
@@ -83,8 +86,12 @@ public:
 ///////////////////////////////////////////////////////////////////////////
 // CTransform method
 ///////////////////////////////////////////////////////////////////////////
+	// Transform 변경 체크 및 업데이트
+	void SetLocalDirty();
+	void SetWorldDirty(bool bPropagation);
+
 	// 이동
-	void Move(const XMFLOAT3& xmf3Shift) { m_xmf3Position = XMFLOAT3(m_xmf3Position.x + xmf3Shift.x, m_xmf3Position.y + xmf3Shift.y, m_xmf3Position.z + xmf3Shift.z); }
+	void Move(const XMFLOAT3& xmf3Shift) { m_xmf3Position = XMFLOAT3(m_xmf3Position.x + xmf3Shift.x, m_xmf3Position.y + xmf3Shift.y, m_xmf3Position.z + xmf3Shift.z); SetLocalDirty(); }
 	void Move(const float fx, const float fy, const float fz) { Move(XMFLOAT3(fx, fy, fz)); }
 	// 회전
 		// 사원수로 회전
@@ -93,21 +100,32 @@ public:
 	void Rotate(const XMFLOAT3& eulerAngles);
 	void Rotate(float roll, float pitch, float yaw) {Rotate(XMFLOAT3(roll, pitch, yaw));}
 	// 크기 조정
-	void Scale(const XMFLOAT3& xmf3Scale) { m_xmf3Scale = XMFLOAT3(m_xmf3Scale.x * xmf3Scale.x, m_xmf3Scale.y * xmf3Scale.y, m_xmf3Scale.z * xmf3Scale.z); }
+	void Scale(const XMFLOAT3& xmf3Scale) { m_xmf3Scale = XMFLOAT3(m_xmf3Scale.x * xmf3Scale.x, m_xmf3Scale.y * xmf3Scale.y, m_xmf3Scale.z * xmf3Scale.z); SetLocalDirty();	}
 	void Scale(const float fx, const float fy, const float fz) { Scale(XMFLOAT3(fx, fy, fz)); }
 
 	// 행렬 반환
 	XMFLOAT4X4 GetLocalMatrix();
-	XMFLOAT4X4 GetWorldMatrix() { return m_xmf4x4WorldMatrix; }
+	XMFLOAT4X4 GetWorldMatrix();
 
-	void UpdateWorldMatrix(const CTransform* transformParent = nullptr);
-
+	// 월드 행렬 업데이트 [ bUpdateChild -> true시 계층구조 전부 Update ]
+	void UpdateWorldMatrix(bool bUpdateChild);
+	void UpdateWorldMatrixTopDown() { UpdateWorldMatrix(true); }
+///////////////////////////////////////////////////////////////////////////
+// Member Variable
 private:
+	// Transform 정보
 	XMFLOAT3 m_xmf3Position; // 위치
 	XMFLOAT4 m_xmf4Rotation; // 회전 [ 사원수, Quaternion ]
 	XMFLOAT3 m_xmf3Scale; // 크기
 
+	XMFLOAT4X4 m_xmf4x4LocalMatrix; // 로컬 행렬
 	XMFLOAT4X4 m_xmf4x4WorldMatrix; // 월드 행렬
+	bool m_bLocalDirty = true; // Local Matrix를 다시 계산해야하는지 여부
+	bool m_bWorldDirty = true; // World Matrix를 다시 계산해야하는지 여부
 
+	// 부모 Transform
+	std::shared_ptr<CTransform> m_pParentTransform;
+
+	// 자식 Transform
 	std::vector<std::shared_ptr<CTransform>> m_vecpChildTransforms; // 자식 Transform
 };

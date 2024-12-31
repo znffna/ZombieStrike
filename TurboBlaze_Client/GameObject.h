@@ -95,7 +95,7 @@ private:
 	OBJECT_LAYER m_Layer; // Object OBJECT_LAYER
 
 	// GameObject Transform
-	CTransform m_Transform; // Object Transform
+	std::shared_ptr<CTransform> m_Transform; // Object Transform
 
 	// GameObject Components
 	std::vector<std::shared_ptr<CComponent>> m_vecpComponents; // Object Components

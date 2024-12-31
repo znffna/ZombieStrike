@@ -37,6 +37,7 @@ std::string GetStringFromLayer(OBJECT_LAYER layer) {
 unsigned int CGameObject::nNextObjectID = 0;
 
 CGameObject::CGameObject()
+	: m_Transform(std::make_shared<CTransform>(shared_from_this()))
 {
 	m_bActive = true;
 	m_nObjectID = nNextObjectID++;
@@ -46,7 +47,7 @@ CGameObject::CGameObject()
 }
 
 CGameObject::CGameObject(const std::string& strName, OBJECT_TAG tag, OBJECT_LAYER layer)
-	: m_strName(strName), m_Tag(tag), m_Layer(layer)
+	: m_Transform(std::make_shared<CTransform>(shared_from_this())), m_strName(strName), m_Tag(tag), m_Layer(layer)
 {
 	m_bActive = true;
 	m_nObjectID = nNextObjectID++;
