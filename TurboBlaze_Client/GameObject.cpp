@@ -25,8 +25,6 @@ std::string GetStringFromLayer(OBJECT_LAYER layer) {
 	static const std::unordered_map<OBJECT_LAYER, std::string> layerToString = {
 		{ OBJECT_LAYER::OBJECT_LAYER_Default, "Default" },
 		{ OBJECT_LAYER::OBJECT_LAYER_UI, "UI" },
-		{ OBJECT_LAYER::OBJECT_LAYER_Physics, "Physics" },
-		{ OBJECT_LAYER::OBJECT_LAYER_None, "None" }
 	};
 	return layerToString.at(layer);
 }

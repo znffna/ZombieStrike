@@ -9,6 +9,9 @@
 #include "stdafx.h"
 #include "Component.h"
 
+#define COMPONENT_KEY(T) typeid(T).name()
+
+// 게임오브젝트 태그 - 게임오브젝트의 종류를 구분하기 위한 태그
 enum OBJECT_TAG
 {
 	OBJECT_TAG_UNTAGGED = 0x00,
@@ -21,12 +24,11 @@ enum OBJECT_TAG
 	OBJECT_TAG_MAX
 };
 
+// 게임오브젝트 레이어 - 게임오브젝트의 로직처리 분류를 위한 레이어
 enum OBJECT_LAYER
 {
 	OBJECT_LAYER_Default = 0x00,
 	OBJECT_LAYER_UI,
-	OBJECT_LAYER_Physics,
-	OBJECT_LAYER_None
 };
 
 // Helper function to get string from Tag enum
@@ -77,9 +79,40 @@ public:
 	OBJECT_LAYER GetLayer() { return m_Layer; }
 	void SetLayer(OBJECT_LAYER layer) { m_Layer = layer; }
 
+	// Object Components
+	template <typename T>
+	std::shared_ptr<T> AddComponent()
+	{
+		// T가 CComponent를 상속받는지 컴파일 타임에 확인
+		static_assert(std::is_base_of<CComponent, T>::value,
+			"T must inherit from CComponent");
+
+		std::shared_ptr<T> pComponent = std::make_shared<T>(shared_from_this());
+
+		m_mapComponents[COMPONENT_KEY(T)] = pComponent; // CComponent의 GetName() 함수가 필요, 이름을 Key로 사용
+		return pComponent;
+	}
+
+	template <typename T>
+	std::shared_ptr<T> GetComponent()
+	{
+		// T가 CComponent를 상속받는지 컴파일 타임에 확인
+		static_assert(std::is_base_of<CComponent, T>::value,
+			"T must inherit from CComponent");
+
+		auto iter = m_mapComponents.find(COMPONENT_KEY(T));
+
+		if (iter != m_mapComponents.end())
+		{
+			return std::dynamic_pointer_cast<T>(iter->second);
+		}
+		return nullptr;
+	}
+
 	///////////////////////////////////////////////////////////////////////////
 	// Object method
 	///////////////////////////////////////////////////////////////////////////
+
 	virtual void FixedUpdate(float deltaTime);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -98,6 +131,6 @@ private:
 	std::shared_ptr<CTransform> m_Transform; // Object Transform
 
 	// GameObject Components
-	std::vector<std::shared_ptr<CComponent>> m_vecpComponents; // Object Components
+	std::unordered_map<std::string, std::shared_ptr<CComponent>> m_mapComponents; // Object Components
 };
 

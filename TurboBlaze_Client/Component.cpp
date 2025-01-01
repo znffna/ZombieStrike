@@ -8,7 +8,7 @@
 #include "GameObject.h"
 
 
-CComponent::CComponent(std::shared_ptr<CGameObject>& pOwnerObject)
+CComponent::CComponent(const std::shared_ptr<CGameObject>& pOwnerObject)
 {
 	m_pOwnerGameObject = pOwnerObject;
 	m_bActive = true;
@@ -22,12 +22,15 @@ CComponent::~CComponent()
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-CTransform::CTransform(std::shared_ptr<CGameObject>& pOwnerObject)
+CTransform::CTransform(const std::shared_ptr<CGameObject>& pOwnerObject)
 	: CComponent(pOwnerObject)
 {
 	m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	m_xmf4Rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 	m_xmf3Scale = XMFLOAT3(1.0f, 1.0f, 1.0f);
+
+	XMStoreFloat4x4(&m_xmf4x4LocalMatrix, XMMatrixIdentity());
+	XMStoreFloat4x4(&m_xmf4x4WorldMatrix, XMMatrixIdentity());
 }
 
 CTransform::~CTransform()
@@ -86,7 +89,6 @@ inline void CTransform::Rotate(const XMFLOAT3& eulerAngles) {
 inline XMFLOAT4X4 CTransform::GetLocalMatrix() {
 	if (m_bLocalDirty)
 	{
-		XMFLOAT4X4 xmf4x4Matrix;
 		XMMATRIX xmmtxScale = XMMatrixScaling(m_xmf3Scale.x, m_xmf3Scale.y, m_xmf3Scale.z);
 		XMMATRIX xmmtxRotation = XMMatrixRotationQuaternion(XMLoadFloat4(&m_xmf4Rotation));
 		XMMATRIX xmmtxTranslation = XMMatrixTranslation(m_xmf3Position.x, m_xmf3Position.y, m_xmf3Position.z);
@@ -109,15 +111,18 @@ inline void CTransform::UpdateWorldMatrix(bool bUpdateChild) {
 	// 부모 Transform가 없다면, 로컬 행렬을 그대로 사용한다.
 	if(m_bWorldDirty)
 	{
+		XMFLOAT4X4 xmf4x4Local = GetLocalMatrix();
+
 		if (nullptr == m_pParentTransform) {
 			// 로컬 행렬을 월드 행렬로 설정한다.
-			XMStoreFloat4x4(&m_xmf4x4WorldMatrix, XMLoadFloat4x4(&GetLocalMatrix()));
+			XMStoreFloat4x4(&m_xmf4x4WorldMatrix, XMLoadFloat4x4(&xmf4x4Local));
 		}
 		else
 		{
 			// 부모 Transform이 있다면, 부모 Transform의 월드 행렬과 로컬 행렬을 곱하여 월드 행렬을 계산한다.
-			XMMATRIX xmmtxParent = XMLoadFloat4x4(&m_pParentTransform->GetWorldMatrix());
-			XMMATRIX xmmtxLocal = XMLoadFloat4x4(&GetLocalMatrix());
+			XMFLOAT4X4 xmf4x4ParentWorld = m_pParentTransform->GetWorldMatrix();
+			XMMATRIX xmmtxParent = XMLoadFloat4x4(&xmf4x4ParentWorld);
+			XMMATRIX xmmtxLocal = XMLoadFloat4x4(&xmf4x4Local);
 
 			XMStoreFloat4x4(&m_xmf4x4WorldMatrix, xmmtxLocal * xmmtxParent);
 		}

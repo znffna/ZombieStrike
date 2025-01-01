@@ -15,9 +15,7 @@ public:
 	///////////////////////////////////////////////////////////////////////////
 	// Special Constructor / Destructor
 	///////////////////////////////////////////////////////////////////////////
-
-	CComponent() = delete; // 기본 생성자는 생성되면 그자체로 오류이다.
-	CComponent(std::shared_ptr<CGameObject>& pOwnerObject);
+	CComponent(const std::shared_ptr<CGameObject>& pOwnerObject);
 	virtual ~CComponent();
 
 	///////////////////////////////////////////////////////////////////////////
@@ -31,7 +29,6 @@ public:
 
 	// Owner GameObject
 	std::shared_ptr<CGameObject> GetOwnerGameObject() { return m_pOwnerGameObject.lock(); }
-
 
 private:
 	std::weak_ptr<CGameObject> m_pOwnerGameObject; // 소유하는 게임 객체 [ 소유권은 가지지 않음 ]
@@ -47,7 +44,7 @@ public:
 ///////////////////////////////////////////////////////////////////////////
 // Special Constructor / Destructor
 ///////////////////////////////////////////////////////////////////////////
-	CTransform(std::shared_ptr<CGameObject>& pOwnerObject);
+	CTransform(const std::shared_ptr<CGameObject>& pOwnerObject);
 	virtual ~CTransform();
 
 ///////////////////////////////////////////////////////////////////////////
