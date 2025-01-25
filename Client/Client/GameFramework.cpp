@@ -345,6 +345,7 @@ void CGameFramework::CreateDepthStencilView()
 
 void CGameFramework::BuildObjects()
 {
+	// Scene »ý¼º
 
 }
 

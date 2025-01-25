@@ -72,3 +72,28 @@ void CScene::ReleaseShaderVariables()
 {
 
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// LoadingScene.cpp : LoadingScene 클래스의 구현 파일
+
+LoadingScene::LoadingScene()
+{
+}
+
+LoadingScene::~LoadingScene()
+{
+}
+
+void LoadingScene::InitializeObjects()
+{
+}
+
+void LoadingScene::ReleaseObjects()
+{
+}
+
+void LoadingScene::ReleaseUploadBuffers()
+{
+}
+
+

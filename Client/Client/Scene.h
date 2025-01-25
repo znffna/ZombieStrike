@@ -8,6 +8,7 @@
 #include "stdafx.h"
 
 class CCamera;
+class CGameObject;
 
 enum SCENE_STATE
 {
@@ -40,10 +41,32 @@ public:
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 
 	// Shader Variables
-	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
-	void ReleaseShaderVariables();
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void ReleaseShaderVariables();
 
 private:
-	SCENE_STATE m_SceneState; // Scene State
+	SCENE_STATE m_SceneState = SCENE_STATE_NONE; // Scene State
 };
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+class LoadingScene : public CScene
+{
+public:
+	LoadingScene();
+	virtual ~LoadingScene();
+
+	// Scene Initialization / Release
+	virtual void InitializeObjects() override;
+	virtual void ReleaseObjects() override;
+	virtual void ReleaseUploadBuffers() override;
+
+	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr) override;
+
+	// Shader Variables
+	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
+	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList) override;
+	void ReleaseShaderVariables() override;
+}
