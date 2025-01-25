@@ -80,6 +80,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CreateRenderTargetView();
 	CreateDepthStencilView();
 
+	BuildObjects();
 
 	m_GameTimer.Reset();
 
@@ -342,6 +343,11 @@ void CGameFramework::CreateDepthStencilView()
 	m_pd3dDevice->CreateDepthStencilView(m_pd3dDepthStencilBuffer.Get(), &d3dDepthStencilViewDesc, d3dDsvCPUDescriptorHandle);
 }
 
+void CGameFramework::BuildObjects()
+{
+
+}
+
 void CGameFramework::AdvanceFrame()
 {
 	// 타이머 업데이트
@@ -349,6 +355,7 @@ void CGameFramework::AdvanceFrame()
 
 	// Scene 업데이트
 
+	bool bRenderScene = false;
 
 	// PreRendering [ Swap Chain Back Buffer를 렌더 타겟으로 사용하기 전 렌더링 단계 ]
 	// Shadow Map, Reflection Map, Refraction Map, Deferred Shading, G-buffer 등
@@ -363,6 +370,14 @@ void CGameFramework::AdvanceFrame()
 	m_pd3dCommandList->Reset(m_pd3dCommandAllocator.Get(), nullptr);
 
 	// Command List에 대한 명령들을 기록
+	for (auto& scene : m_Scenes)
+	{
+		if (scene->GetSceneState() == SCENE_STATE_RUNNING)
+		{
+			scene->FixedUpdate(m_GameTimer.DeltaTime());
+			bRenderScene = scene->Render(m_pd3dCommandList.Get(), nullptr);
+		}
+	}
 
 	// Rendering [ G-buffer를 사용하여 합치는 단계 ]
 

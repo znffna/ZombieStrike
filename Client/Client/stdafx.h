@@ -67,9 +67,12 @@ using Microsoft::WRL::ComPtr;
 //#include <WICTextureLoader.h>
 //#include <DDSTextureLoader.h>
 
-
 // Functions
+
+extern UINT WINDOW_WIDTH;
+extern UINT WINDOW_HEIGHT;
 
 extern UINT gnCbvSrvDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
+
