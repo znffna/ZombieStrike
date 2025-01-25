@@ -38,17 +38,11 @@ CGameFramework::CGameFramework()
 	}
 
 	m_pd3dFence = nullptr;
-
-	m_vecpScenes.push_back(std::make_unique<CScene>());
 }
 
 CGameFramework::~CGameFramework()
 {
-	// Scene들을 해제한다.
-	for (auto& pScene : m_vecpScenes)
-	{
-		pScene.reset();
-	}
+	
 
 	// DirectX 12 자원들을 해제한다.
 	if (m_hFenceEvent != nullptr) {
@@ -90,6 +84,10 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	m_GameTimer.Reset();
 
 	return true;
+}
+
+void CGameFramework::OnDestroy()
+{
 }
 
 void CGameFramework::CreateDirect3DDevice()
@@ -350,10 +348,7 @@ void CGameFramework::AdvanceFrame()
 	m_GameTimer.Tick(60.0f);
 
 	// Scene 업데이트
-	for (auto& pScene : m_vecpScenes)
-	{
-		pScene->FixedUpdate(m_GameTimer.DeltaTime());
-	}
+
 
 	// PreRendering [ Swap Chain Back Buffer를 렌더 타겟으로 사용하기 전 렌더링 단계 ]
 	// Shadow Map, Reflection Map, Refraction Map, Deferred Shading, G-buffer 등
@@ -370,10 +365,7 @@ void CGameFramework::AdvanceFrame()
 	// Command List에 대한 명령들을 기록
 
 	// Rendering [ G-buffer를 사용하여 합치는 단계 ]
-	for (auto& pScene : m_vecpScenes)
-	{
-		pScene->Render(m_pd3dCommandList.Get(), NULL);
-	}
+
 
 	// PostRendering [ 후처리 프로세싱 단계 ]
 	// Bloom, Depth of Field, Motion Blur 등

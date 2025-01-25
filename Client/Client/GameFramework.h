@@ -8,7 +8,7 @@
 
 #include "stdafx.h"
 #include "GameTimer.h"
-#include "Scene.h"
+//#include "Scene.h"
 
 class CGameFramework
 {
@@ -17,6 +17,7 @@ public:
 	~CGameFramework();
 
 	bool OnCreate(HINSTANCE hInstance, HWND hMainWnd);
+	void OnDestroy();
 
 	void CreateDirect3DDevice();
 	void CreateCommandQueueAndList();
@@ -71,9 +72,6 @@ private:
 
 	// Timer
 	CGameTimer												m_GameTimer;
-
-	// Scene Management
-	std::vector<std::shared_ptr<CScene>> m_vecpScenes;
 
 };
 
