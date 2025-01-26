@@ -1,6 +1,13 @@
+///////////////////////////////////////////////////////////////////////////////
+// Date: 2024-12-29
+// GameObject.h : CGameObject 클래스의 헤더 파일
+// Version : 0.1
+///////////////////////////////////////////////////////////////////////////////
+
 #pragma once
 
 #include "stdafx.h"
+#include "Mesh.h"
 
 class CGameObject
 {
@@ -25,6 +32,10 @@ public:
 	void SetPosition(DirectX::XMFLOAT3 xmf3Position) { m_xmf3Position = xmf3Position; }
 
 	DirectX::XMFLOAT3 GetRotation() { return m_xmf3Rotation; }
+	float GetPitch() { return m_xmf3Rotation.x; } // X 축을	기준으로 회전
+	float GetYaw() { return m_xmf3Rotation.y; } // Y 축을 기준으로 회전
+	float GetRoll() { return m_xmf3Rotation.z; } // Z 축을 기준으로 회전
+
 	void SetRotation(DirectX::XMFLOAT3 xmf3Rotation) { m_xmf3Rotation = xmf3Rotation; }
 
 	DirectX::XMFLOAT3 GetScale() { return m_xmf3Scale; }
@@ -37,6 +48,13 @@ public:
 	// Update Object World Matrix
 	void UpdateWorldMatrix(DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
 
+	// Move
+	void Move(DirectX::XMFLOAT3 xmf3Shift) { m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift); }
+	void Move(float x, float y, float z) { m_xmf3Position = Vector3::Add(m_xmf3Position, DirectX::XMFLOAT3(x, y, z)); }
+
+	// Rotate
+	void Rotate(DirectX::XMFLOAT3 xmf3Rotate) { m_xmf3Rotation = Vector3::Add(m_xmf3Rotation, xmf3Rotate); }
+
 	// Object Initialization / Release
 	virtual void Initialize() {};
 	virtual void Release() {}
@@ -48,7 +66,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	// Object Collision
-	virtual void OnCollision(CGameObject* pGameObject) {}
+	//virtual void OnCollision(CGameObject* pGameObject) {}
 
 
 private:
@@ -57,6 +75,7 @@ private:
 	UINT m_nObjectID; // Object ID
 	std::string m_strName;  // Object Name
 
+protected:
 	// Transform
 	DirectX::XMFLOAT3 m_xmf3Position; // 위치
 	DirectX::XMFLOAT3 m_xmf3Rotation; // 회전
@@ -67,3 +86,26 @@ private:
 
 };
 
+////////////////////////////////////////////////////////////////////////////////////////
+//
+
+class CRotatingObject : public CGameObject
+{
+public:
+	CRotatingObject();
+	virtual ~CRotatingObject();
+
+	// Object Update
+	virtual void Update(float fTimeElapsed) override;
+
+	// Set Rotation Speed
+	void SetRotationSpeed(float fRotationSpeed) { m_fRotationSpeed = fRotationSpeed; }
+
+	// Set Rotation Axis
+	void SetRotationAxis(DirectX::XMFLOAT3 xmf3RotationAxis) { m_xmf3RotationAxis = xmf3RotationAxis; }
+
+private:
+	float m_fRotationSpeed; // 초당 회전 속도
+	XMFLOAT3 m_xmf3RotationAxis; // 회전 축
+
+};

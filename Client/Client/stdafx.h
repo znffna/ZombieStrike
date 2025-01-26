@@ -69,6 +69,13 @@ using Microsoft::WRL::ComPtr;
 
 // Global Variables
 
+// Root Signature Paramater Index
+#define ROOT_PARAMETER_FRAMEWORK 0
+#define ROOT_PARAMETER_OBJECT 1
+#define ROOT_PARAMETER_CAMERA 2
+
+
+
 // Window Size
 extern UINT WINDOW_WIDTH;
 extern UINT WINDOW_HEIGHT;
@@ -79,9 +86,12 @@ extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
 
 // Functions
+
+extern ID3D12Resource* CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType = D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, ID3D12Resource** ppd3dUploadBuffer = NULL);
+
+
 #define EPSILON							1.0e-10f
 #define PI								3.1415927f
-
 
 inline bool IsZero(float fValue) { return((fabsf(fValue) < EPSILON)); }
 inline bool IsEqual(float fA, float fB) { return(::IsZero(fA - fB)); }
