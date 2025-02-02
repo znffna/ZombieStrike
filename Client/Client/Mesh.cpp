@@ -104,11 +104,15 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 		{-halfWidth, -halfHeight,  halfDepth},  // 0
 		{ halfWidth, -halfHeight,  halfDepth},  // 1
 		{ halfWidth,  halfHeight,  halfDepth},  // 2
+		{-halfWidth, -halfHeight,  halfDepth},  // 0
+		{ halfWidth,  halfHeight,  halfDepth},  // 2
 		{-halfWidth,  halfHeight,  halfDepth},  // 3
 
 		// Back face
 		{ halfWidth, -halfHeight, -halfDepth},  // 4
 		{-halfWidth, -halfHeight, -halfDepth},  // 5
+		{-halfWidth,  halfHeight, -halfDepth},  // 6
+		{ halfWidth, -halfHeight, -halfDepth},  // 4
 		{-halfWidth,  halfHeight, -halfDepth},  // 6
 		{ halfWidth,  halfHeight, -halfDepth},  // 7
 
@@ -116,11 +120,15 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 		{-halfWidth,  halfHeight, -halfDepth},  // 6
 		{-halfWidth,  halfHeight,  halfDepth},  // 3
 		{ halfWidth,  halfHeight,  halfDepth},  // 2
+		{-halfWidth,  halfHeight, -halfDepth},  // 6
+		{ halfWidth,  halfHeight,  halfDepth},  // 2
 		{ halfWidth,  halfHeight, -halfDepth},  // 7
 
 		// Bottom face
 		{-halfWidth, -halfHeight, -halfDepth},  // 5
 		{ halfWidth, -halfHeight, -halfDepth},  // 4
+		{ halfWidth, -halfHeight,  halfDepth},  // 1
+		{-halfWidth, -halfHeight, -halfDepth},  // 5
 		{ halfWidth, -halfHeight,  halfDepth},  // 1
 		{-halfWidth, -halfHeight,  halfDepth},  // 0
 
@@ -128,11 +136,15 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 		{ halfWidth, -halfHeight, -halfDepth},  // 4
 		{ halfWidth,  halfHeight, -halfDepth},  // 7
 		{ halfWidth,  halfHeight,  halfDepth},  // 2
+		{ halfWidth, -halfHeight, -halfDepth},  // 4
+		{ halfWidth,  halfHeight,  halfDepth},  // 2
 		{ halfWidth, -halfHeight,  halfDepth},  // 1
 
 		// Left face
 		{-halfWidth, -halfHeight, -halfDepth},  // 5
 		{-halfWidth, -halfHeight,  halfDepth},  // 0
+		{-halfWidth,  halfHeight,  halfDepth},  // 3
+		{-halfWidth, -halfHeight, -halfDepth},  // 5
 		{-halfWidth,  halfHeight,  halfDepth},  // 3
 		{-halfWidth,  halfHeight, -halfDepth}   // 6
 	};
@@ -144,76 +156,56 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
 	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
 	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
-
-	// index
-
-	std::vector<UINT> pnIndices = {
-		// Front face
-		0, 1, 2, 0, 2, 3,
-
-		// Back face
-		4, 5, 6, 4, 6, 7,
-
-		// Top face
-		8, 9, 10, 8, 10, 11,
-
-		// Bottom face
-		12, 13, 14, 12, 14, 15,
-
-		// Right face
-		16, 17, 18, 16, 18, 19,
-
-		// Left face
-		20, 21, 22, 20, 22, 23
-	};
-
-	// ¼­ºê¼Â °¹¼ö ¼³Á¤
-	SetSubMeshCount(1);
-
-	m_ppnSubSetIndices[0] = std::move(pnIndices);
-
-	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[0].data(), sizeof(UINT) * static_cast<int>(m_ppnSubSetIndices[0].size()), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_ppd3dSubSetIndexUploadBuffers[0].GetAddressOf());
-	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
-	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
-	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * static_cast<UINT>(m_ppnSubSetIndices[0].size());
-
+	
 	// normal
 	std::vector<XMFLOAT3> pxmf3Normals = {
 		// Front face
-		{0.0f, 0.0f, 1.0f},  // 0
-		{0.0f, 0.0f, 1.0f},  // 1
-		{0.0f, 0.0f, 1.0f},  // 2
-		{0.0f, 0.0f, 1.0f},  // 3
+		{0.0f, 0.0f, 1.0f},
+		{0.0f, 0.0f, 1.0f},
+		{0.0f, 0.0f, 1.0f},
+		{0.0f, 0.0f, 1.0f},
+		{0.0f, 0.0f, 1.0f},
+		{0.0f, 0.0f, 1.0f},
 
 		// Back face
-		{0.0f, 0.0f, -1.0f},  // 4
-		{0.0f, 0.0f, -1.0f},  // 5
-		{0.0f, 0.0f, -1.0f},  // 6
-		{0.0f, 0.0f, -1.0f},  // 7
+		{0.0f, 0.0f, -1.0f},
+		{0.0f, 0.0f, -1.0f},
+		{0.0f, 0.0f, -1.0f},
+		{0.0f, 0.0f, -1.0f},
+		{0.0f, 0.0f, -1.0f},
+		{0.0f, 0.0f, -1.0f},
 
 		// Top face
-		{0.0f, 1.0f, 0.0f},  // 6
-		{0.0f, 1.0f, 0.0f},  // 3
-		{0.0f, 1.0f, 0.0f},  // 2
-		{0.0f, 1.0f, 0.0f},  // 7
+		{0.0f, 1.0f, 0.0f},
+		{0.0f, 1.0f, 0.0f},
+		{0.0f, 1.0f, 0.0f},
+		{0.0f, 1.0f, 0.0f},
+		{0.0f, 1.0f, 0.0f},
+		{0.0f, 1.0f, 0.0f},
 
 		// Bottom face
-		{0.0f, -1.0f, 0.0f},  // 5
-		{0.0f, -1.0f, 0.0f},  // 4
-		{0.0f, -1.0f, 0.0f},  // 1
-		{0.0f, -1.0f, 0.0f},  // 0
+		{0.0f, -1.0f, 0.0f},
+		{0.0f, -1.0f, 0.0f},
+		{0.0f, -1.0f, 0.0f},
+		{0.0f, -1.0f, 0.0f},
+		{0.0f, -1.0f, 0.0f},
+		{0.0f, -1.0f, 0.0f},
 
 		// Right face
-		{1.0f, 0.0f, 0.0f},  // 4
-		{1.0f, 0.0f, 0.0f},  // 7
-		{1.0f, 0.0f, 0.0f},  // 2
-		{1.0f, 0.0f, 0.0f},  // 1
+		{1.0f, 0.0f, 0.0f},
+		{1.0f, 0.0f, 0.0f},
+		{1.0f, 0.0f, 0.0f},
+		{1.0f, 0.0f, 0.0f},
+		{1.0f, 0.0f, 0.0f},
+		{1.0f, 0.0f, 0.0f},
 
 		// Left face
-		{-1.0f, 0.0f, 0.0f},  // 5
-		{-1.0f, 0.0f, 0.0f},  // 0
-		{-1.0f, 0.0f, 0.0f},  // 3
-		{-1.0f, 0.0f, 0.0f}   // 6
+		{-1.0f, 0.0f, 0.0f},
+		{-1.0f, 0.0f, 0.0f},
+		{-1.0f, 0.0f, 0.0f},
+		{-1.0f, 0.0f, 0.0f},
+		{-1.0f, 0.0f, 0.0f},
+		{-1.0f, 0.0f, 0.0f}
 	};
 
 	m_pxmf3Normals = std::move(pxmf3Normals);
@@ -226,29 +218,29 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 
 	// texture
 	std::vector<XMFLOAT2> xmf2Texture0Coords = {
-		// +X ¸é
-	   {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}, // »ï°¢Çü 1
-	   {1.0f, 0.0f}, {0.0f, 1.0f}, {0.0f, 0.0f}, // »ï°¢Çü 2
+		// Front face (+Z)
+		{0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 0.0f},
+		{0.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f},
 
-	   // -X ¸é
-	   {0.0f, 0.0f}, {0.0f, 1.0f}, {1.0f, 1.0f}, // »ï°¢Çü 1
-	   {0.0f, 0.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}, // »ï°¢Çü 2
+		// Back face (-Z)
+		{1.0f, 1.0f}, {0.0f, 1.0f}, {0.0f, 0.0f},
+		{1.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 0.0f},
 
-	   // +Y ¸é
-	   {0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, // »ï°¢Çü 1
-	   {0.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}, // »ï°¢Çü 2
+		// Top face (+Y)
+		{0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 0.0f},
+		{0.0f, 1.0f}, {1.0f, 0.0f}, {1.0f, 1.0f},
 
-	   // -Y ¸é
-	   {0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}, // »ï°¢Çü 1
-	   {0.0f, 1.0f}, {1.0f, 0.0f}, {0.0f, 0.0f}, // »ï°¢Çü 2
+		// Bottom face (-Y)
+		{0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f},
+		{0.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f},
 
-	   // +Z ¸é
-	   {0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, // »ï°¢Çü 1
-	   {0.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}, // »ï°¢Çü 2
+		// Right face (+X)
+		{1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f},
+		{1.0f, 0.0f}, {1.0f, 0.0f}, {0.0f, 1.0f},
 
-	   // -Z ¸é
-	   {1.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 1.0f}, // »ï°¢Çü 1
-	   {1.0f, 0.0f}, {0.0f, 1.0f}, {1.0f, 1.0f}  // »ï°¢Çü 2
+		// Left face (-X)
+		{0.0f, 0.0f}, {0.0f, 1.0f}, {1.0f, 1.0f},
+		{0.0f, 0.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}
 	};
 
 	m_pxmf2Texture0Coords = std::move(xmf2Texture0Coords);
@@ -258,6 +250,31 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 	m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
 	m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
 	m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * static_cast<UINT>(m_pxmf2Texture0Coords.size());
+
+	// Standard Shader¸¦ »ç¿ëÇÏ±âÀ§ÇÑ ´õ¹Ì µ¥ÀÌÅÍ »ý¼º
+	// --------------------------------------------
+	// Tangent Dummy
+	std::vector<XMFLOAT3> xmf3Tangents(m_nVertices, XMFLOAT3(0.0f, 0.0f, 0.0f));
+
+	m_pxmf3Tangents = std::move(xmf3Tangents);
+
+	m_pd3dTangentBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Tangents.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_pd3dTangentUploadBuffer.GetAddressOf());
+
+	m_d3dTangentBufferView.BufferLocation = m_pd3dTangentBuffer->GetGPUVirtualAddress();
+	m_d3dTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * static_cast<UINT>(m_pxmf3Tangents.size());
+
+	// BiTangent Dummy
+
+	std::vector<XMFLOAT3> xmf3BiTangents(m_nVertices, XMFLOAT3(0.0f, 0.0f, 0.0f));
+
+	m_pxmf3BiTangents = std::move(xmf3BiTangents);
+
+	m_pd3dBiTangentBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3BiTangents.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_pd3dBiTangentUploadBuffer.GetAddressOf());
+
+	m_d3dBiTangentBufferView.BufferLocation = m_pd3dBiTangentBuffer->GetGPUVirtualAddress();
+	m_d3dBiTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dBiTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * static_cast<UINT>(m_pxmf3BiTangents.size());
 }
 
 CCubeMesh::~CCubeMesh()
