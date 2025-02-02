@@ -75,6 +75,8 @@ private:
 	UINT m_nObjectID; // Object ID
 	std::string m_strName;  // Object Name
 
+	std::shared_ptr<CMesh> m_pMesh; // Object Mesh
+
 protected:
 	// Transform
 	DirectX::XMFLOAT3 m_xmf3Position; // À§Ä¡

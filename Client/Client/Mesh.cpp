@@ -16,6 +16,12 @@ CMesh::~CMesh()
 void CMesh::ReleaseUploadBuffers()
 {
 	// Release Upload Buffers
+	m_pd3dPositionUploadBuffer.Reset();
+	for (auto& pd3dSubSetIndexUploadBuffer : m_ppd3dSubSetIndexUploadBuffers)
+	{
+		pd3dSubSetIndexUploadBuffer.Reset();
+	}
+
 }
 
 void CMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
@@ -33,6 +39,14 @@ void CMesh::OnPostRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pCont
 	// Post-Render Process
 }
 
+void CMesh::SetSubMeshCount(int nSubMeshes)
+{
+	m_ppnSubSetIndices.resize(nSubMeshes);
+	m_ppd3dSubSetIndexBuffers.resize(nSubMeshes);
+	m_ppd3dSubSetIndexUploadBuffers.resize(nSubMeshes);
+	m_pd3dSubSetIndexBufferViews.resize(nSubMeshes);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 
@@ -42,6 +56,24 @@ CStandardMesh::CStandardMesh()
 
 CStandardMesh::~CStandardMesh()
 {
+}
+
+void CStandardMesh::ReleaseUploadBuffers()
+{
+	CMesh::ReleaseUploadBuffers();
+
+	m_pd3dTextureCoord0UploadBuffer.Reset();
+	m_pd3dTextureCoord1UploadBuffer.Reset();
+
+	m_pd3dNormalUploadBuffer.Reset();
+	m_pd3dTangentUploadBuffer.Reset();
+	m_pd3dBiTangentUploadBuffer.Reset();
+}
+
+void CStandardMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
+{
+	CMesh::OnPreRender(pd3dCommandList, pContext);
+
 }
 
 
