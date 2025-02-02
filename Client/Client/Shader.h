@@ -16,15 +16,23 @@ public:
 	CShader();
 	~CShader();
 
+	// For Debugging
+	virtual std::wstring GetShaderName() { return L"CShader"; }
+
 	// Create Pipeline State
-	void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature);
-	void CreatePipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState = 0);
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	void CreateGraphicPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState = 0);
+	void CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dComputeRootSignature, int nPipelineState = 0);
+
+	D3D12_SHADER_BYTECODE CompileShaderFromFile(const WCHAR* pszFileName, LPCSTR pszShaderName, LPCSTR pszShaderProfile, ID3DBlob** ppd3dShaderBlob);
+	D3D12_SHADER_BYTECODE ReadCompiledShaderFromFile(const WCHAR* pszFileName, ID3DBlob** ppd3dShaderBlob = NULL);
 
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState = 0);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState = 0);
 	virtual D3D12_SHADER_BYTECODE CreateDomainShader(int nPipelineState = 0);
 	virtual D3D12_SHADER_BYTECODE CreateHullShader(int nPipelineState = 0);
 	virtual D3D12_SHADER_BYTECODE CreateGeometryShader(int nPipelineState = 0);
+	virtual D3D12_SHADER_BYTECODE CreateComputeShader(int nPipelineState = 0);
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState = 0);
 	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState = 0);
@@ -50,8 +58,7 @@ public:
 
 	virtual void ReleaseUploadBuffers() { }
 
-
-private:
+protected:
 	// Shader Variables
 	std::vector<ComPtr<ID3D12PipelineState>> m_pd3dPipelineStates; // [m_nPipelineState]
 
@@ -62,5 +69,22 @@ private:
 	ComPtr<ID3DBlob> m_pd3dDomainShaderBlob;
 	ComPtr<ID3DBlob> m_pd3dHullShaderBlob;
 	ComPtr<ID3DBlob> m_pd3dGeometryShaderBlob;
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+class CStandardShader : public CShader
+{
+public:
+	CStandardShader();
+	virtual ~CStandardShader();
+
+	virtual std::wstring GetShaderName() override { return L"CStandardShader"; }
+
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState) override;
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override;
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
 };
 
