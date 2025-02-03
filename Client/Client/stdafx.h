@@ -70,9 +70,16 @@ using Microsoft::WRL::ComPtr;
 // Global Variables
 
 // Root Signature Paramater Index
-#define ROOT_PARAMETER_FRAMEWORK 0
-#define ROOT_PARAMETER_OBJECT 1
-#define ROOT_PARAMETER_CAMERA 2
+#define ROOT_PARAMETER_OBJECT 0
+#define ROOT_PARAMETER_CAMERA 1
+#define ROOT_PARAMETER_FRAMEWORK 2
+#define ROOT_PARAMETER_LIGHT 3
+
+// Standard Texture
+#define ROOT_PARAMETER_TEXTURES 4
+
+// SkyCube Texture
+#define ROOT_PARAMETER_SKYBOX 5
 
 
 

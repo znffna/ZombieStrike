@@ -25,6 +25,7 @@ public:
 	CScene();
 	virtual ~CScene();
 
+
 	// Scene Initialization / Release
 	virtual void InitializeObjects();
 	virtual void ReleaseObjects();
@@ -39,6 +40,10 @@ public:
 	// Scene Method
 	virtual void FixedUpdate(float deltaTime);
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
+
+	// Shader method
+	ComPtr<ID3D12RootSignature> CreateRootSignature(ID3D12Device* pd3dDevice);
+
 
 	// Shader Variables
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
