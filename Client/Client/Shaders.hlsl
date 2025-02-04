@@ -45,7 +45,7 @@ cbuffer cbFrameworkInfo : register(b2)
 #define MATERIAL_DETAIL_ALBEDO_MAP	0x20
 #define MATERIAL_DETAIL_NORMAL_MAP	0x40
 
-Texture2D gtxtStandardTextures[7] : register(t6);
+Texture2D gtxtStandardTextures[7] : register(t6); // t6 ~ t12 : Albedo, Specular, Normal, Metallic, Emission, Detail Albedo, Detail Normal
 TextureCube gtxtSkyCubeTexture : register(t13);
 
 SamplerState gssWrap : register(s0);

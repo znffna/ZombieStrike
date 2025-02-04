@@ -10,6 +10,18 @@
 #include "GameTimer.h"
 #include "Scene.h"
 
+struct CB_FRAMEWORK_INFO
+{
+	float					m_fCurrentTime;
+	float					m_fElapsedTime;
+	//float					m_fSecondsPerFirework = 1.0f;
+	//int					m_nFlareParticlesToEmit = 300;
+	//XMFLOAT3				m_xmf3Gravity = XMFLOAT3(0.0f, -9.8f, 0.0f);
+	//int					m_nMaxFlareType2Particles = 150;
+	UINT					m_nRenderMode;
+	float					m_nPadding;
+};
+
 class CGameFramework
 {
 public:
@@ -32,6 +44,10 @@ public:
 
 	void WaitForGpuComplete();
 	void MoveToNextFrame();
+
+	void CreateShaderVariables();
+	void UpdateShaderVariables();
+	void ReleaseShaderVariables();
 
 private:
 	HINSTANCE m_hInstance;
@@ -83,5 +99,9 @@ private:
 	Scene을 Stack으로 관리하여 가장 마지막 Scene에 대해서 Input 처리를 수행.
 	나머지 Scene에 대해서는 Scene의 State에 따라 Update / Render를 수행.
 	*/
+
+protected:
+	ComPtr<ID3D12Resource> m_pd3dcbFrameworkInfo;
+	CB_FRAMEWORK_INFO* m_pcbMappedFrameworkInfo = NULL;
 };
 

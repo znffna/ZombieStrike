@@ -345,6 +345,9 @@ void CGameFramework::CreateDepthStencilView()
 
 void CGameFramework::BuildObjects()
 {
+	// Framework 정보 생성 (Shader에 전달할 정보)
+	CreateShaderVariables();
+
 	// Scene 생성
 
 }
@@ -369,6 +372,9 @@ void CGameFramework::AdvanceFrame()
 
 	// Command List 재사용
 	m_pd3dCommandList->Reset(m_pd3dCommandAllocator.Get(), nullptr);
+
+	// Framework 정보 업데이트
+	UpdateShaderVariables();
 
 	// Command List에 대한 명령들을 기록
 	for (auto& scene : m_Scenes)
@@ -467,5 +473,33 @@ void CGameFramework::MoveToNextFrame()
 	{
 		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
 		::WaitForSingleObject(m_hFenceEvent, INFINITE);
+	}
+}
+
+void CGameFramework::CreateShaderVariables()
+{
+	UINT ncbElementBytes = ((sizeof(CB_FRAMEWORK_INFO) + 255) & ~255); //256의 배수
+	m_pd3dcbFrameworkInfo = ::CreateBufferResource(m_pd3dDevice.Get(), m_pd3dCommandList.Get(), NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
+
+	m_pd3dcbFrameworkInfo->Map(0, NULL, (void**)&m_pcbMappedFrameworkInfo);
+	ZeroMemory(m_pcbMappedFrameworkInfo, sizeof(CB_FRAMEWORK_INFO));
+}
+
+void CGameFramework::UpdateShaderVariables()
+{
+	m_pcbMappedFrameworkInfo->m_fCurrentTime = m_GameTimer.GameTime();
+	m_pcbMappedFrameworkInfo->m_fElapsedTime = m_GameTimer.DeltaTime();
+	m_pcbMappedFrameworkInfo->m_nRenderMode = 0;
+
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbFrameworkInfo->GetGPUVirtualAddress();
+	m_pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_FRAMEWORK, d3dGpuVirtualAddress);
+}
+
+void CGameFramework::ReleaseShaderVariables()
+{
+	if (m_pd3dcbFrameworkInfo)
+	{
+		m_pd3dcbFrameworkInfo->Unmap(0, NULL);
+		m_pd3dcbFrameworkInfo.Reset();
 	}
 }
