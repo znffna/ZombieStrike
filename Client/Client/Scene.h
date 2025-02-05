@@ -6,9 +6,9 @@
 #pragma once
 
 #include "stdafx.h"
-
-class CCamera;
-class CGameObject;
+#include "GameObject.h"
+#include "Camera.h"
+#include "Shader.h"
 
 enum SCENE_STATE
 {
@@ -26,7 +26,7 @@ public:
 	virtual ~CScene();
 
 	// Scene Initialization / Release
-	virtual void InitializeObjects();
+	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void ReleaseObjects();
 	virtual void ReleaseUploadBuffers();
 
@@ -41,15 +41,19 @@ public:
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 
 	// Shader method
-	ComPtr<ID3D12RootSignature> CreateRootSignature(ID3D12Device* pd3dDevice);
+	ComPtr<ID3D12RootSignature> CreateGraphicsRootSignature(ID3D12Device* pd3dDevice);
 
 	// Shader Variables
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void ReleaseShaderVariables();
 
-private:
+protected:
 	SCENE_STATE m_SceneState = SCENE_STATE_NONE; // Scene State
+
+	// Shader Variables
+	ComPtr<ID3D12RootSignature> m_pd3dGraphicsRootSignature;
+	ComPtr<ID3D12RootSignature> m_pd3dComputeRootSignature;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -62,7 +66,7 @@ public:
 	virtual ~LoadingScene();
 
 	// Scene Initialization / Release
-	virtual void InitializeObjects() override;
+	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
 	virtual void ReleaseObjects() override;
 	virtual void ReleaseUploadBuffers() override;
 

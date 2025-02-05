@@ -9,6 +9,107 @@
 #include "stdafx.h"
 #include "Mesh.h"
 
+class CTexture;
+class CShader;
+
+struct CB_GAMEOBJECT_INFO
+{
+	XMFLOAT4X4						m_xmf4x4World;
+};
+
+struct CB_MATERIAL_INFO
+{
+	XMFLOAT4						m_xmf4Ambient;
+	XMFLOAT4						m_xmf4Diffuse;
+	XMFLOAT4						m_xmf4Specular;
+	XMFLOAT4						m_xmf4Emissive;
+	UINT							m_nTexturesMask;
+};
+
+class CMaterial
+{
+public:
+	CMaterial() {};
+	virtual ~CMaterial() {};
+
+	// CMaterial Name
+	std::string GetName() { return m_strName; }
+	void SetName(std::string strName) { m_strName = strName; }
+
+	// CMaterial Color
+	DirectX::XMFLOAT4 GetAmbient() { return m_xmf4Ambient; }
+	void SetAmbient(DirectX::XMFLOAT4 xmf4Ambient) { m_xmf4Ambient = xmf4Ambient; }
+
+	DirectX::XMFLOAT4 GetDiffuse() { return m_xmf4Diffuse; }
+	void SetDiffuse(DirectX::XMFLOAT4 xmf4Diffuse) { m_xmf4Diffuse = xmf4Diffuse; }
+
+	DirectX::XMFLOAT4 GetSpecular() { return m_xmf4Specular; }
+	void SetSpecular(DirectX::XMFLOAT4 xmf4Specular) { m_xmf4Specular = xmf4Specular; }
+
+	// Texture
+	std::shared_ptr<CTexture> GetTexture() { return m_pTexture; }
+	void SetTexture(std::shared_ptr<CTexture> pTexture) { m_pTexture = pTexture; }
+
+	// Shader
+	void SetShader(std::shared_ptr<CShader> pShader) { m_pShader = pShader; }
+
+	// Shader Variables
+	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+	{
+		// Create Constant Buffer
+		UINT ncbElementBytes = ((sizeof(CB_MATERIAL_INFO) + 255) & ~255); //256의 배수
+		m_pd3dcbMaterial = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
+
+		// Map Constant Buffer
+		m_pd3dcbMaterial->Map(0, nullptr, (void**)&m_pcbMappedMaterial);
+		ZeroMemory(m_pcbMappedMaterial, sizeof(CB_MATERIAL_INFO));
+	}
+
+	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+	{
+		m_pcbMappedMaterial->m_xmf4Ambient = m_xmf4Ambient;
+		m_pcbMappedMaterial->m_xmf4Diffuse = m_xmf4Diffuse;
+		m_pcbMappedMaterial->m_xmf4Specular = m_xmf4Specular;
+		m_pcbMappedMaterial->m_xmf4Emissive = m_xmf4Emissive;
+		
+		m_pcbMappedMaterial->m_nTexturesMask = 0x00;
+
+		if (m_pTexture)
+		{
+			//pcbMappedObjectInfo->m_nTexturesMask |= m_pTexture->GetTextureType();
+			//m_pTexture->UpdateShaderVariables(pd3dCommandList);
+		}
+		else {
+			m_pcbMappedMaterial->m_nTexturesMask = 0x00;
+		}
+
+		D3D12_GPU_VIRTUAL_ADDRESS GPUAddress = m_pd3dcbMaterial->GetGPUVirtualAddress();
+		pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_MATERIAL, GPUAddress);
+	}
+
+	void ReleaseShaderVariables()
+	{
+		if (m_pd3dcbMaterial) m_pd3dcbMaterial->Unmap(0, nullptr);
+		m_pd3dcbMaterial.Reset();
+	}
+
+
+private:
+	std::string m_strName; // CMaterial Name
+
+	DirectX::XMFLOAT4 m_xmf4Ambient = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // Ambient Color
+	DirectX::XMFLOAT4 m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // Diffuse Color
+	DirectX::XMFLOAT4 m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // Specular Color
+	DirectX::XMFLOAT4 m_xmf4Emissive = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // Emissive Color
+
+	std::shared_ptr<CTexture> m_pTexture; // Texture
+	std::shared_ptr<CShader> m_pShader; // Shader
+
+	// Shader Variables
+	ComPtr<ID3D12Resource> m_pd3dcbMaterial;
+	CB_MATERIAL_INFO* m_pcbMappedMaterial = nullptr;
+};
+
 class CGameObject
 {
 public:
@@ -68,6 +169,20 @@ public:
 	// Object Collision
 	//virtual void OnCollision(CGameObject* pGameObject) {}
 
+	// Mesh
+	void SetMesh(std::shared_ptr<CMesh> pMesh) { m_pMesh = pMesh; }
+
+	// Material
+	void AddMaterial(std::shared_ptr<CMaterial> pMaterial) { m_pMaterials.push_back(pMaterial); }
+	void SetMaterial(std::shared_ptr<CMaterial> pMaterial, int nIndex = 0) { m_pMaterials[nIndex] = pMaterial; }
+
+	// Shader
+	void SetShader(std::shared_ptr<CShader> pShader, int nIndex = 0);
+
+	// Shader Variables
+	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	void ReleaseShaderVariables();
 
 private:
 	bool m_bActive; // Active Flag
@@ -77,6 +192,8 @@ private:
 
 	std::shared_ptr<CMesh> m_pMesh; // Object Mesh
 
+	// CMaterial
+	std::vector<std::shared_ptr<CMaterial>> m_pMaterials; // Object CMaterial
 protected:
 	// Transform
 	DirectX::XMFLOAT3 m_xmf3Position; // 위치
@@ -86,6 +203,9 @@ protected:
 	DirectX::XMFLOAT4X4 m_xmf4x4Local; // Object Local Matrix
 	DirectX::XMFLOAT4X4 m_xmf4x4World; // Object World Matrix
 
+	// Shader Variables
+	ComPtr<ID3D12Resource> m_pd3dcbGameObject;
+	CB_GAMEOBJECT_INFO* m_pcbMappedObject = nullptr;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////

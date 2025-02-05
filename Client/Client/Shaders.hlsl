@@ -14,11 +14,15 @@ struct MATERIAL
 cbuffer cbGameObjectInfo : register(b0)
 {
     matrix gmtxGameObject : packoffset(c0);
-    MATERIAL gMaterial : packoffset(c4);
-    uint gnTexturesMask : packoffset(c8);
 };
 
-cbuffer cbCameraInfo : register(b1)
+cbuffer cbMaterialInfo : register(b1)
+{
+    MATERIAL gMaterial : packoffset(c0);
+    uint gnTexturesMask : packoffset(c4.x);
+};
+
+cbuffer cbCameraInfo : register(b2)
 {
     matrix gmtxView : packoffset(c0);
     matrix gmtxInvView : packoffset(c4);
@@ -26,7 +30,7 @@ cbuffer cbCameraInfo : register(b1)
     float3 gvCameraPosition : packoffset(c12);
 };
 
-cbuffer cbFrameworkInfo : register(b2)
+cbuffer cbFrameworkInfo : register(b3)
 {
     float gfCurrentTime : packoffset(c0.x);
     float gfElapsedTime : packoffset(c0.y);

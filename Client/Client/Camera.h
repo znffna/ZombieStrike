@@ -25,8 +25,8 @@ public:
 
 	// Camera Shader Variables
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	virtual void ReleaseShaderVariables();
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void ReleaseShaderVariables();
 
 	// ViewPort and ScissorRect
 	void SetViewport(int xTopLeft, int yTopLeft, int nWidth, int nHeight, float fMinZ = 0.0f, float fMaxZ = 1.0f);
@@ -56,9 +56,9 @@ private:
 	XMFLOAT3 m_xmf3Position;
 	XMFLOAT3 m_xmf3Right;
 	XMFLOAT3 m_xmf3Up;
-	XMFLOAT3 m_xmf3Look; // Local
+	XMFLOAT3 m_xmf3Look; 
 
-	XMFLOAT3 m_xmf3LookAtWorld; // World
+	//XMFLOAT3 m_xmf3LookAtWorld; // World
 	//XMFLOAT3 m_xmf3Offset;
 	//float m_fTimeLag;
 

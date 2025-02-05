@@ -18,6 +18,10 @@ void CScene::InitializeObjects()
 {
 }
 
+void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+}
+
 void CScene::ReleaseObjects()
 {
 }
@@ -58,7 +62,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	return (true);
 }
 
-ComPtr<ID3D12RootSignature> CScene::CreateRootSignature(ID3D12Device* pd3dDevice)
+ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd3dDevice)
 {
 	ComPtr<ID3D12RootSignature> pd3dRootSignature = nullptr;
 
@@ -91,26 +95,31 @@ ComPtr<ID3D12RootSignature> CScene::CreateRootSignature(ID3D12Device* pd3dDevice
 	}
 
 	// Root Parameter 
-	std::vector<D3D12_ROOT_PARAMETER> pd3dRootParameters(6);
+	std::vector<D3D12_ROOT_PARAMETER> pd3dRootParameters(7);
 
 	pd3dRootParameters[ROOT_PARAMETER_OBJECT].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	pd3dRootParameters[ROOT_PARAMETER_OBJECT].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[ROOT_PARAMETER_OBJECT].Descriptor.ShaderRegister = 0; // b0 : cbGameObjectInfo
+	pd3dRootParameters[ROOT_PARAMETER_OBJECT].Descriptor.ShaderRegister = ROOT_PARAMETER_OBJECT; // b0 : cbGameObjectInfo
 	pd3dRootParameters[ROOT_PARAMETER_OBJECT].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+
+	pd3dRootParameters[ROOT_PARAMETER_MATERIAL].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[ROOT_PARAMETER_MATERIAL].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[ROOT_PARAMETER_MATERIAL].Descriptor.ShaderRegister = ROOT_PARAMETER_MATERIAL; // b1 : cbGameObjectInfo
+	pd3dRootParameters[ROOT_PARAMETER_MATERIAL].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
 	pd3dRootParameters[ROOT_PARAMETER_CAMERA].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	pd3dRootParameters[ROOT_PARAMETER_CAMERA].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[ROOT_PARAMETER_CAMERA].Descriptor.ShaderRegister = 1; // b1 : cbCamera
+	pd3dRootParameters[ROOT_PARAMETER_CAMERA].Descriptor.ShaderRegister = ROOT_PARAMETER_CAMERA; // b2 : cbCamera
 	pd3dRootParameters[ROOT_PARAMETER_CAMERA].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 		
 	pd3dRootParameters[ROOT_PARAMETER_FRAMEWORK].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	pd3dRootParameters[ROOT_PARAMETER_FRAMEWORK].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[ROOT_PARAMETER_FRAMEWORK].Descriptor.ShaderRegister = 2; // b2 : cbFramework
+	pd3dRootParameters[ROOT_PARAMETER_FRAMEWORK].Descriptor.ShaderRegister = ROOT_PARAMETER_FRAMEWORK; // b3 : cbFramework
 	pd3dRootParameters[ROOT_PARAMETER_FRAMEWORK].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	pd3dRootParameters[ROOT_PARAMETER_LIGHT].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	pd3dRootParameters[ROOT_PARAMETER_LIGHT].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[ROOT_PARAMETER_LIGHT].Descriptor.ShaderRegister = 3; // b3 : cbLight
+	pd3dRootParameters[ROOT_PARAMETER_LIGHT].Descriptor.ShaderRegister = ROOT_PARAMETER_LIGHT; // b4 : cbLight
 	pd3dRootParameters[ROOT_PARAMETER_LIGHT].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[ROOT_PARAMETER_TEXTURES].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -198,8 +207,26 @@ LoadingScene::~LoadingScene()
 {
 }
 
-void LoadingScene::InitializeObjects()
+void LoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	// Create Shader Variables
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	// Create Root Signature
+	if(!m_pd3dGraphicsRootSignature) m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
+	
+	// Create Objects
+	std::shared_ptr<CGameObject> pGameObject;
+
+	std::shared_ptr<CStandardShader> pStandardShader = std::make_shared<CStandardShader>();
+	std::shared_ptr<CCubeMesh> pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, 1.0f, 1.0f, 1.0f);
+
+	pGameObject = std::make_shared<CRotatingObject>();
+	pGameObject->SetMesh(pCubeMesh);
+	pGameObject->SetShader(pStandardShader);
+	pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 10.0f));
+
+
 }
 
 void LoadingScene::ReleaseObjects()

@@ -52,6 +52,51 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList)
 	// Set Shader Variables
 }
 
+void CGameObject::SetShader(std::shared_ptr<CShader> pShader, int nIndex)
+{
+	if (nIndex < m_pMaterials.size())
+	{
+		m_pMaterials[nIndex]->SetShader(pShader);
+	}
+	else if(m_pMaterials.empty()){
+		std::shared_ptr<CMaterial> pMaterial= std::make_shared<CMaterial>();
+		pMaterial->SetShader(pShader);
+		m_pMaterials.push_back(pMaterial);
+	}
+	else {
+		// Error
+		std::wstring DebugString = L"Error : GameObject::SetShader() - nIndex is out of range";
+		OutputDebugString(DebugString.c_str());
+		throw;
+	}
+}
+
+void CGameObject::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// Create Constant Buffer
+	UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255); //256ÀÇ ¹è¼ö
+	m_pd3dcbGameObject = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
+
+	// Map Constant Buffer
+	m_pd3dcbGameObject->Map(0, nullptr, (void**)&m_pcbMappedObject);
+	ZeroMemory(m_pcbMappedObject, sizeof(CB_GAMEOBJECT_INFO));
+}
+
+void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// Update Constant Buffer
+	m_pcbMappedObject->m_xmf4x4World = m_xmf4x4World;
+
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbGameObject->GetGPUVirtualAddress();
+	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_OBJECT, d3dGpuVirtualAddress);
+}
+
+void CGameObject::ReleaseShaderVariables()
+{
+	if (m_pd3dcbGameObject) m_pd3dcbGameObject->Unmap(0, nullptr);
+	m_pd3dcbGameObject.Reset();
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 
