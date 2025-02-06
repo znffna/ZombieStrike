@@ -42,7 +42,7 @@ public:
 
 	void AdvanceFrame();
 	void OMSetBackBuffer();
-	
+	void ClearRtvAndDsv();
 
 	void WaitForGpuComplete();
 	void MoveToNextFrame();
@@ -96,7 +96,7 @@ private:
 	// Scene
 	std::list<std::unique_ptr<CScene>>						m_Scenes;
 	std::unique_ptr<CScene>									m_pCurrentScene;
-	std::shared_ptr<CScene>									m_pLoadingScene;  // Loading Scene은 Stack이 비었을 경우에만 사용(이는, Render State인 Scene이 없을 때도 포함한다)
+	std::unique_ptr<CScene>									m_pLoadingScene;  // Loading Scene은 Stack이 비었을 경우에만 사용(이는, Render State인 Scene이 없을 때도 포함한다)
 	/*
 	Scene을 Stack으로 관리하여 가장 마지막 Scene에 대해서 Input 처리를 수행.
 	나머지 Scene에 대해서는 Scene의 State에 따라 Update / Render를 수행.

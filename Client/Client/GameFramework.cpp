@@ -42,36 +42,13 @@ CGameFramework::CGameFramework()
 
 CGameFramework::~CGameFramework()
 {
-	
-
-	// DirectX 12 자원들을 해제한다.
-	if (m_hFenceEvent != nullptr) {
-		CloseHandle(m_hFenceEvent);
-	}
-	if (m_pd3dFence)	m_pd3dFence.Reset();
-
-	if (m_pd3dCommandList)	m_pd3dCommandList.Reset();
-	if (m_pd3dCommandAllocator)	m_pd3dCommandAllocator.Reset();
-	if (m_pd3dCommandQueue)	m_pd3dCommandQueue.Reset();
-
-	if (m_pd3dDsvDescriptorHeap) m_pd3dDsvDescriptorHeap.Reset();
-	if (m_pd3dDepthStencilBuffer) m_pd3dDepthStencilBuffer.Reset();
-	if (m_pd3dRtvDescriptorHeap) m_pd3dRtvDescriptorHeap.Reset();
-	for (int i = 0; i < m_nSwapChainBuffers; ++i) {
-		if (m_ppd3dSwapChainBackBuffers[i])	m_ppd3dSwapChainBackBuffers[i].Reset();
-	}
-
-	if (m_pdxgiSwapChain)	m_pdxgiSwapChain.Reset();
-	if (m_pdxgiAdapter)	m_pdxgiAdapter.Reset();
-	if (m_pdxgiFactory)	m_pdxgiFactory.Reset();
-
-	if (m_pd3dDevice)	m_pd3dDevice.Reset();
 }
 
 bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 {
 	m_hInstance = hInstance;
 	m_hWnd = hMainWnd;
+
 
 	CreateDirect3DDevice();
 	CreateCommandQueueAndList();
@@ -89,6 +66,34 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 void CGameFramework::OnDestroy()
 {
+	WaitForGpuComplete();
+
+	ReleaseShaderVariables();
+
+	::CloseHandle(m_hFenceEvent);
+
+	// DirectX 12 자원들을 해제한다.
+	if (m_pd3dDepthStencilBuffer) m_pd3dDepthStencilBuffer.Reset();
+	if (m_pd3dDsvDescriptorHeap) m_pd3dDsvDescriptorHeap.Reset();
+
+	for (int i = 0; i < m_nSwapChainBuffers; ++i) {	if (m_ppd3dSwapChainBackBuffers[i])	m_ppd3dSwapChainBackBuffers[i].Reset();	}
+	if (m_pd3dRtvDescriptorHeap) m_pd3dRtvDescriptorHeap.Reset();
+
+	if (m_pd3dCommandList)	m_pd3dCommandList.Reset();
+	if (m_pd3dCommandAllocator)	m_pd3dCommandAllocator.Reset();
+	if (m_pd3dCommandQueue)	m_pd3dCommandQueue.Reset();
+
+	if (m_pd3dFence)	m_pd3dFence.Reset();
+
+	m_pdxgiSwapChain->SetFullscreenState(FALSE, NULL);
+	if (m_pdxgiSwapChain) m_pdxgiSwapChain.Reset();
+	if (m_pd3dDevice) m_pd3dDevice.Reset();
+	if (m_pdxgiFactory) m_pdxgiFactory.Reset();
+#ifdef _DEBUG
+	if (m_pd3dDebugController) m_pd3dDebugController.Reset();
+#endif
+
+	ReportLiveObjects();
 }
 
 void CGameFramework::CreateDirect3DDevice()
@@ -133,6 +138,7 @@ void CGameFramework::CreateDirect3DDevice()
 		// 비디오 메모리 확인
 		if (desc.DedicatedVideoMemory > maxVideoMemory) {
 			maxVideoMemory = desc.DedicatedVideoMemory;
+			m_pdxgiAdapter.Reset();
 			m_pdxgiAdapter = adapter;
 		}
 	}
@@ -194,6 +200,7 @@ void CGameFramework::CreateDirect3DDevice()
 	::gnCbvSrvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	::gnRtvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	::gnDsvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
 }
 
 void CGameFramework::CreateCommandQueueAndList()
@@ -351,11 +358,11 @@ void CGameFramework::BuildObjects()
 	// Framework 정보 생성 (Shader에 전달할 정보)
 	CreateShaderVariables();
 
-	// Scene 생성
-	std::unique_ptr<CScene> scene = std::make_unique<CLoadingScene>();
-	scene->InitializeObjects(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
+	// LoadingScene 생성
+	/*std::unique_ptr<CScene> pLoadingScene = std::make_unique<CLoadingScene>();
+	pLoadingScene->InitializeObjects(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
+	m_pLoadingScene = std::move(pLoadingScene);*/
 
-	m_Scenes.push_back(std::move(scene));
 
 	// Command List에 대한 명령들을 종료
 	m_pd3dCommandList->Close();
@@ -391,6 +398,8 @@ void CGameFramework::AdvanceFrame()
 
 	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
 	OMSetBackBuffer();
+	// Clear Back Buffer And Depth-Stencil Buffer 
+	ClearRtvAndDsv();
 
 	// Scene 업데이트
 	for (auto& scene : m_Scenes)
@@ -409,7 +418,18 @@ void CGameFramework::AdvanceFrame()
 	}
 	if (0 == bRenderScene) {
 		// 렌더링된 Scene이 없는 경우 Loading Scene을 출력
+		if(m_pLoadingScene)
+		{
+			// Scene Root Signature를 사용
+			m_pLoadingScene->PrepareRender(m_pd3dCommandList.Get());
 
+			// Framework 정보 업데이트
+			UpdateShaderVariables();
+
+			// Scene 정보 업데이트 및 렌더링
+			m_pLoadingScene->FixedUpdate(m_GameTimer.DeltaTime());
+			m_pLoadingScene->Render(m_pd3dCommandList.Get(), nullptr);
+		}
 	}
 
 	// Command List에 대한 명령들을 종료
@@ -465,7 +485,16 @@ void CGameFramework::OMSetBackBuffer()
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
+}
 
+void CGameFramework::ClearRtvAndDsv()
+{
+	// Get Descriptor Handle
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	d3dRtvCPUDescriptorHandle.ptr += m_nSwapChainBufferIndex * ::gnRtvDescriptorIncrementSize;
+	
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	
 	// Clear Back Buffer
 	m_pd3dCommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, Colors::SteelBlue, 0, nullptr);
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);

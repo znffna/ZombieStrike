@@ -33,7 +33,6 @@ void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	// Create Shader Variables
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-
 	// Create Root Signature
 	if (!pd3dRootSignature) m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 	else m_pd3dGraphicsRootSignature = pd3dRootSignature;
