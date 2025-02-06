@@ -5,8 +5,17 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "Mesh.h"
 
-CMesh::CMesh()
+CMesh::CMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	// 메쉬의 이름 초기화
+	m_strName = "Mesh";
+
+	// 포지션 버퍼 초기화
+	ZeroMemory(&m_d3dPositionBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+
+	m_nOffset = 0;
+	m_nSlot = 0;
+	m_nStride = sizeof(XMFLOAT3);
 }
 
 CMesh::~CMesh()
@@ -31,7 +40,21 @@ void CMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pConte
 
 void CMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet)
 {
+	int nSubMeshes = m_ppnSubSetIndices.size();
 	// Render Process
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 1, &m_d3dPositionBufferView);
+
+	if ((nSubMeshes > 0) && (nSubSet < nSubMeshes))
+	{
+		pd3dCommandList->IASetIndexBuffer(&(m_pd3dSubSetIndexBufferViews[nSubSet]));
+		pd3dCommandList->DrawIndexedInstanced(m_ppnSubSetIndices[nSubSet].size(), 1, 0, 0, 0);
+	}
+	else
+	{
+		pd3dCommandList->DrawInstanced(m_nVertices, 1, m_nOffset, 0);
+	}
 }
 
 void CMesh::OnPostRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
@@ -50,8 +73,18 @@ void CMesh::SetSubMeshCount(int nSubMeshes)
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-CStandardMesh::CStandardMesh()
+CStandardMesh::CStandardMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+	: CMesh(pd3dDevice, pd3dCommandList)
 {
+	// 색상 정보 초기화
+	m_xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+
+	// 버텍스 정보 버퍼 초기화
+	ZeroMemory(&m_d3dTextureCoord0BufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+	ZeroMemory(&m_d3dTextureCoord1BufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+	ZeroMemory(&m_d3dNormalBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+	ZeroMemory(&m_d3dTangentBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+	ZeroMemory(&m_d3dBiTangentBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
 }
 
 CStandardMesh::~CStandardMesh()
@@ -73,7 +106,26 @@ void CStandardMesh::ReleaseUploadBuffers()
 void CStandardMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
 {
 	CMesh::OnPreRender(pd3dCommandList, pContext);
+}
 
+void CStandardMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet)
+{
+	int nSubMeshes = m_ppnSubSetIndices.size();
+	// Render Process
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[5] = { m_d3dPositionBufferView, m_d3dTextureCoord0BufferView, m_d3dNormalBufferView, m_d3dTangentBufferView, m_d3dBiTangentBufferView };
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 5, pVertexBufferViews);
+
+	if ((nSubMeshes > 0) && (nSubSet < nSubMeshes))
+	{
+		pd3dCommandList->IASetIndexBuffer(&(m_pd3dSubSetIndexBufferViews[nSubSet]));
+		pd3dCommandList->DrawIndexedInstanced(m_ppnSubSetIndices[nSubSet].size(), 1, 0, 0, 0);
+	}
+	else
+	{
+		pd3dCommandList->DrawInstanced(m_nVertices, 1, m_nOffset, 0);
+	}
 }
 
 
@@ -82,6 +134,7 @@ void CStandardMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void
 //
 
 CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fWidth, float fHeight, float fDepth)
+	: CStandardMesh(pd3dDevice, pd3dCommandList)
 {
 	static int nCubeIndex = 0;
 	std::string strName = "Cube_" + std::to_string(nCubeIndex++);

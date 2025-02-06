@@ -345,11 +345,27 @@ void CGameFramework::CreateDepthStencilView()
 
 void CGameFramework::BuildObjects()
 {
+	m_pd3dCommandAllocator->Reset();
+	m_pd3dCommandList->Reset(m_pd3dCommandAllocator.Get(), nullptr);
+
 	// Framework 정보 생성 (Shader에 전달할 정보)
 	CreateShaderVariables();
 
 	// Scene 생성
+	std::unique_ptr<CScene> scene = std::make_unique<CLoadingScene>();
+	scene->InitializeObjects(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
 
+	m_Scenes.push_back(std::move(scene));
+
+	// Command List에 대한 명령들을 종료
+	m_pd3dCommandList->Close();
+
+	// Command Queue에 Command List를 추가
+	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList.Get() };
+	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+
+	// Command Queue의 명령들이 모두 실행될 때까지 대기
+	WaitForGpuComplete();
 }
 
 void CGameFramework::AdvanceFrame()
@@ -359,7 +375,7 @@ void CGameFramework::AdvanceFrame()
 
 	// Scene 업데이트
 
-	bool bRenderScene = false;
+	int bRenderScene = 0;
 
 	// PreRendering [ Swap Chain Back Buffer를 렌더 타겟으로 사용하기 전 렌더링 단계 ]
 	// Shadow Map, Reflection Map, Refraction Map, Deferred Shading, G-buffer 등
@@ -373,58 +389,38 @@ void CGameFramework::AdvanceFrame()
 	// Command List 재사용
 	m_pd3dCommandList->Reset(m_pd3dCommandAllocator.Get(), nullptr);
 
-	// Framework 정보 업데이트
-	UpdateShaderVariables();
+	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
+	OMSetBackBuffer();
 
-	// Command List에 대한 명령들을 기록
+	// Scene 업데이트
 	for (auto& scene : m_Scenes)
 	{
 		if (scene->GetSceneState() == SCENE_STATE_RUNNING)
 		{
+			scene->PrepareRender(m_pd3dCommandList.Get());
+
+			// Framework 정보 업데이트
+			UpdateShaderVariables();
+
+			// Scene 정보 업데이트 및 렌더링
 			scene->FixedUpdate(m_GameTimer.DeltaTime());
-			bRenderScene = scene->Render(m_pd3dCommandList.Get(), nullptr);
+			bRenderScene += scene->Render(m_pd3dCommandList.Get(), nullptr)? 1 : 0;
 		}
 	}
+	if (0 == bRenderScene) {
+		// 렌더링된 Scene이 없는 경우 Loading Scene을 출력
 
-	// Rendering [ G-buffer를 사용하여 합치는 단계 ]
+	}
 
-
-	// PostRendering [ 후처리 프로세싱 단계 ]
-	// Bloom, Depth of Field, Motion Blur 등
-
-	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
+	// Command List에 대한 명령들을 종료
 	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
 	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
 	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 	d3dResourceBarrier.Transition.pResource = m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex].Get();
-	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	d3dRtvCPUDescriptorHandle.ptr += m_nSwapChainBufferIndex * ::gnRtvDescriptorIncrementSize;
-
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-
-	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
-
-	// 실제 출력 Window의 크기를 Viewport와 Scissor Rect에 설정
-	m_pd3dCommandList->RSSetViewports(1, &m_d3dViewport);
-	m_pd3dCommandList->RSSetScissorRects(1, &m_d3dScissorRect);
-
-	// Clear Back Buffer
-	m_pd3dCommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, Colors::SteelBlue, 0, nullptr);
-	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
-	// Scene Rendering
-
-
-
-	// Command List에 대한 명령들을 종료
 	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
 
 	m_pd3dCommandList->Close();
@@ -448,6 +444,31 @@ void CGameFramework::AdvanceFrame()
 	std::wstring fps = L"FPS: " + std::to_wstring(m_GameTimer.calculateAverageFPS());
 	std::wstring text = time + L" " + fps;
 	::SetWindowText(m_hWnd, text.c_str());
+}
+
+void CGameFramework::OMSetBackBuffer()
+{
+	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
+	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
+	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
+	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	d3dResourceBarrier.Transition.pResource = m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex].Get();
+	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	d3dRtvCPUDescriptorHandle.ptr += m_nSwapChainBufferIndex * ::gnRtvDescriptorIncrementSize;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+
+	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
+
+	// Clear Back Buffer
+	m_pd3dCommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, Colors::SteelBlue, 0, nullptr);
+	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 }
 
 void CGameFramework::WaitForGpuComplete()

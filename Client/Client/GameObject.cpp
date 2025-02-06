@@ -5,6 +5,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "GameObject.h"
+#include "Shader.h"
 
 CGameObject::CGameObject()
 {
@@ -29,8 +30,20 @@ CGameObject::~CGameObject()
 {
 }
 
+void CGameObject::UpdateLocalMatrix()
+{
+	XMMATRIX xmmtxScale = XMMatrixScaling(m_xmf3Scale.x, m_xmf3Scale.y, m_xmf3Scale.z);
+	XMMATRIX xmmtxRotation = XMMatrixRotationRollPitchYaw(XMConvertToRadians(m_xmf3Rotation.x), XMConvertToRadians(m_xmf3Rotation.y), XMConvertToRadians(m_xmf3Rotation.z));
+	XMMATRIX xmmtxTranslation = XMMatrixTranslation(m_xmf3Position.x, m_xmf3Position.y, m_xmf3Position.z);
+	
+	XMStoreFloat4x4(&m_xmf4x4Local, xmmtxScale * xmmtxRotation * xmmtxTranslation);
+}
+
 void CGameObject::UpdateWorldMatrix(DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
 {
+	// Update Local Matrix
+	UpdateLocalMatrix();
+
 	// Update Object World Matrix
 	if (xmf4x4ParentMatrix)
 	{
@@ -47,9 +60,29 @@ void CGameObject::UpdateWorldMatrix(DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
 
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	if (false == m_bActive) return;
 	// Render Object
 
 	// Set Shader Variables
+	UpdateShaderVariables(pd3dCommandList); // GameObject Matrix Update
+
+	for (int i = 0; i < m_pMaterials.size(); ++i)
+	{
+		std::shared_ptr<CMaterial> pMaterial = m_pMaterials[i];
+		if (pMaterial)
+		{
+			if (pMaterial->m_pShader) pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0); // Render(pd3dCommandList, pCamera);
+			pMaterial->UpdateShaderVariables(pd3dCommandList);
+		}
+		// Render Mesh
+		if (m_pMesh) m_pMesh->Render(pd3dCommandList, i);
+	}
+
+	// Render Child Object
+	for (auto& pChild : m_pChilds)
+	{
+		pChild->Render(pd3dCommandList);
+	}
 }
 
 void CGameObject::SetShader(std::shared_ptr<CShader> pShader, int nIndex)

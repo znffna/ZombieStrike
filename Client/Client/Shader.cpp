@@ -46,7 +46,7 @@ void CShader::CreateGraphicPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSig
 	m_d3dPipelineStateDesc.SampleDesc = GetSampleDesc(nPipelineState);
 	m_d3dPipelineStateDesc.Flags = GetPipelineStateFlags(nPipelineState);
 
-	HRESULT hResult = pd3dDevice->CreateGraphicsPipelineState(&m_d3dPipelineStateDesc, __uuidof(ID3D12PipelineState), (void**)(m_pd3dPipelineStates[nPipelineState]).GetAddressOf());
+	HRESULT hResult = pd3dDevice->CreateGraphicsPipelineState(&m_d3dPipelineStateDesc, IID_PPV_ARGS(m_pd3dPipelineStates[nPipelineState].GetAddressOf()));
 
 	// Output Debug Message
 	if (hResult == S_OK)

@@ -53,10 +53,10 @@ private:
 	float m_fFarZ = 500.0f;
 
 	// Camera Inner Variables
-	XMFLOAT3 m_xmf3Position;
-	XMFLOAT3 m_xmf3Right;
-	XMFLOAT3 m_xmf3Up;
-	XMFLOAT3 m_xmf3Look; 
+	XMFLOAT3 m_xmf3Position = XMFLOAT3(0.0f, 0.0f, -10.0f);
+	XMFLOAT3 m_xmf3Right = XMFLOAT3(1.0f, 0.0f, 0.0f);
+	XMFLOAT3 m_xmf3Up = XMFLOAT3(0.0f, 1.0f, 0.0f);
+	XMFLOAT3 m_xmf3Look = XMFLOAT3(0.0f, 0.0f, 1.0f);
 
 	//XMFLOAT3 m_xmf3LookAtWorld; // World
 	//XMFLOAT3 m_xmf3Offset;

@@ -8,6 +8,7 @@
 
 CCamera::CCamera()
 {
+
 }
 
 CCamera::~CCamera()

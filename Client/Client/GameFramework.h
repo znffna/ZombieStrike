@@ -41,6 +41,8 @@ public:
 	void BuildObjects();
 
 	void AdvanceFrame();
+	void OMSetBackBuffer();
+	
 
 	void WaitForGpuComplete();
 	void MoveToNextFrame();

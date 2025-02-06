@@ -13,7 +13,7 @@
 class CMesh
 {
 public:
-	CMesh();
+	CMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	~CMesh();
 
 	// setter, getter
@@ -72,12 +72,14 @@ protected:
 class CStandardMesh : public CMesh
 {
 public:
-	CStandardMesh();
+	CStandardMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual ~CStandardMesh();
 
 	virtual void ReleaseUploadBuffers() override;
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext) override;
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet) override;
 
 protected:
 	// 버텍스 정보 버퍼

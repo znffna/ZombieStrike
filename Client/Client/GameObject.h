@@ -101,13 +101,13 @@ private:
 	DirectX::XMFLOAT4 m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // Diffuse Color
 	DirectX::XMFLOAT4 m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // Specular Color
 	DirectX::XMFLOAT4 m_xmf4Emissive = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // Emissive Color
-
-	std::shared_ptr<CTexture> m_pTexture; // Texture
-	std::shared_ptr<CShader> m_pShader; // Shader
-
+	
 	// Shader Variables
 	ComPtr<ID3D12Resource> m_pd3dcbMaterial;
 	CB_MATERIAL_INFO* m_pcbMappedMaterial = nullptr;
+public:
+	std::shared_ptr<CTexture> m_pTexture; // Texture
+	std::shared_ptr<CShader> m_pShader; // Shader
 };
 
 class CGameObject
@@ -145,6 +145,10 @@ public:
 	// Object World Matrix
 	DirectX::XMFLOAT4X4 GetWorldMatrix() { return m_xmf4x4World; }
 	void SetWorldMatrix(DirectX::XMFLOAT4X4 xmf4x4World) { m_xmf4x4World = xmf4x4World; }
+
+	// Obecjt Local Matrix
+	void UpdateLocalMatrix();
+	DirectX::XMFLOAT4X4 GetLocalMatrix() { UpdateLocalMatrix(); return m_xmf4x4Local; }
 
 	// Update Object World Matrix
 	void UpdateWorldMatrix(DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
@@ -197,11 +201,14 @@ private:
 protected:
 	// Transform
 	DirectX::XMFLOAT3 m_xmf3Position; // 위치
-	DirectX::XMFLOAT3 m_xmf3Rotation; // 회전
+	DirectX::XMFLOAT3 m_xmf3Rotation; // 회전[Euler Angle]
 	DirectX::XMFLOAT3 m_xmf3Scale; // 크기
 
 	DirectX::XMFLOAT4X4 m_xmf4x4Local; // Object Local Matrix
 	DirectX::XMFLOAT4X4 m_xmf4x4World; // Object World Matrix
+
+	// Child
+	std::vector<std::shared_ptr<CGameObject>> m_pChilds; // Child Object
 
 	// Shader Variables
 	ComPtr<ID3D12Resource> m_pd3dcbGameObject;
@@ -227,7 +234,7 @@ public:
 	void SetRotationAxis(DirectX::XMFLOAT3 xmf3RotationAxis) { m_xmf3RotationAxis = xmf3RotationAxis; }
 
 private:
-	float m_fRotationSpeed; // 초당 회전 속도
-	XMFLOAT3 m_xmf3RotationAxis; // 회전 축
+	float m_fRotationSpeed = 0.0f; // 초당 회전 속도
+	XMFLOAT3 m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f); // 회전 축
 
 };

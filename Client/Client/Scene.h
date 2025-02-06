@@ -10,6 +10,36 @@
 #include "Camera.h"
 #include "Shader.h"
 
+#define MAX_LIGHTS 16
+
+#define POINT_LIGHT			1
+#define SPOT_LIGHT			2
+#define DIRECTIONAL_LIGHT	3
+
+struct Light
+{
+	XMFLOAT4				m_xmf4Ambient;
+	XMFLOAT4				m_xmf4Diffuse;
+	XMFLOAT4				m_xmf4Specular;
+	XMFLOAT3				m_xmf3Position;
+	float 					m_fFalloff;
+	XMFLOAT3				m_xmf3Direction;
+	float 					m_fTheta; //cos(m_fTheta)
+	XMFLOAT3				m_xmf3Attenuation;
+	float					m_fPhi; //cos(m_fPhi)
+	bool					m_bEnable;
+	int						m_nType;
+	float					m_fRange;
+	float					padding;
+};
+
+struct CB_LIGHT_INFO
+{
+	Light					m_pLights[MAX_LIGHTS];
+	XMFLOAT4				m_xmf4GlobalAmbient;
+	int						m_nLights;
+};
+
 enum SCENE_STATE
 {
 	SCENE_STATE_NONE = 0x00, // 초기화되지 않은 상태 [ None ]
@@ -26,9 +56,11 @@ public:
 	virtual ~CScene();
 
 	// Scene Initialization / Release
-	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
 	virtual void ReleaseObjects();
 	virtual void ReleaseUploadBuffers();
+
+	void BuildDefaultLightsAndMaterials();
 
 	// Scene Management
 	bool CheckWorkRendering() { return (m_SceneState == SCENE_STATE_RUNNING) || (m_SceneState == SCENE_STATE_PAUSING); }
@@ -38,6 +70,7 @@ public:
 
 	// Scene Method
 	virtual void FixedUpdate(float deltaTime);
+	void PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 
 	// Shader method
@@ -54,19 +87,32 @@ protected:
 	// Shader Variables
 	ComPtr<ID3D12RootSignature> m_pd3dGraphicsRootSignature;
 	ComPtr<ID3D12RootSignature> m_pd3dComputeRootSignature;
+
+	// Light
+	XMFLOAT4 m_xmf4GlobalAmbient;
+
+	std::array<Light, MAX_LIGHTS> m_pLights;
+	ComPtr<ID3D12Resource> m_pd3dcbLights;
+	CB_LIGHT_INFO* m_pcbMappedLights = nullptr;
+
+	// GameObjects
+	std::vector<std::shared_ptr<CGameObject>> m_ppObjects;
+
+	// Camera
+	std::shared_ptr<CCamera> m_pCamera;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-class LoadingScene : public CScene
+class CLoadingScene : public CScene
 {
 public:
-	LoadingScene();
-	virtual ~LoadingScene();
+	CLoadingScene();
+	virtual ~CLoadingScene();
 
 	// Scene Initialization / Release
-	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
+	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
 	virtual void ReleaseObjects() override;
 	virtual void ReleaseUploadBuffers() override;
 
