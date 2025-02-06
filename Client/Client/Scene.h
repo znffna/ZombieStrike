@@ -81,6 +81,10 @@ public:
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void ReleaseShaderVariables();
 
+	// Input Method
+	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
+	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
+
 protected:
 	SCENE_STATE m_SceneState = SCENE_STATE_NONE; // Scene State
 
@@ -89,7 +93,7 @@ protected:
 	ComPtr<ID3D12RootSignature> m_pd3dComputeRootSignature;
 
 	// Light
-	XMFLOAT4 m_xmf4GlobalAmbient;
+	XMFLOAT4 m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
 
 	std::array<Light, MAX_LIGHTS> m_pLights;
 	ComPtr<ID3D12Resource> m_pd3dcbLights;
@@ -115,6 +119,9 @@ public:
 	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
 	virtual void ReleaseObjects() override;
 	virtual void ReleaseUploadBuffers() override;
+
+	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
+
 
 	//virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr) override;
 

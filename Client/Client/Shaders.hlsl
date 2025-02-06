@@ -11,6 +11,9 @@ struct MATERIAL
     float4 m_cEmissive;
 };
 
+#define _USE_OBJECT_MATERIAL_CBV
+
+#ifdef _USE_OBJECT_MATERIAL_CBV
 cbuffer cbGameObjectInfo : register(b0)
 {
     matrix gmtxGameObject : packoffset(c0);
@@ -21,6 +24,14 @@ cbuffer cbMaterialInfo : register(b1)
     MATERIAL gMaterial : packoffset(c0);
     uint gnTexturesMask : packoffset(c4.x);
 };
+#else
+cbuffer cbGameObjectInfo : register(b0)
+{
+    matrix gmtxGameObject : packoffset(c0);
+    MATERIAL gMaterial : packoffset(c4);
+    uint gnTexturesMask : packoffset(c8.x);
+};
+#endif
 
 cbuffer cbCameraInfo : register(b2)
 {

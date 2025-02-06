@@ -8,6 +8,7 @@
 
 CScene::CScene()
 {
+	ZeroMemory(m_pLights.data(), sizeof(Light) * MAX_LIGHTS);
 }
 
 CScene::~CScene()
@@ -289,9 +290,9 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	// Root Signature Description
 	D3D12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
 	::ZeroMemory(&d3dRootSignatureDesc, sizeof(D3D12_ROOT_SIGNATURE_DESC));
-	d3dRootSignatureDesc.NumParameters = pd3dRootParameters.size();
+	d3dRootSignatureDesc.NumParameters = (UINT)pd3dRootParameters.size();
 	d3dRootSignatureDesc.pParameters = pd3dRootParameters.data();
-	d3dRootSignatureDesc.NumStaticSamplers = pd3dStaticSamplerDescs.size();
+	d3dRootSignatureDesc.NumStaticSamplers = (UINT)pd3dStaticSamplerDescs.size();
 	d3dRootSignatureDesc.pStaticSamplers = pd3dStaticSamplerDescs.data();
 	d3dRootSignatureDesc.Flags = d3dRootSignatureFlags;
 
@@ -327,7 +328,7 @@ void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 	// Light 
 	memcpy(&m_pcbMappedLights->m_pLights, m_pLights.data(), sizeof(Light) * m_pLights.size());
 	m_pcbMappedLights->m_xmf4GlobalAmbient = m_xmf4GlobalAmbient;
-	m_pcbMappedLights->m_nLights = m_pLights.size();
+	m_pcbMappedLights->m_nLights = (UINT)m_pLights.size();
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_LIGHT, d3dGpuVirtualAddress);
@@ -378,7 +379,7 @@ void CLoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	pGameObject->SetMesh(pCubeMesh);
 	pGameObject->AddMaterial(pMaterial);
 	pMaterial->SetShader(pStandardShader);
-	pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 10.0f));
+	pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f));
 	pGameObject->SetRotationSpeed(50.0f);
 	pGameObject->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -401,6 +402,65 @@ void CLoadingScene::ReleaseObjects()
 
 void CLoadingScene::ReleaseUploadBuffers()
 {
+}
+
+void CLoadingScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)
+	{
+	case WM_KEYDOWN:
+	{
+		switch (wParam)
+		{
+			case VK_LEFT:
+			{
+				m_pCamera->Move(-1.0f,0.0f,0.0f);
+				m_pCamera->RegenerateViewMatrix();
+				break;
+			}
+			case VK_RIGHT:
+			{
+				m_pCamera->Move(1.0f, 0.0f, 0.0f);
+				m_pCamera->RegenerateViewMatrix();
+				break;
+			}
+			case VK_UP:
+			{
+				m_pCamera->Move(0.0f, 0.0f, 1.0f);
+				m_pCamera->RegenerateViewMatrix();
+				break;
+			}
+			case VK_DOWN:
+			{
+				m_pCamera->Move(0.0f, 0.0f, -1.0f);
+				m_pCamera->RegenerateViewMatrix();
+				break;
+			}
+
+			case 'W': case 'w':
+			{
+				m_ppObjects[0]->Move(0.0f, 1.0f, 0.0f);
+				break;
+			}
+			case 'S': case 's':
+			{
+				m_ppObjects[0]->Move(0.0f, -1.0f, 0.0f);
+				break;
+			}
+			case 'A': case 'a':
+			{
+				m_ppObjects[0]->Move(-1.0f, 0.0f, 0.0f);
+				break;
+			}
+			case 'D': case 'd':
+			{
+				m_ppObjects[0]->Move(1.0f, 0.0f, 0.0f);
+				break;
+			}
+		}
+		break;
+		}
+	}
 }
 
 

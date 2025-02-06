@@ -359,9 +359,9 @@ void CGameFramework::BuildObjects()
 	CreateShaderVariables();
 
 	// LoadingScene 생성
-	/*std::unique_ptr<CScene> pLoadingScene = std::make_unique<CLoadingScene>();
+	std::unique_ptr<CScene> pLoadingScene = std::make_unique<CLoadingScene>();
 	pLoadingScene->InitializeObjects(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
-	m_pLoadingScene = std::move(pLoadingScene);*/
+	m_pLoadingScene = std::move(pLoadingScene);
 
 
 	// Command List에 대한 명령들을 종료
@@ -551,5 +551,37 @@ void CGameFramework::ReleaseShaderVariables()
 	{
 		m_pd3dcbFrameworkInfo->Unmap(0, NULL);
 		m_pd3dcbFrameworkInfo.Reset();
+	}
+}
+
+void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	bool bProcessed = false;
+	// 마우스 메시지 처리
+	for (auto& scene : m_Scenes)
+	{
+		scene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+		bProcessed = true;
+	}
+
+	if (m_Scenes.empty() || bProcessed) {
+		m_pLoadingScene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+		return;
+	}
+
+}
+
+void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	bool bProcessed = false;
+	// 키보드 메시지 처리
+	for (auto& scene : m_Scenes)
+	{
+		scene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+	}
+
+	if (m_Scenes.empty() || bProcessed) {
+		m_pLoadingScene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+		return;
 	}
 }

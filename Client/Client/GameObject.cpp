@@ -118,7 +118,17 @@ void CGameObject::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphics
 void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	// Update Constant Buffer
-	m_pcbMappedObject->m_xmf4x4World = m_xmf4x4World;
+	//m_pcbMappedObject->m_xmf4x4World = m_xmf4x4World; // DirectX는 행렬을 전치해서 셰이더에 적용해야 한다.
+	XMStoreFloat4x4(&m_pcbMappedObject->m_xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+
+#ifdef _DEBUG
+	// Debug Output
+	std::wstring DebugString = L"GameObject [" + std::to_wstring(m_nObjectID) + L"] - position ("
+		+ std::to_wstring(m_xmf4x4World._41) + L", "
+		+ std::to_wstring(m_xmf4x4World._42) + L", "
+		+ std::to_wstring(m_xmf4x4World._43) + L")\n";
+	OutputDebugString(DebugString.c_str());
+#endif
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbGameObject->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_OBJECT, d3dGpuVirtualAddress);

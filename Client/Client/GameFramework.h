@@ -51,6 +51,9 @@ public:
 	void UpdateShaderVariables();
 	void ReleaseShaderVariables();
 
+	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+
 private:
 	HINSTANCE m_hInstance;
 	HWND m_hWnd;

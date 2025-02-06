@@ -41,6 +41,14 @@ public:
 
 	void GenerateProjectionMatrix(float aspectRatio, float fov, float nearZ, float farZ);
 
+	// Camera Position
+	void SetPosition(float x, float y, float z) { m_xmf3Position = XMFLOAT3(x, y, z); };
+	void SetPosition(XMFLOAT3 xmf3Position) { m_xmf3Position = xmf3Position; };
+
+	XMFLOAT3 GetPosition() { return m_xmf3Position; };
+	void Move(XMFLOAT3 xmf3Shift) { m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift); };
+	void Move(float x, float y, float z) { Move(XMFLOAT3(x, y, z)); };
+
 private:
 	// ViewPort and ScissorRect
 	D3D12_VIEWPORT m_d3dViewport;
