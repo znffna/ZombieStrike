@@ -13,8 +13,9 @@ struct CB_CAMERA_INFO
 	XMFLOAT4X4				m_xmf4x4View;
 	XMFLOAT4X4				m_xmf4x4InverseView;
 	XMFLOAT4X4				m_xmf4x4Projection;
-	XMFLOAT3				m_xmf3Position;
-	float					m_fPadding;
+	XMFLOAT4X4				m_xmf4x4InvProjection;
+	//XMFLOAT3				m_xmf3Position;
+	//float					m_fPadding;
 };
 
 class CCamera
