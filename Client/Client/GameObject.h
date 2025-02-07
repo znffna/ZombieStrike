@@ -56,6 +56,7 @@ public:
 	// Shader Variables
 	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 	{
+#ifdef _USE_OBJECT_MATERIAL_CBV
 		// Create Constant Buffer
 		UINT ncbElementBytes = ((sizeof(CB_MATERIAL_INFO) + 255) & ~255); //256ÀÇ ¹è¼ö
 		m_pd3dcbMaterial = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
@@ -63,10 +64,12 @@ public:
 		// Map Constant Buffer
 		m_pd3dcbMaterial->Map(0, nullptr, (void**)&m_pcbMappedMaterial);
 		ZeroMemory(m_pcbMappedMaterial, sizeof(CB_MATERIAL_INFO));
+#endif // _USE_OBJECT_MATERIAL_CBV
 	}
 
 	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 	{
+#ifdef _USE_OBJECT_MATERIAL_CBV
 		m_pcbMappedMaterial->m_xmf4Ambient = m_xmf4Ambient;
 		m_pcbMappedMaterial->m_xmf4Diffuse = m_xmf4Diffuse;
 		m_pcbMappedMaterial->m_xmf4Specular = m_xmf4Specular;
@@ -85,12 +88,26 @@ public:
 
 		D3D12_GPU_VIRTUAL_ADDRESS GPUAddress = m_pd3dcbMaterial->GetGPUVirtualAddress();
 		pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_MATERIAL, GPUAddress);
+#else
+		pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_MATERIAL, 4, &m_xmf4Ambient, 0);
+		pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_MATERIAL, 4, &m_xmf4Diffuse, 4);
+		pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_MATERIAL, 4, &m_xmf4Specular, 8);
+		pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_MATERIAL, 4, &m_xmf4Emissive, 12);
+
+		pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_MATERIAL, 1, &m_nTexturesMask, 16);
+
+		if (m_pTexture){
+			//m_pTexture->UpdateShaderVariables(pd3dCommandList);
+		}
+#endif // _USE_OBJECT_MATERIAL_CBV
 	}
 
 	void ReleaseShaderVariables()
 	{
+#ifdef _USE_OBJECT_MATERIAL_CBV
 		if (m_pd3dcbMaterial) m_pd3dcbMaterial->Unmap(0, nullptr);
 		m_pd3dcbMaterial.Reset();
+#endif // _USE_OBJECT_MATERIAL_CBV
 	}
 
 
@@ -101,6 +118,9 @@ private:
 	DirectX::XMFLOAT4 m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // Diffuse Color
 	DirectX::XMFLOAT4 m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // Specular Color
 	DirectX::XMFLOAT4 m_xmf4Emissive = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // Emissive Color
+
+	UINT m_nTexturesMask = 0x00; // Texture Mask
+
 	
 	// Shader Variables
 	ComPtr<ID3D12Resource> m_pd3dcbMaterial;

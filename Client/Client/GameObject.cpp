@@ -106,6 +106,7 @@ void CGameObject::SetShader(std::shared_ptr<CShader> pShader, int nIndex)
 
 void CGameObject::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+#ifdef _USE_OBJECT_MATERIAL_CBV
 	// Create Constant Buffer
 	UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255); //256의 배수
 	m_pd3dcbGameObject = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
@@ -113,10 +114,12 @@ void CGameObject::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphics
 	// Map Constant Buffer
 	m_pd3dcbGameObject->Map(0, nullptr, (void**)&m_pcbMappedObject);
 	ZeroMemory(m_pcbMappedObject, sizeof(CB_GAMEOBJECT_INFO));
+#endif // _USE_OBJECT_MATERIAL_CBV
 }
 
 void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
+#ifdef _USE_OBJECT_MATERIAL_CBV
 	// Update Constant Buffer
 	//m_pcbMappedObject->m_xmf4x4World = m_xmf4x4World; // DirectX는 행렬을 전치해서 셰이더에 적용해야 한다.
 	XMStoreFloat4x4(&m_pcbMappedObject->m_xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
@@ -128,16 +131,25 @@ void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandLi
 		+ std::to_wstring(m_xmf4x4World._42) + L", "
 		+ std::to_wstring(m_xmf4x4World._43) + L")\n";
 	OutputDebugString(DebugString.c_str());
-#endif
+#endif // _DEBUG
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbGameObject->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_OBJECT, d3dGpuVirtualAddress);
+#else 
+	// Update Shader Variables
+	XMFLOAT4X4 xmf4x4World;
+	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 16, &xmf4x4World, 0);
+#endif // _USE_OBJECT_MATERIAL_CBV
 }
 
 void CGameObject::ReleaseShaderVariables()
 {
+#ifdef _USE_OBJECT_MATERIAL_CBV
 	if (m_pd3dcbGameObject) m_pd3dcbGameObject->Unmap(0, nullptr);
 	m_pd3dcbGameObject.Reset();
+#endif // _USE_OBJECT_MATERIAL_CBV
 }
 
 ///////////////////////////////////////////////////////////////////////////////
