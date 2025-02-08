@@ -40,7 +40,7 @@ void CMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pConte
 
 void CMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet)
 {
-	int nSubMeshes = m_ppnSubSetIndices.size();
+	int nSubMeshes = (int)m_ppnSubSetIndices.size();
 	// Render Process
 	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
 
@@ -49,7 +49,7 @@ void CMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet)
 	if ((nSubMeshes > 0) && (nSubSet < nSubMeshes))
 	{
 		pd3dCommandList->IASetIndexBuffer(&(m_pd3dSubSetIndexBufferViews[nSubSet]));
-		pd3dCommandList->DrawIndexedInstanced(m_ppnSubSetIndices[nSubSet].size(), 1, 0, 0, 0);
+		pd3dCommandList->DrawIndexedInstanced((UINT)m_ppnSubSetIndices[nSubSet].size(), 1, 0, 0, 0);
 	}
 	else
 	{
@@ -110,7 +110,7 @@ void CStandardMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void
 
 void CStandardMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet)
 {
-	int nSubMeshes = m_ppnSubSetIndices.size();
+	int nSubMeshes = (int)m_ppnSubSetIndices.size();
 	// Render Process
 	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
 
@@ -120,7 +120,7 @@ void CStandardMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubS
 	if ((nSubMeshes > 0) && (nSubSet < nSubMeshes))
 	{
 		pd3dCommandList->IASetIndexBuffer(&(m_pd3dSubSetIndexBufferViews[nSubSet]));
-		pd3dCommandList->DrawIndexedInstanced(m_ppnSubSetIndices[nSubSet].size(), 1, 0, 0, 0);
+		pd3dCommandList->DrawIndexedInstanced((UINT)m_ppnSubSetIndices[nSubSet].size(), 1, 0, 0, 0);
 	}
 	else
 	{

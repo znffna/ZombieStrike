@@ -185,7 +185,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// Render GameObjects [Through Batch Shader]
 	for (auto& pObject : m_ppObjects)
 	{
-		pObject->Render(pd3dCommandList);
+		pObject->Render(pd3dCommandList, pCamera);
 	}
 
 	return (true);

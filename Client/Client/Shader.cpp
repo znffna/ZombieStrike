@@ -38,7 +38,7 @@ void CShader::CreateGraphicPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSig
 	m_d3dPipelineStateDesc.SampleMask = UINT_MAX;
 	m_d3dPipelineStateDesc.PrimitiveTopologyType = GetPrimitiveTopologyType(nPipelineState);
 	m_d3dPipelineStateDesc.NumRenderTargets = GetRenderTargetCount(nPipelineState);
-	for (int i = 0; i < m_d3dPipelineStateDesc.NumRenderTargets; ++i)
+	for (UINT i = 0; i < m_d3dPipelineStateDesc.NumRenderTargets; ++i)
 	{
 		m_d3dPipelineStateDesc.RTVFormats[i] = GetRenderTargetFormat(nPipelineState, i);
 	}

@@ -11,6 +11,154 @@
 
 class CTexture;
 class CShader;
+class CCamera;
+
+////////////////////////////////////////////////////////////////////////////////////////
+//
+
+enum RESOURCE_TYPE
+{
+	RESOURCE_TEXTURE1D = 0x01,
+	RESOURCE_TEXTURE2D = 0x02,
+	RESOURCE_TEXTURE2D_ARRAY = 0x03, //[]
+	RESOURCE_TEXTURE2DARRAY = 0x04,
+	RESOURCE_TEXTURE_CUBE = 0x05,
+	RESOURCE_BUFFER = 0x06,
+	RESOURCE_STRUCTURED_BUFFER = 0x07
+};
+
+class CTexture
+{
+public:
+	CTexture() {};
+	CTexture(int nTextures, UINT nTextureType, int nRootParameters)
+	{
+		m_pd3dTextures.resize(nTextures);
+		m_pd3dTextureUploadBuffers.resize(nTextures);
+		m_strTextureNames.resize(nTextures);
+
+		m_nResourceTypes.resize(nTextures);
+
+		m_pdxgiBufferFormats.resize(nTextures);
+		m_nBufferElements.resize(nTextures);
+		m_nBufferStrides.resize(nTextures);
+
+		m_nRootParameters = nRootParameters;
+		m_nRootParameterIndices.resize(nRootParameters);
+		m_d3dSrvGpuDescriptorHandles.resize(nRootParameters);
+
+	};
+	virtual ~CTexture() {};
+
+	// Texture Name
+	std::string GetName() { return m_strName; }
+	void SetName(std::string strName) { m_strName = strName; }
+
+	// Texture Type
+	UINT GetTextureType() { return m_nTextureType; }
+	void SetTextureType(UINT nTextureType) { m_nTextureType = nTextureType; }
+
+	// Texture
+	ComPtr<ID3D12Resource> GetTexture(int nIndex = 0) { return m_pd3dTextures[nIndex]; }
+	void SetTexture(ComPtr<ID3D12Resource> pd3dTexture, int nIndex = 0) { m_pd3dTextures[nIndex] = pd3dTexture; }
+
+	// Shader Variables
+	void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int nParameterIndex, int nTextureIndex)
+	{
+		pd3dCommandList->SetGraphicsRootDescriptorTable(m_nRootParameterIndices[nParameterIndex], m_d3dSrvGpuDescriptorHandles[nTextureIndex]);
+	};
+
+	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+	{
+		if (m_nRootParameters == m_pd3dTextures.size())
+		{
+			for (int i = 0; i < m_nRootParameters; i++)
+			{
+				if (m_d3dSrvGpuDescriptorHandles[i].ptr && (m_nRootParameterIndices[i] != -1)) pd3dCommandList->SetGraphicsRootDescriptorTable(m_nRootParameterIndices[i], m_d3dSrvGpuDescriptorHandles[i]);
+			}
+		}
+		else
+		{
+			if (m_d3dSrvGpuDescriptorHandles[0].ptr) pd3dCommandList->SetGraphicsRootDescriptorTable(m_nRootParameterIndices[0], m_d3dSrvGpuDescriptorHandles[0]);
+		}
+	};
+
+	// Load Texture
+	void LoadTextureFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring strTextureName, UINT nResourceType, UINT nIndex)
+	{
+		if (nIndex >= m_pd3dTextures.size()) {
+			OutputDebugString(L"Texture index out of range\n");
+			return;
+		};
+
+		m_nResourceTypes[nIndex] = nResourceType;
+		m_strTextureNames[nIndex] = strTextureName;
+		//m_pd3dTextures[nIndex] = ::CreateTextureResourceFromm_nResourceTypesDDSFile(pd3dDevice, pd3dCommandList, pszFileName, &m_ppd3dTextureUploadBuffers[nIndex], D3D12_RESOURCE_STATE_GENERIC_READ/*D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE*/);
+	};
+
+	void LoadTextureFromWICFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring strTextureName, UINT nResourceType, UINT nIndex)
+	{
+		if (nIndex >= m_pd3dTextures.size()) {
+			OutputDebugString(L"Texture index out of range\n");
+			return;
+		};
+
+		m_nResourceTypes[nIndex] = nResourceType;
+		m_strTextureNames[nIndex] = strTextureName;
+		//m_pd3dTextures[nIndex] = ::CreateTextureResourceFromWICFile(pd3dDevice, pd3dCommandList, pszFileName, &m_ppd3dTextureUploadBuffers[nIndex], D3D12_RESOURCE_STATE_GENERIC_READ/*D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE*/);
+	};
+
+	void LoadBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, DXGI_FORMAT ndxgiFormat, UINT nIndex)
+	{
+		if (nIndex >= m_pd3dTextures.size()) {
+			OutputDebugString(L"Texture index out of range\n");
+			return;
+		};
+
+		m_nResourceTypes[nIndex] = RESOURCE_BUFFER;
+		m_nBufferElements[nIndex] = nElements;
+		m_nBufferStrides[nIndex] = nStride;
+		m_pdxgiBufferFormats[nIndex] = ndxgiFormat;
+		m_pd3dTextures[nIndex] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pData, nElements * nStride, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureUploadBuffers[nIndex]);
+	};
+
+	ComPtr<ID3D12Resource> CreateTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nIndex, UINT nResourceType, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue)
+	{
+		if (nIndex >= m_pd3dTextures.size()) {
+			OutputDebugString(L"Texture index out of range\n");
+			return nullptr;
+		};
+
+		m_nResourceTypes[nIndex] = nResourceType;
+		//m_pd3dTextures[nIndex] = ::CreateTexture2DResource(pd3dDevice, pd3dCommandList, nWidth, nHeight, nElements, nMipLevels, dxgiFormat, d3dResourceFlags, d3dResourceStates, pd3dClearValue);
+		return(m_pd3dTextures[nIndex]);
+	};
+
+
+
+
+
+private:
+	std::string m_strName; // Texture Name
+
+	UINT m_nTextureType = 0x00; // Texture Type
+
+	// Texture Variables
+	std::vector<ComPtr<ID3D12Resource>> m_pd3dTextures;
+	std::vector<ComPtr<ID3D12Resource>> m_pd3dTextureUploadBuffers;
+	std::vector<std::wstring> m_strTextureNames;
+
+	std::vector<UINT> m_nResourceTypes;
+
+	std::vector<DXGI_FORMAT> m_pdxgiBufferFormats;
+	std::vector<int> m_nBufferElements;
+	std::vector<int> m_nBufferStrides;
+
+	int m_nRootParameters = 0;
+	std::vector<int> m_nRootParameterIndices;
+	std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> m_d3dSrvGpuDescriptorHandles;
+
+};
 
 struct CB_GAMEOBJECT_INFO
 {
@@ -97,7 +245,7 @@ public:
 		pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_MATERIAL, 1, &m_nTexturesMask, 16);
 
 		if (m_pTexture){
-			//m_pTexture->UpdateShaderVariables(pd3dCommandList);
+			m_pTexture->UpdateShaderVariables(pd3dCommandList);
 		}
 #endif // _USE_OBJECT_MATERIAL_CBV
 	}
@@ -134,6 +282,7 @@ class CGameObject
 {
 public:
 	CGameObject();
+	CGameObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual ~CGameObject();
 
 	// Active Flag
@@ -151,6 +300,7 @@ public:
 	// Local Variables
 	DirectX::XMFLOAT3 GetPosition() { return m_xmf3Position; }
 	void SetPosition(DirectX::XMFLOAT3 xmf3Position) { m_xmf3Position = xmf3Position; }
+	void SetPosition(float fx, float fy, float fz) { SetPosition(XMFLOAT3(fx, fy, fz)); }
 
 	DirectX::XMFLOAT3 GetRotation() { return m_xmf3Rotation; }
 	float GetPitch() { return m_xmf3Rotation.x; } // X 축을	기준으로 회전
@@ -188,7 +338,7 @@ public:
 	virtual void Update(float fTimeElapsed) {}
 
 	// Object Render
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 
 	// Object Collision
 	//virtual void OnCollision(CGameObject* pGameObject) {}
@@ -208,7 +358,7 @@ public:
 	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseShaderVariables();
 
-private:
+protected:
 	bool m_bActive; // Active Flag
 
 	UINT m_nObjectID; // Object ID
@@ -218,7 +368,7 @@ private:
 
 	// CMaterial
 	std::vector<std::shared_ptr<CMaterial>> m_pMaterials; // Object CMaterial
-protected:
+
 	// Transform
 	DirectX::XMFLOAT3 m_xmf3Position; // 위치
 	DirectX::XMFLOAT3 m_xmf3Rotation; // 회전[Euler Angle]
@@ -257,4 +407,15 @@ private:
 	float m_fRotationSpeed = 0.0f; // 초당 회전 속도
 	XMFLOAT3 m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f); // 회전 축
 
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+class CSkyBox : public CGameObject
+{
+public:
+	CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual ~CSkyBox();
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
 };
