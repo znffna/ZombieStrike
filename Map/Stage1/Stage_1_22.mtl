@@ -1,0 +1,242 @@
+
+newmtl BLD_WindowGlass1
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd BLD_WindowGlass1_A.tif
+
+
+
+newmtl BLD_Doors1
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd BLD_Doors1_A.tif
+
+
+
+newmtl BLD_BrickHouse1
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd BLD_BrickHouse1_A.tif
+
+
+
+newmtl BLD_Cabins
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd BLD_Cabins1_A.tif
+
+
+
+newmtl PROP_RugsPaintings
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd PROP_RugsPaintigs1_A.tif
+
+
+
+newmtl NAT_Rocks1
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd NAT_Rocks1_A.tif
+
+
+
+newmtl HLP_BlockerCube
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd MISC_GridBlocker.tif
+
+
+
+newmtl BLD_Structures1
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd BLD_Structures1_A.tif
+
+
+
+newmtl BLD_Structures1_LOD
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd BLD_Structures1_A.tif
+
+
+
+newmtl BLD_Bridge1
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd BLD_Bridge1_A.tif
+
+
+
+newmtl BLD_Bridge1_LOD
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd BLD_Bridge1_A.tif
+
+
+
+newmtl BLD_Structures2
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd BLD_Structures2_A.tif
+
+
+
+newmtl BLD_Structures2_LOD
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd BLD_Structures2_A.tif
+
+
+
+newmtl BLD_Rubble1
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd BLD_Rubble1_A.tif
+
+
+
+newmtl PROP_Boat1
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd PROP_Boat1_A.tif
+
+
+
+newmtl PROP_Boat1_LOD
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd PROP_Boat1_A.tif
+
+
+
+newmtl PROP_Ship1
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd PROP_Ship1_A.tif
+
+
+
+newmtl BLD_IndBuilding1
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd BLD_IndBuilding1_A.tif
+
+
+
+newmtl BLD_IndBuilding1_LOD
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd BLD_IndBuilding1_A.tif
+
+
+
+newmtl BLD_Villa2
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd BLD_Villa2_A.tif
+
+
+
+newmtl PROP_Gravestones1
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd PROP_Gravestones1_A.tif
+
+
+
+newmtl PROP_Car1_Rusty
+Ka  0.6 0.6 0.6
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  0.0
+illum 2
+map_Kd PROP_Car1_A.tif
+
+
