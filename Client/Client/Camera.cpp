@@ -115,3 +115,12 @@ void CCamera::GenerateProjectionMatrix(float aspectRatio, float fov, float nearZ
 
 	m_xmf4x4Projection = Matrix4x4::PerspectiveFovLH(XMConvertToRadians(m_fFovAngle), m_fAspectRatio, m_fNearZ, m_fFarZ);
 }
+
+void CCamera::Rotate(float x, float y, float z)
+{
+	XMMATRIX xmmtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(x), XMConvertToRadians(y), XMConvertToRadians(z));
+
+	m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
+	m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
+	m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
+}

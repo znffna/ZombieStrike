@@ -50,6 +50,14 @@ public:
 	void Move(XMFLOAT3 xmf3Shift) { m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift); };
 	void Move(float x, float y, float z) { Move(XMFLOAT3(x, y, z)); };
 
+	// Camera Roatation
+	XMFLOAT3 GetLook() { return m_xmf3Look; }
+	XMFLOAT3 GetUp() { return m_xmf3Up; }
+	XMFLOAT3 GetRight() { return m_xmf3Right; }
+
+	void Rotate(float x, float y, float z);
+	void Rotate(const XMFLOAT3& xmf3Shift) { Rotate(xmf3Shift.x, xmf3Shift.y, xmf3Shift.z); }
+
 private:
 	// ViewPort and ScissorRect
 	D3D12_VIEWPORT m_d3dViewport;

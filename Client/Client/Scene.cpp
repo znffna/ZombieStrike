@@ -6,6 +6,8 @@
 
 #include "Scene.h"
 
+std::shared_ptr<CDescirptorHeap> CScene::m_pDescriptorHeap;
+
 CScene::CScene()
 {
 	ZeroMemory(m_pLights.data(), sizeof(Light) * MAX_LIGHTS);
@@ -165,7 +167,11 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 	// Set Root Signature
-	//pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature.Get());
+	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature.Get());
+
+	// Set Descriptor Heap
+	ID3D12DescriptorHeap* ppHeaps[] = { m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap.Get() };
+	pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 	// Set Viewport and Scissor & Update Camera Variables
 	if (pCamera)
@@ -181,6 +187,12 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 	// Update Shader Variables
 	UpdateShaderVariables(pd3dCommandList);
+
+	// Render SkyBox
+	if (m_pSkyBox)
+	{
+		m_pSkyBox->Render(pd3dCommandList, pCamera);
+	}
 
 	// Render GameObjects [Through Batch Shader]
 	for (auto& pObject : m_ppObjects)
@@ -326,6 +338,123 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	return (pd3dRootSignature);
 }
 
+void CScene::CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews)
+{
+	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
+	d3dDescriptorHeapDesc.NumDescriptors = nConstantBufferViews + nShaderResourceViews; //CBVs + SRVs 
+	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	d3dDescriptorHeapDesc.NodeMask = 0;
+	pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap);
+
+	m_pDescriptorHeap->m_d3dCbvCPUDescriptorStartHandle = m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	m_pDescriptorHeap->m_d3dCbvGPUDescriptorStartHandle = m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+	m_pDescriptorHeap->m_d3dSrvCPUDescriptorStartHandle.ptr = m_pDescriptorHeap->m_d3dCbvCPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * nConstantBufferViews);
+	m_pDescriptorHeap->m_d3dSrvGPUDescriptorStartHandle.ptr = m_pDescriptorHeap->m_d3dCbvGPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * nConstantBufferViews);
+
+	m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dCbvCPUDescriptorStartHandle;
+	m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dCbvGPUDescriptorStartHandle;
+	m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dSrvCPUDescriptorStartHandle;
+	m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dSrvGPUDescriptorStartHandle;
+
+}
+
+void CScene::CreateConstantBufferViews(ID3D12Device* pd3dDevice, int nConstantBufferViews, ID3D12Resource* pd3dConstantBuffers, UINT nStride)
+{
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = pd3dConstantBuffers->GetGPUVirtualAddress();
+	D3D12_CONSTANT_BUFFER_VIEW_DESC d3dCBVDesc;
+	d3dCBVDesc.SizeInBytes = nStride;
+	for (int j = 0; j < nConstantBufferViews; j++)
+	{
+		d3dCBVDesc.BufferLocation = d3dGpuVirtualAddress + (nStride * j);
+		pd3dDevice->CreateConstantBufferView(&d3dCBVDesc, m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle);
+		m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+		m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+	}
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE CScene::CreateConstantBufferView(ID3D12Device* pd3dDevice, ID3D12Resource* pd3dConstantBuffer, UINT nStride)
+{
+	D3D12_CONSTANT_BUFFER_VIEW_DESC d3dCBVDesc;
+	d3dCBVDesc.SizeInBytes = nStride;
+	d3dCBVDesc.BufferLocation = pd3dConstantBuffer->GetGPUVirtualAddress();
+	pd3dDevice->CreateConstantBufferView(&d3dCBVDesc, m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle);
+	D3D12_GPU_DESCRIPTOR_HANDLE d3dCbvGPUDescriptorHandle = m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle;
+	m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+	m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+
+	return(d3dCbvGPUDescriptorHandle);
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE CScene::CreateConstantBufferView(ID3D12Device* pd3dDevice, D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress, UINT nStride)
+{
+	D3D12_CONSTANT_BUFFER_VIEW_DESC d3dCBVDesc;
+	d3dCBVDesc.SizeInBytes = nStride;
+	d3dCBVDesc.BufferLocation = d3dGpuVirtualAddress;
+	pd3dDevice->CreateConstantBufferView(&d3dCBVDesc, m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle);
+	D3D12_GPU_DESCRIPTOR_HANDLE d3dCbvGPUDescriptorHandle = m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle;
+	m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+	m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+	
+	return(d3dCbvGPUDescriptorHandle);
+}
+
+void CScene::CreateShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex)
+{
+	m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle.ptr += (::gnCbvSrvDescriptorIncrementSize * nDescriptorHeapIndex);
+	m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle.ptr += (::gnCbvSrvDescriptorIncrementSize * nDescriptorHeapIndex);
+
+	int nTextures = pTexture->GetTextures();
+	for (int i = 0; i < nTextures; i++)
+	{
+		ID3D12Resource* pShaderResource = pTexture->GetResource(i);
+		D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc = pTexture->GetShaderResourceViewDesc(i);
+		pd3dDevice->CreateShaderResourceView(pShaderResource, &d3dShaderResourceViewDesc, m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle);
+		m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+
+		pTexture->SetGpuDescriptorHandle(i, m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle);
+		m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+
+	}
+	int nRootParameters = pTexture->GetRootParameters();
+	for (int i = 0; i < nRootParameters; i++) pTexture->SetRootParameterIndex(i, nRootParameterStartIndex + i);
+}
+
+void CScene::CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, int nIndex, UINT nRootParameterStartIndex)
+{
+	ID3D12Resource* pShaderResource = pTexture->GetResource(nIndex);
+	D3D12_GPU_DESCRIPTOR_HANDLE d3dGpuDescriptorHandle = pTexture->GetGpuDescriptorHandle(nIndex);
+	if (pShaderResource && !d3dGpuDescriptorHandle.ptr)
+	{
+		D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc = pTexture->GetShaderResourceViewDesc(nIndex);
+		pd3dDevice->CreateShaderResourceView(pShaderResource, &d3dShaderResourceViewDesc, m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle);
+		m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+
+		pTexture->SetGpuDescriptorHandle(nIndex, m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle);
+		m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+
+		pTexture->SetRootParameterIndex(nIndex, nRootParameterStartIndex + nIndex);
+	}
+
+}
+
+void CScene::CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, int nIndex)
+{
+	ID3D12Resource* pShaderResource = pTexture->GetResource(nIndex);
+	D3D12_GPU_DESCRIPTOR_HANDLE d3dGpuDescriptorHandle = pTexture->GetGpuDescriptorHandle(nIndex);
+	if (pShaderResource && !d3dGpuDescriptorHandle.ptr)
+	{
+		D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc = pTexture->GetShaderResourceViewDesc(nIndex);
+		pd3dDevice->CreateShaderResourceView(pShaderResource, &d3dShaderResourceViewDesc, m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle);
+		m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+
+		pTexture->SetGpuDescriptorHandle(nIndex, m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle);
+		m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+
+	}
+
+}
+
 void CScene::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	// Light
@@ -380,8 +509,14 @@ void CLoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	if(!pd3dRootSignature) m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 	else m_pd3dGraphicsRootSignature = pd3dRootSignature;
 
-	// Create Objects
+	// Create Descriptor Heap
+	if (!m_pDescriptorHeap)
+	{
+		m_pDescriptorHeap = std::make_shared<CDescirptorHeap>();
+		CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 100);
+	};
 
+	// Create Objects
 	std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
 	pMaterial->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -389,17 +524,21 @@ void CLoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	pStandardShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
 	std::shared_ptr<CMesh> pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
 
-	std::shared_ptr<CRotatingObject> pGameObject;
-	pGameObject = std::make_shared<CRotatingObject>();
-	pGameObject->SetMesh(pCubeMesh);
-	pGameObject->AddMaterial(pMaterial);
+	std::shared_ptr<CRotatingObject> pRotateGameObject;
+	pRotateGameObject = std::make_shared<CRotatingObject>();
+	pRotateGameObject->SetMesh(pCubeMesh);
+	pRotateGameObject->AddMaterial(pMaterial);
 	pMaterial->SetShader(pStandardShader);
-	pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f));
-	pGameObject->SetRotationSpeed(50.0f);
-	pGameObject->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	pRotateGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f));
+	pRotateGameObject->SetRotationSpeed(50.0f);
+	pRotateGameObject->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	m_ppObjects.push_back(pGameObject);
+	m_ppObjects.push_back(pRotateGameObject);
 
+	// Skybox
+	m_pSkyBox = std::make_shared<CSkyBox>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
+
+	// Fixed Camera
 	m_pCamera = std::make_shared<CCamera>();
 	m_pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 	m_pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -429,25 +568,29 @@ void CLoadingScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPAR
 		{
 			case VK_LEFT:
 			{
-				m_pCamera->Move(-1.0f,0.0f,0.0f);
+				//m_pCamera->Move(-1.0f,0.0f,0.0f);
+				m_pCamera->Rotate(0.0f, -10.0f, 0.0f);
 				m_pCamera->RegenerateViewMatrix();
 				break;
 			}
 			case VK_RIGHT:
 			{
-				m_pCamera->Move(1.0f, 0.0f, 0.0f);
+				//m_pCamera->Move(1.0f, 0.0f, 0.0f);
+				m_pCamera->Rotate(0.0f, 10.0f, 0.0f);
 				m_pCamera->RegenerateViewMatrix();
 				break;
 			}
 			case VK_UP:
 			{
-				m_pCamera->Move(0.0f, 0.0f, 1.0f);
+				//m_pCamera->Move(0.0f, 0.0f, 1.0f);
+				m_pCamera->Rotate(-10.0f, 0.0f, 0.0f);
 				m_pCamera->RegenerateViewMatrix();
 				break;
 			}
 			case VK_DOWN:
 			{
-				m_pCamera->Move(0.0f, 0.0f, -1.0f);
+				//m_pCamera->Move(0.0f, 0.0f, -1.0f);
+				m_pCamera->Rotate(10.0f, 0.0f, 0.0f);
 				m_pCamera->RegenerateViewMatrix();
 				break;
 			}
@@ -478,4 +621,21 @@ void CLoadingScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPAR
 	}
 }
 
+bool CLoadingScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (false == CheckWorkRendering())
+	{
+		// Scene is not running or pausing
+		return (false);
+	}
+
+	CScene::Render(pd3dCommandList, pCamera);
+
+	if (m_pSkyBox)
+	{
+		m_pSkyBox->Render(pd3dCommandList, m_pCamera.get());
+	}
+
+	return true;
+}
 

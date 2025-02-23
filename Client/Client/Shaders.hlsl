@@ -122,3 +122,33 @@ float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
     
     return (cColor);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+//
+
+struct VS_SKYBOX_INPUT
+{
+    float3 position : POSITION;
+};
+
+struct VS_SKYBOX_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float3 uv : TEXCOORD;
+};
+
+VS_SKYBOX_OUTPUT VSSkyBox(VS_SKYBOX_INPUT input)
+{
+    VS_SKYBOX_OUTPUT output;
+
+    output.position = mul(float4(input.position, 1.0f), gmtxView).xyzw;
+    output.position = mul(output.position, gmtxProjection);
+    output.uv = input.position;
+
+    return (output);
+}
+
+float4 PSSkyBox(VS_SKYBOX_OUTPUT input) : SV_TARGET
+{
+    return (gtxtSkyCubeTexture.Sample(gssWrap, input.uv));
+}

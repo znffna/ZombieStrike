@@ -88,3 +88,21 @@ public:
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+class CSkyBoxShader : public CShader
+{
+public:
+	CSkyBoxShader();
+	virtual ~CSkyBoxShader();
+
+	virtual std::wstring GetShaderName() override { return L"CSkyBoxShader"; }
+
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState) override;
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override;
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
+	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
+};
+
