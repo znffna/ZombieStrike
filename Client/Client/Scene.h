@@ -161,6 +161,9 @@ protected:
 	// SkyBox
 	std::shared_ptr<CGameObject> m_pSkyBox;
 
+	// Terrain
+	std::shared_ptr<CGameObject> m_pTerrain;
+
 	// Camera
 	std::shared_ptr<CCamera> m_pCamera;
 };

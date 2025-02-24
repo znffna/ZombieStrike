@@ -79,7 +79,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	// Render Child Object
 	for (auto& pChild : m_pChilds)
 	{
-		pChild->Render(pd3dCommandList);
+		pChild->Render(pd3dCommandList, pCamera);
 	}
 }
 
@@ -216,6 +216,92 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 		XMFLOAT3 xmf3CameraPos = pCamera->GetPosition();
 		SetPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
 	}
+	UpdateWorldMatrix();
+
+	CGameObject::Render(pd3dCommandList, pCamera);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+
+CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color)
+	: CGameObject(pd3dDevice, pd3dCommandList)
+{
+	//지형에 사용할 높이 맵의 가로, 세로의 크기이다. 
+	m_nWidth = nWidth;
+	m_nLength = nLength;
+
+	/*지형 객체는 격자 메쉬들의 배열로 만들 것이다.
+	nBlockWidth, nBlockLength는 격자 메쉬 하나의 가로, 세로 크기이다.
+	cxQuadsPerBlock, czQuadsPerBlock은 격자 메쉬의 가로 방향과 세로 방향 사각형의 개수이다.*/
+	int cxQuadsPerBlock = nBlockWidth - 1;
+	int czQuadsPerBlock = nBlockLength - 1;
+
+	long cxBlocks = (nWidth - 1) / cxQuadsPerBlock;
+	long czBlocks = (nLength - 1) / czQuadsPerBlock;
+
+	//xmf3Scale는 지형을 실제로 몇 배 확대할 것인가를 나타낸다. 
+	m_xmf3Scale = xmf3Scale;
+
+	//지형에 사용할 높이 맵을 생성한다. 
+	m_pHeightMapImage = std::make_shared<CHeightMapImage>(pFileName, nWidth, nLength, xmf3Scale);
+
+	{
+		std::shared_ptr<CMesh> pHeightMapGridMesh;
+		std::shared_ptr<CGameObject> pHeightMapGameObject;
+		for (int z = 0, zStart = 0; z < czBlocks; z++)
+		{
+			for (int x = 0, xStart = 0; x < cxBlocks; x++)
+			{
+				pHeightMapGameObject = std::make_shared<CGameObject>();
+				pHeightMapGameObject->MaterialResize(1);
+				xStart = x * (nBlockWidth - 1);
+				zStart = z * (nBlockLength - 1);
+				pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(pd3dDevice, pd3dCommandList, xStart, zStart, nBlockWidth, nBlockLength, xmf3Scale, xmf4Color, m_pHeightMapImage.get());
+				pHeightMapGameObject->SetMesh(pHeightMapGridMesh);
+				SetChild(pHeightMapGameObject);
+			}
+		}
+	}
+	//{
+
+	//	//지형 전체를 표현하기 위한 격자 메쉬에 대한 포인터 배열을 생성한다. 
+	//	CHeightMapGridMesh* pHeightMapGridMesh = NULL;
+	//	//지형의 일부분을 나타내는 격자 메쉬를 생성하여 지형 메쉬에 저장한다. 
+	//	pHeightMapGridMesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, 0,
+	//		0, nBlockWidth, nBlockLength, xmf3Scale, xmf4Color, m_pHeightMapImage);
+
+	//	SetMesh(pHeightMapGridMesh);
+	//}
+
+	//지형을 렌더링하기 위한 셰이더를 생성한다. 
+
+#ifdef _WITH_TERRAIN_TESSELATION
+	CTerrainTessellationShader* pShader = new CTerrainTessellationShader();
+#else
+	std::shared_ptr<CShader> pShader = std::make_shared<CTerrainShader>();
+#endif
+	pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature);
+	pShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	SetShader(pShader);
+
+	// 이 define 은 stdafx.h 에서 정의되어 있다.
+	std::shared_ptr<CTexture> pTexture = std::make_shared<CTexture>(2, RESOURCE_TEXTURE2D, 1);
+	pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Stone01.jpg", RESOURCE_TEXTURE2D, 0);
+	pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Grass.jpg", RESOURCE_TEXTURE2D, 1);
+
+	CScene::CreateShaderResourceViews(pd3dDevice, pTexture.get(), 0, ROOT_PARAMETER_TEXTURES);
+
+	m_pMaterials.resize(1);
+	m_pMaterials[0]->SetTexture(pTexture);
+}
+
+CHeightMapTerrain::~CHeightMapTerrain()
+{
+}
+
+void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
 	UpdateWorldMatrix();
 
 	CGameObject::Render(pd3dCommandList, pCamera);

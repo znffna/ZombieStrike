@@ -188,16 +188,22 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// Update Shader Variables
 	UpdateShaderVariables(pd3dCommandList);
 
-	// Render SkyBox
-	if (m_pSkyBox)
+	// Render Terrain
+	if (m_pTerrain)
 	{
-		m_pSkyBox->Render(pd3dCommandList, pCamera);
+		m_pTerrain->Render(pd3dCommandList, pCamera);
 	}
 
 	// Render GameObjects [Through Batch Shader]
 	for (auto& pObject : m_ppObjects)
 	{
 		pObject->Render(pd3dCommandList, pCamera);
+	}
+
+	// Render SkyBox
+	if (m_pSkyBox)
+	{
+		m_pSkyBox->Render(pd3dCommandList, pCamera);
 	}
 
 	return (true);
@@ -538,6 +544,13 @@ void CLoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	// Skybox
 	m_pSkyBox = std::make_shared<CSkyBox>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 
+	// Terrain
+	
+	//지형을 확대할 스케일 벡터이다. x-축과 z-축은 8배, y-축은 2배 확대한다. 
+	XMFLOAT3 xmf3Scale(8.0f, 1.0f, 8.0f);
+	XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
+	m_pTerrain = std::make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
+
 	// Fixed Camera
 	m_pCamera = std::make_shared<CCamera>();
 	m_pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -594,6 +607,18 @@ void CLoadingScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPAR
 				m_pCamera->RegenerateViewMatrix();
 				break;
 			}
+			case VK_SPACE:
+			{
+				m_pCamera->Move(0.0f, 10.0f, 0.0f);
+				m_pCamera->RegenerateViewMatrix();
+				break;
+			}
+			case VK_SHIFT:
+			{
+				m_pCamera->Move(0.0f, -10.0f, 0.0f);
+				m_pCamera->RegenerateViewMatrix();
+				break;
+			}
 
 			case 'W': case 'w':
 			{
@@ -629,12 +654,7 @@ bool CLoadingScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* 
 		return (false);
 	}
 
-	CScene::Render(pd3dCommandList, pCamera);
-
-	if (m_pSkyBox)
-	{
-		m_pSkyBox->Render(pd3dCommandList, m_pCamera.get());
-	}
+	CScene::Render(pd3dCommandList, m_pCamera.get());
 
 	return true;
 }

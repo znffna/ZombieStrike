@@ -141,9 +141,9 @@ VS_SKYBOX_OUTPUT VSSkyBox(VS_SKYBOX_INPUT input)
 {
     VS_SKYBOX_OUTPUT output;
 
-    output.position = mul(float4(input.position, 1.0f), gmtxView).xyzw;
-    output.position = mul(output.position, gmtxProjection);
+    output.position = mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView).xyzw;
     output.uv = input.position;
+    output.position = mul(output.position, gmtxProjection).xyww;
 
     return (output);
 }
@@ -151,4 +151,61 @@ VS_SKYBOX_OUTPUT VSSkyBox(VS_SKYBOX_INPUT input)
 float4 PSSkyBox(VS_SKYBOX_OUTPUT input) : SV_TARGET
 {
     return (gtxtSkyCubeTexture.Sample(gssWrap, input.uv));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//
+
+//정점 셰이더의 입력을 위한 구조체를 선언한다.
+struct VS_TERRAIN_INPUT
+{
+    float3 position : POSITION;
+    float4 color : COLOR;
+    float3 normal : NORMAL;
+    float2 uv0 : TEXCOORD0;
+    float2 uv1 : TEXCOORD1;
+};
+
+//정점 셰이더의 출력(픽셀 셰이더의 입력)을 위한 구조체를 선언한다.
+struct VS_TERRAIN_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float4 color : COLOR;
+    float3 positionW : POSITION;
+    float3 normalW : NORMAL;
+    float2 uv0 : TEXCOORD0;
+    float2 uv1 : TEXCOORD1;
+};
+
+//정점 셰이더를 정의한다.
+VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
+{
+    VS_TERRAIN_OUTPUT output;
+	
+    output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
+    output.color = input.color;
+    output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
+    output.normalW = mul(input.normal, (float3x3) gmtxGameObject);
+    //output.position = float4(input.position, 1.0f);
+    output.uv0 = input.uv0;
+    output.uv1 = input.uv1;
+    
+    return (output);
+}
+
+
+//픽셀 셰이더를 정의한다.
+float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
+{
+    float4 baseColor = input.color;
+    float4 texColor = gtxtStandardTextures[0].Sample(gssWrap, input.uv0);
+    float4 detailTexColor = gtxtStandardTextures[1].Sample(gssWrap, input.uv1);
+	
+    float4 cIllumination = Lighting(input.positionW, input.normalW);
+    //float4 cColor = texColor * 0.5f + cIllumination * 0.5f;
+    float4 cColor = (baseColor * 0.4f + texColor * 0.4f + detailTexColor * 0.2f);
+    return lerp(cColor, cIllumination, 0.7f);
+    
+	
+    //return (baseColor);
 }

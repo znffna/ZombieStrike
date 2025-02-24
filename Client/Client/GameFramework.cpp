@@ -57,6 +57,8 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CreateRenderTargetView();
 	CreateDepthStencilView();
 
+	CoInitialize(nullptr);
+
 	BuildObjects();
 
 	m_GameTimer.Reset();
