@@ -186,26 +186,29 @@ void CCamera::Rotate(float x, float y, float z)
 		if (fRoll > 180.0f) fRoll -= 360.0f;
 		if (fRoll <= -180.0f) fRoll += 360.0f;
 
-		XMVECTOR qCurrent = XMLoadFloat4(&m_xmf4Rotation);
 
 		XMVECTOR qX = XMQuaternionRotationAxis(XMLoadFloat3(&m_xmf3Right), XMConvertToRadians(x));
 		XMVECTOR qY = XMQuaternionRotationAxis(XMLoadFloat3(&m_xmf3Up), XMConvertToRadians(y));
 		XMVECTOR qZ = XMQuaternionRotationAxis(XMLoadFloat3(&m_xmf3Look), XMConvertToRadians(z));
 
-		qCurrent = XMQuaternionMultiply(qZ, qCurrent);
-		qCurrent = XMQuaternionMultiply(qY, qCurrent);
-		qCurrent = XMQuaternionMultiply(qX, qCurrent);
-		qCurrent = XMQuaternionNormalize(qCurrent); // 정규화
+		XMFLOAT4 qIdentity = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+		XMVECTOR qShift = XMLoadFloat4(&qIdentity);
+		qShift = XMQuaternionMultiply(qZ, qShift);
+		qShift = XMQuaternionMultiply(qY, qShift);
+		qShift = XMQuaternionMultiply(qX, qShift);
+		qShift = XMQuaternionNormalize(qShift); // 정규화
 
+		XMVECTOR qCurrent = XMLoadFloat4(&m_xmf4Rotation);
+		qCurrent = XMQuaternionMultiply(qShift, qCurrent);
 		XMStoreFloat4(&m_xmf4Rotation, qCurrent);
 
 		XMVECTOR vRight = XMLoadFloat3(&m_xmf3Right);
 		XMVECTOR vUp = XMLoadFloat3(&m_xmf3Up);
 		XMVECTOR vLook = XMLoadFloat3(&m_xmf3Look);
 
-		vRight = XMVector3Rotate(vRight, qCurrent);
-		vUp = XMVector3Rotate(vUp, qCurrent);
-		vLook = XMVector3Rotate(vLook, qCurrent);
+		vRight = XMVector3Rotate(vRight, qShift);
+		vUp = XMVector3Rotate(vUp, qShift);
+		vLook = XMVector3Rotate(vLook, qShift);
 
 		XMStoreFloat3(&m_xmf3Right, vRight);
 		XMStoreFloat3(&m_xmf3Up, vUp);
