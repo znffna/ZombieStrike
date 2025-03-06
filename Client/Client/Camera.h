@@ -55,6 +55,10 @@ public:
 	XMFLOAT3 GetUp() { return m_xmf3Up; }
 	XMFLOAT3 GetRight() { return m_xmf3Right; }
 
+	float GetPitch() { return fPitch; }
+	float GetYaw() { return fYaw; }
+	float GetRoll() { return fRoll; }
+
 	void Rotate(float x, float y, float z);
 	void Rotate(const XMFLOAT3& xmf3Shift) { Rotate(xmf3Shift.x, xmf3Shift.y, xmf3Shift.z); }
 
@@ -74,6 +78,11 @@ private:
 	XMFLOAT3 m_xmf3Right = XMFLOAT3(1.0f, 0.0f, 0.0f);
 	XMFLOAT3 m_xmf3Up = XMFLOAT3(0.0f, 1.0f, 0.0f);
 	XMFLOAT3 m_xmf3Look = XMFLOAT3(0.0f, 0.0f, 1.0f);
+
+	float fPitch = 0.0f;
+	float fYaw = 0.0f;
+	float fRoll = 0.0f;
+	XMFLOAT4 m_xmf4Rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	//XMFLOAT3 m_xmf3LookAtWorld; // World
 	//XMFLOAT3 m_xmf3Offset;

@@ -118,9 +118,98 @@ void CCamera::GenerateProjectionMatrix(float aspectRatio, float fov, float nearZ
 
 void CCamera::Rotate(float x, float y, float z)
 {
-	XMMATRIX xmmtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(x), XMConvertToRadians(y), XMConvertToRadians(z));
+	/* 
+	{
+		//// 다음 코드는 
+		XMMATRIX xmmtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(x), XMConvertToRadians(y), XMConvertToRadians(z));
+		m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
+		m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
+		m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
+	}
+	*/
 
-	m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
-	m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
-	m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
+	/*
+	{  // 이는 1개의 축에 대한 변경시엔 문제가 없지만, 3개의 축에 대한 변경시 문제가 발생한다.
+		if (x != 0.0f) {
+			XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3Right), XMConvertToRadians(x));
+			m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
+			m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
+			m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
+
+			fPitch += x;
+			if (fPitch > 90.0f) fPitch -= 90.0f;
+			if (fPitch < -90.0f) fPitch += 90.0f;
+		}
+		if (y != 0.0f) {
+			XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3Up), XMConvertToRadians(y));
+			m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
+			m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
+			m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
+
+			fYaw += y;
+			if (fYaw > 90.0f) fYaw -= 90.0f;
+			if (fYaw < -90.0f) fYaw += 90.0f;
+		}
+		if (z != 0.0f) {
+			XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3Look), XMConvertToRadians(z));
+			m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
+			m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
+			m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
+
+			fRoll += z;
+			if (fRoll > 90.0f) fRoll -= 90.0f;
+			if (fRoll < -90.0f) fRoll += 90.0f;
+		}
+	}
+	*/
+
+	{
+		fPitch += x;
+		if (fPitch > 180.0f) fPitch -= 360.0f;
+		if (fPitch <= -180.0f) fPitch += 360.0f;
+
+		/*
+		// 위아래 회전을 제한(Up vector를 월드 Up으로 고정시 사용)
+		if (fPitch >= 90.0f) {
+			x = x - (fPitch - 89.9f); fPitch = 89.9f;
+		}
+		if (fPitch <= -90.0f) {
+			x = x - (fPitch + 89.9f); fPitch = -89.9f;
+		}
+		*/
+
+		fYaw += y;
+		if (fYaw > 180.0f) fYaw -= 360.0f;
+		if (fYaw <= -180.0f) fYaw += 360.0f;
+
+		fRoll += z;
+		if (fRoll > 180.0f) fRoll -= 360.0f;
+		if (fRoll <= -180.0f) fRoll += 360.0f;
+
+		XMVECTOR qCurrent = XMLoadFloat4(&m_xmf4Rotation);
+
+		XMVECTOR qX = XMQuaternionRotationAxis(XMLoadFloat3(&m_xmf3Right), XMConvertToRadians(x));
+		XMVECTOR qY = XMQuaternionRotationAxis(XMLoadFloat3(&m_xmf3Up), XMConvertToRadians(y));
+		XMVECTOR qZ = XMQuaternionRotationAxis(XMLoadFloat3(&m_xmf3Look), XMConvertToRadians(z));
+
+		qCurrent = XMQuaternionMultiply(qZ, qCurrent);
+		qCurrent = XMQuaternionMultiply(qY, qCurrent);
+		qCurrent = XMQuaternionMultiply(qX, qCurrent);
+		qCurrent = XMQuaternionNormalize(qCurrent); // 정규화
+
+		XMStoreFloat4(&m_xmf4Rotation, qCurrent);
+
+		XMVECTOR vRight = XMLoadFloat3(&m_xmf3Right);
+		XMVECTOR vUp = XMLoadFloat3(&m_xmf3Up);
+		XMVECTOR vLook = XMLoadFloat3(&m_xmf3Look);
+
+		vRight = XMVector3Rotate(vRight, qCurrent);
+		vUp = XMVector3Rotate(vUp, qCurrent);
+		vLook = XMVector3Rotate(vLook, qCurrent);
+
+		XMStoreFloat3(&m_xmf3Right, vRight);
+		XMStoreFloat3(&m_xmf3Up, vUp);
+		XMStoreFloat3(&m_xmf3Look, vLook);
+
+	}
 }
