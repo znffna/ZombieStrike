@@ -33,22 +33,21 @@ public:
 	CTexture() {};
 	CTexture(int nTextures, UINT nTextureType, int nRootParameters)
 	{
-		m_pd3dTextures.resize(nTextures);
-		m_pd3dTextureUploadBuffers.resize(nTextures);
-		m_strTextureNames.resize(nTextures);
+		m_nTextures = nTextures;
+		m_pd3dTextures.resize(m_nTextures);
+		m_pd3dTextureUploadBuffers.resize(m_nTextures);
+		m_strTextureNames.resize(m_nTextures);
 
-		m_nResourceTypes.resize(nTextures);
+		m_nResourceTypes.resize(m_nTextures);
 
-		m_pdxgiBufferFormats.resize(nTextures);
-		m_nBufferElements.resize(nTextures);
-		m_nBufferStrides.resize(nTextures);
+		m_pdxgiBufferFormats.resize(m_nTextures);
+		m_nBufferElements.resize(m_nTextures);
+		m_nBufferStrides.resize(m_nTextures);
 
-		m_d3dSrvGpuDescriptorHandles.resize(nTextures);
+		m_d3dSrvGpuDescriptorHandles.resize(m_nTextures);
 
 		m_nRootParameters = nRootParameters;
-		m_nRootParameterIndices.resize(nRootParameters);
-
-
+		m_nRootParameterIndices.resize(m_nRootParameters);
 	};
 	virtual ~CTexture() {};
 
@@ -214,6 +213,7 @@ private:
 	UINT m_nTextureType = 0x00; // Texture Type
 
 	// Texture Variables
+	UINT m_nTextures;
 	std::vector<ComPtr<ID3D12Resource>> m_pd3dTextures;
 	std::vector<ComPtr<ID3D12Resource>> m_pd3dTextureUploadBuffers;
 	std::vector<std::wstring> m_strTextureNames;
@@ -265,8 +265,13 @@ public:
 	void SetSpecular(DirectX::XMFLOAT4 xmf4Specular) { m_xmf4Specular = xmf4Specular; }
 
 	// Texture
-	std::shared_ptr<CTexture> GetTexture() { return m_pTexture; }
-	void SetTexture(std::shared_ptr<CTexture> pTexture) { m_pTexture = pTexture; }
+	//std::shared_ptr<CTexture> GetTexture() { return m_pTexture; }
+	//void SetTexture(std::shared_ptr<CTexture> pTexture) { m_pTexture = pTexture; }
+	
+	std::shared_ptr<CTexture> GetTexture(int nIndex = 0) { return m_ppTexture[nIndex]; }
+	void SetTexture(std::shared_ptr<CTexture> pTexture) { m_ppTexture.clear(); m_ppTexture.push_back(pTexture); }
+	void SetTexture(std::shared_ptr<CTexture> pTexture, int nIndex) { m_ppTexture[nIndex] = pTexture; }
+	void AddTexture(std::shared_ptr<CTexture> pTexture) { m_ppTexture.push_back(pTexture); }
 
 	// Shader
 	void SetShader(std::shared_ptr<CShader> pShader) { m_pShader = pShader; }
@@ -314,8 +319,8 @@ public:
 
 		pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_MATERIAL, 1, &m_nTexturesMask, 16);
 
-		if (m_pTexture){
-			m_pTexture->UpdateShaderVariables(pd3dCommandList);
+		for (auto& pTexture : m_ppTexture) {
+			pTexture->UpdateShaderVariables(pd3dCommandList);
 		}
 #endif // _USE_OBJECT_MATERIAL_CBV
 	}
@@ -337,14 +342,14 @@ private:
 	DirectX::XMFLOAT4 m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // Specular Color
 	DirectX::XMFLOAT4 m_xmf4Emissive = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // Emissive Color
 
+public:
 	UINT m_nTexturesMask = 0x00; // Texture Mask
-
 	
 	// Shader Variables
 	ComPtr<ID3D12Resource> m_pd3dcbMaterial;
 	CB_MATERIAL_INFO* m_pcbMappedMaterial = nullptr;
 public:
-	std::shared_ptr<CTexture> m_pTexture; // Texture
+	std::vector<std::shared_ptr<CTexture>> m_ppTexture; // Texture
 	std::shared_ptr<CShader> m_pShader; // Shader
 };
 
