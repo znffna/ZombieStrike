@@ -41,6 +41,9 @@ cbuffer cbFrameworkInfo : register(b3)
 
 #include "Light.hlsl"
 
+// Render Config
+#include "RenderConfig.h"
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 
@@ -52,7 +55,18 @@ cbuffer cbFrameworkInfo : register(b3)
 #define MATERIAL_DETAIL_ALBEDO_MAP	0x20
 #define MATERIAL_DETAIL_NORMAL_MAP	0x40
 
+#ifdef _WITH_STANDARD_TEXTURE_MULTIPLE_PARAMETERS
+Texture2D gtxtAlbedoTexture : register(t6);
+Texture2D gtxtSpecularTexture : register(t7);
+Texture2D gtxtNormalTexture : register(t8);
+Texture2D gtxtMetallicTexture : register(t9);
+Texture2D gtxtEmissionTexture : register(t10);
+Texture2D gtxtDetailAlbedoTexture : register(t11);
+Texture2D gtxtDetailNormalTexture : register(t12);
+#else
 Texture2D gtxtStandardTextures[7] : register(t6); // t6 ~ t12 : Albedo, Specular, Normal, Metallic, Emission, Detail Albedo, Detail Normal
+#endif
+
 TextureCube gtxtSkyCubeTexture : register(t13);
 
 SamplerState gssWrap : register(s0);
@@ -101,12 +115,20 @@ float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
     float4 cMetallicColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
     float4 cEmissionColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
     
+#ifdef _WITH_STANDARD_TEXTURE_MULTIPLE_PARAMETERS
+    if (gnTexturesMask & MATERIAL_ALBEDO_MAP) cAlbedoColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
+    if (gnTexturesMask & MATERIAL_SPECULAR_MAP) cSpecularColor = gtxtSpecularTexture.Sample(gssWrap, input.uv);
+    if (gnTexturesMask & MATERIAL_NORMAL_MAP) cNormalColor = gtxtNormalTexture.Sample(gssWrap, input.uv);
+    if (gnTexturesMask & MATERIAL_METALLIC_MAP) cMetallicColor = gtxtMetallicTexture.Sample(gssWrap, input.uv);
+    if (gnTexturesMask & MATERIAL_EMISSION_MAP) cEmissionColor = gtxtEmissionTexture.Sample(gssWrap, input.uv);
+#else
     if (gnTexturesMask & MATERIAL_ALBEDO_MAP) cAlbedoColor = gtxtStandardTextures[0].Sample(gssWrap, input.uv);
     if (gnTexturesMask & MATERIAL_SPECULAR_MAP) cSpecularColor = gtxtStandardTextures[1].Sample(gssWrap, input.uv);
     if (gnTexturesMask & MATERIAL_NORMAL_MAP) cNormalColor = gtxtStandardTextures[2].Sample(gssWrap, input.uv);
     if (gnTexturesMask & MATERIAL_METALLIC_MAP) cMetallicColor = gtxtStandardTextures[3].Sample(gssWrap, input.uv);
     if (gnTexturesMask & MATERIAL_EMISSION_MAP) cEmissionColor = gtxtStandardTextures[4].Sample(gssWrap, input.uv);
-
+#endif
+    
     float4 cIllumination = float4(1.0f, 1.0f, 1.0f, 1.0f);
     float4 cColor = cAlbedoColor + cSpecularColor + cEmissionColor;
     float3 normalW = input.normalW;
@@ -198,9 +220,15 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
 {
     float4 baseColor = input.color;
+    
+#ifdef _WITH_STANDARD_TEXTURE_MULTIPLE_PARAMETERS
+    float4 texColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv0);
+    float4 detailTexColor = gtxtSpecularTexture.Sample(gssWrap, input.uv1);
+#else
     float4 texColor = gtxtStandardTextures[0].Sample(gssWrap, input.uv0);
     float4 detailTexColor = gtxtStandardTextures[1].Sample(gssWrap, input.uv1);
-	
+#endif
+    
     float4 cIllumination = Lighting(input.positionW, input.normalW);
     //float4 cColor = texColor * 0.5f + cIllumination * 0.5f;
     float4 cColor = (baseColor * 0.4f + texColor * 0.4f + detailTexColor * 0.2f);
