@@ -19,6 +19,45 @@ UINT gnDsvDescriptorIncrementSize = 0;
 
 // Functions
 
+int ReadIntegerFromFile(std::ifstream& file)
+{
+	int nValue = 0;
+	file.read((char*)&nValue, sizeof(int));
+	return(nValue);
+}
+
+float ReadFloatFromFile(std::ifstream& file)
+{
+	float fValue = 0;
+	file.read((char*)&fValue, sizeof(float));
+	return(fValue);
+}
+
+BYTE ReadStringFromFile(std::ifstream& file, char* pstrToken)
+{
+	BYTE nStrLength = 0;
+	UINT nReads = 0;
+	file.read((char*)&nStrLength, sizeof(BYTE));
+	file.read(pstrToken, sizeof(char) * nStrLength);
+	pstrToken[nStrLength] = '\0';
+
+	return(nStrLength);
+}
+
+BYTE ReadStringFromFile(std::ifstream& file, std::string& String)
+{
+	BYTE nStrLength = 0;
+	UINT nReads = 0;
+
+	file.read((char*)&nStrLength, sizeof(BYTE));
+
+	std::vector<char> strBuffer(nStrLength);
+	file.read(strBuffer.data(), sizeof(char) * nStrLength);
+	String.assign(strBuffer.begin(), strBuffer.end());
+
+	return(nStrLength);
+}
+
 void ReportLiveObjects()
 {
 #if defined(_DEBUG)

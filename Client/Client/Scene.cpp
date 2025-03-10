@@ -5,6 +5,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "Scene.h"
+#include "GameFramework.h"
 
 std::shared_ptr<CDescirptorHeap> CScene::m_pDescriptorHeap;
 
@@ -40,24 +41,65 @@ void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	if (!pd3dRootSignature) m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 	else m_pd3dGraphicsRootSignature = pd3dRootSignature;
 
+	// Create Descriptor Heap
+	if (!m_pDescriptorHeap)
+	{
+		m_pDescriptorHeap = std::make_shared<CDescirptorHeap>();
+		CreateCbvSrvDescriptorHeaps(pd3dDevice, 100, 100);
+	}
+
+	// Static Variable 생성
+	if (CMaterial::m_pStandardShader == nullptr)
+	{
+		CMaterial::m_pStandardShader = std::make_shared<CStandardShader>();
+		CMaterial::m_pStandardShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+	}
+	if (CMaterial::m_pSkinnedAnimationShader == nullptr)
+	{
+		CMaterial::m_pSkinnedAnimationShader = std::make_shared<CSkinnedAnimationStandardShader>();
+		CMaterial::m_pSkinnedAnimationShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+	}
+
+
 	// Create Objects
+	ResourceManager& resourceManager = CGameFramework::GetResourceManager();
+
 	std::shared_ptr<CGameObject> pGameObject;
 
-	std::shared_ptr<CStandardShader> pStandardShader = std::make_shared<CStandardShader>();
+	std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
+	pMaterial->SetStandardShader();
 	std::shared_ptr<CCubeMesh> pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
 
 	pGameObject = std::make_shared<CRotatingObject>();
 	pGameObject->SetMesh(pCubeMesh);
-	pGameObject->SetShader(pStandardShader);
+	pGameObject->SetMaterial(0, pMaterial);
 	pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 10.0f));
 
 	m_ppObjects.push_back(pGameObject);
 
+	// Zombie Object
+	std::shared_ptr<CLoadedModelInfo> pModel = resourceManager.GetSkinInfo(L"Model/FuzZombie.bin");
+	if (!pModel)
+	{
+		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
+		resourceManager.SetSkinInfo(L"Model/FuzZombie.bin", pModel);
+	}
+
+	std::shared_ptr<CZombieObject> pZombie = std::make_shared<CZombieObject>(pd3dDevice, pd3dCommandList, pd3dRootSignature, pModel, 2);
+	pZombie->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f));
+	pZombie->Rotate(0.0f, 180.0f, 0.0f);
+	m_ppHierarchicalObjects.push_back(pZombie);
+
+	// Fixed Camera
 	m_pCamera = std::make_shared<CCamera>();
 	m_pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 	m_pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	m_pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, -5.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
 	m_pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
+	m_pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
+	// Scene 생성 완료
+	m_SceneState = SCENE_STATE_RUNNING;
 }
 
 void CScene::ReleaseObjects()
@@ -133,6 +175,8 @@ void CScene::FixedUpdate(float deltaTime)
 		return;
 	}
 
+	m_fElapsedTime = deltaTime;
+
 	// Update GameObjects
 	for (auto& pObject : m_ppObjects)
 	{
@@ -144,18 +188,19 @@ void CScene::FixedUpdate(float deltaTime)
 	// Update Matrix
 	for (auto& pObject : m_ppObjects)
 	{
-		pObject->UpdateWorldMatrix(nullptr);
+		pObject->UpdateTransform(nullptr);
 	}
 }
 
-void CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
+bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (false == CheckWorkRendering())
 	{
 		// Scene is not running or pausing
-		return;
+		return false;
 	}
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature.Get());
+	return true;
 }
 
 bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -197,6 +242,13 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// Render GameObjects [Through Batch Shader]
 	for (auto& pObject : m_ppObjects)
 	{
+		pObject->Render(pd3dCommandList, pCamera);
+	}
+
+	for (auto& pObject : m_ppHierarchicalObjects)
+	{
+		pObject->Update(m_fElapsedTime);
+		if (!pObject->m_pSkinnedAnimationController) pObject->UpdateTransform(NULL);
 		pObject->Render(pd3dCommandList, pCamera);
 	}
 
@@ -294,7 +346,7 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	}
 
 	// Root Parameter 
-	std::vector<D3D12_ROOT_PARAMETER> pd3dRootParameters(7);
+	std::vector<D3D12_ROOT_PARAMETER> pd3dRootParameters(9);
 
 #ifdef _USE_OBJECT_MATERIAL_CBV
 	// 0
@@ -339,7 +391,7 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	// Textures
 #ifdef _WITH_STANDARD_TEXTURE_MULTIPLE_PARAMETERS
 	// 추가될 파라미터 수 만큼 resize
-	pd3dRootParameters.resize(pd3dRootParameters.size() + 7);
+	pd3dRootParameters.resize(pd3dRootParameters.size() + 6);
 
 	pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
@@ -386,6 +438,17 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	pd3dRootParameters[ROOT_PARAMETER_SKYBOX].DescriptorTable.NumDescriptorRanges = 1;
 	pd3dRootParameters[ROOT_PARAMETER_SKYBOX].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[ROOT_PARAMETER_SKYBOX - ROOT_PARAMETER_LIGHT - 1];
 	pd3dRootParameters[ROOT_PARAMETER_SKYBOX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	// Skin Mesh Bone
+	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_OFFSETS].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_OFFSETS].Descriptor.ShaderRegister = 7; //Skinned Bone Offsets
+	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_OFFSETS].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_OFFSETS].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+
+	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].Descriptor.ShaderRegister = 8; //Skinned Bone Transforms
+	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
 	// Static Sampler
 	std::vector<D3D12_STATIC_SAMPLER_DESC> pd3dStaticSamplerDescs(1);

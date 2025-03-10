@@ -5,10 +5,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "Mesh.h"
 
+#include "GameObject.h"
+
 CMesh::CMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	// 메쉬의 이름 초기화
-	m_strName = "Mesh";
+	m_strMeshName = "Mesh";
 
 	// 포지션 버퍼 초기화
 	ZeroMemory(&m_d3dPositionBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
@@ -76,9 +78,6 @@ void CMesh::SetSubMeshCount(int nSubMeshes)
 CStandardMesh::CStandardMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 	: CMesh(pd3dDevice, pd3dCommandList)
 {
-	// 색상 정보 초기화
-	m_xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-
 	// 버텍스 정보 버퍼 초기화
 	ZeroMemory(&m_d3dTextureCoord0BufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
 	ZeroMemory(&m_d3dTextureCoord1BufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
@@ -89,6 +88,173 @@ CStandardMesh::CStandardMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 CStandardMesh::~CStandardMesh()
 {
+}
+
+void CStandardMesh::LoadMeshFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::ifstream& File)
+{
+	char pstrToken[64] = { '\0' };
+	int nPositions = 0, nColors = 0, nNormals = 0, nTangents = 0, nBiTangents = 0, nTextureCoords = 0, nIndices = 0, nSubMeshes = 0, nSubIndices = 0;
+
+	//UINT nReads;
+	File.read((char*) & m_nVertices, sizeof(int) * 1);
+
+	::ReadStringFromFile(File, m_strMeshName);
+
+	for (; ; )
+	{
+		::ReadStringFromFile(File, pstrToken);
+		if (!strcmp(pstrToken, "<Bounds>:"))
+		{
+			File.read((char*)&m_xmf3AABBCenter, sizeof(XMFLOAT3));
+			File.read((char*)&m_xmf3AABBExtents, sizeof(XMFLOAT3));
+		}
+		else if (!strcmp(pstrToken, "<Positions>:"))
+		{
+			File.read((char*)&nPositions, sizeof(int));
+			if (nPositions > 0)
+			{
+				m_nType |= VERTEXT_POSITION;
+				m_pxmf3Positions.resize(nPositions);
+				File.read((char*)m_pxmf3Positions.data(), sizeof(XMFLOAT3) * nPositions);
+
+				m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+				m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+				m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+				m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+			}
+		}
+		else if (!strcmp(pstrToken, "<Colors>:"))
+		{
+			File.read((char*)&nColors, sizeof(int));
+			if (nColors > 0)
+			{
+				m_nType |= VERTEXT_COLOR;
+				m_pxmf4Colors.resize(nColors);
+				File.read((char*)m_pxmf4Colors.data(), sizeof(XMFLOAT4) * nColors);
+			}
+		}
+		else if (!strcmp(pstrToken, "<TextureCoords0>:"))
+		{
+			nTextureCoords = ReadIntegerFromFile(File);
+			if (nTextureCoords > 0)
+			{
+				m_nType |= VERTEXT_TEXTURE_COORD0;
+				m_pxmf2TextureCoords0.resize(nTextureCoords);
+				File.read((char*)m_pxmf2TextureCoords0.data(), sizeof(XMFLOAT2) * nTextureCoords);
+
+				m_pd3dTextureCoord0Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0.data(), sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord0UploadBuffer);
+
+				m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
+				m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
+				m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+			}
+		}
+		else if (!strcmp(pstrToken, "<TextureCoords1>:"))
+		{
+			nTextureCoords = ReadIntegerFromFile(File);
+			if (nTextureCoords > 0)
+			{
+				m_nType |= VERTEXT_TEXTURE_COORD1;
+				m_pxmf2TextureCoords1.resize(nTextureCoords);
+				File.read((char*)m_pxmf2TextureCoords1.data(), sizeof(XMFLOAT2) * nTextureCoords);
+
+				m_pd3dTextureCoord1Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords1.data(), sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord1UploadBuffer);
+
+				m_d3dTextureCoord1BufferView.BufferLocation = m_pd3dTextureCoord1Buffer->GetGPUVirtualAddress();
+				m_d3dTextureCoord1BufferView.StrideInBytes = sizeof(XMFLOAT2);
+				m_d3dTextureCoord1BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+			}
+		}
+		else if (!strcmp(pstrToken, "<Normals>:"))
+		{
+			nNormals = ReadIntegerFromFile(File);
+			if (nNormals > 0)
+			{
+				m_nType |= VERTEXT_NORMAL;
+				m_pxmf3Normals.resize(nNormals);
+				File.read((char*)m_pxmf3Normals.data(), sizeof(XMFLOAT3) * nNormals);
+
+				m_pd3dNormalBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Normals.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dNormalUploadBuffer);
+
+				m_d3dNormalBufferView.BufferLocation = m_pd3dNormalBuffer->GetGPUVirtualAddress();
+				m_d3dNormalBufferView.StrideInBytes = sizeof(XMFLOAT3);
+				m_d3dNormalBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+			}
+		}
+		else if (!strcmp(pstrToken, "<Tangents>:"))
+		{
+			nTangents = ReadIntegerFromFile(File);
+			if (nTangents > 0)
+			{
+				m_nType |= VERTEXT_TANGENT;
+				m_pxmf3Tangents.resize(nTangents);
+				File.read((char*)m_pxmf3Tangents.data(), sizeof(XMFLOAT3) * nTangents);
+
+				m_pd3dTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Tangents.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTangentUploadBuffer);
+
+				m_d3dTangentBufferView.BufferLocation = m_pd3dTangentBuffer->GetGPUVirtualAddress();
+				m_d3dTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
+				m_d3dTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+			}
+		}
+		else if (!strcmp(pstrToken, "<BiTangents>:"))
+		{
+			nBiTangents = ReadIntegerFromFile(File);
+			if (nBiTangents > 0)
+			{
+				m_pxmf3BiTangents.resize(nBiTangents);
+				File.read((char*)m_pxmf3BiTangents.data(), sizeof(XMFLOAT3) * nBiTangents);
+
+				m_pd3dBiTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3BiTangents.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dBiTangentUploadBuffer);
+
+				m_d3dBiTangentBufferView.BufferLocation = m_pd3dBiTangentBuffer->GetGPUVirtualAddress();
+				m_d3dBiTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
+				m_d3dBiTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+			}
+		}
+		else if (!strcmp(pstrToken, "<SubMeshes>:"))
+		{
+			m_nSubMeshes = ReadIntegerFromFile(File);
+			if (m_nSubMeshes > 0)
+			{
+				SetSubMeshCount(m_nSubMeshes);
+				//m_pnSubSetIndices = new int[m_nSubMeshes];
+				//m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
+
+				//m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [m_nSubMeshes];
+				//m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [m_nSubMeshes];
+				//m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[m_nSubMeshes];
+
+				for (UINT i = 0; i < m_nSubMeshes; i++)
+				{
+					::ReadStringFromFile(File, pstrToken);
+					if (!strcmp(pstrToken, "<SubMesh>:"))
+					{
+						int nIndex = ReadIntegerFromFile(File); // i
+
+						UINT nIndices;
+						nIndices = ReadIntegerFromFile(File);
+						if (nIndices > 0)
+						{
+							m_ppnSubSetIndices[i].resize(nIndices);
+							File.read((char*)m_ppnSubSetIndices[i].data(), sizeof(UINT) * nIndices);
+
+							m_ppd3dSubSetIndexBuffers[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[i].data(), sizeof(UINT) * (UINT)m_ppnSubSetIndices[i].size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[i]);
+
+							m_pd3dSubSetIndexBufferViews[i].BufferLocation = m_ppd3dSubSetIndexBuffers[i]->GetGPUVirtualAddress();
+							m_pd3dSubSetIndexBufferViews[i].Format = DXGI_FORMAT_R32_UINT;
+							m_pd3dSubSetIndexBufferViews[i].SizeInBytes = (UINT) (sizeof(UINT) * m_ppnSubSetIndices[i].size());
+						}
+					}
+				}
+			}
+		}
+		else if (!strcmp(pstrToken, "</Mesh>"))
+		{
+			break;
+		}
+	}
 }
 
 void CStandardMesh::ReleaseUploadBuffers()
@@ -105,21 +271,25 @@ void CStandardMesh::ReleaseUploadBuffers()
 
 void CStandardMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
 {
-	CMesh::OnPreRender(pd3dCommandList, pContext);
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[5] = { m_d3dPositionBufferView, m_d3dTextureCoord0BufferView, m_d3dNormalBufferView, m_d3dTangentBufferView, m_d3dBiTangentBufferView };
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 5, pVertexBufferViews);
 }
 
 void CStandardMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet)
 {
-	int nSubMeshes = (int)m_ppnSubSetIndices.size();
-	// Render Process
-	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+	int nSubMeshes = (int)m_nSubMeshes;
 
-	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[5] = { m_d3dPositionBufferView, m_d3dTextureCoord0BufferView, m_d3dNormalBufferView, m_d3dTangentBufferView, m_d3dBiTangentBufferView };
-	pd3dCommandList->IASetVertexBuffers(m_nSlot, 5, pVertexBufferViews);
+	// Render Process
+	UpdateShaderVariables(pd3dCommandList);
+
+	OnPreRender(pd3dCommandList, nullptr);
+
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
 
 	if ((nSubMeshes > 0) && (nSubSet < nSubMeshes))
 	{
 		pd3dCommandList->IASetIndexBuffer(&(m_pd3dSubSetIndexBufferViews[nSubSet]));
+		UINT nSubSetIndex = (UINT)m_ppnSubSetIndices[nSubSet].size();
 		pd3dCommandList->DrawIndexedInstanced((UINT)m_ppnSubSetIndices[nSubSet].size(), 1, 0, 0, 0);
 	}
 	else
@@ -139,9 +309,6 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 	static int nCubeIndex = 0;
 	std::string strName = "Cube_" + std::to_string(nCubeIndex++);
 	SetName(strName);
-
-	// 임의의 값으로 설정
-	m_xmf4Color = XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f);
 
 	// position
 	m_nVertices = 36;
@@ -296,13 +463,13 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 		{0.0f, 0.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}
 	};
 
-	m_pxmf2Texture0Coords = std::move(xmf2Texture0Coords);
+	m_pxmf2TextureCoords0 = std::move(xmf2Texture0Coords);
 
-	m_pd3dTextureCoord0Buffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2Texture0Coords.data(), sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_pd3dTextureCoord0UploadBuffer.GetAddressOf());
+	m_pd3dTextureCoord0Buffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0.data(), sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_pd3dTextureCoord0UploadBuffer.GetAddressOf());
 
 	m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
 	m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
-	m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * static_cast<UINT>(m_pxmf2Texture0Coords.size());
+	m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * static_cast<UINT>(m_pxmf2TextureCoords0.size());
 
 	// Standard Shader를 사용하기위한 더미 데이터 생성
 	// --------------------------------------------
@@ -649,4 +816,163 @@ XMFLOAT2 CHeightMapGridMesh::OnGetUVs(int x, int z, void* pContext)
 	XMFLOAT2 UV = XMFLOAT2((float)x / m_nWidth, (float)z / m_nLength);
 
 	return UV;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+
+CSkinnedMesh::CSkinnedMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+	: CStandardMesh(pd3dDevice, pd3dCommandList)
+{
+}
+
+CSkinnedMesh::~CSkinnedMesh()
+{
+}
+
+void CSkinnedMesh::PrepareSkinning(std::shared_ptr<CGameObject> pModelRootObject)
+{
+	for (int j = 0; j < m_nSkinningBones; j++)
+	{
+		m_ppSkinningBoneFrameCaches[j] = pModelRootObject->FindFrame(m_ppstrSkinningBoneNames[j]);
+	}
+}
+
+void CSkinnedMesh::LoadSkinInfoFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::ifstream& pInFile)
+{
+	char pstrToken[64] = { '\0' };
+	UINT nReads = 0;
+
+	::ReadStringFromFile(pInFile, m_strMeshName);
+
+	for (; ; )
+	{
+		::ReadStringFromFile(pInFile, pstrToken);
+		if (!strcmp(pstrToken, "<BonesPerVertex>:"))
+		{
+			m_nBonesPerVertex = ::ReadIntegerFromFile(pInFile);
+		}
+		else if (!strcmp(pstrToken, "<Bounds>:"))
+		{
+			pInFile.read((char*)&m_xmf3AABBCenter, sizeof(XMFLOAT3));
+			pInFile.read((char*)&m_xmf3AABBExtents, sizeof(XMFLOAT3));
+		}
+		else if (!strcmp(pstrToken, "<BoneNames>:"))
+		{
+			m_nSkinningBones = ::ReadIntegerFromFile(pInFile);
+			if (m_nSkinningBones > 0)
+			{
+				m_ppstrSkinningBoneNames.resize(m_nSkinningBones);
+				//m_ppstrSkinningBoneNames = new char[m_nSkinningBones][64];
+				m_ppSkinningBoneFrameCaches.resize(m_nSkinningBones);
+				//m_ppSkinningBoneFrameCaches = new CGameObject * [m_nSkinningBones];
+				for (int i = 0; i < m_nSkinningBones; i++)
+				{
+					::ReadStringFromFile(pInFile, m_ppstrSkinningBoneNames[i]);
+					m_ppSkinningBoneFrameCaches[i] = NULL;
+				}
+			}
+		}
+		else if (!strcmp(pstrToken, "<BoneOffsets>:"))
+		{
+			m_nSkinningBones = ::ReadIntegerFromFile(pInFile);
+			if (m_nSkinningBones > 0)
+			{
+				m_pxmf4x4BindPoseBoneOffsets.resize(m_nSkinningBones);
+				pInFile.read((char*)m_pxmf4x4BindPoseBoneOffsets.data(), sizeof(XMFLOAT4X4) * m_nSkinningBones);
+
+				UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256의 배수
+				m_pd3dcbBindPoseBoneOffsets = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+				m_pd3dcbBindPoseBoneOffsets->Map(0, NULL, (void**)&m_pcbxmf4x4MappedBindPoseBoneOffsets);
+
+				for (int i = 0; i < m_nSkinningBones; i++)
+				{
+					XMStoreFloat4x4(&m_pcbxmf4x4MappedBindPoseBoneOffsets[i], XMMatrixTranspose(XMLoadFloat4x4(&m_pxmf4x4BindPoseBoneOffsets[i])));
+				}
+			}
+		}
+		else if (!strcmp(pstrToken, "<BoneIndices>:"))
+		{
+			m_nType |= VERTEXT_BONE_INDEX_WEIGHT;
+
+			m_nVertices = ::ReadIntegerFromFile(pInFile);
+			if (m_nVertices > 0)
+			{
+				m_pxmn4BoneIndices.resize(m_nVertices);
+				//m_pxmn4BoneIndices = new XMINT4[m_nVertices];
+
+				pInFile.read((char*)m_pxmn4BoneIndices.data(), sizeof(XMINT4) * m_nVertices);
+				m_pd3dBoneIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmn4BoneIndices.data(), sizeof(XMINT4) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dBoneIndexUploadBuffer);
+
+				m_d3dBoneIndexBufferView.BufferLocation = m_pd3dBoneIndexBuffer->GetGPUVirtualAddress();
+				m_d3dBoneIndexBufferView.StrideInBytes = sizeof(XMINT4);
+				m_d3dBoneIndexBufferView.SizeInBytes = sizeof(XMINT4) * m_nVertices;
+			}
+		}
+		else if (!strcmp(pstrToken, "<BoneWeights>:"))
+		{
+			m_nType |= VERTEXT_BONE_INDEX_WEIGHT;
+
+			m_nVertices = ::ReadIntegerFromFile(pInFile);
+			if (m_nVertices > 0)
+			{
+				m_pxmf4BoneWeights.resize(m_nVertices);
+				//m_pxmf4BoneWeights = new XMFLOAT4[m_nVertices];
+
+				pInFile.read((char*)m_pxmf4BoneWeights.data(), sizeof(XMFLOAT4) * m_nVertices);
+				m_pd3dBoneWeightBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4BoneWeights.data(), sizeof(XMFLOAT4) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dBoneWeightUploadBuffer);
+
+				m_d3dBoneWeightBufferView.BufferLocation = m_pd3dBoneWeightBuffer->GetGPUVirtualAddress();
+				m_d3dBoneWeightBufferView.StrideInBytes = sizeof(XMFLOAT4);
+				m_d3dBoneWeightBufferView.SizeInBytes = sizeof(XMFLOAT4) * m_nVertices;
+			}
+		}
+		else if (!strcmp(pstrToken, "</SkinningInfo>"))
+		{
+			break;
+		}
+	}
+}
+
+void CSkinnedMesh::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+}
+
+void CSkinnedMesh::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (m_pd3dcbBindPoseBoneOffsets)
+	{
+		D3D12_GPU_VIRTUAL_ADDRESS d3dcbBoneOffsetsGpuVirtualAddress = m_pd3dcbBindPoseBoneOffsets->GetGPUVirtualAddress();
+		pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_SKINNED_BONE_OFFSETS, d3dcbBoneOffsetsGpuVirtualAddress); //Skinned Bone Offsets
+	}
+
+	if (m_pd3dcbSkinningBoneTransforms)
+	{
+		D3D12_GPU_VIRTUAL_ADDRESS d3dcbBoneTransformsGpuVirtualAddress = m_pd3dcbSkinningBoneTransforms->GetGPUVirtualAddress();
+		pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_SKINNED_BONE_TRANSFORM, d3dcbBoneTransformsGpuVirtualAddress); //Skinned Bone Transforms
+
+		for (int j = 0; j < m_nSkinningBones; j++)
+		{
+			XMFLOAT4X4 WorldMatrix = m_ppSkinningBoneFrameCaches[j]->GetWorldMatrix();
+			XMStoreFloat4x4(&m_pcbxmf4x4MappedSkinningBoneTransforms[j], XMMatrixTranspose(XMLoadFloat4x4(&WorldMatrix)));
+		}
+	}
+}
+
+void CSkinnedMesh::ReleaseShaderVariables()
+{
+}
+
+void CSkinnedMesh::ReleaseUploadBuffers()
+{
+	CStandardMesh::ReleaseUploadBuffers();
+
+	if (m_pd3dBoneIndexUploadBuffer) m_pd3dBoneIndexUploadBuffer.Reset();
+	if (m_pd3dBoneWeightUploadBuffer) m_pd3dBoneWeightUploadBuffer.Reset();
+}
+
+void CSkinnedMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
+{
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[7] = { m_d3dPositionBufferView, m_d3dTextureCoord0BufferView, m_d3dNormalBufferView, m_d3dTangentBufferView, m_d3dBiTangentBufferView, m_d3dBoneIndexBufferView, m_d3dBoneWeightBufferView };
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 7, pVertexBufferViews);
 }

@@ -365,6 +365,10 @@ void CGameFramework::BuildObjects()
 	pLoadingScene->InitializeObjects(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
 	m_pLoadingScene = std::move(pLoadingScene);
 
+	// MainScene 생성
+	std::unique_ptr<CScene> pMainScene = std::make_unique<CScene>();
+	pMainScene->InitializeObjects(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
+	m_Scenes.push_back(std::move(pMainScene));
 
 	// Command List에 대한 명령들을 종료
 	m_pd3dCommandList->Close();
@@ -461,7 +465,7 @@ void CGameFramework::AdvanceFrame()
 	// 이전 스왑체인 버퍼의 Present이 끝나기를 기다린다.)
 	MoveToNextFrame();
 
-	// FPS 출력
+	// Time / FPS 출력
 	std::wstring time = L"Time: " + std::to_wstring(m_GameTimer.GameTime());
 	std::wstring fps = L"FPS: " + std::to_wstring(m_GameTimer.calculateAverageFPS());
 	std::wstring text = time + L" " + fps;
@@ -481,11 +485,14 @@ void CGameFramework::OMSetBackBuffer()
 	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
 
+	// Get CPU Descriptor Handle of RTV
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	d3dRtvCPUDescriptorHandle.ptr += m_nSwapChainBufferIndex * ::gnRtvDescriptorIncrementSize;
 
+	// Get CPU Descriptor Handle of DSV
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
+	// Set Output Merge Render Targets
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 }
 
@@ -504,9 +511,13 @@ void CGameFramework::ClearRtvAndDsv()
 
 void CGameFramework::WaitForGpuComplete()
 {
+	// 마지막 Fence Value에 1을 더한 값을 가져온다.
 	const UINT64 nFenceValue = ++m_nFenceValues[m_nSwapChainBufferIndex];
+
+	// Fence에 Signal -> Queue에서 GPU 작업이 끝나면 Fence의 값을 nFenceValue로 설정
 	HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), nFenceValue);
 
+	// Fence를 사용하여 GPU의 명령이 모두 완료될 때까지 대기
 	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
 	{
 		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
@@ -516,11 +527,16 @@ void CGameFramework::WaitForGpuComplete()
 
 void CGameFramework::MoveToNextFrame()
 {
+	// 현재 Back Buffer의 Index를 가져온다.
 	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
+	// 마지막 Fence Value에 1을 더한 값을 가져온다.
 	UINT64 nFenceValue = ++m_nFenceValues[m_nSwapChainBufferIndex];
+
+	// Fence에 Signal -> Queue에서 GPU 작업이 끝나면 Fence의 값을 nFenceValue로 설정
 	HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), nFenceValue);
 
+	// Fence를 사용하여 GPU의 명령이 모두 완료될 때까지 대기
 	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
 	{
 		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);

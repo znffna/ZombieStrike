@@ -52,13 +52,13 @@ void CShader::CreateGraphicPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSig
 	if (hResult == S_OK)
 	{
 		// Output Debug Message
-		std::wstring strDebugString = GetShaderName() + L"Graphic Pipeline State is created successfully.\n";
+		std::wstring strDebugString = GetShaderName() + L" Graphic Pipeline State is created successfully.\n";
 		OutputDebugString(strDebugString.data());
 	}
 	else
 	{
 		// Output Debug Message
-		std::wstring strDebugString = GetShaderName() + L"Graphic Pipeline State is not created successfully.\n";
+		std::wstring strDebugString = GetShaderName() + L" Graphic Pipeline State is not created successfully.\n";
 		OutputDebugString(strDebugString.data());
 	}
 
@@ -341,16 +341,12 @@ CSkyBoxShader::~CSkyBoxShader()
 
 D3D12_SHADER_BYTECODE CSkyBoxShader::CreateVertexShader(int nPipelineState)
 {
-#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSSkyBox", "vs_5_1", &m_pd3dVertexShaderBlob));
-#endif
 }
 
 D3D12_SHADER_BYTECODE CSkyBoxShader::CreatePixelShader(int nPipelineState)
 {
-#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSSkyBox", "ps_5_1", &m_pd3dPixelShaderBlob));
-#endif
 }
 
 D3D12_INPUT_LAYOUT_DESC CSkyBoxShader::CreateInputLayout(int nPipelineState)
@@ -434,4 +430,40 @@ D3D12_SHADER_BYTECODE CTerrainShader::CreateVertexShader(int nPipelineState)
 D3D12_SHADER_BYTECODE CTerrainShader::CreatePixelShader(int nPipelineState)
 {
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSTerrain", "ps_5_1", &m_pd3dPixelShaderBlob));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+
+CSkinnedAnimationStandardShader::CSkinnedAnimationStandardShader()
+{
+}
+
+CSkinnedAnimationStandardShader::~CSkinnedAnimationStandardShader()
+{
+}
+
+D3D12_INPUT_LAYOUT_DESC CSkinnedAnimationStandardShader::CreateInputLayout(int nPipelineState)
+{
+	UINT nInputElementDescs = 7;
+	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+
+	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[2] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[3] = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 3, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[4] = { "BITANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 4, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[5] = { "BONEINDEX", 0, DXGI_FORMAT_R32G32B32A32_SINT, 5, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[6] = { "BONEWEIGHT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 6, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+
+	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
+	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+	d3dInputLayoutDesc.NumElements = nInputElementDescs;
+
+	return(d3dInputLayoutDesc);
+}
+
+D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreateVertexShader(int nPipelineState)
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSSkinnedAnimationStandard", "vs_5_1", &m_pd3dVertexShaderBlob));
 }

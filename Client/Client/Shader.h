@@ -91,6 +91,23 @@ public:
 ////////////////////////////////////////////////////////////////////////////////////////////
 //
 
+class CSkinnedAnimationStandardShader : public CStandardShader
+{
+public:
+	CSkinnedAnimationStandardShader();
+	virtual ~CSkinnedAnimationStandardShader();
+
+	virtual std::wstring GetShaderName() override { return L"CSkinnedAnimationStandardShader"; }
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState) override;
+
+
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//
+
 class CSkyBoxShader : public CShader
 {
 public:

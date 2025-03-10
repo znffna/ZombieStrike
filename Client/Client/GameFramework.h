@@ -10,6 +10,61 @@
 #include "GameTimer.h"
 #include "Scene.h"
 
+class ResourceManager
+{
+public:
+	void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, ID3D12RootSignature* rootsignature) {
+		m_d3dDevice = device;
+		m_d3dGraphicsCommandList = commandList;
+		m_d3dRootSignature = rootsignature;
+	}
+
+	// 모든 리소스 해제
+	void ReleaseResources() {
+		resources.clear(); // 스마트 포인터 사용으로 자동 해제됨
+	}
+
+	////////////////////////////////////////////
+
+	// 리소스를 저장
+	void SetResource(const std::wstring& name, ComPtr<ID3D12Resource> resource) {
+		resources[name] = resource;
+	}
+
+	// 특정 리소스 가져오기
+	ComPtr<ID3D12Resource> GetResource(const std::wstring& name) {
+		if (resources.find(name) != resources.end()) {
+			return resources[name];
+		}
+		return nullptr;
+	}
+
+	////////////////////////////////////////////
+
+	// 모델 정보를 저장
+
+	void SetSkinInfo(const std::wstring& name, std::shared_ptr<CLoadedModelInfo> modelInfo) {
+		ModelInfos[name] = modelInfo;
+	}
+
+	std::shared_ptr<CLoadedModelInfo> GetSkinInfo(const std::wstring& name) {
+		if (ModelInfos.find(name) != ModelInfos.end()) {
+			return ModelInfos[name];
+		}
+		return nullptr;
+	}
+
+
+
+private:
+	ID3D12Device* m_d3dDevice = nullptr;
+	ID3D12GraphicsCommandList* m_d3dGraphicsCommandList = nullptr;
+	ID3D12RootSignature* m_d3dRootSignature = nullptr;
+
+	std::unordered_map<std::wstring, ComPtr<ID3D12Resource>> resources;
+	std::unordered_map<std::wstring, std::shared_ptr<CLoadedModelInfo>> ModelInfos;
+};
+
 struct CB_FRAMEWORK_INFO
 {
 	float					m_fCurrentTime;
@@ -108,5 +163,27 @@ private:
 protected:
 	ComPtr<ID3D12Resource> m_pd3dcbFrameworkInfo;
 	CB_FRAMEWORK_INFO* m_pcbMappedFrameworkInfo = NULL;
+
+public:
+	// ResourceManager 리소스 관리
+	static ResourceManager& GetResourceManager() {
+		static ResourceManager instance; // 정적 지역 변수
+		return instance;
+	}
+
+	static ComPtr<ID3D12Resource> GetResource(const std::wstring& name)
+	{
+		return GetResourceManager().GetResource(name);
+	};
+
+	static void StoreResource(const std::wstring& filename, ComPtr<ID3D12Resource> pResource)
+	{
+		GetResourceManager().SetResource(filename, pResource);
+	};
+
+	static void StoreSkinInfo(const std::wstring& filename, std::shared_ptr<CLoadedModelInfo> pSkinInfo)
+	{
+		GetResourceManager().SetSkinInfo(filename, pSkinInfo);
+	};
 };
 

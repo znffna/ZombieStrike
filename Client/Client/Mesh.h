@@ -86,6 +86,22 @@ public:
 // Mesh 클래스
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#define VERTEXT_POSITION				0x0001
+#define VERTEXT_COLOR					0x0002
+#define VERTEXT_NORMAL					0x0004
+#define VERTEXT_TANGENT					0x0008
+#define VERTEXT_TEXTURE_COORD0			0x0010
+#define VERTEXT_TEXTURE_COORD1			0x0020
+
+#define VERTEXT_BONE_INDEX_WEIGHT		0x1000
+
+#define VERTEXT_TEXTURE					(VERTEXT_POSITION | VERTEXT_TEXTURE_COORD0)
+#define VERTEXT_DETAIL					(VERTEXT_POSITION | VERTEXT_TEXTURE_COORD0 | VERTEXT_TEXTURE_COORD1)
+#define VERTEXT_NORMAL_TEXTURE			(VERTEXT_POSITION | VERTEXT_NORMAL | VERTEXT_TEXTURE_COORD0)
+#define VERTEXT_NORMAL_TANGENT_TEXTURE	(VERTEXT_POSITION | VERTEXT_NORMAL | VERTEXT_TANGENT | VERTEXT_TEXTURE_COORD0)
+#define VERTEXT_NORMAL_DETAIL			(VERTEXT_POSITION | VERTEXT_NORMAL | VERTEXT_TEXTURE_COORD0 | VERTEXT_TEXTURE_COORD1)
+#define VERTEXT_NORMAL_TANGENT__DETAIL	(VERTEXT_POSITION | VERTEXT_NORMAL | VERTEXT_TANGENT | VERTEXT_TEXTURE_COORD0 | VERTEXT_TEXTURE_COORD1)
+
 class CMesh
 {
 public:
@@ -95,8 +111,8 @@ public:
 	// setter, getter
 	UINT GetType() const { return(m_nType); }
 
-	void SetName(const std::string& strName) { m_strName = strName; }
-	std::string GetName() const { return(m_strName); }
+	void SetName(const std::string& strName) { m_strMeshName = strName; }
+	std::string GetName() const { return(m_strMeshName); }
 
 	// method
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) { }
@@ -118,8 +134,8 @@ public:
 		m_ppd3dSubSetIndexUploadBuffers.resize(nSubSet);
 		m_pd3dSubSetIndexBufferViews.resize(nSubSet);
 	};
-private:
-	std::string m_strName; // 메쉬의 이름
+protected:
+	std::string m_strMeshName; // 메쉬의 이름
 
 protected:
 	UINT m_nType = 0x00; // 메쉬의 종류
@@ -132,6 +148,7 @@ protected:
 	D3D12_VERTEX_BUFFER_VIEW m_d3dPositionBufferView;	// 버텍스 버퍼 뷰
 
 	// 서브 메쉬(Index Buffer)
+	UINT m_nSubMeshes;	// 서브 메쉬의 개수
 	std::vector<std::vector<UINT>> m_ppnSubSetIndices;  // 서브셋의 인덱스 데이터
 	// m_ppnSubSetIndices.size() = 서브셋의 개수 (서브 셋을 사용하는 이유 : mesh의 primitive마다 Meterial이 다르기 적용하기 위함)
 	// m_ppnSubSetIndices[i].size() = i번째 서브셋의 인덱스 개수
@@ -149,6 +166,10 @@ protected:
 protected:
 	// Index 데이터의 갯수에 따라서 인덱스 버퍼를 생성하는 함수
 	void SetSubMeshCount(int nSubMeshes);
+
+protected:
+	XMFLOAT3 m_xmf3AABBCenter;	// AABB의 중심
+	XMFLOAT3 m_xmf3AABBExtents;	// AABB의 반지름
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -160,6 +181,8 @@ public:
 	CStandardMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual ~CStandardMesh();
 
+	void LoadMeshFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::ifstream& File);
+
 	virtual void ReleaseUploadBuffers() override;
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext) override;
@@ -168,13 +191,13 @@ public:
 
 protected:
 	// 버텍스 정보 버퍼
-	XMFLOAT4 m_xmf4Color;						// Material Diffuse Color
+	std::vector<XMFLOAT4> m_pxmf4Colors;						// Material Diffuse Color
 	std::vector<XMFLOAT3> m_pxmf3Tangents;		// CPU에 저장된 접선 벡터 데이터
 	std::vector<XMFLOAT3> m_pxmf3BiTangents;	// CPU에 저장된 이접선 벡터 데이터
 	std::vector<XMFLOAT3> m_pxmf3Normals;		// CPU에 저장된 법선 벡터 데이터
 
-	std::vector<XMFLOAT2> m_pxmf2Texture0Coords;	// CPU에 저장된 텍스처 좌표 데이터
-	std::vector<XMFLOAT2> m_pxmf2Texture1Coords;	// CPU에 저장된 텍스처 좌표 데이터
+	std::vector<XMFLOAT2> m_pxmf2TextureCoords0;	// CPU에 저장된 텍스처 좌표 데이터
+	std::vector<XMFLOAT2> m_pxmf2TextureCoords1;	// CPU에 저장된 텍스처 좌표 데이터
 
 	ComPtr<ID3D12Resource> m_pd3dTextureCoord0Buffer;		// GPU에 저장된 텍스처 좌표 데이터
 	ComPtr<ID3D12Resource> m_pd3dTextureCoord0UploadBuffer;	// CPU에 저장된 텍스처 좌표 데이터를 GPU에 업로드하기 위한 버퍼
@@ -195,6 +218,58 @@ protected:
 	ComPtr<ID3D12Resource> m_pd3dBiTangentBuffer;		// GPU에 저장된 이접선 벡터 데이터
 	ComPtr<ID3D12Resource> m_pd3dBiTangentUploadBuffer;	// CPU에 저장된 이접선 벡터 데이터를 GPU에 업로드하기 위한 버퍼
 	D3D12_VERTEX_BUFFER_VIEW m_d3dBiTangentBufferView;	// 이접선 버퍼 뷰
+};
+
+///////////////////////////////////////////////////////////////////////////////
+//
+class CGameObject;
+#define SKINNED_ANIMATION_BONES		256
+
+class CSkinnedMesh : public CStandardMesh
+{
+public:
+	CSkinnedMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual ~CSkinnedMesh();
+
+protected:
+	ComPtr<ID3D12Resource> m_pd3dBoneIndexBuffer;
+	ComPtr<ID3D12Resource> m_pd3dBoneIndexUploadBuffer;
+	D3D12_VERTEX_BUFFER_VIEW		m_d3dBoneIndexBufferView;
+
+	ComPtr<ID3D12Resource> m_pd3dBoneWeightBuffer;
+	ComPtr<ID3D12Resource> m_pd3dBoneWeightUploadBuffer;
+	D3D12_VERTEX_BUFFER_VIEW		m_d3dBoneWeightBufferView;
+
+protected:
+	int								m_nBonesPerVertex = 4;
+
+	std::vector<XMINT4> m_pxmn4BoneIndices;
+	std::vector<XMFLOAT4> m_pxmf4BoneWeights;
+
+public:
+	int		m_nSkinningBones = 0;
+
+	std::vector<std::string> m_ppstrSkinningBoneNames; //[m_nSkinningBones]
+	std::vector<std::shared_ptr<CGameObject>> m_ppSkinningBoneFrameCaches; //[m_nSkinningBones]
+	std::vector<XMFLOAT4X4> m_pxmf4x4BindPoseBoneOffsets; //[m_nSkinningBones], Transposed
+
+	ComPtr<ID3D12Resource> m_pd3dcbBindPoseBoneOffsets; //[m_nSkinningBones]
+	XMFLOAT4X4* m_pcbxmf4x4MappedBindPoseBoneOffsets; //[m_nSkinningBones]
+
+	ComPtr<ID3D12Resource> m_pd3dcbSkinningBoneTransforms; //[m_nSkinningBones], Pointer Only
+	XMFLOAT4X4* m_pcbxmf4x4MappedSkinningBoneTransforms; //[m_nSkinningBones]
+
+public:
+	void PrepareSkinning(std::shared_ptr<CGameObject> pModelRootObject);
+	void LoadSkinInfoFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::ifstream& pInFile);
+
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void ReleaseShaderVariables();
+
+	virtual void ReleaseUploadBuffers();
+
+	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext) override;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

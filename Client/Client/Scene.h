@@ -104,7 +104,7 @@ public:
 
 	// Scene Method
 	virtual void FixedUpdate(float deltaTime);
-	void PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
+	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 
 	// Shader method
@@ -155,8 +155,12 @@ protected:
 	ComPtr<ID3D12Resource> m_pd3dcbLights;
 	CB_LIGHT_INFO* m_pcbMappedLights = nullptr;
 
+	// Animation
+	float								m_fElapsedTime = 0.0f;
+
 	// GameObjects
 	std::vector<std::shared_ptr<CGameObject>> m_ppObjects;
+	std::vector<std::shared_ptr<CGameObject>> m_ppHierarchicalObjects;
 
 	// SkyBox
 	std::shared_ptr<CGameObject> m_pSkyBox;
