@@ -141,12 +141,15 @@ float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
         normalW = normalize(mul(vNormal, TBN));
     }
     cIllumination = Lighting(input.positionW, normalW);
-    cIllumination = clamp(cIllumination, 0.0f, 1.0f);
-    cColor = cColor * cIllumination;
+    {// 빛의 강도를 0.0 ~ 1.0 사이로 제한한다.
+//    cIllumination = clamp(cIllumination, 0.0f, 1.0f);
+    }
+        cColor = cColor * cIllumination;
+    cColor = cColor / (1 + cColor);
 //    cColor = lerp(cColor, cIllumination, 0.5f);
     
-    return (cColor);
-}
+        return (cColor);
+    }
 
 ////////////////////////////////////////////////////////////////////////////////
 //

@@ -616,10 +616,10 @@ public:
 
 	// Parent
 	void SetParent(std::shared_ptr<CGameObject> pParent) { m_pParent = pParent; }
-	std::shared_ptr<CGameObject> GetParent() { return m_pParent; }
+	std::shared_ptr<CGameObject> GetParent() { return m_pParent.lock(); }
 
 	// Child
-	void SetChild(std::shared_ptr<CGameObject> pChild) { m_pChilds.push_back(pChild); }
+	void SetChild(std::shared_ptr<CGameObject> pChild);
 
 protected:
 	bool m_bActive; // Active Flag
@@ -643,7 +643,7 @@ public:
 
 protected:
 	// Parent
-	std::shared_ptr<CGameObject> m_pParent;
+	std::weak_ptr<CGameObject> m_pParent;
 
 	// Child
 	std::vector<std::shared_ptr<CGameObject>> m_pChilds; // Child Object
@@ -705,6 +705,17 @@ public:
 private:
 	float m_fRotationSpeed = 90.0f; // 초당 회전 속도
 	XMFLOAT3 m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f); // 회전 축
+
+};
+
+////////////////////////////////////////////////////////////////////////////////////////
+//
+
+class CCubeObject : public CRotatingObject
+{
+public:
+	CCubeObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual ~CCubeObject();
 
 };
 

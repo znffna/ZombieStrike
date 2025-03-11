@@ -295,6 +295,13 @@ void CGameObject::ReleaseShaderVariables()
 #endif // _USE_OBJECT_MATERIAL_CBV
 }
 
+// Child
+void CGameObject::SetChild(std::shared_ptr<CGameObject> pChild)
+{
+	m_pChilds.push_back(pChild);
+	// pChild->SetParent(shared_from_this());
+}
+
 std::shared_ptr<CTexture> CGameObject::FindReplicatedTexture(const _TCHAR* pstrTextureName)
 {
 	for (UINT i = 0; i < m_nMaterials; i++)
@@ -516,7 +523,6 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 #else
 					pAnimationSet->m_pfKeyFrameTimes[i] = fKeyTime;
 					pInFile.read((char*)(pAnimationSet->m_ppxmf4x4KeyFrameTransforms[i].data()), sizeof(XMFLOAT4X4) * pLoadedModel->m_pAnimationSets->m_nBoneFrames);
-					pAnimationSet->m_ppxmf4x4KeyFrameTransforms[i];
 #endif
 				}
 			}
@@ -1118,14 +1124,14 @@ CZombieObject::CZombieObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	m_bActive = true;
 	m_nObjectID = nGameObjectID++;
 
-	m_strName = "ZomBie_" + std::to_string(m_nObjectID);
+	m_strName = "Zombie_" + std::to_string(m_nObjectID);
 
 	// Model Info
 
 	std::shared_ptr<CLoadedModelInfo> pAngrybotModel = pModel;
-	if (!pAngrybotModel) pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/test2.bin", NULL);
-
+	if (!pAngrybotModel) pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/FuzZombie.bin", NULL);
 	SetChild(pAngrybotModel->m_pModelRootObject);
+
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pAngrybotModel);
 
 	m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
@@ -1201,5 +1207,25 @@ CZombieAnimationController::CZombieAnimationController(ID3D12Device* pd3dDevice,
 }
 
 CZombieAnimationController::~CZombieAnimationController()
+{
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+
+CCubeObject::CCubeObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+	: CRotatingObject(pd3dDevice, pd3dCommandList)
+{
+	// Mesh
+	std::shared_ptr<CCubeMesh> pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
+	SetMesh(pCubeMesh);
+
+	// Material
+	std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
+	pMaterial->SetStandardShader();
+	SetMaterial(0, pMaterial);
+}
+
+CCubeObject::~CCubeObject()
 {
 }

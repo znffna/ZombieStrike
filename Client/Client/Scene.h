@@ -96,6 +96,8 @@ public:
 
 	void BuildDefaultLightsAndMaterials();
 
+	void CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
 	// Scene Management
 	bool CheckWorkRendering() { return (m_SceneState == SCENE_STATE_RUNNING) || (m_SceneState == SCENE_STATE_PAUSING); }
 	bool CheckWorkUpdating() { return (m_SceneState == SCENE_STATE_RUNNING); }
@@ -109,6 +111,9 @@ public:
 
 	// Shader method
 	ComPtr<ID3D12RootSignature> CreateGraphicsRootSignature(ID3D12Device* pd3dDevice);
+	void CreateRootSignature(ID3D12RootSignature* pd3dRootSignature, ID3D12Device* pd3dDevice);
+	void CreateDescriptorHeap(ID3D12Device* pd3dDevice);
+	void CreateStaticShader(ID3D12Device* pd3dDevice);
 
 	// Descriptor Heap
 	static void CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews);
@@ -138,15 +143,15 @@ public:
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
 
 protected:
-	// Descriptor Heap
+	// DescriptorHeap
 	static std::shared_ptr<CDescirptorHeap> m_pDescriptorHeap;
 
 	// Scene State
 	SCENE_STATE m_SceneState = SCENE_STATE_NONE;
 
-	// Shader Variables
-	ComPtr<ID3D12RootSignature> m_pd3dGraphicsRootSignature;
-	ComPtr<ID3D12RootSignature> m_pd3dComputeRootSignature;
+	// RootSignature
+	static ComPtr<ID3D12RootSignature> m_pd3dGraphicsRootSignature;
+	static ComPtr<ID3D12RootSignature> m_pd3dComputeRootSignature;
 
 	// Light
 	XMFLOAT4 m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);

@@ -92,6 +92,9 @@
     <ClCompile Include="WICTextureLoader12.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="RenderConfig.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Client.rc">

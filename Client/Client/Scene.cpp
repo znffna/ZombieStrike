@@ -8,6 +8,8 @@
 #include "GameFramework.h"
 
 std::shared_ptr<CDescirptorHeap> CScene::m_pDescriptorHeap;
+ComPtr<ID3D12RootSignature> CScene::m_pd3dGraphicsRootSignature;
+ComPtr<ID3D12RootSignature> CScene::m_pd3dComputeRootSignature;
 
 CScene::CScene()
 {
@@ -32,49 +34,20 @@ CScene::~CScene()
 
 void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	// Create Default Lights and Materials
 	BuildDefaultLightsAndMaterials();
-	// Create Shader Variables
+
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	// Create Root Signature
-	if (!pd3dRootSignature) m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
-	else m_pd3dGraphicsRootSignature = pd3dRootSignature;
-
-	// Create Descriptor Heap
-	if (!m_pDescriptorHeap)
-	{
-		m_pDescriptorHeap = std::make_shared<CDescirptorHeap>();
-		CreateCbvSrvDescriptorHeaps(pd3dDevice, 100, 100);
-	}
-
-	// Static Variable 积己
-	if (CMaterial::m_pStandardShader == nullptr)
-	{
-		CMaterial::m_pStandardShader = std::make_shared<CStandardShader>();
-		CMaterial::m_pStandardShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
-	}
-	if (CMaterial::m_pSkinnedAnimationShader == nullptr)
-	{
-		CMaterial::m_pSkinnedAnimationShader = std::make_shared<CSkinnedAnimationStandardShader>();
-		CMaterial::m_pSkinnedAnimationShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
-	}
-
+	CreateRootSignature(pd3dRootSignature, pd3dDevice);
+	CreateDescriptorHeap(pd3dDevice);
+	CreateStaticShader(pd3dDevice);
 
 	// Create Objects
 	ResourceManager& resourceManager = CGameFramework::GetResourceManager();
 
 	std::shared_ptr<CGameObject> pGameObject;
-
-	std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
-	pMaterial->SetStandardShader();
-	std::shared_ptr<CCubeMesh> pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
-
-	pGameObject = std::make_shared<CRotatingObject>();
-	pGameObject->SetMesh(pCubeMesh);
-	pGameObject->SetMaterial(0, pMaterial);
+	pGameObject = std::make_shared<CCubeObject>(pd3dDevice, pd3dCommandList, pd3dRootSignature);
 	pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 10.0f));
-
 	m_ppObjects.push_back(pGameObject);
 
 	// Zombie Object
@@ -91,15 +64,49 @@ void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	m_ppHierarchicalObjects.push_back(pZombie);
 
 	// Fixed Camera
+	CreateFixedCamera(pd3dDevice, pd3dCommandList);
+
+	// Scene 积己 肯丰
+	m_SceneState = SCENE_STATE_RUNNING;
+}
+
+void CScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
 	m_pCamera = std::make_shared<CCamera>();
 	m_pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 	m_pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 	m_pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, -5.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
 	m_pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
 	m_pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+}
 
-	// Scene 积己 肯丰
-	m_SceneState = SCENE_STATE_RUNNING;
+void CScene::CreateRootSignature(ID3D12RootSignature* pd3dRootSignature, ID3D12Device* pd3dDevice)
+{
+	if (!pd3dRootSignature) m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
+	else m_pd3dGraphicsRootSignature = pd3dRootSignature;
+}
+
+void CScene::CreateDescriptorHeap(ID3D12Device* pd3dDevice)
+{
+	if (!m_pDescriptorHeap)
+	{
+		m_pDescriptorHeap = std::make_shared<CDescirptorHeap>();
+		CreateCbvSrvDescriptorHeaps(pd3dDevice, 100, 100);
+	}
+}
+
+void CScene::CreateStaticShader(ID3D12Device* pd3dDevice)
+{
+	if (CMaterial::m_pStandardShader == nullptr)
+	{
+		CMaterial::m_pStandardShader = std::make_shared<CStandardShader>();
+		CMaterial::m_pStandardShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+	}
+	if (CMaterial::m_pSkinnedAnimationShader == nullptr)
+	{
+		CMaterial::m_pSkinnedAnimationShader = std::make_shared<CSkinnedAnimationStandardShader>();
+		CMaterial::m_pSkinnedAnimationShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+	}
 }
 
 void CScene::ReleaseObjects()
