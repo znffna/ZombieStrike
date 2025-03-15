@@ -56,10 +56,11 @@
 
 #ifdef _DEBUG
 #include <dxgidebug.h>
-//#define _WITH_DEBUG_FRAME_HIERARCHY
-//#define _WITH_DEBUG_SKINNING_BONE
-//#define _WITH_DEBUG_ANIMATION_UPDATE
-//#define _WITH_DEBUG_TRANSFORM_UPDATE
+//#define _WITH_DEBUG_FRAME_HIERARCHY  // 프레임 계층 구조 디버깅
+//#define _WITH_DEBUG_SKINNING_BONE    // 스키닝 본 디버깅
+//#define _WITH_DEBUG_ANIMATION_UPDATE // 애니메이션 업데이트 디버깅
+//#define _WITH_DEBUG_TRANSFORM_UPDATE // 트랜스폼 업데이트 디버깅
+//#define _WITH_OBJECT_TRANSFORM	   // 오브젝트 트랜스폼 자체를 포함할 경우.(사용 안할시 class CTransform을 사용)
 #endif
 
 

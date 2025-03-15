@@ -9,6 +9,8 @@
 #include "stdafx.h"
 #include "Mesh.h"
 
+#include "Component.h"
+
 class CGameObject;
 class CTexture;
 class CShader;
@@ -521,15 +523,19 @@ public:
 	virtual void OnAnimationIK(CGameObject* pRootGameObject) { }
 };
 
-
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 
 class CGameObject : public std::enable_shared_from_this<CGameObject>
 {
 public:
 	CGameObject();
-	CGameObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual ~CGameObject();
+
+	// Object Initialization
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList) {};
+
+	static std::shared_ptr<CGameObject> CreateObject() { return std::make_shared<CGameObject>(); }
 
 	// Active Flag
 	bool IsActive() { return m_bActive; }
@@ -541,9 +547,11 @@ public:
 
 	// Object Name
 	std::string GetName() { return m_strName; }
-	void SetName(std::string strName) { m_strName = strName; }
+	void SetName(const std::string& strName);
+	virtual std::string GetDefaultName() { return "CGameObject"; }
 
 	// Transform
+#ifdef _WITH_OBJECT_TRANSFORM
 	DirectX::XMFLOAT3 GetPosition() { return m_xmf3Position; }
 	DirectX::XMFLOAT3 GetRight() { return Vector3::Normalize(XMFLOAT3(m_xmf4x4World._31, m_xmf4x4World._32, m_xmf4x4World._33)); }
 	DirectX::XMFLOAT3 GetUp() { return (Vector3::Normalize(XMFLOAT3(m_xmf4x4World._21, m_xmf4x4World._22, m_xmf4x4World._23))); }
@@ -582,6 +590,75 @@ public:
 	void SetWorldMatrix(DirectX::XMFLOAT4X4 xmf4x4World) { m_xmf4x4World = xmf4x4World; }
 	
 	void UpdateTransform(DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
+
+	
+#else
+	DirectX::XMFLOAT3 GetPosition() { return m_pTransform->GetPosition(); }
+	DirectX::XMFLOAT3 GetRight() { return m_pTransform->GetRight(); }
+	DirectX::XMFLOAT3 GetUp() { return m_pTransform->GetUp(); }
+	DirectX::XMFLOAT3 GetLook() { return m_pTransform->GetLook(); }
+	DirectX::XMFLOAT3 GetScale() { return m_pTransform->GetScale(); }
+
+	DirectX::XMFLOAT3 GetRotation() { return m_pTransform->GetRotation(); }
+	float GetPitch() { return m_pTransform->GetRotation().x; } // X 축을	기준으로 회전
+	float GetYaw() { return m_pTransform->GetRotation().y; } // Y 축을 기준으로 회전
+	float GetRoll() { return m_pTransform->GetRotation().z; } // Z 축을 기준으로 회전
+
+	DirectX::XMFLOAT4X4 GetLocalMatrix() { return m_pTransform->GetLocalMatrix(); }
+	DirectX::XMFLOAT4X4 GetWorldMatrix() { return m_pTransform->GetWorldMatrix(); }
+
+	DirectX::XMFLOAT3 GetLocalPosition() { return m_pTransform->GetLocalPosition(); };
+
+	std::shared_ptr<CTransform> GetTransform() { return m_pTransform; }
+
+	void SetPosition(DirectX::XMFLOAT3 xmf3Position) { m_pTransform->SetPosition(xmf3Position); }
+	void SetPosition(float fx, float fy, float fz) {  m_pTransform->SetPosition(fx, fy, fz);  }
+	void SetScale(DirectX::XMFLOAT3 xmf3Scale) { m_pTransform->SetPosition(xmf3Scale); };
+	void SetScale(float fx, float fy, float fz) { m_pTransform->SetPosition(fx, fy, fz); };
+
+	void Move(DirectX::XMFLOAT3 xmf3Shift) { m_pTransform->Move(xmf3Shift); } ;
+	void Move(float x, float y, float z) { Move(DirectX::XMFLOAT3(x, y, z)); }
+
+	void MoveStrafe(float fDistance = 1.0f) { m_pTransform->MoveStrafe(fDistance); };
+	void MoveUp(float fDistance = 1.0f) { m_pTransform->MoveUp(fDistance); };
+	void MoveForward(float fDistance = 1.0f) { m_pTransform->MoveForward(fDistance); };
+
+	void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f) { m_pTransform->Rotate(fPitch, fYaw, fRoll); }
+	void Rotate(const XMFLOAT3& pxmf3Axis, float fAngle) { m_pTransform->Rotate(pxmf3Axis, fAngle); }
+	void Rotate(const XMFLOAT4& pxmf4Quaternion) { m_pTransform->Rotate(pxmf4Quaternion); }
+
+	void SetLocalMatrix(DirectX::XMFLOAT4X4 xmf4x4Local) { m_pTransform->SetLocalMatrix(xmf4x4Local); }
+	void SetLocalTransform(DirectX::XMFLOAT4X4 xmf4x4Local) { SetLocalMatrix(xmf4x4Local); }
+	void SetWorldMatrix(DirectX::XMFLOAT4X4 xmf4x4World) { m_pTransform->SetWorldMatrix(xmf4x4World); }
+	void SetWorldTransform(DirectX::XMFLOAT4X4 xmf4x4World) { SetWorldTransform(xmf4x4World); }
+
+	void UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
+	void UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix);
+	void UpdateTransform(std::shared_ptr<CGameObject>& pGameobject)
+	{
+		m_pTransform->UpdateTransform(pGameobject); 
+
+		// Update Child
+		for (auto& pChild : m_pChilds) pChild->UpdateTransform(GetWorldMatrix());
+	}
+
+#endif // _WITH_OBJECT_TRANSFORM
+
+	// 상속 관계
+#ifdef _WITH_TRANSFORM_HIERARCHY
+	const CGameObject* GetParent() { return m_pTransform->GetParent()->GetOwner(); }
+
+	void SetParent(std::shared_ptr<CGameObject> pParent) { m_pTransform->SetParent(pParent->GetTransform()); }
+	void SetChild(std::shared_ptr<CGameObject> pChild) { m_pTransform->SetChild(pChild->GetTransform()); };
+#else
+	std::shared_ptr<CGameObject> GetParent() { return m_pParent.lock(); }
+	std::vector<std::shared_ptr<CGameObject>> GetChilds() { return m_pChilds; }
+	std::shared_ptr<CGameObject> GetChild(int nIndex) { return m_pChilds[nIndex]; }
+
+	void SetParent(std::shared_ptr<CGameObject> pParent) { m_pParent = pParent; };
+	void SetChild(std::shared_ptr<CGameObject> pChild) { m_pChilds.push_back(pChild); pChild->SetParent(shared_from_this()); };
+
+#endif // _WITH_TRANSFORM_HIERARCHY
 	
 	// Object Initialization / Release
 	virtual void Initialize() {};
@@ -614,13 +691,6 @@ public:
 	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseShaderVariables();
 
-	// Parent
-	void SetParent(std::shared_ptr<CGameObject> pParent) { m_pParent = pParent; }
-	std::shared_ptr<CGameObject> GetParent() { return m_pParent.lock(); }
-
-	// Child
-	void SetChild(std::shared_ptr<CGameObject> pChild);
-
 protected:
 	bool m_bActive; // Active Flag
 
@@ -634,6 +704,7 @@ protected:
 	std::vector<std::shared_ptr<CMaterial>> m_ppMaterials; // Object CMaterial
 public:
 	// Transform
+#ifdef _WITH_OBJECT_TRANSFORM
 	DirectX::XMFLOAT3 m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f); // 위치
 	DirectX::XMFLOAT3 m_xmf3Rotation = XMFLOAT3(0.0f, 0.0f, 0.0f); // 회전[Euler Angle]
 	DirectX::XMFLOAT3 m_xmf3Scale = XMFLOAT3(1.0f, 1.0f, 1.0f); // 크기
@@ -641,16 +712,23 @@ public:
 	DirectX::XMFLOAT4X4 m_xmf4x4Local = Matrix4x4::Identity(); // Local Matrix [즉시 갱신]
 	DirectX::XMFLOAT4X4 m_xmf4x4World = Matrix4x4::Identity(); // World Matrix [UpdateMatrix()로 갱신]
 
+#else
+	std::shared_ptr<CTransform> m_pTransform = std::make_shared<CTransform>();
+#endif
+
+	// Shader Variables
+	ComPtr<ID3D12Resource> m_pd3dcbGameObject;
+	CB_GAMEOBJECT_INFO* m_pcbMappedObject = nullptr;
+
+#ifndef _WITH_TRANSFORM_HIERARCHY
 protected:
 	// Parent
 	std::weak_ptr<CGameObject> m_pParent;
 
 	// Child
 	std::vector<std::shared_ptr<CGameObject>> m_pChilds; // Child Object
-
-	// Shader Variables
-	ComPtr<ID3D12Resource> m_pd3dcbGameObject;
-	CB_GAMEOBJECT_INFO* m_pcbMappedObject = nullptr;
+public:
+#endif
 
 public:
 
@@ -662,8 +740,12 @@ public:
 	void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& ppSkinnedMeshes, int* pnSkinnedMesh)
 	{
 		if (m_pMesh && (m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT)) ppSkinnedMeshes[(*pnSkinnedMesh)++] = std::dynamic_pointer_cast<CSkinnedMesh>(m_pMesh) ;
-
+		
+#ifdef _WITH_TRANSFORM_HIERARCHY
 		for (auto& pChild : m_pChilds) pChild->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
+#else
+		for (auto& pChild : m_pChilds) pChild->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
+#endif
 	};
 
 	static void LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<CLoadedModelInfo> pLoadedModel);
@@ -690,8 +772,13 @@ class CRotatingObject : public CGameObject
 {
 public:
 	CRotatingObject();
-	CRotatingObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual ~CRotatingObject();
+
+	// Object Initialization
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList);
+	virtual std::string GetDefaultName() override { return "CRotatingObject"; } 
+
+	static std::shared_ptr<CRotatingObject> Create(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList);
 
 	// Object Update
 	virtual void Update(float fTimeElapsed) override;
@@ -714,9 +801,14 @@ private:
 class CCubeObject : public CRotatingObject
 {
 public:
-	CCubeObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	CCubeObject();
 	virtual ~CCubeObject();
 
+	// Object Initialization
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual std::string GetDefaultName() override { return "CCubeObject"; }
+
+	static std::shared_ptr<CCubeObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -725,8 +817,14 @@ public:
 class CZombieObject : public CGameObject
 {
 public:
-	CZombieObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks);
+	CZombieObject();
 	virtual ~CZombieObject();
+
+	// Object Initialization
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks);
+	virtual std::string GetDefaultName() override { return "CZombieObject"; }
+
+	static std::shared_ptr<CZombieObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -734,9 +832,16 @@ public:
 class CSkyBox : public CGameObject
 {
 public:
-	CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	CSkyBox();
 	virtual ~CSkyBox();
 
+	// Object Initialization
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual std::string GetDefaultName() override { return "CSkyBox"; }
+
+	static std::shared_ptr<CSkyBox> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+
+	// Object Render
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
 };
 
@@ -746,11 +851,20 @@ public:
 class CHeightMapTerrain : public CGameObject
 {
 public:
-	CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
-		LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength,
-		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
+	CHeightMapTerrain();
 	virtual ~CHeightMapTerrain();
 
+	// Object Initialization
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
+		LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength,
+		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
+	virtual std::string GetDefaultName() override { return "CHeightMapTerrain"; }
+
+	static std::shared_ptr<CHeightMapTerrain> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
+		LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength,
+		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
+
+	// Object Render
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
 
 	//지형의 높이를 계산하는 함수이다(월드 좌표계). 높이 맵의 높이에 스케일의 y를 곱한 값이다. 

@@ -46,7 +46,7 @@ void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	ResourceManager& resourceManager = CGameFramework::GetResourceManager();
 
 	std::shared_ptr<CGameObject> pGameObject;
-	pGameObject = std::make_shared<CCubeObject>(pd3dDevice, pd3dCommandList, pd3dRootSignature);
+	pGameObject = CCubeObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature);
 	pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 10.0f));
 	m_ppObjects.push_back(pGameObject);
 
@@ -58,7 +58,7 @@ void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		resourceManager.SetSkinInfo(L"Model/FuzZombie.bin", pModel);
 	}
 
-	std::shared_ptr<CZombieObject> pZombie = std::make_shared<CZombieObject>(pd3dDevice, pd3dCommandList, pd3dRootSignature, pModel, 2);
+	std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, pModel, 2);
 	pZombie->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f));
 	pZombie->Rotate(0.0f, 180.0f, 0.0f);
 	m_ppHierarchicalObjects.push_back(pZombie);
@@ -693,7 +693,7 @@ void CLoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	std::shared_ptr<CMesh> pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
 
 	std::shared_ptr<CRotatingObject> pRotateGameObject;
-	pRotateGameObject = std::make_shared<CRotatingObject>();
+	pRotateGameObject = CRotatingObject::Create(pd3dDevice, pd3dCommandList);
 	pRotateGameObject->SetMesh(pCubeMesh);
 	pRotateGameObject->AddMaterial(pMaterial);
 	pMaterial->SetShader(pStandardShader);
@@ -704,14 +704,14 @@ void CLoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	m_ppObjects.push_back(pRotateGameObject);
 
 	// Skybox
-	m_pSkyBox = std::make_shared<CSkyBox>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
+	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 
 	// Terrain
 	
 	//지형을 확대할 스케일 벡터이다. x-축과 z-축은 8배, y-축은 2배 확대한다. 
 	XMFLOAT3 xmf3Scale(8.0f, 1.0f, 8.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
-	m_pTerrain = std::make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
+	m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
 
 	// Fixed Camera
 	m_pCamera = std::make_shared<CCamera>();

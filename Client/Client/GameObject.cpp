@@ -20,22 +20,36 @@ CGameObject::CGameObject()
 	m_bActive = true;
 	m_nObjectID = nGameObjectID++;
 
+	// Transform Owner Setting
+	m_pTransform->SetOwner(this);
+
+	// Default Name
 	m_strName = "GameObject_" + std::to_string(m_nObjectID);
-}
-
-CGameObject::CGameObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
-{
-
 }
 
 CGameObject::~CGameObject()
 {
 }
 
+void CGameObject::SetName(const std::string& strName)
+{
+	if (strName.length() > 0)
+	{
+		m_strName = strName;
+	}
+	else
+	{
+		m_strName = GetDefaultName() + "_" + std::to_string(m_nObjectID);
+	}
+}
+
+#ifdef _WITH_OBJECT_TRANSFORM
 void CGameObject::SetPosition(float fx, float fy, float fz)
 {
 	// Debug 용 Position Set
+#ifdef _DEBUG
 	m_xmf3Position = XMFLOAT3(fx, fy, fz);
+#endif
 
 	// Local Matrix Update
 	m_xmf4x4Local._41 = fx;
@@ -49,7 +63,9 @@ void CGameObject::SetPosition(float fx, float fy, float fz)
 void CGameObject::SetScale(float fx, float fy, float fz)
 {
 	// Debug 용 Scale Set
+#ifdef _DEBUG
 	m_xmf3Scale = XMFLOAT3(fx, fy, fz);
+#endif
 
 	// Scale Update
 	XMMATRIX mtxScale = XMMatrixScaling(fx, fy, fz);
@@ -62,8 +78,9 @@ void CGameObject::SetScale(float fx, float fy, float fz)
 void CGameObject::Move(DirectX::XMFLOAT3 xmf3Shift)
 {
 	// Debug 용 Position Set
+#ifdef _DEBUG
 	m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
-
+#endif
 	// Local Matrix Update
 	m_xmf4x4Local._41 += xmf3Shift.x;
 	m_xmf4x4Local._42 += xmf3Shift.y;
@@ -110,7 +127,9 @@ void CGameObject::Rotate(const XMFLOAT3& pxmf3Axis, float fAngle)
 	XMMATRIX mtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&pxmf3Axis), XMConvertToRadians(fAngle));
 	m_xmf4x4Local = Matrix4x4::Multiply(mtxRotate, m_xmf4x4Local);
 
+#ifdef _DEBUG
 	m_xmf3Rotation = ExtractEulerAngles(m_xmf4x4Local, m_xmf3Scale);
+#endif
 
 	UpdateTransform(NULL);
 
@@ -122,7 +141,9 @@ void CGameObject::Rotate(const XMFLOAT4& pxmf4Quaternion)
 	XMMATRIX mtxRotate = XMMatrixRotationQuaternion(XMLoadFloat4(&pxmf4Quaternion));
 	m_xmf4x4Local = Matrix4x4::Multiply(mtxRotate, m_xmf4x4Local);
 
+#ifdef _DEBUG
 	m_xmf3Rotation = ExtractEulerAngles(m_xmf4x4Local, m_xmf3Scale);
+#endif
 
 	UpdateTransform(NULL);
 }
@@ -181,6 +202,26 @@ void CGameObject::UpdateTransform(DirectX::XMFLOAT4X4* xmf4x4Parent)
 
 	// Update Child Object World Matrix
 	for(auto& pChild : m_pChilds) pChild->UpdateTransform(&m_xmf4x4World);
+}
+#endif
+
+void CGameObject::UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
+{ 
+	m_pTransform->UpdateTransform(xmf4x4ParentMatrix); 
+
+#ifndef _WITH_TRANSFORM_HIERARCHY
+	// Update Child Object World Matrix
+	#ifdef _WITH_OBJECT_TRANSFORM
+		for (auto& pChild : m_pChilds) pChild->UpdateTransform(&m_xmf4x4World);
+	#else
+		for (auto& pChild : m_pChilds) pChild->UpdateTransform(GetWorldMatrix());
+	#endif // _WITH_OBJECT_TRANSFORM
+#endif // !_WITH_TRANSFORM_HIERARCHY
+}
+
+void CGameObject::UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix)
+{
+	UpdateTransform(&xmf4x4ParentMatrix);
 }
 
 void CGameObject::Update(float fTimeElapsed)
@@ -281,7 +322,12 @@ void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandLi
 #else 
 	// Update Shader Variables
 	XMFLOAT4X4 xmf4x4World;
+#ifdef _WITH_OBJECT_TRANSFORM
 	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
+#else
+	xmf4x4World = GetWorldMatrix();
+	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4World)));
+#endif
 
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 16, &xmf4x4World, 0);
 #endif // _USE_OBJECT_MATERIAL_CBV
@@ -293,13 +339,6 @@ void CGameObject::ReleaseShaderVariables()
 	if (m_pd3dcbGameObject) m_pd3dcbGameObject->Unmap(0, nullptr);
 	m_pd3dcbGameObject.Reset();
 #endif // _USE_OBJECT_MATERIAL_CBV
-}
-
-// Child
-void CGameObject::SetChild(std::shared_ptr<CGameObject> pChild)
-{
-	m_pChilds.push_back(pChild);
-	// pChild->SetParent(shared_from_this());
 }
 
 std::shared_ptr<CTexture> CGameObject::FindReplicatedTexture(const _TCHAR* pstrTextureName)
@@ -564,7 +603,13 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		}
 		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
 		{
+			XMFLOAT4X4 xmf4x4Matrix;
+#ifdef _WITH_OBJECT_TRANSFORM
 			file.read((char*)&pGameObject->m_xmf4x4Local, sizeof(float) * 16);
+#else
+			file.read((char*)&xmf4x4Matrix, sizeof(float) * 16);
+			pGameObject->SetLocalMatrix(xmf4x4Matrix);
+#endif
 		}
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
@@ -674,20 +719,28 @@ std::shared_ptr<CGameObject> CGameObject::FindFrame(std::string strFrameName)
 //
 
 CRotatingObject::CRotatingObject()
+	: CGameObject()
 {
-	m_fRotationSpeed = 30.0f;
-	m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);
-}
-
-CRotatingObject::CRotatingObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
-	: CGameObject(pd3dDevice, pd3dCommandList)
-{
-	m_fRotationSpeed = 30.0f;
-	m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);
 }
 
 CRotatingObject::~CRotatingObject()
 {
+}
+
+void CRotatingObject::Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandlist)
+{
+	CGameObject::Initialize(pd3dDevice, pd3dCommandlist);
+
+	m_fRotationSpeed = 30.0f;
+	m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);
+}
+
+std::shared_ptr<CRotatingObject> CRotatingObject::Create(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList)
+{
+	std::shared_ptr<CRotatingObject> pRotatingObject = std::make_shared<CRotatingObject>();
+	pRotatingObject->Initialize(pd3dDevice, pd3dCommandList);
+
+	return pRotatingObject;
 }
 
 void CRotatingObject::Update(float fTimeElapsed)
@@ -698,8 +751,15 @@ void CRotatingObject::Update(float fTimeElapsed)
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-CSkyBox::CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
-	: CGameObject(pd3dDevice, pd3dCommandList)
+CSkyBox::CSkyBox()
+{
+}
+
+CSkyBox::~CSkyBox()
+{
+}
+
+void CSkyBox::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	std::shared_ptr<CMesh> pSkyBoxMesh = std::make_shared<CSkyBoxMesh>(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 20.0f);
 	SetMesh(pSkyBoxMesh);
@@ -725,8 +785,12 @@ CSkyBox::CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dComman
 	SetMaterial(0, pSkyBoxMaterial);
 }
 
-CSkyBox::~CSkyBox()
+std::shared_ptr<CSkyBox> CSkyBox::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
+	std::shared_ptr<CSkyBox> pSkyBox = std::make_shared<CSkyBox>();
+	pSkyBox->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+	return pSkyBox;
 }
 
 void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -744,8 +808,23 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color)
-	: CGameObject(pd3dDevice, pd3dCommandList)
+CHeightMapTerrain::CHeightMapTerrain()
+{
+}
+
+CHeightMapTerrain::~CHeightMapTerrain()
+{
+}
+
+std::shared_ptr<CHeightMapTerrain> CHeightMapTerrain::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color)
+{
+	std::shared_ptr<CHeightMapTerrain> pHeightMapTerrain = std::make_shared<CHeightMapTerrain>();
+	pHeightMapTerrain->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, nWidth, nLength, nBlockWidth, nBlockLength, xmf3Scale, xmf4Color);
+
+	return pHeightMapTerrain;
+}
+
+void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color)
 {
 	//지형에 사용할 높이 맵의 가로, 세로의 크기이다. 
 	m_nWidth = nWidth;
@@ -814,10 +893,6 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	m_ppMaterials.resize(1);
 	m_ppMaterials[0]->SetTexture(pTexture);
-}
-
-CHeightMapTerrain::~CHeightMapTerrain()
-{
 }
 
 void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -1116,8 +1191,15 @@ void CLoadedModelInfo::PrepareSkinning()
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-CZombieObject::CZombieObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks)
-	: CGameObject(pd3dDevice, pd3dCommandList)
+CZombieObject::CZombieObject()
+{
+}
+
+CZombieObject::~CZombieObject()
+{
+}
+
+void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks)
 {
 	// Object Info
 	static UINT nGameObjectID = 0;
@@ -1127,7 +1209,6 @@ CZombieObject::CZombieObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	m_strName = "Zombie_" + std::to_string(m_nObjectID);
 
 	// Model Info
-
 	std::shared_ptr<CLoadedModelInfo> pAngrybotModel = pModel;
 	if (!pAngrybotModel) pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/FuzZombie.bin", NULL);
 	SetChild(pAngrybotModel->m_pModelRootObject);
@@ -1137,11 +1218,14 @@ CZombieObject::CZombieObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);
 	m_pSkinnedAnimationController->SetTrackEnable(1, false);
-
 }
 
-CZombieObject::~CZombieObject()
+std::shared_ptr<CZombieObject> CZombieObject::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks)
 {
+	std::shared_ptr<CZombieObject> pZombie = std::make_shared<CZombieObject>();
+	pZombie->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pModel, nAnimationTracks);
+
+	return pZombie;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1152,7 +1236,11 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 	m_fTime += fElapsedTime;
 	if (!m_pAnimationTracks.empty())
 	{
+#ifdef _WITH_OBJECT_TRANSFORM
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++) m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local = Matrix4x4::Zero();
+#else
+		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++) m_pAnimationSets->m_ppBoneFrameCaches[j]->SetLocalMatrix(Matrix4x4::Zero());
+#endif
 
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
@@ -1162,15 +1250,24 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fElapsedTime, pAnimationSet->m_fLength);
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 				{
+#ifdef _WITH_OBJECT_TRANSFORM
 					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local;
+#else
+					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->GetLocalMatrix();
+#endif
 					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
 					xmf4x4Transform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, m_pAnimationTracks[k].m_fWeight));
+#ifdef _WITH_OBJECT_TRANSFORM
 					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local = xmf4x4Transform;
+#else
+					m_pAnimationSets->m_ppBoneFrameCaches[j]->SetLocalMatrix(xmf4x4Transform);
+#endif
 				}
 				m_pAnimationTracks[k].HandleCallback();
 			}
 		}
 #ifdef _WITH_DEBUG_ANIMATION_UPDATE
+#ifdef _WITH_OBJECT_TRANSFORM
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 		{
 			XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local;
@@ -1189,7 +1286,28 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 			OutputDebugString(pstrDebug);
 			_stprintf_s(pstrDebug, 256, _T("----------------\n"));
 		}
-#endif
+#else
+		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
+		{
+			XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->GetLocalMatrix();
+
+			// Print Matrix
+			TCHAR pstrDebug[256] = { 0 };
+			_stprintf_s(pstrDebug, 256, _T("Bone Frame %d\n"), j);
+			OutputDebugString(pstrDebug);
+			_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._11, xmf4x4Transform._12, xmf4x4Transform._13, xmf4x4Transform._14);
+			OutputDebugString(pstrDebug);
+			_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._21, xmf4x4Transform._22, xmf4x4Transform._23, xmf4x4Transform._24);
+			OutputDebugString(pstrDebug);
+			_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._31, xmf4x4Transform._32, xmf4x4Transform._33, xmf4x4Transform._34);
+			OutputDebugString(pstrDebug);
+			_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._41, xmf4x4Transform._42, xmf4x4Transform._43, xmf4x4Transform._44);
+			OutputDebugString(pstrDebug);
+			_stprintf_s(pstrDebug, 256, _T("----------------\n"));
+	}
+#endif // _WITH_OBJECT_TRANSFORM/
+
+#endif // _WITH_DEBUG_ANIMATION_UPDATE/
 
 		pRootGameObject->UpdateTransform(NULL);
 
@@ -1213,8 +1331,17 @@ CZombieAnimationController::~CZombieAnimationController()
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-CCubeObject::CCubeObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
-	: CRotatingObject(pd3dDevice, pd3dCommandList)
+CCubeObject::CCubeObject()
+	: CRotatingObject()
+{
+
+}
+
+CCubeObject::~CCubeObject()
+{
+}
+
+void CCubeObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	// Mesh
 	std::shared_ptr<CCubeMesh> pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
@@ -1226,6 +1353,10 @@ CCubeObject::CCubeObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	SetMaterial(0, pMaterial);
 }
 
-CCubeObject::~CCubeObject()
+std::shared_ptr<CCubeObject> CCubeObject::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
+	std::shared_ptr<CCubeObject> pCube = std::make_shared<CCubeObject>();
+	pCube->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+	return pCube;
 }
