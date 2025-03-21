@@ -364,17 +364,26 @@ public:
 
 		/*지형의 좌표 (fx, fz)는 이미지 좌표계이다. 높이 맵의 x-좌표와 z-좌표가 높이 맵의 범위를 벗어나면 지형의 높이는
 		0이다.*/
-		if ((fx < 0.0f) || (fz < 0.0f) || (fx >= m_nWidth) || (fz >= m_nLength)) return(0.0f);
+		if ((fx < 0.0f) || (fz < 0.0f) || (fx >= m_nWidth - 1) || (fz >= m_nLength - 1)) return(0.0f);
+		// max 값에서 -1 하는 이유는 사각형에서	4개의 점을 참조하기 때문에
 
 		//높이 맵의 좌표의 정수 부분과 소수 부분을 계산한다. 
 		int x = (int)fx;
 		int z = (int)fz;
 		float fxPercent = fx - x;
 		float fzPercent = fz - z;
-		float fBottomLeft = (float)m_pHeightMapPixels[x + (z * m_nWidth)];
-		float fBottomRight = (float)m_pHeightMapPixels[(x + 1) + (z * m_nWidth)];
-		float fTopLeft = (float)m_pHeightMapPixels[x + ((z + 1) * m_nWidth)];
-		float fTopRight = (float)m_pHeightMapPixels[(x + 1) + ((z + 1) * m_nWidth)];
+
+		float fBottomLeft = (float)m_pHeightMapPixels.at(x + (z * m_nWidth));
+		float fBottomRight = (float)m_pHeightMapPixels.at((x + 1) + (z * m_nWidth));
+		float fTopLeft = (float)m_pHeightMapPixels.at(x + ((z + 1) * m_nWidth));
+		float fTopRight = (float)m_pHeightMapPixels.at((x + 1) + ((z + 1) * m_nWidth));
+
+		/*{
+			float fBottomLeft = (float)m_pHeightMapPixels[x + (z * m_nWidth)];
+			float fBottomRight = (float)m_pHeightMapPixels[(x + 1) + (z * m_nWidth)];
+			float fTopLeft = (float)m_pHeightMapPixels[x + ((z + 1) * m_nWidth)];
+			float fTopRight = (float)m_pHeightMapPixels[(x + 1) + ((z + 1) * m_nWidth)];
+		}*/
 
 #ifdef _WITH_APPROXIMATE_OPPOSITE_CORNER
 		//z-좌표가 1, 3, 5, ...인 경우 인덱스가 오른쪽에서 왼쪽으로 나열된다. 

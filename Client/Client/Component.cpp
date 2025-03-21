@@ -350,6 +350,7 @@ void CRigidBodyComponent::OnTerrainUpdateCallback(float fTimeElapsed)
 {
 	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pTerrainUpdatedContext;
 	XMFLOAT3 xmf3Scale = pTerrain->GetScale();
+	int xmf4TerrainSize = pTerrain->GetHeightMapWidth();
 
 	auto owner = GetOwner();
 
@@ -357,14 +358,33 @@ void CRigidBodyComponent::OnTerrainUpdateCallback(float fTimeElapsed)
 	int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
 	//float fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 6.0f;
-	float fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z) + 6.0f;
-	if (xmf3PlayerPosition.y < fHeight)
-	{
-		XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
-		xmf3PlayerVelocity.y = 0.0f;
-		SetVelocity(xmf3PlayerVelocity);
-		xmf3PlayerPosition.y = fHeight;
-		owner->SetPosition(xmf3PlayerPosition);
+
+	// 지상과의 높이 체크
+	auto AABB = owner->GetComponent<CAABBBoxCollider>();
+	if (AABB) {
+		float modelHeight = AABB->GetBoundingBox().Extents.y / 2;
+
+		float fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z) + modelHeight;
+		if (xmf3PlayerPosition.y < fHeight)
+		{
+			XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
+			xmf3PlayerVelocity.y = 0.0f;
+			SetVelocity(xmf3PlayerVelocity);
+			xmf3PlayerPosition.y = fHeight;
+			owner->SetPosition(xmf3PlayerPosition);
+		}
+	}
+	else {
+
+		float fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z);
+		if (xmf3PlayerPosition.y < fHeight)
+		{
+			XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
+			xmf3PlayerVelocity.y = 0.0f;
+			SetVelocity(xmf3PlayerVelocity);
+			xmf3PlayerPosition.y = fHeight;
+			owner->SetPosition(xmf3PlayerPosition);
+		}
 	}
 }
 
