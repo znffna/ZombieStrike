@@ -32,8 +32,19 @@ CScene::~CScene()
 	m_SceneState = SCENE_STATE_ENDING;
 }
 
-void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
+void CScene::Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
+	// Scene 초기화
+	PreInitializeObjects(pd3dDevice, pd3dCommandList, pd3dRootSignature);
+	InitializeObjects(pd3dDevice, pd3dCommandList, pd3dRootSignature);
+	PostInitializeObjects();
+}
+
+void CScene::PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
+{
+	m_SceneState = SCENE_STATE_ALLOCING;
+
+	// Create Default Lights and Materials
 	BuildDefaultLightsAndMaterials();
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -42,30 +53,16 @@ void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	CreateDescriptorHeap(pd3dDevice);
 	CreateStaticShader(pd3dDevice);
 
-	// Create Objects
-	ResourceManager& resourceManager = CGameFramework::GetResourceManager();
-
-	std::shared_ptr<CGameObject> pGameObject;
-	pGameObject = CCubeObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature);
-	pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 10.0f));
-	m_ppObjects.push_back(pGameObject);
-
-	// Zombie Object
-	std::shared_ptr<CLoadedModelInfo> pModel = resourceManager.GetSkinInfo(L"Model/FuzZombie.bin");
-	if (!pModel)
-	{
-		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
-		resourceManager.SetSkinInfo(L"Model/FuzZombie.bin", pModel);
-	}
-
-	std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, pModel, 2);
-	pZombie->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f));
-	pZombie->Rotate(0.0f, 180.0f, 0.0f);
-	m_ppHierarchicalObjects.push_back(pZombie);
-
 	// Fixed Camera
 	CreateFixedCamera(pd3dDevice, pd3dCommandList);
+}
 
+void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
+{	
+}
+
+void CScene::PostInitializeObjects()
+{
 	// Scene 생성 완료
 	m_SceneState = SCENE_STATE_RUNNING;
 }
@@ -113,6 +110,7 @@ void CScene::ReleaseObjects()
 {
 	// Release GameObjects
 	m_ppObjects.clear();
+	m_ppHierarchicalObjects.clear();
 
 	// Release Camera
 	m_pCamera.reset();	
@@ -235,6 +233,8 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		// Set Default Viewport and Scissor
 		m_pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 		m_pCamera->UpdateShaderVariables(pd3dCommandList);
+
+		pCamera = m_pCamera.get();
 	}
 
 	// Update Shader Variables
@@ -246,7 +246,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		m_pTerrain->Render(pd3dCommandList, pCamera);
 	}
 
-	// Render GameObjects [Through Batch Shader]
+	// Render GameObjects 
 	for (auto& pObject : m_ppObjects)
 	{
 		pObject->Render(pd3dCommandList, pCamera);
@@ -667,24 +667,7 @@ CLoadingScene::~CLoadingScene()
 
 void CLoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	// Create Default Lights and Materials
-	BuildDefaultLightsAndMaterials();
-
-	// Create Shader Variables
-	CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-	// Create Root Signature
-	if(!pd3dRootSignature) m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
-	else m_pd3dGraphicsRootSignature = pd3dRootSignature;
-
-	// Create Descriptor Heap
-	if (!m_pDescriptorHeap)
-	{
-		m_pDescriptorHeap = std::make_shared<CDescirptorHeap>();
-		CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 100);
-	};
-
-	// Create Objects
+		// Create Objects
 	std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
 	pMaterial->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -701,28 +684,7 @@ void CLoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	pRotateGameObject->SetRotationSpeed(50.0f);
 	pRotateGameObject->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	m_ppObjects.push_back(pRotateGameObject);
-
-	// Skybox
-	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
-
-	// Terrain
-	
-	//지형을 확대할 스케일 벡터이다. x-축과 z-축은 8배, y-축은 2배 확대한다. 
-	XMFLOAT3 xmf3Scale(8.0f, 1.0f, 8.0f);
-	XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
-	m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
-
-	// Fixed Camera
-	m_pCamera = std::make_shared<CCamera>();
-	m_pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	m_pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	m_pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, -5.0f),XMFLOAT3(0.0f, 0.0f, 1.0f),XMFLOAT3(0.0f,1.0f,0.0f));
-	m_pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
-	m_pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-	// Scene 생성 완료
-	m_SceneState = SCENE_STATE_RUNNING;
+	m_ppObjects.push_back(pRotateGameObject);	
 }
 
 void CLoadingScene::ReleaseObjects()
@@ -735,77 +697,7 @@ void CLoadingScene::ReleaseUploadBuffers()
 
 void CLoadingScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	switch (nMessageID)
-	{
-	case WM_KEYDOWN:
-	{
-		switch (wParam)
-		{
-			case VK_LEFT:
-			{
-				//m_pCamera->Move(-1.0f,0.0f,0.0f);
-				m_pCamera->Rotate(0.0f, -10.0f, 0.0f);
-				m_pCamera->RegenerateViewMatrix();
-				break;
-			}
-			case VK_RIGHT:
-			{
-				//m_pCamera->Move(1.0f, 0.0f, 0.0f);
-				m_pCamera->Rotate(0.0f, 10.0f, 0.0f);
-				m_pCamera->RegenerateViewMatrix();
-				break;
-			}
-			case VK_UP:
-			{
-				//m_pCamera->Move(0.0f, 0.0f, 1.0f);
-				m_pCamera->Rotate(-10.0f, 0.0f, 0.0f);
-				m_pCamera->RegenerateViewMatrix();
-				break;
-			}
-			case VK_DOWN:
-			{
-				//m_pCamera->Move(0.0f, 0.0f, -1.0f);
-				m_pCamera->Rotate(10.0f, 0.0f, 0.0f);
-				m_pCamera->RegenerateViewMatrix();
-				break;
-			}
-			case VK_SPACE:
-			{
-				m_pCamera->Move(0.0f, 10.0f, 0.0f);
-				m_pCamera->RegenerateViewMatrix();
-				break;
-			}
-			case VK_SHIFT:
-			{
-				m_pCamera->Move(0.0f, -10.0f, 0.0f);
-				m_pCamera->RegenerateViewMatrix();
-				break;
-			}
-
-			case 'W': case 'w':
-			{
-				m_ppObjects[0]->Move(0.0f, 1.0f, 0.0f);
-				break;
-			}
-			case 'S': case 's':
-			{
-				m_ppObjects[0]->Move(0.0f, -1.0f, 0.0f);
-				break;
-			}
-			case 'A': case 'a':
-			{
-				m_ppObjects[0]->Move(-1.0f, 0.0f, 0.0f);
-				break;
-			}
-			case 'D': case 'd':
-			{
-				m_ppObjects[0]->Move(1.0f, 0.0f, 0.0f);
-				break;
-			}
-		}
-		break;
-		}
-	}
+	
 }
 
 bool CLoadingScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -819,5 +711,190 @@ bool CLoadingScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* 
 	CScene::Render(pd3dCommandList, m_pCamera.get());
 
 	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+
+CGameScene::CGameScene()
+{
+}
+
+CGameScene::~CGameScene()
+{
+}
+
+void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
+{
+	// Create Objects
+	ResourceManager& resourceManager = CGameFramework::GetResourceManager();
+
+	// Skybox
+	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
+
+	// Terrain
+	//지형을 확대할 스케일 벡터이다. x-축과 z-축은 8배, y-축은 2배 확대한다. 
+	XMFLOAT3 xmf3Scale(8.0f, 1.0f, 8.0f);
+	XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
+	m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 257, 257, xmf3Scale, xmf4Color);
+	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
+
+	// Cube
+	std::shared_ptr<CGameObject> pGameObject;
+	pGameObject = CCubeObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature);
+	pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 10.0f));
+	m_ppObjects.push_back(pGameObject);
+
+	// Zombie Object
+	std::shared_ptr<CLoadedModelInfo> pModel = resourceManager.GetSkinInfo(L"Model/FuzZombie.bin");
+	if (!pModel)
+	{
+		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
+		resourceManager.SetSkinInfo(L"Model/FuzZombie.bin", pModel);
+	}
+
+	std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
+	pZombie->SetPosition(DirectX::XMFLOAT3(100.0f, 50.0f, 100.0f));
+	m_ppHierarchicalObjects.push_back(pZombie);
+
+	// Default Camera 위치 수정
+	m_pCamera->SetPosition(Vector3::Add(pZombie->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));
+	m_pCamera->RegenerateViewMatrix();
+}
+
+void CGameScene::ReleaseObjects()
+{
+}
+
+void CGameScene::ReleaseUploadBuffers()
+{
+}
+
+void CGameScene::FixedUpdate(float deltaTime)
+{
+	CScene::FixedUpdate(deltaTime);
+
+	// Update Camera Position
+	if (m_pCamera)
+	{
+		// Camera Follow Zombie
+		if (m_ppHierarchicalObjects.size() > 0)
+		{
+			//XMFLOAT3 xmf3CameraPosition = Vector3::Add(m_ppHierarchicalObjects[0]->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f));
+			XMFLOAT3 xmf3CameraPosition = Vector3::Add(m_ppHierarchicalObjects[0]->GetPosition(), Vector3::ScalarProduct(m_pCamera->GetLook(), -10.0f));
+			m_pCamera->SetPosition(xmf3CameraPosition);
+			m_pCamera->RegenerateViewMatrix();
+		}
+	}
+}
+
+bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
+{
+	// 키보드 입력의 정보 압축
+	DWORD dwDirection = 0;
+	if (pBuffer.pKeysBuffer[VK_UP] & 0xF0)dwDirection |= DIR_FORWARD;
+	if (pBuffer.pKeysBuffer[VK_DOWN] & 0xF0)dwDirection |= DIR_BACKWARD;
+	if (pBuffer.pKeysBuffer[VK_LEFT] & 0xF0)dwDirection |= DIR_LEFT;
+	if (pBuffer.pKeysBuffer[VK_RIGHT] & 0xF0)dwDirection |= DIR_RIGHT;
+	if (pBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
+	if (pBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
+
+	if (dwDirection || pBuffer.cxDelta != 0.0f || pBuffer.cyDelta != 0.0f)
+	{
+		if (m_ppHierarchicalObjects.size() > 0)
+		{
+			m_ppHierarchicalObjects[0]->Move(dwDirection, 10.0f, deltaTime);
+		}
+
+		if (m_pCamera)
+		{
+			m_pCamera->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
+			m_pCamera->RegenerateViewMatrix();
+		}
+	}
+
+	return true;
+}
+
+void CGameScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+}
+
+void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)	{
+	case WM_KEYDOWN: {
+		switch (wParam)
+		{
+			//case VK_LEFT:
+			//{
+			//	//m_pCamera->Move(-1.0f,0.0f,0.0f);
+			//	m_pCamera->Rotate(0.0f, -10.0f, 0.0f);
+			//	m_pCamera->RegenerateViewMatrix();
+			//	break;
+			//}
+			//case VK_RIGHT:
+			//{
+			//	//m_pCamera->Move(1.0f, 0.0f, 0.0f);
+			//	m_pCamera->Rotate(0.0f, 10.0f, 0.0f);
+			//	m_pCamera->RegenerateViewMatrix();
+			//	break;
+			//}
+			//case VK_UP:
+			//{
+			//	//m_pCamera->Move(0.0f, 0.0f, 1.0f);
+			//	m_pCamera->Rotate(-10.0f, 0.0f, 0.0f);
+			//	m_pCamera->RegenerateViewMatrix();
+			//	break;
+			//}
+			//case VK_DOWN:
+			//{
+			//	//m_pCamera->Move(0.0f, 0.0f, -1.0f);
+			//	m_pCamera->Rotate(10.0f, 0.0f, 0.0f);
+			//	m_pCamera->RegenerateViewMatrix();
+			//	break;
+			//}
+			/*
+			case VK_SPACE:
+			{
+				m_pCamera->Move(0.0f, 10.0f, 0.0f);
+				m_pCamera->RegenerateViewMatrix();
+				break;
+			}
+			case VK_SHIFT:
+			{
+				m_pCamera->Move(0.0f, -10.0f, 0.0f);
+				m_pCamera->RegenerateViewMatrix();
+				break;
+			}
+			*/
+			/*
+			case 'W': case 'w':
+			{
+				m_ppHierarchicalObjects[0]->Move(0.0f, 0.0f, 1.0f);
+				break;
+			}
+			case 'S': case 's':
+			{
+				m_ppHierarchicalObjects[0]->Move(0.0f, 0.0f, -1.0f);
+				break;
+			}
+			case 'A': case 'a':
+			{
+				m_ppHierarchicalObjects[0]->Move(-1.0f, 0.0f, 0.0f);
+				break;
+			}
+			case 'D': case 'd':
+			{
+				m_ppHierarchicalObjects[0]->Move(1.0f, 0.0f, 0.0f);
+				break;
+			}
+			}
+			break;
+			}
+			*/
+		}
+	}
+	}
 }
 

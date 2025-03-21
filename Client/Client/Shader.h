@@ -132,6 +132,9 @@ public:
 	CTerrainShader();
 	virtual ~CTerrainShader();
 
+	virtual std::wstring GetShaderName() override { return L"CTerrainShader"; }
+
+
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature) override;
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;

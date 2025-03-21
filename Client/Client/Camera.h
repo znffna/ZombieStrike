@@ -7,6 +7,7 @@
 #pragma once
 
 #include "stdafx.h"
+#include "Component.h"
 
 struct CB_CAMERA_INFO
 {
@@ -18,7 +19,7 @@ struct CB_CAMERA_INFO
 	//float					m_fPadding;
 };
 
-class CCamera
+class CCamera : public CComponent
 {
 public:
 	CCamera();
@@ -62,7 +63,9 @@ public:
 	void Rotate(float x, float y, float z);
 	void Rotate(const XMFLOAT3& xmf3Shift) { Rotate(xmf3Shift.x, xmf3Shift.y, xmf3Shift.z); }
 
-private:
+	virtual void Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed) { }
+
+protected:
 	// ViewPort and ScissorRect
 	D3D12_VIEWPORT m_d3dViewport;
 	D3D12_RECT m_d3dScissorRect;
@@ -74,7 +77,7 @@ private:
 	float m_fFarZ = 500.0f;
 
 	// Camera Inner Variables
-	XMFLOAT3 m_xmf3Position = XMFLOAT3(0.0f, 0.0f, -10.0f);
+	XMFLOAT3 m_xmf3Position = XMFLOAT3(0.0f, 0.0f, -10.0f); // 현 카메라 위치[World]
 	XMFLOAT3 m_xmf3Right = XMFLOAT3(1.0f, 0.0f, 0.0f);
 	XMFLOAT3 m_xmf3Up = XMFLOAT3(0.0f, 1.0f, 0.0f);
 	XMFLOAT3 m_xmf3Look = XMFLOAT3(0.0f, 0.0f, 1.0f);
@@ -85,8 +88,8 @@ private:
 	XMFLOAT4 m_xmf4Rotation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	//XMFLOAT3 m_xmf3LookAtWorld; // World
-	//XMFLOAT3 m_xmf3Offset;
-	//float m_fTimeLag;
+	XMFLOAT3 m_xmf3Offset = XMFLOAT3{0.0f, 0.0f, 0.0f}; // 오브젝트(Owner)와의 상대적 포지션[Local]
+	float m_fTimeLag = 0.0f;
 
 	// Camera Shader Matrix
 	XMFLOAT4X4 m_xmf4x4View;
@@ -95,5 +98,21 @@ private:
 	// Camera Shader Variables
 	ComPtr<ID3D12Resource> m_pd3dcbCamera;
 	CB_CAMERA_INFO* m_pcbMappedCamera = NULL;
+
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+
+
+class CThirdPersonCamera : public CCamera
+{
+public:
+	CThirdPersonCamera(CCamera* pCamera);
+	virtual ~CThirdPersonCamera();
+
+	virtual void Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed) override;
+	virtual void SetLookAt(XMFLOAT3& vLookAt);
 };
 

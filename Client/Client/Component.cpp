@@ -6,6 +6,7 @@
 
 #include "Component.h"
 #include "GameObject.h"
+#include "Mesh.h"
 
 CComponent::CComponent()
 {
@@ -179,3 +180,191 @@ void CTransformComponent::RemoveChild(std::shared_ptr<CTransform> pChildTransfor
 }
 
 #endif
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+
+
+void CColliderComponent::Update(float fTimeElapsed)
+{
+	auto pOwner = GetOwner();
+	if (pOwner)
+	{
+		auto pTransform = pOwner->GetComponent<CTransform>();
+		if (pTransform)
+		{
+			UpdateCollider(pTransform->GetWorldMatrix());
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+
+void CSphereCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
+{
+	m_xmBoundingSphere = pMesh->GetBoundingSphere();
+}
+bool CSphereCollider::IsCollided(CColliderComponent* pCollider)
+{
+	switch (pCollider->GetColliderType())
+	{
+	case ColliderType::Sphere:
+	{
+		CSphereCollider* pSphereCollider = dynamic_cast<CSphereCollider*>(pCollider);
+		return m_xmWorldBoundingSphere.Intersects(pSphereCollider->GetBoundingSphere());
+	}
+	case ColliderType::AABB:
+	{
+		CAABBBoxCollider* pAABBBoxCollider = dynamic_cast<CAABBBoxCollider*>(pCollider);
+		return m_xmWorldBoundingSphere.Intersects(pAABBBoxCollider->GetBoundingBox());
+	}
+	case ColliderType::OBB:
+	{
+		COBBBoxCollider* pOBBBoxCollider = dynamic_cast<COBBBoxCollider*>(pCollider);
+		return m_xmWorldBoundingSphere.Intersects(pOBBBoxCollider->GetBoundingOrientedBox());
+	}
+	}
+	return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+
+void CAABBBoxCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
+{
+	m_xmBoundingBox = pMesh->GetBoundingBox();
+}
+bool CAABBBoxCollider::IsCollided(CColliderComponent* pCollider)
+{
+	switch (pCollider->GetColliderType())
+	{
+	case ColliderType::Sphere:
+	{
+		CSphereCollider* pSphereCollider = dynamic_cast<CSphereCollider*>(pCollider);
+		return m_xmWorldBoundingBox.Intersects(pSphereCollider->GetBoundingSphere());
+	}
+	case ColliderType::AABB:
+	{
+		CAABBBoxCollider* pAABBBoxCollider = dynamic_cast<CAABBBoxCollider*>(pCollider);
+		return m_xmWorldBoundingBox.Intersects(pAABBBoxCollider->GetBoundingBox());
+	}
+	case ColliderType::OBB:
+	{
+		COBBBoxCollider* pOBBBoxCollider = dynamic_cast<COBBBoxCollider*>(pCollider);
+		return m_xmWorldBoundingBox.Intersects(pOBBBoxCollider->GetBoundingOrientedBox());
+	}
+	}
+	return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+
+void COBBBoxCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
+{
+	m_xmBoundingOrientedBox = pMesh->GetBoundingOrientedBox(XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+}
+bool COBBBoxCollider::IsCollided(CColliderComponent* pCollider)
+{
+	switch (pCollider->GetColliderType())
+	{
+	case ColliderType::Sphere:
+	{
+		CSphereCollider* pSphereCollider = dynamic_cast<CSphereCollider*>(pCollider);
+		return m_xmWorldBoundingOrientedBox.Intersects(pSphereCollider->GetBoundingSphere());
+	}
+	case ColliderType::AABB:
+	{
+		CAABBBoxCollider* pAABBBoxCollider = dynamic_cast<CAABBBoxCollider*>(pCollider);
+		return m_xmWorldBoundingOrientedBox.Intersects(pAABBBoxCollider->GetBoundingBox());
+	}
+	case ColliderType::OBB:
+	{
+		COBBBoxCollider* pOBBBoxCollider = dynamic_cast<COBBBoxCollider*>(pCollider);
+		return m_xmWorldBoundingOrientedBox.Intersects(pOBBBoxCollider->GetBoundingOrientedBox());
+	}
+	}
+	return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+
+void CRigidBodyComponent::UpdateRigidBody(float fTimeElapsed)
+{
+	auto owner = GetOwner();
+
+	// 중력 적용 및 속도 갱신
+	UpdateVelocity(fTimeElapsed);
+	
+	// 지형과의 높이 처리
+	if (m_pTerrainUpdatedContext) OnTerrainUpdateCallback(fTimeElapsed);
+
+	//TODO 카메라 처리 (이건 카메라를 Component로 하던지, 아무튼 RigidBody에서 하는건 아닌듯 함.)
+	/*
+	DWORD nCurrentCameraMode = m_pCamera->GetMode();
+	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) m_pCamera->Update(m_xmf3Position, fTimeElapsed);
+	if (m_pCameraUpdatedContext) OnCameraUpdateCallback(fTimeElapsed);
+	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) m_pCamera->SetLookAt(m_xmf3Position);
+	m_pCamera->RegenerateViewMatrix();
+	*/
+
+	{ // 이동 후처치(속도 감소(정지까지만))
+		float fLength = Vector3::Length(m_xmf3Velocity);
+		float fDeceleration = (m_fFriction * fTimeElapsed);
+		if (fDeceleration > fLength) fDeceleration = fLength;
+		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -fDeceleration, true));
+	}
+}
+
+void CRigidBodyComponent::UpdateVelocity(float fTimeElapsed)
+{
+	// 중력 적용
+	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, m_xmf3Gravity);
+
+	// 최대 속도 제한 ========================================
+	// 수평 이동 속도 제한
+	float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
+	float fMaxVelocityXZ = m_fMaxVelocityXZ;
+	if (fLength > m_fMaxVelocityXZ)
+	{
+		m_xmf3Velocity.x *= (fMaxVelocityXZ / fLength);
+		m_xmf3Velocity.z *= (fMaxVelocityXZ / fLength);
+	}
+	// 수직 이동 속도 제한
+	float fMaxVelocityY = m_fMaxVelocityY;
+	fLength = sqrtf(m_xmf3Velocity.y * m_xmf3Velocity.y);
+	if (fLength > m_fMaxVelocityY) m_xmf3Velocity.y *= (fMaxVelocityY / fLength);
+
+	// 초당 속도에서 이동 거리로 변환
+	XMFLOAT3 xmf3Velocity = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
+	
+	// 이동 거리만큼 이동
+	auto pTransform = GetOwner()->GetComponent<CTransformComponent>();
+	pTransform->Move(xmf3Velocity);
+}
+
+void CRigidBodyComponent::OnTerrainUpdateCallback(float fTimeElapsed)
+{
+	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pTerrainUpdatedContext;
+	XMFLOAT3 xmf3Scale = pTerrain->GetScale();
+
+	auto owner = GetOwner();
+
+	XMFLOAT3 xmf3PlayerPosition = owner->GetPosition();
+	int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
+	bool bReverseQuad = ((z % 2) != 0);
+	//float fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 6.0f;
+	float fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z) + 6.0f;
+	if (xmf3PlayerPosition.y < fHeight)
+	{
+		XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
+		xmf3PlayerVelocity.y = 0.0f;
+		SetVelocity(xmf3PlayerVelocity);
+		xmf3PlayerPosition.y = fHeight;
+		owner->SetPosition(xmf3PlayerPosition);
+	}
+}
+

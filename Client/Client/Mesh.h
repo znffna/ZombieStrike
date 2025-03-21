@@ -125,6 +125,11 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet);
 	virtual void OnPostRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext);
 
+	BoundingBox GetBoundingBox();
+	BoundingSphere GetBoundingSphere();
+	BoundingOrientedBox GetBoundingOrientedBox(const XMFLOAT4X4& xmf4x4WorldMatrix);
+	BoundingOrientedBox GetBoundingOrientedBox(const XMFLOAT4& xmf4x4Quaternion);
+
 	// Initiallize helper
 	void SetSubSetAmount(int nSubSet) 
 	{
@@ -148,7 +153,7 @@ protected:
 	D3D12_VERTEX_BUFFER_VIEW m_d3dPositionBufferView;	// 버텍스 버퍼 뷰
 
 	// 서브 메쉬(Index Buffer)
-	UINT m_nSubMeshes;	// 서브 메쉬의 개수
+	UINT m_nSubMeshes = 0;	// 서브 메쉬의 개수
 	std::vector<std::vector<UINT>> m_ppnSubSetIndices;  // 서브셋의 인덱스 데이터
 	// m_ppnSubSetIndices.size() = 서브셋의 개수 (서브 셋을 사용하는 이유 : mesh의 primitive마다 Meterial이 다르기 적용하기 위함)
 	// m_ppnSubSetIndices[i].size() = i번째 서브셋의 인덱스 개수

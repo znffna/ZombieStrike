@@ -121,7 +121,6 @@ extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
 
 // Read File
-
 extern BYTE ReadStringFromFile(std::ifstream& file, char* pstrToken);
 extern BYTE ReadStringFromFile(std::ifstream& file, std::string& pstrToken);
 extern int ReadIntegerFromFile(std::ifstream& file);
