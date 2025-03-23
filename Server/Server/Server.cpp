@@ -13,6 +13,9 @@
 #include <unordered_map>
 #include <queue>
 #include <set>
+#include <map>
+#include "../../protocol.h"
+
 #pragma comment(lib, "ws2_32.lib")
 
 const int MAX_CLIENTS = 10;
@@ -21,16 +24,12 @@ const short PORT = 4000;
 
 struct Zombie;
 std::unordered_map<int, Zombie*> zombieMap;
-const int MAP_WIDTH = 100;  // 유니티에서 타일맵 사이즈
+const int MAP_WIDTH = 100;          // 유니티에서 타일맵 사이즈
 const int MAP_HEIGHT = 100;
 int tileMap[MAP_HEIGHT][MAP_WIDTH]; // 0: 빈 공간, 1: 벽/장애물
 
 const int PLAYER_HP = 100;
 const int ZOMBIE_HP = 50;
-
-#include <queue>
-#include <set>
-#include <map>
 
 struct Vector3 {
     float x = 0.0f;
@@ -115,6 +114,31 @@ std::vector<Vector3> FindPath(Vector3 startPos, Vector3 targetPos) {
     return path; // 경로 없음
 }
 
+enum COMP_TYPE { OP_RECV, OP_SEND };
+
+class OVER_EXP {
+public:
+    WSAOVERLAPPED overlapped;
+    WSABUF wsabuf;
+    char buffer[1024];
+    COMP_TYPE compType;
+
+    OVER_EXP() {
+        ZeroMemory(&overlapped, sizeof(overlapped));
+        wsabuf.buf = buffer;
+        wsabuf.len = sizeof(buffer);
+        compType = OP_RECV;
+    }
+
+    OVER_EXP(const char* sendData, size_t len) {
+        ZeroMemory(&overlapped, sizeof(overlapped));
+        wsabuf.buf = buffer;
+        memcpy(buffer, sendData, len);
+        wsabuf.len = static_cast<ULONG>(len);
+        compType = OP_SEND;
+    }
+};
+
 struct Quaternion {
     float x = 0, y = 0, z = 0, w = 1;
 };
@@ -133,9 +157,10 @@ struct Player {
     int hp = PLAYER_HP;
     bool isShooting = false;
     SOCKET socket;
-    char buffer[1024];
-    OVERLAPPED overlapped;
-    WSABUF wsabuf;
+    OVER_EXP* recv_over = nullptr;
+    //char buffer[1024];
+    //OVERLAPPED overlapped;
+    //WSABUF wsabuf;
 };
 
 struct Zombie {
@@ -355,13 +380,15 @@ void checkZombieHit(Player* player) { // 플레이어와 좀비 가까우면
     }
 }
 
-void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOverlapped, DWORD flags) {
+void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOverlapped, DWORD flags)
+{
     Player* player = (Player*)lpOverlapped->hEvent;
     if (err != 0 || bytesTransferred == 0) {
         std::cout << "Player ID " << player->id << " disconnected\n";
         {
             std::lock_guard<std::mutex> lock(playersMutex);
             closesocket(player->socket);
+            if (player->recv_over) delete player->recv_over;
             players.erase(std::remove(players.begin(), players.end(), player), players.end());
             delete player;
             broadcastState_NoLock();
@@ -369,28 +396,39 @@ void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOv
         return;
     }
 
-    processPlayerPacket(player, player->buffer, bytesTransferred); //클라로부터 받은 패킷 처리
+    processPlayerPacket(player, player->recv_over->buffer, bytesTransferred); //클라로부터 받은 패킷 처리
     //checkZombieHit(player);
     broadcastState(); // 현재 상태 모든 클라에게 동기화
 
-    ZeroMemory(&player->overlapped, sizeof(OVERLAPPED));
-    player->overlapped.hEvent = (HANDLE)player;
-    player->wsabuf.buf = player->buffer;
-    player->wsabuf.len = sizeof(player->buffer);
+    //ZeroMemory(&player->overlapped, sizeof(OVERLAPPED));
+    //player->overlapped.hEvent = (HANDLE)player;
+    //player->wsabuf.buf = player->buffer;
+    //player->wsabuf.len = sizeof(player->buffer);
+
+    ZeroMemory(&player->recv_over->overlapped, sizeof(OVERLAPPED));
+    player->recv_over->overlapped.hEvent = (HANDLE)player;
     DWORD recvBytes = 0, flagsRecv = 0;
-    int ret = WSARecv(player->socket, &player->wsabuf, 1, &recvBytes, &flagsRecv, &player->overlapped, IoCallback);
+    //int ret = WSARecv(player->socket, &player->wsabuf, 1, &recvBytes, &flagsRecv, &player->overlapped, IoCallback);
+    int ret = WSARecv(player->socket, &player->recv_over->wsabuf, 1, &recvBytes, &flagsRecv, &player->recv_over->overlapped, IoCallback);
     if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
         std::cout << "WSARecv re-register failed\n";
     }
 }
 
 void registerPlayerRecv(Player* player) {
-    ZeroMemory(&player->overlapped, sizeof(OVERLAPPED));
-    player->overlapped.hEvent = (HANDLE)player;
-    player->wsabuf.buf = player->buffer;
-    player->wsabuf.len = sizeof(player->buffer);
+    //ZeroMemory(&player->overlapped, sizeof(OVERLAPPED));
+    //player->overlapped.hEvent = (HANDLE)player;
+    //player->wsabuf.buf = player->buffer;
+    //player->wsabuf.len = sizeof(player->buffer);
+
+    if (!player->recv_over) {
+        player->recv_over = new OVER_EXP(); // 새로 Recv용 OVER_EXP 할당
+        player->recv_over->overlapped.hEvent = (HANDLE)player;
+    }
+
     DWORD recvBytes = 0, flagsRecv = 0;
-    int ret = WSARecv(player->socket, &player->wsabuf, 1, &recvBytes, &flagsRecv, &player->overlapped, IoCallback);
+    //int ret = WSARecv(player->socket, &player->wsabuf, 1, &recvBytes, &flagsRecv, &player->overlapped, IoCallback);
+    int ret = WSARecv(player->socket, &player->recv_over->wsabuf, 1, &recvBytes, &flagsRecv, &player->recv_over->overlapped, IoCallback);
     if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
         std::cout << "WSARecv failed\n";
     }
@@ -430,7 +468,9 @@ void serverControl() {
 }
 
 int main() {
+
     WSADATA wsaData;
+
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
         error_display("WSAStartup failed", WSAGetLastError());
 
