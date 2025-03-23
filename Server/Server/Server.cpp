@@ -139,6 +139,41 @@ public:
     }
 };
 
+void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOverlapped, DWORD flags);
+enum SESSION_STATE { ST_FREE, ST_ALLOC, ST_INGAME };
+
+struct SESSION {
+    SOCKET socket;
+    int id;
+    SESSION_STATE state = ST_FREE;
+    OVER_EXP* recv_over = nullptr;
+    int prev_remain = 0;
+    std::mutex lock;
+
+    void do_recv() {
+        if (!recv_over) {
+            recv_over = new OVER_EXP();
+            recv_over->overlapped.hEvent = (HANDLE)this;
+        }
+        DWORD flags = 0;
+        int ret = WSARecv(socket, &recv_over->wsabuf, 1, 0, &flags, &recv_over->overlapped, IoCallback);
+        if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+            std::cout << "WSARecv failed\n";
+        }
+    }
+
+    void disconnect() {
+        closesocket(socket);
+        if (recv_over) delete recv_over;
+        recv_over = nullptr;
+        socket = INVALID_SOCKET;
+        {
+            std::lock_guard<std::mutex> lg(lock);
+            state = ST_FREE;
+        }
+    }
+};
+
 struct Quaternion {
     float x = 0, y = 0, z = 0, w = 1;
 };
@@ -156,8 +191,9 @@ struct Player {
     Quaternion rotation;
     int hp = PLAYER_HP;
     bool isShooting = false;
-    SOCKET socket;
-    OVER_EXP* recv_over = nullptr;
+    SESSION* session = nullptr; // SESSION 연결
+    //SOCKET socket;
+    //OVER_EXP* recv_over = nullptr;
     //char buffer[1024];
     //OVERLAPPED overlapped;
     //WSABUF wsabuf;
@@ -203,7 +239,7 @@ struct Zombie {
                 Vector3 next = path[pathIndex];
                 position.x += (next.x - position.x) * 0.1f;
                 position.z += (next.z - position.z) * 0.1f;
-                if (fabs(position.x - next.x) < 0.1f && fabs(position.z - next.z) < 0.1f) {
+                if (fabsf(position.x - next.x) < 0.1f && fabsf(position.z - next.z) < 0.1f) {
                     pathIndex++;
                 }
                 dirty = true;
@@ -277,6 +313,7 @@ private:
     bool stop = false;
 };
 
+std::vector<SESSION*> sessions;
 std::vector<Player*> players;
 std::vector<Zombie*> zombies;
 std::mutex playersMutex;
@@ -320,7 +357,8 @@ void broadcastState_NoLock() {
         wsabuf.len = sizeof(BroadcastPacket);
         DWORD sentBytes = 0;
         OVERLAPPED sendOv = {};
-        int ret = WSASend(player->socket, &wsabuf, 1, &sentBytes, 0, &sendOv, NULL);
+        //int ret = WSASend(player->socket, &wsabuf, 1, &sentBytes, 0, &sendOv, NULL);
+        int ret = WSASend(player->session->socket, &wsabuf, 1, &sentBytes, 0, &sendOv, NULL);
         if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
             std::cout << "Broadcast failed: Player ID " << player->id << "\n";
         }
@@ -337,7 +375,7 @@ bool checkRaySphereIntersection(Vector3 rayOrigin, Vector3 rayDir, Vector3 spher
     Vector3 oc = { sphereCenter.x - rayOrigin.x, sphereCenter.y - rayOrigin.y, sphereCenter.z - rayOrigin.z };
     float t = oc.x * rayDir.x + oc.y * rayDir.y + oc.z * rayDir.z;
     Vector3 closestPoint = { rayOrigin.x + rayDir.x * t, rayOrigin.y + rayDir.y * t, rayOrigin.z + rayDir.z * t };
-    float distSq = pow(sphereCenter.x - closestPoint.x, 2) + pow(sphereCenter.y - closestPoint.y, 2) + pow(sphereCenter.z - closestPoint.z, 2);
+    float distSq = powf(sphereCenter.x - closestPoint.x, 2) + powf(sphereCenter.y - closestPoint.y, 2) + powf(sphereCenter.z - closestPoint.z, 2);
     return distSq <= radius * radius;
 }
 
@@ -380,60 +418,112 @@ void checkZombieHit(Player* player) { // 플레이어와 좀비 가까우면
     }
 }
 
-void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOverlapped, DWORD flags)
-{
-    Player* player = (Player*)lpOverlapped->hEvent;
-    if (err != 0 || bytesTransferred == 0) {
-        std::cout << "Player ID " << player->id << " disconnected\n";
+//void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOverlapped, DWORD flags)
+//{
+//    Player* player = (Player*)lpOverlapped->hEvent;
+//    if (err != 0 || bytesTransferred == 0) {
+//        std::cout << "Player ID " << player->id << " disconnected\n";
+//        {
+//            std::lock_guard<std::mutex> lock(playersMutex);
+//            closesocket(player->socket);
+//            delete player->session;
+//            if (player->recv_over) delete player->recv_over;
+//            players.erase(std::remove(players.begin(), players.end(), player), players.end());
+//            delete player;
+//            broadcastState_NoLock();
+//        }
+//        return;
+//    }
+//
+//
+//    processPlayerPacket(player, player->recv_over->buffer, bytesTransferred); //클라로부터 받은 패킷 처리
+//    //checkZombieHit(player);
+//    broadcastState(); // 현재 상태 모든 클라에게 동기화
+//
+//    //ZeroMemory(&player->overlapped, sizeof(OVERLAPPED));
+//    //player->overlapped.hEvent = (HANDLE)player;
+//    //player->wsabuf.buf = player->buffer;
+//    //player->wsabuf.len = sizeof(player->buffer);
+//
+//    //ZeroMemory(&player->recv_over->overlapped, sizeof(OVERLAPPED));
+//    //player->recv_over->overlapped.hEvent = (HANDLE)player;
+//    player->session->do_recv();
+//    DWORD recvBytes = 0, flagsRecv = 0;
+//    //int ret = WSARecv(player->socket, &player->wsabuf, 1, &recvBytes, &flagsRecv, &player->overlapped, IoCallback);
+//    int ret = WSARecv(player->socket, &player->recv_over->wsabuf, 1, &recvBytes, &flagsRecv, &player->recv_over->overlapped, IoCallback);
+//    if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+//        std::cout << "WSARecv re-register failed\n";
+//    }
+//}
+
+//void registerPlayerRecv(Player* player) { //SESSION 도입 전 -> do_recv()로 대체
+//    //ZeroMemory(&player->overlapped, sizeof(OVERLAPPED));
+//    //player->overlapped.hEvent = (HANDLE)player;
+//    //player->wsabuf.buf = player->buffer;
+//    //player->wsabuf.len = sizeof(player->buffer);
+//
+//    if (!player->recv_over) {
+//        player->recv_over = new OVER_EXP(); // 새로 Recv용 OVER_EXP 할당
+//        player->recv_over->overlapped.hEvent = (HANDLE)player;
+//    }
+//
+//    DWORD recvBytes = 0, flagsRecv = 0;
+//    //int ret = WSARecv(player->socket, &player->wsabuf, 1, &recvBytes, &flagsRecv, &player->overlapped, IoCallback);
+//    int ret = WSARecv(player->socket, &player->recv_over->wsabuf, 1, &recvBytes, &flagsRecv, &player->recv_over->overlapped, IoCallback);
+//    if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+//        std::cout << "WSARecv failed\n";
+//    }
+//}
+
+void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOverlapped, DWORD flags) {
+
+    SESSION* session = (SESSION*)lpOverlapped->hEvent;  
+
+    if (err != 0 || bytesTransferred == 0)
+    {
+        std::cout << "Player ID " << session->id << " disconnected\n";
+
+        std::lock_guard<std::mutex> lock(playersMutex);
+
+        // 연결된 Player 찾기 (SESSION과 연결된 Player 검색)
+        auto it = std::find_if(players.begin(), players.end(), [&](Player* p) { return p->session == session; });
+        if (it != players.end())
         {
-            std::lock_guard<std::mutex> lock(playersMutex);
-            closesocket(player->socket);
-            if (player->recv_over) delete player->recv_over;
-            players.erase(std::remove(players.begin(), players.end(), player), players.end());
-            delete player;
-            broadcastState_NoLock();
+            Player* player = *it;
+            session->disconnect();         // 소켓 닫기 + Recv OVER_EXP 해제
+            delete session;                // SESSION 메모리 해제
+            players.erase(it);             // players 벡터에서 제거
+            delete player;                 // Player 메모리 해제
+            broadcastState_NoLock();       // 모든 클라이언트에 상태 브로드캐스트
         }
         return;
     }
 
-    processPlayerPacket(player, player->recv_over->buffer, bytesTransferred); //클라로부터 받은 패킷 처리
-    //checkZombieHit(player);
-    broadcastState(); // 현재 상태 모든 클라에게 동기화
-
-    //ZeroMemory(&player->overlapped, sizeof(OVERLAPPED));
-    //player->overlapped.hEvent = (HANDLE)player;
-    //player->wsabuf.buf = player->buffer;
-    //player->wsabuf.len = sizeof(player->buffer);
-
-    ZeroMemory(&player->recv_over->overlapped, sizeof(OVERLAPPED));
-    player->recv_over->overlapped.hEvent = (HANDLE)player;
-    DWORD recvBytes = 0, flagsRecv = 0;
-    //int ret = WSARecv(player->socket, &player->wsabuf, 1, &recvBytes, &flagsRecv, &player->overlapped, IoCallback);
-    int ret = WSARecv(player->socket, &player->recv_over->wsabuf, 1, &recvBytes, &flagsRecv, &player->recv_over->overlapped, IoCallback);
-    if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-        std::cout << "WSARecv re-register failed\n";
+    // --- 정상적으로 데이터 수신된 경우 ---
+    Player* player = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(playersMutex);
+        for (auto& p : players)  // SESSION과 연결된 Player 찾아
+        {
+            if (p->session == session)
+            {
+                player = p;
+                break;
+            }
+        }
     }
+
+    if (player == nullptr)  // 예외 처리 (SESSION은 있는데 Player가 없을 때)
+    {
+        std::cout << "Player not found for SESSION ID: " << session->id << "\n";
+        return;
+    }
+    processPlayerPacket(player, session->recv_over->buffer, bytesTransferred); // 수신된 데이터 처리 (ShootPacket 등)
+
+    broadcastState(); // 모든 클라이언트에게 브로드캐스트
+
+    session->do_recv();  // 다시 Recv 등록 , Recv OVER_EXP 초기화 후 WSARecv 재호출 , (IOCP 환경에서는.. ) 
 }
-
-void registerPlayerRecv(Player* player) {
-    //ZeroMemory(&player->overlapped, sizeof(OVERLAPPED));
-    //player->overlapped.hEvent = (HANDLE)player;
-    //player->wsabuf.buf = player->buffer;
-    //player->wsabuf.len = sizeof(player->buffer);
-
-    if (!player->recv_over) {
-        player->recv_over = new OVER_EXP(); // 새로 Recv용 OVER_EXP 할당
-        player->recv_over->overlapped.hEvent = (HANDLE)player;
-    }
-
-    DWORD recvBytes = 0, flagsRecv = 0;
-    //int ret = WSARecv(player->socket, &player->wsabuf, 1, &recvBytes, &flagsRecv, &player->overlapped, IoCallback);
-    int ret = WSARecv(player->socket, &player->recv_over->wsabuf, 1, &recvBytes, &flagsRecv, &player->recv_over->overlapped, IoCallback);
-    if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-        std::cout << "WSARecv failed\n";
-    }
-}
-
 void zombieAILoop() {
     for (int i = 0; i < ZOMBIE_COUNT; ++i) {
         Zombie* z = new Zombie();
@@ -473,10 +563,14 @@ int main() {
 
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
         error_display("WSAStartup failed", WSAGetLastError());
+    else
+        std::cout << "WSAStartup 성공\n";
 
     SOCKET listenSocket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
     if (listenSocket == INVALID_SOCKET)
-        error_display("Socket creation failed", WSAGetLastError());
+        error_display("Socket creation failed", WSAGetLastError());\
+    else
+        std::cout << "Socket creation 성공\n";
 
     int opt = 1;
     setsockopt(listenSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt));
@@ -487,9 +581,13 @@ int main() {
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     if (bind(listenSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
         error_display("Bind failed", WSAGetLastError());
+    else
+        std::cout << "Bind 성공\n";
 
     if (listen(listenSocket, SOMAXCONN) == SOCKET_ERROR)
         error_display("Listen failed", WSAGetLastError());
+    else
+        std::cout << "Listen 성공\n";
 
     std::cout << "Zombie Strike 3D Server running on port: " << PORT << "\n";
 
@@ -512,13 +610,29 @@ int main() {
             continue;
         }
 
+        //Player* player = new Player;
+        //player->id = nextPlayerId++;
+        //player->socket = clientSocket;
+        //players.push_back(player);
+
+        //std::cout << "Player connected, ID: " << player->id << "\n";
+        //registerPlayerRecv(player);
+        //broadcastState_NoLock();
+
+        SESSION* session = new SESSION;
+        session->socket = clientSocket;
+        session->id = nextPlayerId;
+        session->state = ST_ALLOC;
+        sessions.push_back(session);    // 세션 등록
+
         Player* player = new Player;
         player->id = nextPlayerId++;
-        player->socket = clientSocket;
-        players.push_back(player);
+        player->session = session;
+        players.push_back(player);      // 플레이어 등록
 
         std::cout << "Player connected, ID: " << player->id << "\n";
-        registerPlayerRecv(player);
+
+        session->do_recv();
         broadcastState_NoLock();
     }
 
