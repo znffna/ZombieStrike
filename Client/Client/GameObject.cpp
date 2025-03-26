@@ -20,15 +20,30 @@ CGameObject::CGameObject()
 	m_bActive = true;
 	m_nObjectID = nGameObjectID++;
 
-	// Transform Owner Setting
-	m_pTransform->SetOwner(this);
-
 	// Default Name
 	m_strName = "GameObject_" + std::to_string(m_nObjectID);
 }
 
 CGameObject::~CGameObject()
 {
+	// Release Child Object
+	m_pChilds.clear();
+
+	// Release Mesh
+	m_pMesh.reset();
+
+	// Release Materials
+	m_ppMaterials.clear();
+
+	// Release Skinned Animation Controller
+	m_pSkinnedAnimationController.reset();
+
+	// Release Shader Variables
+	ReleaseShaderVariables();
+
+	// Release Components
+	m_pTransform.reset();
+	m_pComponents.clear();
 }
 
 void CGameObject::SetName(const std::string& strName)
@@ -43,180 +58,37 @@ void CGameObject::SetName(const std::string& strName)
 	}
 }
 
-#ifdef _WITH_OBJECT_TRANSFORM
-void CGameObject::SetPosition(float fx, float fy, float fz)
+void CGameObject::Move(DWORD dwDirection, float fDistance, float deltaTime)
 {
-	// Debug 용 Position Set
-#ifdef _DEBUG
-	m_xmf3Position = XMFLOAT3(fx, fy, fz);
-#endif
+	// 키보드 입력으로부터 이동 방향을 추출한다.
+	XMFLOAT3 xmf3Direction(0.0f, 0.0f, 0.0f);
+	if (dwDirection & DIR_FORWARD) xmf3Direction = Vector3::Add(xmf3Direction, GetLookVector());
+	if (dwDirection & DIR_BACKWARD) xmf3Direction = Vector3::Add(xmf3Direction, Vector3::ScalarProduct(GetLookVector(), -1.0f));
+	if (dwDirection & DIR_RIGHT) xmf3Direction = Vector3::Add(xmf3Direction, GetRightVector());
+	if (dwDirection & DIR_LEFT) xmf3Direction = Vector3::Add(xmf3Direction, Vector3::ScalarProduct(GetRightVector(), -1.0f));
+	if (dwDirection & DIR_UP) xmf3Direction = Vector3::Add(xmf3Direction, GetUpVector());
+	if (dwDirection & DIR_DOWN) xmf3Direction = Vector3::Add(xmf3Direction, Vector3::ScalarProduct(GetUpVector(), -1.0f));
 
-	// Local Matrix Update
-	m_xmf4x4Local._41 = fx;
-	m_xmf4x4Local._42 = fy;
-	m_xmf4x4Local._43 = fz;
-
-	// World Matrix Update
-	UpdateTransform(NULL);
+	// 이동 방향으로부터 이동 거리를 계산한다.
+	if(auto cRigidbody = GetComponent<CRigidBody>())
+	{
+		// 물리 엔진을 사용하는 경우
+		cRigidbody->AddVelocity(Vector3::ScalarProduct(xmf3Direction, fDistance));
+	}
+	else
+	{
+		// 물리 엔진을 사용하지 않는 경우
+		xmf3Direction = Vector3::Normalize(xmf3Direction);
+		xmf3Direction = Vector3::ScalarProduct(xmf3Direction, fDistance * deltaTime);
+		Move(xmf3Direction);
+	}
 }
-
-void CGameObject::SetScale(float fx, float fy, float fz)
-{
-	// Debug 용 Scale Set
-#ifdef _DEBUG
-	m_xmf3Scale = XMFLOAT3(fx, fy, fz);
-#endif
-
-	// Scale Update
-	XMMATRIX mtxScale = XMMatrixScaling(fx, fy, fz);
-	m_xmf4x4Local = Matrix4x4::Multiply(mtxScale, m_xmf4x4Local);
-
-	// World Matrix Update
-	UpdateTransform(NULL);
-}
-
-void CGameObject::Move(DirectX::XMFLOAT3 xmf3Shift)
-{
-	// Debug 용 Position Set
-#ifdef _DEBUG
-	m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
-#endif
-	// Local Matrix Update
-	m_xmf4x4Local._41 += xmf3Shift.x;
-	m_xmf4x4Local._42 += xmf3Shift.y;
-	m_xmf4x4Local._43 += xmf3Shift.z;
-
-	// World Matrix Update
-	UpdateTransform(NULL);
-}
-
-void CGameObject::MoveStrafe(float fDistance)
-{
-	XMFLOAT3 xmf3Position = GetPosition();
-	XMFLOAT3 xmf3Right = GetRight();
-	xmf3Position = Vector3::Add(xmf3Position, xmf3Right, fDistance);
-	CGameObject::SetPosition(xmf3Position);
-}
-
-void CGameObject::MoveUp(float fDistance)
-{
-	XMFLOAT3 xmf3Position = GetPosition();
-	XMFLOAT3 xmf3Up = GetUp();
-	xmf3Position = Vector3::Add(xmf3Position, xmf3Up, fDistance);
-	CGameObject::SetPosition(xmf3Position);
-}
-
-void CGameObject::MoveForward(float fDistance)
-{
-	XMFLOAT3 xmf3Position = GetPosition();
-	XMFLOAT3 xmf3Look = GetLook();
-	xmf3Position = Vector3::Add(xmf3Position, xmf3Look, fDistance);
-	CGameObject::SetPosition(xmf3Position);
-}
-
-void CGameObject::Rotate(float fPitch, float fYaw, float fRoll)
-{
-	XMMATRIX mtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(fPitch), XMConvertToRadians(fYaw), XMConvertToRadians(fRoll));
-	m_xmf4x4Local = Matrix4x4::Multiply(mtxRotate, m_xmf4x4Local);
-
-	UpdateTransform(NULL);
-}
-
-void CGameObject::Rotate(const XMFLOAT3& pxmf3Axis, float fAngle)
-{
-	XMMATRIX mtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&pxmf3Axis), XMConvertToRadians(fAngle));
-	m_xmf4x4Local = Matrix4x4::Multiply(mtxRotate, m_xmf4x4Local);
-
-#ifdef _DEBUG
-	m_xmf3Rotation = ExtractEulerAngles(m_xmf4x4Local, m_xmf3Scale);
-#endif
-
-	UpdateTransform(NULL);
-
-
-}
-
-void CGameObject::Rotate(const XMFLOAT4& pxmf4Quaternion)
-{
-	XMMATRIX mtxRotate = XMMatrixRotationQuaternion(XMLoadFloat4(&pxmf4Quaternion));
-	m_xmf4x4Local = Matrix4x4::Multiply(mtxRotate, m_xmf4x4Local);
-
-#ifdef _DEBUG
-	m_xmf3Rotation = ExtractEulerAngles(m_xmf4x4Local, m_xmf3Scale);
-#endif
-
-	UpdateTransform(NULL);
-}
-
-XMFLOAT3 CGameObject::ExtractEulerAngles(const XMFLOAT4X4& worldMatrix, const XMFLOAT3& scale)
-{
-	// 스케일을 제거한 회전 행렬을 얻기 위해 각 축을 정규화
-	XMFLOAT3X3 rotationMatrix;
-	rotationMatrix._11 = worldMatrix._11 / scale.x;
-	rotationMatrix._12 = worldMatrix._12 / scale.x;
-	rotationMatrix._13 = worldMatrix._13 / scale.x;
-
-	rotationMatrix._21 = worldMatrix._21 / scale.y;
-	rotationMatrix._22 = worldMatrix._22 / scale.y;
-	rotationMatrix._23 = worldMatrix._23 / scale.y;
-
-	rotationMatrix._31 = worldMatrix._31 / scale.z;
-	rotationMatrix._32 = worldMatrix._32 / scale.z;
-	rotationMatrix._33 = worldMatrix._33 / scale.z;
-
-	// 회전 행렬을 XMVECTOR로 변환
-	XMMATRIX rotMat = XMLoadFloat3x3(&rotationMatrix);
-
-	// Euler 각을 추출
-	float pitch, yaw, roll;
-	yaw = atan2f(rotMat.r[0].m128_f32[2], rotMat.r[2].m128_f32[2]) * RAD_TO_DEG;
-	pitch = asinf(-rotMat.r[1].m128_f32[2]) * RAD_TO_DEG;
-	roll = atan2f(rotMat.r[1].m128_f32[0], rotMat.r[1].m128_f32[1]) * RAD_TO_DEG;
-
-	return XMFLOAT3(pitch, yaw, roll); // 각도(x,y,z) 값 반환
-}
-
-void CGameObject::UpdateTransform(DirectX::XMFLOAT4X4* xmf4x4Parent)
-{
-	// Update Object World Matrix
-	m_xmf4x4World = (xmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4Local, *xmf4x4Parent) : m_xmf4x4Local;
-
-#ifdef _WITH_DEBUG_TRANSFORM_UPDATE
-	// Debug Output
-	XMFLOAT4X4& xmf4x4Transform = m_xmf4x4World;
-
-	// Print Matrix
-	TCHAR pstrDebug[256] = { 0 };
-	_stprintf_s(pstrDebug, 256, _T("GameObject [%d]\n"), m_nObjectID);
-	OutputDebugString(pstrDebug);
-	_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._11, xmf4x4Transform._12, xmf4x4Transform._13, xmf4x4Transform._14);
-	OutputDebugString(pstrDebug);
-	_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._21, xmf4x4Transform._22, xmf4x4Transform._23, xmf4x4Transform._24);
-	OutputDebugString(pstrDebug);
-	_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._31, xmf4x4Transform._32, xmf4x4Transform._33, xmf4x4Transform._34);
-	OutputDebugString(pstrDebug);
-	_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._41, xmf4x4Transform._42, xmf4x4Transform._43, xmf4x4Transform._44);
-	OutputDebugString(pstrDebug);
-	_stprintf_s(pstrDebug, 256, _T("----------------\n"));
-#endif
-
-	// Update Child Object World Matrix
-	for(auto& pChild : m_pChilds) pChild->UpdateTransform(&m_xmf4x4World);
-}
-#endif
 
 void CGameObject::UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
 { 
 	m_pTransform->UpdateTransform(xmf4x4ParentMatrix); 
 
-#ifndef _WITH_TRANSFORM_HIERARCHY
-	// Update Child Object World Matrix
-	#ifdef _WITH_OBJECT_TRANSFORM
-		for (auto& pChild : m_pChilds) pChild->UpdateTransform(&m_xmf4x4World);
-	#else
-		for (auto& pChild : m_pChilds) pChild->UpdateTransform(GetWorldMatrix());
-	#endif // _WITH_OBJECT_TRANSFORM
-#endif // !_WITH_TRANSFORM_HIERARCHY
+	for (auto& pChild : m_pChilds) pChild->UpdateTransform(GetWorldMatrix());
 }
 
 void CGameObject::UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix)
@@ -226,6 +98,12 @@ void CGameObject::UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix)
 
 void CGameObject::Update(float fTimeElapsed)
 {
+	// Component Update
+	for (auto& pComponent : m_pComponents)
+	{
+		pComponent.second->Update(fTimeElapsed);
+	}
+
 	OnPrepareRender();
 
 	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
@@ -319,18 +197,14 @@ void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandLi
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbGameObject->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_OBJECT, d3dGpuVirtualAddress);
-#else 
+#endif // _USE_OBJECT_MATERIAL_CBV
 	// Update Shader Variables
 	XMFLOAT4X4 xmf4x4World;
-#ifdef _WITH_OBJECT_TRANSFORM
-	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
-#else
+
 	xmf4x4World = GetWorldMatrix();
 	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4World)));
-#endif
 
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 16, &xmf4x4World, 0);
-#endif // _USE_OBJECT_MATERIAL_CBV
 }
 
 void CGameObject::ReleaseShaderVariables()
@@ -604,12 +478,8 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
 		{
 			XMFLOAT4X4 xmf4x4Matrix;
-#ifdef _WITH_OBJECT_TRANSFORM
-			file.read((char*)&pGameObject->m_xmf4x4Local, sizeof(float) * 16);
-#else
 			file.read((char*)&xmf4x4Matrix, sizeof(float) * 16);
 			pGameObject->SetLocalMatrix(xmf4x4Matrix);
-#endif
 		}
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
@@ -845,6 +715,12 @@ void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	//지형에 사용할 높이 맵을 생성한다. 
 	m_pHeightMapImage = std::make_shared<CHeightMapImage>(pFileName, nWidth, nLength, xmf3Scale);
 
+	if (nWidth == nBlockWidth && nLength == nBlockLength) {
+		std::shared_ptr<CMesh> pHeightMapGridMesh;
+		pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(pd3dDevice, pd3dCommandList, 0, 0, nBlockWidth, nBlockLength, xmf3Scale, xmf4Color, m_pHeightMapImage.get());
+		SetMesh(pHeightMapGridMesh);
+	}
+	else
 	{
 		std::shared_ptr<CMesh> pHeightMapGridMesh;
 		std::shared_ptr<CGameObject> pHeightMapGameObject;
@@ -853,7 +729,7 @@ void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 			for (int x = 0, xStart = 0; x < cxBlocks; x++)
 			{
 				pHeightMapGameObject = std::make_shared<CGameObject>();
-				pHeightMapGameObject->MaterialResize(1);
+				pHeightMapGameObject->MaterialResize(0);
 				xStart = x * (nBlockWidth - 1);
 				zStart = z * (nBlockLength - 1);
 				pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(pd3dDevice, pd3dCommandList, xStart, zStart, nBlockWidth, nBlockLength, xmf3Scale, xmf4Color, m_pHeightMapImage.get());
@@ -1201,6 +1077,8 @@ CZombieObject::~CZombieObject()
 
 void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks)
 {
+	CGameObject::Initialize(pd3dDevice, pd3dCommandList);
+
 	// Object Info
 	static UINT nGameObjectID = 0;
 	m_bActive = true;
@@ -1218,12 +1096,18 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);
 	m_pSkinnedAnimationController->SetTrackEnable(1, false);
+
+	// Component
+	std::shared_ptr<CRigidBody> pRigidBody = AddComponent<CRigidBody>(shared_from_this());
+	pRigidBody->SetVelocity(XMFLOAT3(0.0f, -9.0f, 0.0f));
+
 }
 
-std::shared_ptr<CZombieObject> CZombieObject::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks)
+std::shared_ptr<CZombieObject> CZombieObject::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks)
 {
 	std::shared_ptr<CZombieObject> pZombie = std::make_shared<CZombieObject>();
 	pZombie->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pModel, nAnimationTracks);
+	pZombie->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(pTerrain.get());
 
 	return pZombie;
 }

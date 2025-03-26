@@ -10,6 +10,20 @@
 #include "Camera.h"
 #include "Shader.h"
 
+#define DIR_FORWARD					0x01
+#define DIR_BACKWARD				0x02
+#define DIR_LEFT					0x04
+#define DIR_RIGHT					0x08
+#define DIR_UP						0x10
+#define DIR_DOWN					0x20
+
+struct INPUT_PARAMETER
+{
+	UCHAR pKeysBuffer[256];
+	float cxDelta;
+	float cyDelta;
+};
+
 #define MAX_LIGHTS 16
 
 #define POINT_LIGHT			1
@@ -90,7 +104,10 @@ public:
 	virtual ~CScene();
 
 	// Scene Initialization / Release
+	void Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
+	void PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
 	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
+	void PostInitializeObjects();
 	virtual void ReleaseObjects();
 	virtual void ReleaseUploadBuffers();
 
@@ -139,6 +156,7 @@ public:
 	virtual void ReleaseShaderVariables();
 
 	// Input Method
+	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) { return false; };
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
 
@@ -175,6 +193,7 @@ protected:
 
 	// Camera
 	std::shared_ptr<CCamera> m_pCamera;
+
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -194,6 +213,32 @@ public:
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr) override;
+
+	// Shader Variables
+	//void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
+	//void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList) override;
+	//void ReleaseShaderVariables() override;
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+class CGameScene : public CScene
+{
+public:
+	CGameScene();
+	virtual ~CGameScene();
+
+	// Scene Initialization / Release
+	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
+	virtual void ReleaseObjects() override;
+	virtual void ReleaseUploadBuffers() override;
+
+	virtual void FixedUpdate(float deltaTime) override;
+
+	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
+	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
+	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 
 	// Shader Variables
 	//void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;

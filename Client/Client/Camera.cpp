@@ -5,6 +5,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "Camera.h"
+#include "GameObject.h"
 
 CCamera::CCamera()
 {
@@ -118,51 +119,6 @@ void CCamera::GenerateProjectionMatrix(float aspectRatio, float fov, float nearZ
 
 void CCamera::Rotate(float x, float y, float z)
 {
-	/* 
-	{
-		//// 다음 코드는 
-		XMMATRIX xmmtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(x), XMConvertToRadians(y), XMConvertToRadians(z));
-		m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
-		m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
-		m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
-	}
-	*/
-
-	/*
-	{  // 이는 1개의 축에 대한 변경시엔 문제가 없지만, 3개의 축에 대한 변경시 문제가 발생한다.
-		if (x != 0.0f) {
-			XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3Right), XMConvertToRadians(x));
-			m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
-			m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
-			m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
-
-			fPitch += x;
-			if (fPitch > 90.0f) fPitch -= 90.0f;
-			if (fPitch < -90.0f) fPitch += 90.0f;
-		}
-		if (y != 0.0f) {
-			XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3Up), XMConvertToRadians(y));
-			m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
-			m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
-			m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
-
-			fYaw += y;
-			if (fYaw > 90.0f) fYaw -= 90.0f;
-			if (fYaw < -90.0f) fYaw += 90.0f;
-		}
-		if (z != 0.0f) {
-			XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3Look), XMConvertToRadians(z));
-			m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
-			m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
-			m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
-
-			fRoll += z;
-			if (fRoll > 90.0f) fRoll -= 90.0f;
-			if (fRoll < -90.0f) fRoll += 90.0f;
-		}
-	}
-	*/
-
 	{
 		fPitch += x;
 		if (fPitch > 180.0f) fPitch -= 360.0f;
@@ -216,3 +172,58 @@ void CCamera::Rotate(float x, float y, float z)
 
 	}
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+CThirdPersonCamera::CThirdPersonCamera(CCamera* pCamera)
+{
+}
+
+CThirdPersonCamera::~CThirdPersonCamera()
+{
+}
+
+void CThirdPersonCamera::Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed)
+{
+	if (auto pOwner = GetOwner())
+	{
+		// 카메라의 회전 행렬 계산
+		XMFLOAT4X4 xmf4x4Rotate = Matrix4x4::Identity();
+		XMFLOAT3 xmf3Right = pOwner->GetRightVector();
+		XMFLOAT3 xmf3Up = pOwner->GetUpVector();
+		XMFLOAT3 xmf3Look = pOwner->GetLookVector();
+		xmf4x4Rotate._11 = xmf3Right.x; xmf4x4Rotate._21 = xmf3Up.x; xmf4x4Rotate._31 = xmf3Look.x;
+		xmf4x4Rotate._12 = xmf3Right.y; xmf4x4Rotate._22 = xmf3Up.y; xmf4x4Rotate._32 = xmf3Look.y;
+		xmf4x4Rotate._13 = xmf3Right.z; xmf4x4Rotate._23 = xmf3Up.z; xmf4x4Rotate._33 = xmf3Look.z;
+
+		// 오브젝트 대비 상대적 위치 설정
+		XMFLOAT3 xmf3Offset = Vector3::TransformCoord(m_xmf3Offset, xmf4x4Rotate); // 상대적 위치에 회전 행렬 적용
+		XMFLOAT3 xmf3Position = Vector3::Add(pOwner->GetPosition(), xmf3Offset); // 상대적 위치	+ 오브젝트 위치 = 카메라 목표 위치
+		XMFLOAT3 xmf3Direction = Vector3::Subtract(xmf3Position, m_xmf3Position); // 목표 위치 - 현재 위치 = 가야할 방향
+				
+		float fLength = Vector3::Length(xmf3Direction); // 가야할 거리 계산
+		xmf3Direction = Vector3::Normalize(xmf3Direction); // 가야하는 방향 추출
+		float fTimeLagScale = (m_fTimeLag) ? fTimeElapsed * (1.0f / m_fTimeLag) : 1.0f; // 시간 지연 계산
+
+		float fDistance = fLength * fTimeLagScale; // 이동 거리 계산
+		if (fDistance > fLength)fDistance = fLength; // 이동 거리가 목표 위치보다 멀면 목표 위치로 이동
+		if (fLength < 0.01f)fDistance = fLength; // 거리가 0.01f 이하면 이동하지 않음
+
+		if (fDistance > 0) // 이동해야할 경우
+		{
+			m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Direction, fDistance);
+			SetLookAt(xmf3LookAt);
+		}
+	}
+}
+
+void CThirdPersonCamera::SetLookAt(XMFLOAT3& vLookAt)
+{
+	XMFLOAT4X4 mtxLookAt = Matrix4x4::LookAtLH(m_xmf3Position, m_xmf3Look, GetOwner()->GetUpVector());
+	m_xmf3Right = XMFLOAT3(mtxLookAt._11, mtxLookAt._21, mtxLookAt._31);
+	m_xmf3Up = XMFLOAT3(mtxLookAt._12, mtxLookAt._22, mtxLookAt._32);
+	m_xmf3Look = XMFLOAT3(mtxLookAt._13, mtxLookAt._23, mtxLookAt._33);
+}
+
+

@@ -54,8 +54,6 @@ public:
 		return nullptr;
 	}
 
-
-
 private:
 	ID3D12Device* m_d3dDevice = nullptr;
 	ID3D12GraphicsCommandList* m_d3dGraphicsCommandList = nullptr;
@@ -106,8 +104,12 @@ public:
 	void UpdateShaderVariables();
 	void ReleaseShaderVariables();
 
+	void ProcessInput();
+
+
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
 private:
 	HINSTANCE m_hInstance;
@@ -153,12 +155,14 @@ private:
 
 	// Scene
 	std::list<std::unique_ptr<CScene>>						m_Scenes;
-	std::unique_ptr<CScene>									m_pCurrentScene;
 	std::unique_ptr<CScene>									m_pLoadingScene;  // Loading Scene은 Stack이 비었을 경우에만 사용(이는, Render State인 Scene이 없을 때도 포함한다)
 	/*
 	Scene을 Stack으로 관리하여 가장 마지막 Scene에 대해서 Input 처리를 수행.
 	나머지 Scene에 대해서는 Scene의 State에 따라 Update / Render를 수행.
 	*/
+
+	POINT m_ptOldCursorPos;
+
 
 protected:
 	ComPtr<ID3D12Resource> m_pd3dcbFrameworkInfo;

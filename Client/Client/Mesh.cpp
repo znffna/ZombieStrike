@@ -64,6 +64,28 @@ void CMesh::OnPostRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pCont
 	// Post-Render Process
 }
 
+BoundingBox CMesh::GetBoundingBox()
+{
+	return BoundingBox(m_xmf3AABBCenter, m_xmf3AABBExtents);
+}
+
+BoundingSphere CMesh::GetBoundingSphere()
+{
+	return BoundingSphere(m_xmf3AABBCenter, Vector3::Length(m_xmf3AABBExtents));
+}
+
+BoundingOrientedBox CMesh::GetBoundingOrientedBox(const XMFLOAT4X4& xmf4x4WorldMatrix)
+{
+	XMFLOAT4 quaternion;
+	XMStoreFloat4(&quaternion, XMQuaternionRotationMatrix(XMLoadFloat4x4(&xmf4x4WorldMatrix)));
+	return GetBoundingOrientedBox(quaternion);
+}
+
+BoundingOrientedBox CMesh::GetBoundingOrientedBox(const XMFLOAT4& xmf4x4Quaternion)
+{
+	return BoundingOrientedBox(m_xmf3AABBCenter, m_xmf3AABBExtents, xmf4x4Quaternion);
+}
+
 void CMesh::SetSubMeshCount(int nSubMeshes)
 {
 	m_ppnSubSetIndices.resize(nSubMeshes);

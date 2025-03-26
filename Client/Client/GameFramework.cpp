@@ -74,6 +74,10 @@ void CGameFramework::OnDestroy()
 
 	::CloseHandle(m_hFenceEvent);
 
+	// Scene들을 해제한다.
+	m_Scenes.clear();
+	m_pLoadingScene.reset();
+
 	// DirectX 12 자원들을 해제한다.
 	if (m_pd3dDepthStencilBuffer) m_pd3dDepthStencilBuffer.Reset();
 	if (m_pd3dDsvDescriptorHeap) m_pd3dDsvDescriptorHeap.Reset();
@@ -94,8 +98,6 @@ void CGameFramework::OnDestroy()
 #ifdef _DEBUG
 	if (m_pd3dDebugController) m_pd3dDebugController.Reset();
 #endif
-
-	ReportLiveObjects();
 }
 
 void CGameFramework::CreateDirect3DDevice()
@@ -362,12 +364,12 @@ void CGameFramework::BuildObjects()
 
 	// LoadingScene 생성
 	std::unique_ptr<CScene> pLoadingScene = std::make_unique<CLoadingScene>();
-	pLoadingScene->InitializeObjects(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
+	pLoadingScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
 	m_pLoadingScene = std::move(pLoadingScene);
 
 	// MainScene 생성
-	std::unique_ptr<CScene> pMainScene = std::make_unique<CScene>();
-	pMainScene->InitializeObjects(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
+	std::unique_ptr<CScene> pMainScene = std::make_unique<CGameScene>();
+	pMainScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
 	m_Scenes.push_back(std::move(pMainScene));
 
 	// Command List에 대한 명령들을 종료
@@ -386,6 +388,9 @@ void CGameFramework::AdvanceFrame()
 	// 타이머 업데이트
 	m_GameTimer.Tick(60.0f);
 
+	// Input 업데이트
+	ProcessInput();
+
 	// Scene 업데이트
 
 	int bRenderScene = 0;
@@ -394,7 +399,6 @@ void CGameFramework::AdvanceFrame()
 	// Shadow Map, Reflection Map, Refraction Map, Deferred Shading, G-buffer 등
 	// PreRendering 단계에서는 자체적으로 SetOM과 ExecuteCommandLists를 호출.
 	// 따라서 이미 Command List에 대한 명령들이 실행된 후, Close 상태여야 함.
-
 
 	// Command Allocator 재사용
 	m_pd3dCommandAllocator->Reset();
@@ -410,16 +414,19 @@ void CGameFramework::AdvanceFrame()
 	// Scene 업데이트
 	for (auto& scene : m_Scenes)
 	{
-		if (scene->GetSceneState() == SCENE_STATE_RUNNING)
+		if (scene->CheckWorkUpdating())
 		{
-			scene->PrepareRender(m_pd3dCommandList.Get());
-
-			// Framework 정보 업데이트
-			UpdateShaderVariables();
-
-			// Scene 정보 업데이트 및 렌더링
+			// Scene 정보 업데이트
 			scene->FixedUpdate(m_GameTimer.DeltaTime());
-			bRenderScene += scene->Render(m_pd3dCommandList.Get(), nullptr)? 1 : 0;
+
+			if (scene->CheckWorkRendering())
+			{
+				scene->PrepareRender(m_pd3dCommandList.Get());
+				// Framework 정보 업데이트
+				UpdateShaderVariables();
+
+				bRenderScene += scene->Render(m_pd3dCommandList.Get(), nullptr) ? 1 : 0;
+			}
 		}
 	}
 	if (0 == bRenderScene) {
@@ -572,20 +579,89 @@ void CGameFramework::ReleaseShaderVariables()
 	}
 }
 
+void CGameFramework::ProcessInput()
+{
+	static INPUT_PARAMETER pInputBuffer;
+	bool bProcessedByScene = false;
+
+	ZeroMemory(&pInputBuffer, sizeof(INPUT_PARAMETER));
+
+	if(GetKeyboardState(pInputBuffer.pKeysBuffer))
+	{
+		pInputBuffer.cxDelta = 0.0f, pInputBuffer.cyDelta = 0.0f;
+		POINT ptCursorPos;
+		if (GetCapture() == m_hWnd)
+		{
+			SetCursor(NULL);
+			GetCursorPos(&ptCursorPos);
+			pInputBuffer.cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
+			pInputBuffer.cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
+			SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
+		}
+
+		if (false == m_Scenes.empty()) bProcessedByScene = m_Scenes.back()->ProcessInput(pInputBuffer, m_GameTimer.DeltaTime()) ? 1 : 0;
+
+		if (!bProcessedByScene)	{
+			DWORD dwDirection = 0;
+			if (pInputBuffer.pKeysBuffer[VK_UP] & 0xF0)dwDirection |= DIR_FORWARD;
+			if (pInputBuffer.pKeysBuffer[VK_DOWN] & 0xF0)dwDirection |= DIR_BACKWARD;
+			if (pInputBuffer.pKeysBuffer[VK_LEFT] & 0xF0)dwDirection |= DIR_LEFT;
+			if (pInputBuffer.pKeysBuffer[VK_RIGHT] & 0xF0)dwDirection |= DIR_RIGHT;
+			if (pInputBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
+			if (pInputBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
+
+			if ((dwDirection != 0) || (pInputBuffer.cxDelta != 0.0f) || (pInputBuffer.cyDelta != 0.0f))
+			{
+				/*if (pInputBuffer.cxDelta || pInputBuffer.cyDelta)
+				{
+					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+						m_pPlayer->Rotate(pInputBuffer.cyDelta, 0.0f, -pInputBuffer.cxDelta);
+					else
+						m_pPlayer->Rotate(pInputBuffer.cyDelta, pInputBuffer.cxDelta, 0.0f);
+				}
+				if (dwDirection) m_pPlayer->Move(dwDirection, 50.0f * m_GameTimer.GetTimeElapsed(), true);*/
+			}
+		}
+		
+	}
+}
+
 void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	bool bProcessed = false;
 	// 마우스 메시지 처리
-	for (auto& scene : m_Scenes)
 	{
-		scene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
-		bProcessed = true;
+		for (auto& scene : m_Scenes)
+		{
+			scene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+			bProcessed = true;
+		}
+		if (!bProcessed) {
+			m_pLoadingScene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+			return;
+		}
 	}
 
-	if (m_Scenes.empty() || bProcessed) {
-		m_pLoadingScene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
-		return;
+	switch (nMessageID)
+	{
+	case WM_LBUTTONDOWN:
+	case WM_RBUTTONDOWN:
+	{
+		::SetCapture(hWnd);
+		::GetCursorPos(&m_ptOldCursorPos);
+		break;
 	}
+	case WM_LBUTTONUP:
+	case WM_RBUTTONUP:
+	{
+		::ReleaseCapture();
+		break;
+	}
+	case WM_MOUSEMOVE:
+		break;
+	default:
+		break;
+	};
 
 }
 
@@ -602,4 +678,34 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		m_pLoadingScene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 		return;
 	}
+}
+
+LRESULT CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+
+	switch (nMessageID)
+	{
+	case WM_ACTIVATE:
+	{
+		if (LOWORD(wParam) == WA_INACTIVE)
+			m_GameTimer.Stop();
+		else
+			m_GameTimer.Start();
+		break;
+	}
+	case WM_SIZE:
+		break;
+	case WM_LBUTTONDOWN:
+	case WM_RBUTTONDOWN:
+	case WM_LBUTTONUP:
+	case WM_RBUTTONUP:
+	case WM_MOUSEMOVE:
+		OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+		break;
+	case WM_KEYDOWN:
+	case WM_KEYUP:
+		OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+		break;
+	}
+	return(0);
 }
