@@ -28,68 +28,6 @@ private:
 
 //////////////////////////////////////////////////////////////////////////
 //
-class CTransformComponent;
-using CTransform = CTransformComponent; // Alias
-class CTransformComponent : public CComponent, public std::enable_shared_from_this<CTransform>
-{
-public:
-	CTransformComponent() { }
-	~CTransformComponent() { }
-
-	// Transform Getter
-	DirectX::XMFLOAT3 GetPosition() { return m_xmf3Position; }
-	DirectX::XMFLOAT3 GetRight() { return Vector3::Normalize(XMFLOAT3(m_xmf4x4World._11, m_xmf4x4World._12, m_xmf4x4World._13)); }
-	DirectX::XMFLOAT3 GetUp() { return (Vector3::Normalize(XMFLOAT3(m_xmf4x4World._21, m_xmf4x4World._22, m_xmf4x4World._23))); }
-	DirectX::XMFLOAT3 GetLook() { return (Vector3::Normalize(XMFLOAT3(m_xmf4x4World._31, m_xmf4x4World._32, m_xmf4x4World._33))); }
-	DirectX::XMFLOAT3 GetScale() { return m_xmf3Scale; }
-
-	DirectX::XMFLOAT3 GetRotation() { return m_xmf3Rotation; }
-	float GetPitch() { return m_xmf3Rotation.x; } // X 축을	기준으로 회전
-	float GetYaw() { return m_xmf3Rotation.y; } // Y 축을 기준으로 회전
-	float GetRoll() { return m_xmf3Rotation.z; } // Z 축을 기준으로 회전
-
-	DirectX::XMFLOAT4X4 GetLocalMatrix() { return m_xmf4x4Local; }
-	DirectX::XMFLOAT4X4 GetWorldMatrix() { return m_xmf4x4World; }
-
-	DirectX::XMFLOAT3 GetLocalPosition() { return(XMFLOAT3(m_xmf4x4Local._41, m_xmf4x4Local._42, m_xmf4x4Local._43)); };
-
-	// Transform Setter
-	void SetPosition(DirectX::XMFLOAT3 xmf3Position) { SetPosition(xmf3Position.x, xmf3Position.y, xmf3Position.z); }
-	void SetPosition(float fx, float fy, float fz);
-	void SetScale(DirectX::XMFLOAT3 xmf3Scale) { SetScale(xmf3Scale.x, xmf3Scale.y, xmf3Scale.z); };
-	void SetScale(float fx, float fy, float fz);
-
-	void Move(DirectX::XMFLOAT3 xmf3Shift);
-	void Move(float x, float y, float z) { Move(DirectX::XMFLOAT3(x, y, z)); }
-
-	void MoveStrafe(float fDistance = 1.0f);
-	void MoveUp(float fDistance = 1.0f);
-	void MoveForward(float fDistance = 1.0f);
-
-	void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
-	void Rotate(const XMFLOAT3& pxmf3Axis, float fAngle);
-	void Rotate(const XMFLOAT4& pxmf4Quaternion);
-
-	XMFLOAT3 ExtractEulerAngles(const XMFLOAT4X4& worldMatrix, const XMFLOAT3& scale);
-
-	void SetLocalMatrix(DirectX::XMFLOAT4X4 xmf4x4Local) { m_xmf4x4Local = xmf4x4Local; }
-	void SetWorldMatrix(DirectX::XMFLOAT4X4 xmf4x4World) { m_xmf4x4World = xmf4x4World; }
-
-	void UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
-	void UpdateTransform(const std::shared_ptr<CGameObject> pParentObject);
-
-private:
-	// Transform
-	DirectX::XMFLOAT3 m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f); // 위치
-	DirectX::XMFLOAT3 m_xmf3Rotation = XMFLOAT3(0.0f, 0.0f, 0.0f); // 회전[Euler Angle]
-	DirectX::XMFLOAT3 m_xmf3Scale = XMFLOAT3(1.0f, 1.0f, 1.0f); // 크기
-
-	DirectX::XMFLOAT4X4 m_xmf4x4Local = Matrix4x4::Identity(); // Local Matrix [즉시 갱신]
-	DirectX::XMFLOAT4X4 m_xmf4x4World = Matrix4x4::Identity(); // World Matrix [UpdateMatrix()로 갱신]
-};
-
-//////////////////////////////////////////////////////////////////////////
-//
 class CCamera;
 
 class CColliderComponent;
@@ -230,12 +168,21 @@ public:
 	void SetMaxVelocityXZ(float fMaxVelocityXZ) { m_fMaxVelocityXZ = fMaxVelocityXZ; }
 	void SetMaxVelocityY(float fMaxVelocityY) { m_fMaxVelocityY = fMaxVelocityY; }
 	void SetFriction(float fFriction) { m_fFriction = fFriction; }
+	void SetMass(float fMass) { m_fMass = fMass; m_fInverseMass = 1.0f / fMass; }
+	void SetInverseMass(float fInverseMass) { m_fInverseMass = fInverseMass; m_fMass = 1.0f / fInverseMass; }
+	void SetForce(const XMFLOAT3& xmf3Force) { m_xmf3Force = xmf3Force; }
+	void SetTorque(const XMFLOAT3& xmf3Torque) { m_xmf3Torque = xmf3Torque; }
+
 
 	XMFLOAT3 GetVelocity() { return m_xmf3Velocity; }
 	XMFLOAT3 GetGravity() { return m_xmf3Gravity; }
 	float GetMaxVelocityXZ() { return m_fMaxVelocityXZ; }
 	float GetMaxVelocityY() { return m_fMaxVelocityY; }
 	float GetFriction() { return m_fFriction; }
+	float GetMass() { return m_fMass; }
+	float GetInverseMass() { return m_fInverseMass; }
+	XMFLOAT3 GetForce() { return m_xmf3Force; }
+	XMFLOAT3 GetTorque() { return m_xmf3Torque; }
 
 	void AddVelocity(const XMFLOAT3& xmf3Velocity) { m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Velocity); }
 	void AddVelocity(float x, float y, float z) { m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, XMFLOAT3(x, y, z)); }
@@ -245,6 +192,10 @@ public:
 	void UpdateRigidBody(float fTimeElapsed);
 
 	void UpdateVelocity(float fTimeElapsed);
+	void ApplyDamping(float fTimeElapsed);
+	void ApplyForce(const XMFLOAT3& f);
+	void ApplyForceAtPoint(const XMFLOAT3& f, const XMFLOAT3& point);
+	void Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT4& rotation);
 
 	virtual void Update(float fTimeElapsed) override
 	{
@@ -252,10 +203,22 @@ public:
 	}
 
 private:
+	float 		 				m_fMass = 1.0f;
+	float			 			m_fInverseMass = 1.0f / m_fMass;
+
 	XMFLOAT3					m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	XMFLOAT3					m_xmf3Force = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+	XMFLOAT3					m_xmf3AngularVelocity = { 0, 0, 0 }; // 각속도
+	XMFLOAT3					m_xmf3Torque = { 0, 0, 0 };          // 토크
+
+	XMMATRIX					m_xmmInertiaTensor = XMMatrixIdentity();         // 관성 모멘트 행렬
+	XMMATRIX					m_xmmInverseInertiaTensor = XMMatrixIdentity(); // 관성 모멘트 역행렬
+
 	XMFLOAT3     				m_xmf3Gravity = XMFLOAT3(0.0f, -400.0f, 0.0f);
 	float           			m_fMaxVelocityXZ = 300.0f;
 	float           			m_fMaxVelocityY = 400.0f;
+
 	float           			m_fFriction = 250.0f;
 
 public:

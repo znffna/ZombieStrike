@@ -77,6 +77,16 @@ void CScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	m_pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
+void CScene::DestroyFramework()
+{
+	// Release Root Signature
+	m_pd3dGraphicsRootSignature.Reset();
+	m_pd3dComputeRootSignature.Reset();
+
+	// Release Descriptor Heap
+	m_pDescriptorHeap->~CDescirptorHeap();
+}
+
 void CScene::CreateRootSignature(ID3D12RootSignature* pd3dRootSignature, ID3D12Device* pd3dDevice)
 {
 	if (!pd3dRootSignature) m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
@@ -111,6 +121,15 @@ void CScene::ReleaseObjects()
 	// Release GameObjects
 	m_ppObjects.clear();
 	m_ppHierarchicalObjects.clear();
+
+	// Release Terrain
+	m_pTerrain.reset();
+
+	// Release SkyBox
+	m_pSkyBox.reset();
+
+	// Release Lights
+	ZeroMemory(m_pLights.data(), sizeof(Light) * MAX_LIGHTS);
 
 	// Release Camera
 	m_pCamera.reset();	
@@ -893,6 +912,8 @@ void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 			break;
 			}
 			*/
+		default: 
+			break;
 		}
 	}
 	}

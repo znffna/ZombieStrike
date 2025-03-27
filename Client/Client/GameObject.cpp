@@ -27,6 +27,7 @@ CGameObject::CGameObject()
 CGameObject::~CGameObject()
 {
 	// Release Child Object
+	for (auto& pChild : m_pChilds) pChild.reset();
 	m_pChilds.clear();
 
 	// Release Mesh
@@ -44,6 +45,10 @@ CGameObject::~CGameObject()
 	// Release Components
 	m_pTransform.reset();
 	m_pComponents.clear();
+
+	// Debug Output
+	std::string debugoutput = "Object Name: " + GetName() + " has Destroyed\n";
+	OutputDebugStringA(debugoutput.c_str());
 }
 
 void CGameObject::SetName(const std::string& strName)
@@ -455,6 +460,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 	int nFrame = 0, nTextures = 0;
 
 	std::shared_ptr<CGameObject> pGameObject = std::make_shared<CGameObject>();
+	pGameObject->SetParent(pParent);
 
 	for (; ; )
 	{
@@ -1013,7 +1019,7 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 		bDuplicated = (pstrTextureName[0] == '@');
 		strcpy_s(pstrFilePath + 15, 64 - 15, (bDuplicated) ? (pstrTextureName + 1) : pstrTextureName);
-		strcpy_s(pstrFilePath + 15 + ((bDuplicated) ? (nStrLength - 1) : nStrLength), 64 - 15 - ((bDuplicated) ? (nStrLength - 1) : nStrLength), ".dds");
+		strcpy_s(pstrFilePath + 15 + ((bDuplicated) ? (nStrLength - 1) : nStrLength), 64 - 15 - ((bDuplicated) ? (nStrLength - 1) : nStrLength), ".png");
 
 		size_t nConverted = 0;
 
@@ -1031,7 +1037,7 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 		if (!bDuplicated)
 		{
 			ppTexture = std::make_shared <CTexture>(1, RESOURCE_TEXTURE2D, 1);
-			(ppTexture)->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, pwstrTextureName, RESOURCE_TEXTURE2D, 0);
+			(ppTexture)->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, pwstrTextureName, RESOURCE_TEXTURE2D, 0);
 
 			CScene::CreateShaderResourceViews(pd3dDevice, ppTexture.get(), 0, nRootParameter);
 		}

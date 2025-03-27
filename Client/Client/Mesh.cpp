@@ -22,6 +22,14 @@ CMesh::CMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandLis
 
 CMesh::~CMesh()
 {
+	m_pxmf3Positions.clear();
+	m_pd3dPositionBuffer.Reset();
+	m_pd3dPositionUploadBuffer.Reset();
+
+	m_ppnSubSetIndices.clear();
+	m_ppd3dSubSetIndexBuffers.clear();
+	m_ppd3dSubSetIndexUploadBuffers.clear();
+	m_ppd3dSubSetIndexBuffers.clear();
 }
 
 void CMesh::ReleaseUploadBuffers()
@@ -110,6 +118,27 @@ CStandardMesh::CStandardMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 CStandardMesh::~CStandardMesh()
 {
+	m_pxmf4Colors.clear();
+	m_pxmf2TextureCoords0.clear();
+	m_pxmf2TextureCoords1.clear();
+	m_pxmf3Normals.clear();
+	m_pxmf3Tangents.clear();
+	m_pxmf3BiTangents.clear();
+
+	m_pd3dTextureCoord0Buffer.Reset();
+	m_pd3dTextureCoord0UploadBuffer.Reset();
+
+	m_pd3dTextureCoord1Buffer.Reset();
+	m_pd3dTextureCoord1UploadBuffer.Reset();
+
+	m_pd3dNormalBuffer.Reset();
+	m_pd3dNormalUploadBuffer.Reset();
+
+	m_pd3dTangentBuffer.Reset();
+	m_pd3dTangentUploadBuffer.Reset();
+
+	m_pd3dBiTangentBuffer.Reset();
+	m_pd3dBiTangentUploadBuffer.Reset();
 }
 
 void CStandardMesh::LoadMeshFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::ifstream& File)
@@ -395,6 +424,12 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 
 	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_pd3dPositionUploadBuffer.GetAddressOf());
 
+	std::wstring debugName = L"Cube_" + std::to_wstring(nCubeIndex - 1);
+	{
+		std::wstring name = debugName + L" : m_pd3dPositionBuffer";
+		m_pd3dPositionBuffer->SetName(name.c_str());
+	}
+
 	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
 	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
 	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
@@ -453,6 +488,11 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 	m_pxmf3Normals = std::move(pxmf3Normals);
 
 	m_pd3dNormalBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Normals.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_pd3dNormalUploadBuffer.GetAddressOf());
+	
+	{
+		std::wstring name = debugName + L" : m_pd3dNormalBuffer";
+		m_pd3dNormalBuffer->SetName(name.c_str());
+	}
 
 	m_d3dNormalBufferView.BufferLocation = m_pd3dNormalBuffer->GetGPUVirtualAddress();
 	m_d3dNormalBufferView.StrideInBytes = sizeof(XMFLOAT3);
@@ -489,6 +529,11 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 
 	m_pd3dTextureCoord0Buffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0.data(), sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_pd3dTextureCoord0UploadBuffer.GetAddressOf());
 
+	{
+		std::wstring name = debugName + L" : m_pd3dTextureCoord0Buffer";
+		m_pd3dTextureCoord0Buffer->SetName(name.c_str());
+	}
+
 	m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
 	m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
 	m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * static_cast<UINT>(m_pxmf2TextureCoords0.size());
@@ -502,6 +547,11 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 
 	m_pd3dTangentBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Tangents.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_pd3dTangentUploadBuffer.GetAddressOf());
 
+	{
+		std::wstring name = debugName + L" : m_pd3dTangentBuffer";
+		m_pd3dTangentBuffer->SetName(name.c_str());
+	}
+
 	m_d3dTangentBufferView.BufferLocation = m_pd3dTangentBuffer->GetGPUVirtualAddress();
 	m_d3dTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
 	m_d3dTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * static_cast<UINT>(m_pxmf3Tangents.size());
@@ -513,7 +563,11 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 	m_pxmf3BiTangents = std::move(xmf3BiTangents);
 
 	m_pd3dBiTangentBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3BiTangents.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_pd3dBiTangentUploadBuffer.GetAddressOf());
-
+	m_pd3dBiTangentBuffer->Release();
+	{
+		std::wstring name = debugName + L" : m_pd3dBiTangentBuffer";
+		m_pd3dBiTangentBuffer->SetName(name.c_str());
+	}
 	m_d3dBiTangentBufferView.BufferLocation = m_pd3dBiTangentBuffer->GetGPUVirtualAddress();
 	m_d3dBiTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
 	m_d3dBiTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * static_cast<UINT>(m_pxmf3BiTangents.size());
@@ -521,6 +575,7 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 
 CCubeMesh::~CCubeMesh()
 {
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -22,6 +22,7 @@ public:
 	// 모든 리소스 해제
 	void ReleaseResources() {
 		resources.clear(); // 스마트 포인터 사용으로 자동 해제됨
+		ModelInfos.clear();
 	}
 
 	////////////////////////////////////////////
@@ -106,7 +107,6 @@ public:
 
 	void ProcessInput();
 
-
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
@@ -188,6 +188,11 @@ public:
 	static void StoreSkinInfo(const std::wstring& filename, std::shared_ptr<CLoadedModelInfo> pSkinInfo)
 	{
 		GetResourceManager().SetSkinInfo(filename, pSkinInfo);
+	};
+
+	static void ReleaseResources()
+	{
+		GetResourceManager().ReleaseResources();
 	};
 };
 

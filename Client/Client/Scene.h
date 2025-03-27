@@ -64,7 +64,7 @@ public:
 	};
 	virtual ~CDescirptorHeap()
 	{
-		if (m_pd3dCbvSrvDescriptorHeap) m_pd3dCbvSrvDescriptorHeap->Release();
+		if (m_pd3dCbvSrvDescriptorHeap) m_pd3dCbvSrvDescriptorHeap.Reset();
 	};
 
 	ComPtr<ID3D12DescriptorHeap> m_pd3dCbvSrvDescriptorHeap;
@@ -114,7 +114,9 @@ public:
 	void BuildDefaultLightsAndMaterials();
 
 	void CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-
+	// static member variable
+	static void DestroyFramework();
+	
 	// Scene Management
 	bool CheckWorkRendering() { return (m_SceneState == SCENE_STATE_RUNNING) || (m_SceneState == SCENE_STATE_PAUSING); }
 	bool CheckWorkUpdating() { return (m_SceneState == SCENE_STATE_RUNNING); }

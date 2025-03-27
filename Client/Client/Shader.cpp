@@ -54,6 +54,7 @@ void CShader::CreateGraphicPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSig
 		// Output Debug Message
 		std::wstring strDebugString = GetShaderName() + L" Graphic Pipeline State is created successfully.\n";
 		OutputDebugString(strDebugString.data());
+		m_pd3dPipelineStates[nPipelineState]->SetName(GetShaderName().data());
 	}
 	else
 	{

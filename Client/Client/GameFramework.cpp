@@ -68,15 +68,22 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 void CGameFramework::OnDestroy()
 {
+	// 남은 Command List가 없는지 확인
 	WaitForGpuComplete();
 
+	// Shader 변수들을 해제한다.
 	ReleaseShaderVariables();
 
+	// Fence Event 객체를 해제한다.
 	::CloseHandle(m_hFenceEvent);
 
 	// Scene들을 해제한다.
+	GetResourceManager().ReleaseResources();
+
 	m_Scenes.clear();
 	m_pLoadingScene.reset();
+
+	CScene::DestroyFramework();
 
 	// DirectX 12 자원들을 해제한다.
 	if (m_pd3dDepthStencilBuffer) m_pd3dDepthStencilBuffer.Reset();
@@ -96,6 +103,7 @@ void CGameFramework::OnDestroy()
 	if (m_pd3dDevice) m_pd3dDevice.Reset();
 	if (m_pdxgiFactory) m_pdxgiFactory.Reset();
 #ifdef _DEBUG
+	ReportLiveObjects();
 	if (m_pd3dDebugController) m_pd3dDebugController.Reset();
 #endif
 }

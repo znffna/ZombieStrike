@@ -10,6 +10,7 @@
 #include "Mesh.h"
 
 #include "Component.h"
+#include "Transform.h"
 
 class CGameObject;
 class CTexture;
@@ -35,7 +36,24 @@ class CTexture
 public:
 	CTexture() {};
 	CTexture(int nTextures, UINT nTextureType, int nRootParameters);;
-	virtual ~CTexture() {};
+	virtual ~CTexture()
+	{
+		m_pd3dTextures.clear();
+		m_pd3dTextureUploadBuffers.clear();
+		for (auto& name : m_strTextureNames)
+		{
+			std::wstring debugoutput = L"Texture Name: " + name + L" has destroyed\n";
+			OutputDebugString(debugoutput.c_str());
+		}
+		m_strTextureNames.clear();
+		m_nResourceTypes.clear();
+		m_pdxgiBufferFormats.clear();
+		m_nBufferElements.clear();
+		m_nBufferStrides.clear();
+		m_nRootParameterIndices.clear();
+		m_d3dSrvGpuDescriptorHandles.clear();
+
+	};
 
 	// Texture Name
 	std::string GetName() { return m_strName; }
@@ -128,7 +146,16 @@ class CMaterial
 {
 public:
 	CMaterial(int nTextures = 0);;
-	virtual ~CMaterial() {};
+	virtual ~CMaterial()
+	{
+		m_ppTextures.clear();
+		m_strTextureNames.clear();
+		m_nTextures = 0;
+		m_nType = 0x00;
+		m_pShader = nullptr;
+		m_pd3dcbMaterial.Reset();
+		m_pcbMappedMaterial = nullptr;
+	};
 
 	// CMaterial Name
 	std::string GetName() { return m_strMaterialName; }
@@ -182,6 +209,7 @@ public:
 	void ReleaseShaderVariables();
 
 	void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, std::wstring& pwstrTextureName, std::shared_ptr<CTexture>& ppTexture, std::shared_ptr<CGameObject> pParent, std::ifstream& File, std::shared_ptr<CShader> pShader);
+
 private:
 	std::string m_strMaterialName; // CMaterial Name
 
@@ -454,6 +482,9 @@ public:
 		{
 			m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 			m_ppd3dcbSkinningBoneTransforms[i]->Map(0, NULL, (void**)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
+
+			std::wstring name = L"Skinning Bone Transforms [" + std::to_wstring(i) + L"]";
+			m_ppd3dcbSkinningBoneTransforms[i]->SetName(name.c_str());
 		}
 
 		for (int i = 0; i < m_nAnimationTracks; i++)

@@ -5,8 +5,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "Component.h"
+#include "Transform.h"
+
 #include "GameObject.h"
 #include "Mesh.h"
+
 
 CComponent::CComponent()
 {
@@ -15,172 +18,6 @@ CComponent::CComponent()
 CComponent::~CComponent()
 {
 }
-
-///////////////////////////////////////////////////////////////////////////////
-//
-
-void CTransformComponent::SetPosition(float fx, float fy, float fz)
-{
-	m_xmf3Position = DirectX::XMFLOAT3(fx, fy, fz);
-
-	m_xmf4x4Local._41 = fx;
-	m_xmf4x4Local._42 = fy;
-	m_xmf4x4Local._43 = fz;
-
-	UpdateTransform(nullptr);
-}
-
-void CTransformComponent::SetScale(float fx, float fy, float fz)
-{
-	m_xmf3Scale = DirectX::XMFLOAT3(fx, fy, fz);
-
-	m_xmf4x4Local._11 = fx;
-	m_xmf4x4Local._22 = fy;
-	m_xmf4x4Local._33 = fz;
-
-	UpdateTransform(nullptr);
-}
-
-void CTransformComponent::Move(DirectX::XMFLOAT3 xmf3Shift)
-{
-	m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
-
-	m_xmf4x4Local._41 = m_xmf3Position.x;
-	m_xmf4x4Local._42 = m_xmf3Position.y;
-	m_xmf4x4Local._43 = m_xmf3Position.z;
-
-	UpdateTransform(nullptr);
-}
-
-void CTransformComponent::MoveStrafe(float fDistance)
-{
-	DirectX::XMFLOAT3 xmf3Right = GetRight();
-	DirectX::XMFLOAT3 xmf3Shift = Vector3::ScalarProduct(xmf3Right, fDistance);
-	Move(xmf3Shift);
-}
-
-void CTransformComponent::MoveUp(float fDistance)
-{
-	DirectX::XMFLOAT3 xmf3Up = GetUp();
-	DirectX::XMFLOAT3 xmf3Shift = Vector3::ScalarProduct(xmf3Up, fDistance);
-	Move(xmf3Shift);
-}
-
-void CTransformComponent::MoveForward(float fDistance)
-{
-	DirectX::XMFLOAT3 xmf3Look = GetLook();
-	DirectX::XMFLOAT3 xmf3Shift = Vector3::ScalarProduct(xmf3Look, fDistance);
-	Move(xmf3Shift);
-}
-
-void CTransformComponent::Rotate(float fPitch, float fYaw, float fRoll)
-{
-	m_xmf3Rotation.x += fPitch;
-	m_xmf3Rotation.y += fYaw;
-	m_xmf3Rotation.z += fRoll;
-
-	XMMATRIX xmmtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(fPitch), XMConvertToRadians(fYaw), XMConvertToRadians(fRoll));
-	m_xmf4x4Local = Matrix4x4::Multiply(xmmtxRotate, m_xmf4x4Local);
-
-	UpdateTransform(nullptr);
-}
-
-void CTransformComponent::Rotate(const XMFLOAT3& pxmf3Axis, float fAngle)
-{
-	XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&pxmf3Axis), XMConvertToRadians(fAngle));
-	m_xmf4x4Local = Matrix4x4::Multiply(xmmtxRotate, m_xmf4x4Local);
-
-	m_xmf3Rotation = ExtractEulerAngles(m_xmf4x4Local, m_xmf3Scale);
-
-	UpdateTransform(nullptr);
-}
-
-void CTransformComponent::Rotate(const XMFLOAT4& pxmf4Quaternion)
-{
-	XMMATRIX xmmtxRotate = XMMatrixRotationQuaternion(XMLoadFloat4(&pxmf4Quaternion));
-	m_xmf4x4Local = Matrix4x4::Multiply(xmmtxRotate, m_xmf4x4Local);
-
-	m_xmf3Rotation = ExtractEulerAngles(m_xmf4x4Local, m_xmf3Scale);
-
-	UpdateTransform(nullptr);
-}
-
-XMFLOAT3 CTransformComponent::ExtractEulerAngles(const XMFLOAT4X4& worldMatrix, const XMFLOAT3& scale)
-{
-	// 스케일을 제거한 회전 행렬을 얻기 위해 각 축을 정규화
-	XMFLOAT3X3 rotationMatrix;
-	rotationMatrix._11 = worldMatrix._11 / scale.x;
-	rotationMatrix._12 = worldMatrix._12 / scale.x;
-	rotationMatrix._13 = worldMatrix._13 / scale.x;
-
-	rotationMatrix._21 = worldMatrix._21 / scale.y;
-	rotationMatrix._22 = worldMatrix._22 / scale.y;
-	rotationMatrix._23 = worldMatrix._23 / scale.y;
-
-	rotationMatrix._31 = worldMatrix._31 / scale.z;
-	rotationMatrix._32 = worldMatrix._32 / scale.z;
-	rotationMatrix._33 = worldMatrix._33 / scale.z;
-
-	// 회전 행렬을 XMVECTOR로 변환
-	XMMATRIX rotMat = XMLoadFloat3x3(&rotationMatrix);
-
-	// Euler 각을 추출
-	float pitch, yaw, roll;
-	yaw = atan2f(rotMat.r[0].m128_f32[2], rotMat.r[2].m128_f32[2]) * RAD_TO_DEG;
-	pitch = asinf(-rotMat.r[1].m128_f32[2]) * RAD_TO_DEG;
-	roll = atan2f(rotMat.r[1].m128_f32[0], rotMat.r[1].m128_f32[1]) * RAD_TO_DEG;
-
-	return XMFLOAT3(pitch, yaw, roll); // 각도(x,y,z) 값 반환
-}
-
-void CTransformComponent::UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
-{
-	m_xmf4x4World = (xmf4x4ParentMatrix) ? Matrix4x4::Multiply(m_xmf4x4Local, *xmf4x4ParentMatrix) : m_xmf4x4Local;
-
-#ifdef _WITH_TRANSFORM_HIERARCHY
-	for (auto& pChild : m_vecChildTransforms)
-	{
-		pChild->UpdateTransform(&m_xmf4x4World);
-	}
-#endif
-}
-
-void CTransformComponent::UpdateTransform(const std::shared_ptr<CGameObject> pParentObject)
-{
-	SetWorldMatrix((pParentObject) ? Matrix4x4::Multiply(m_xmf4x4Local, (pParentObject->GetWorldMatrix())) : m_xmf4x4Local);
-#ifdef	_WITH_TRANSFORM_HIERARCHY
-	for (auto& pChild : m_vecChildTransforms)
-	{
-		pChild->UpdateTransform(&m_xmf4x4World);
-	}
-#endif
-}
-
-#ifdef	_WITH_TRANSFORM_HIERARCHY
-
-void CTransformComponent::SetParent(std::shared_ptr<CTransform> pParentTransform)
-{
-	m_pParentTransform = pParentTransform;
-	pParentTransform->SetChild(shared_from_this());
-}
-
-void CTransformComponent::SetChild(std::shared_ptr<CTransform> pChildTransform)
-{
-	m_vecChildTransforms.push_back(pChildTransform);
-	pChildTransform->SetParent(shared_from_this());
-}
-
-void CTransformComponent::RemoveChild(std::shared_ptr<CTransform> pChildTransform)
-{
-	auto iter = std::find(m_vecChildTransforms.begin(), m_vecChildTransforms.end(), pChildTransform);
-	if (iter != m_vecChildTransforms.end())
-	{
-		m_vecChildTransforms.erase(iter);
-	}
-}
-
-#endif
-
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -311,12 +148,87 @@ void CRigidBodyComponent::UpdateRigidBody(float fTimeElapsed)
 	m_pCamera->RegenerateViewMatrix();
 	*/
 
-	{ // 이동 후처치(속도 감소(정지까지만))
-		float fLength = Vector3::Length(m_xmf3Velocity);
-		float fDeceleration = (m_fFriction * fTimeElapsed);
-		if (fDeceleration > fLength) fDeceleration = fLength;
-		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -fDeceleration, true));
-	}
+	ApplyDamping(fTimeElapsed);
+}
+
+// 마찰에 의한 속도 감소
+void CRigidBodyComponent::ApplyDamping(float fTimeElapsed)
+{
+	// 이동 후처치(속도 감소(및 정지))
+	float fLength = Vector3::Length(m_xmf3Velocity);
+	float fDeceleration = (m_fFriction * fTimeElapsed);
+	if (fDeceleration > fLength) fDeceleration = fLength;
+	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -fDeceleration, true));
+	
+}
+
+// 일반적인 힘 적용 (중심에 힘을 가할 때)
+void CRigidBodyComponent::ApplyForce(const XMFLOAT3& f)
+{
+	XMStoreFloat3(&m_xmf3Force, XMVectorAdd(XMLoadFloat3(&m_xmf3Force), XMLoadFloat3(&f)));
+}
+
+// 특정 위치에 힘을 가해 Torque를 생성하는 함수
+void CRigidBodyComponent::ApplyForceAtPoint(const XMFLOAT3& f, const XMFLOAT3& point)
+{
+	// Transform에서 World Matrix 가져오기
+	XMFLOAT4X4 xmf4x4worldMatrix = GetOwner()->GetTransform()->GetWorldMatrix();
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&xmf4x4worldMatrix);
+
+	// 중심 좌표 추출 (Matrix에서 Translation 부분 가져오기)
+	XMVECTOR centerOfMass = worldMatrix.r[3];
+
+	// XMFLOAT3 → XMVECTOR 변환
+	XMVECTOR forceVec = XMLoadFloat3(&f);
+	XMVECTOR pointVec = XMLoadFloat3(&point);
+
+	// Torque = r x F (외적)
+	XMVECTOR r = XMVectorSubtract(pointVec, centerOfMass);
+	XMVECTOR torqueVec = XMVector3Cross(r, forceVec);
+
+	// 결과 저장
+	XMStoreFloat3(&m_xmf3Torque, XMVectorAdd(XMLoadFloat3(&m_xmf3Torque), torqueVec));
+	XMStoreFloat3(&m_xmf3Force, XMVectorAdd(XMLoadFloat3(&m_xmf3Force), forceVec));
+}
+
+// RigidBody의 업데이트 (물리 연산)
+void CRigidBodyComponent::Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT4& rotation)
+{
+	// Transform에서 World Matrix 가져오기
+	XMFLOAT4X4 xmf4x4worldMatrix = GetOwner()->GetTransform()->GetWorldMatrix();
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&xmf4x4worldMatrix);
+	XMVECTOR positionVec = worldMatrix.r[3]; // Translation(위치)
+
+	// 기존 속도 업데이트
+	XMVECTOR velocityVec = XMLoadFloat3(&m_xmf3Velocity);
+	velocityVec = XMVectorAdd(velocityVec, XMVectorScale(XMLoadFloat3(&m_xmf3Force), deltaTime));
+
+	// 위치 업데이트
+	positionVec = XMVectorAdd(positionVec, XMVectorScale(velocityVec, deltaTime));
+
+	// 각속도 업데이트
+	XMVECTOR angularVelocityVec = XMLoadFloat3(&m_xmf3AngularVelocity);
+	XMVECTOR torqueVec = XMLoadFloat3(&m_xmf3Torque);
+
+	XMVECTOR angularAcceleration = XMVector3Transform(torqueVec, m_xmmInverseInertiaTensor);
+	angularVelocityVec = XMVectorAdd(angularVelocityVec, XMVectorScale(angularAcceleration, deltaTime));
+		
+	// 감쇠 적용
+	angularVelocityVec = XMVectorScale(angularVelocityVec, 0.99f);
+
+	// 회전 업데이트 (Quaternion이 아니라 Matrix 직접 수정)
+	XMMATRIX rotationMatrix = XMMatrixRotationNormal(angularVelocityVec, XMVectorGetX(XMVector3Length(angularVelocityVec)) * deltaTime);
+	worldMatrix = XMMatrixMultiply(rotationMatrix, worldMatrix);
+
+	// 새 위치 적용
+	worldMatrix.r[3] = positionVec;
+
+	// 업데이트된 Matrix 저장
+	GetOwner()->GetTransform()->SetWorldMatrix(worldMatrix);
+
+	// 힘 및 토크 초기화 (순간적인 힘 처리)
+	m_xmf3Force = { 0, 0, 0 };
+	m_xmf3Torque = { 0, 0, 0 };
 }
 
 void CRigidBodyComponent::UpdateVelocity(float fTimeElapsed)

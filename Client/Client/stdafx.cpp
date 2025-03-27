@@ -294,3 +294,5 @@ ID3D12Resource* CreateTexture2DResource(ID3D12Device* pd3dDevice, ID3D12Graphics
 
 	return(pd3dTexture);
 }
+
+
