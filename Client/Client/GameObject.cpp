@@ -7,6 +7,9 @@
 #include "GameObject.h"
 #include "Shader.h"
 #include "Camera.h"
+#include "Mesh.h"
+#include "Transform.h"
+#include "Rigidbody.h"
 
 #include "Scene.h"
 

@@ -1,0 +1,128 @@
+///////////////////////////////////////////////////////////////////////////////
+// Date: 2025-03-28
+// Collider.h : CCollider 클래스의 헤더 파일
+// Version : 0.1
+///////////////////////////////////////////////////////////////////////////////
+#pragma once
+#include "Component.h"
+
+class CCamera;
+
+class CColliderComponent;
+using CCollider = CColliderComponent; // Alias
+class CColliderComponent : public CComponent
+{
+public:
+	CColliderComponent() { }
+	virtual ~CColliderComponent() { }
+
+	virtual void Update(float fTimeElapsed) override;
+
+	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) = 0;
+	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends) = 0;
+
+	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) = 0;
+	//virtual void RenderCollider(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) = 0;
+
+	virtual bool IsCollided(CColliderComponent* pCollider) = 0;
+	virtual bool IsCollided(std::shared_ptr<CColliderComponent> pCollider) { IsCollided(pCollider.get()); };
+
+	const enum ColliderType { AABB, OBB, Sphere };
+
+	virtual int GetColliderType() = 0;
+};
+
+//////////////////////////////////////////////////////////////////////////
+//
+
+class CSphereCollider : public CColliderComponent
+{
+public:
+	CSphereCollider() { }
+	virtual ~CSphereCollider() { }
+
+	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
+	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends) override
+	{
+		m_xmBoundingSphere.Center = xmf3Center;
+		m_xmBoundingSphere.Radius = Vector3::Length(Extends);
+	};
+	void SetCollider(const XMFLOAT3& xmf3Center, float fRadius)
+	{
+		m_xmBoundingSphere.Center = xmf3Center;
+		m_xmBoundingSphere.Radius = fRadius;
+	};
+
+	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) override
+	{
+		m_xmWorldBoundingSphere.Center = Vector3::TransformCoord(m_xmBoundingSphere.Center, xmf4x4World);
+		m_xmWorldBoundingSphere.Radius = m_xmBoundingSphere.Radius;
+
+	};
+
+	virtual bool IsCollided(CColliderComponent* pCollider) override;;
+
+	int GetColliderType() override { return ColliderType::Sphere; };
+	const BoundingSphere GetBoundingSphere() { return m_xmWorldBoundingSphere; }
+private:
+	BoundingSphere m_xmBoundingSphere;
+	BoundingSphere m_xmWorldBoundingSphere;
+};
+
+class CAABBBoxCollider : public CColliderComponent
+{
+public:
+	CAABBBoxCollider() { }
+	virtual ~CAABBBoxCollider() { }
+
+	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
+	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents) override
+	{
+		m_xmBoundingBox.Center = xmf3Center;
+		m_xmBoundingBox.Extents = xmf3Extents;
+	};
+
+	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) override
+	{
+		m_xmBoundingBox.Transform(m_xmWorldBoundingBox, XMLoadFloat4x4(&xmf4x4World));
+	};
+
+	virtual bool IsCollided(CColliderComponent* pCollider) override;;
+
+	const BoundingBox GetBoundingBox() { return m_xmBoundingBox; }
+	int GetColliderType() override { return ColliderType::AABB; }
+
+private:
+	BoundingBox m_xmBoundingBox;
+	BoundingBox m_xmWorldBoundingBox;
+};
+
+class COBBBoxCollider : public CColliderComponent
+{
+public:
+	COBBBoxCollider() { }
+	virtual ~COBBBoxCollider() { }
+
+	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
+	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents) override
+	{
+		m_xmBoundingOrientedBox.Center = xmf3Center;
+		m_xmBoundingOrientedBox.Extents = xmf3Extents;
+	};
+	void SetCollider(const BoundingOrientedBox& OBB) { m_xmBoundingOrientedBox = OBB; };
+
+	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) override
+	{
+		m_xmBoundingOrientedBox.Transform(m_xmWorldBoundingOrientedBox, XMLoadFloat4x4(&xmf4x4World));
+	};
+
+	virtual bool IsCollided(CColliderComponent* pCollider) override;;
+
+	const BoundingOrientedBox GetBoundingOrientedBox() { return m_xmWorldBoundingOrientedBox; }
+	int GetColliderType() override { return ColliderType::OBB; }
+
+private:
+
+	BoundingOrientedBox m_xmBoundingOrientedBox;
+	BoundingOrientedBox m_xmWorldBoundingOrientedBox;
+};

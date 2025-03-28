@@ -131,6 +131,7 @@
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Client.h" />
+    <ClInclude Include="Collider.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="DDSTextureLoader12.h" />
     <ClInclude Include="GameFramework.h" />
@@ -139,6 +140,7 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="RenderConfig.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="RigidBody.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="stdafx.h" />
@@ -149,6 +151,7 @@
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Client.cpp" />
+    <ClCompile Include="Collider.cpp" />
     <ClCompile Include="Component.cpp" />
     <ClCompile Include="DDSTextureLoader12.cpp" />
     <ClCompile Include="GameFramework.cpp" />
@@ -156,6 +159,7 @@
     <ClCompile Include="GameTimer.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="RenderConfig.cpp" />
+    <ClCompile Include="RigidBody.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="stdafx.cpp" />
