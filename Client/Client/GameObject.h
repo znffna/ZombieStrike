@@ -6,11 +6,18 @@
 
 #pragma once
 
+// Library
 #include "stdafx.h"
-#include "Mesh.h"
 
+// Component
 #include "Component.h"
 #include "Transform.h"
+
+// Resource
+#include "Mesh.h"
+#include "Texture.h"
+#include "Shader.h"
+#include "Material.h"
 
 class CGameObject;
 class CTexture;
@@ -20,229 +27,9 @@ class CCamera;
 ////////////////////////////////////////////////////////////////////////////////////////
 //
 
-enum RESOURCE_TYPE
-{
-	RESOURCE_TEXTURE1D = 0x01,
-	RESOURCE_TEXTURE2D = 0x02,
-	RESOURCE_TEXTURE2D_ARRAY = 0x03, //[]
-	RESOURCE_TEXTURE2DARRAY = 0x04,
-	RESOURCE_TEXTURE_CUBE = 0x05,
-	RESOURCE_BUFFER = 0x06,
-	RESOURCE_STRUCTURED_BUFFER = 0x07
-};
-
-class CTexture
-{
-public:
-	CTexture() {};
-	CTexture(int nTextures, UINT nTextureType, int nRootParameters);;
-	virtual ~CTexture()
-	{
-		m_pd3dTextures.clear();
-		m_pd3dTextureUploadBuffers.clear();
-		for (auto& name : m_strTextureNames)
-		{
-			std::wstring debugoutput = L"Texture Name: " + name + L" has destroyed\n";
-			OutputDebugString(debugoutput.c_str());
-		}
-		m_strTextureNames.clear();
-		m_nResourceTypes.clear();
-		m_pdxgiBufferFormats.clear();
-		m_nBufferElements.clear();
-		m_nBufferStrides.clear();
-		m_nRootParameterIndices.clear();
-		m_d3dSrvGpuDescriptorHandles.clear();
-
-	};
-
-	// Texture Name
-	std::string GetName() { return m_strName; }
-	void SetName(std::string strName) { m_strName = strName; }
-
-	// Texture Type
-	UINT GetTextureType() { return m_nTextureType; }
-	void SetTextureType(UINT nTextureType) { m_nTextureType = nTextureType; }
-
-	// Texture
-	ComPtr<ID3D12Resource> GetTexture(int nIndex = 0) { return m_pd3dTextures[nIndex]; }
-	void SetTexture(ComPtr<ID3D12Resource> pd3dTexture, int nIndex = 0) { m_pd3dTextures[nIndex] = pd3dTexture; }
-
-	// Getter / Setter
-	void SetRootParameterIndex(int nIndex, UINT nRootParameterIndex) {m_nRootParameterIndices[nIndex] = nRootParameterIndex;}
-	void SetGpuDescriptorHandle(int nIndex, D3D12_GPU_DESCRIPTOR_HANDLE d3dSrvGpuDescriptorHandle) {m_d3dSrvGpuDescriptorHandles[nIndex] = d3dSrvGpuDescriptorHandle;}
-
-	int GetRootParameters() { return(m_nRootParameters); }
-	int GetTextures() { return((int)m_pd3dTextures.size()); }
-	std::wstring GetTextureName(int nIndex) { return(m_strTextureNames[nIndex]); }
-	ID3D12Resource* GetResource(int nIndex) { return(m_pd3dTextures[nIndex].Get()); }
-	D3D12_GPU_DESCRIPTOR_HANDLE GetGpuDescriptorHandle(int nIndex) { return(m_d3dSrvGpuDescriptorHandles[nIndex]); }
-	int GetRootParameter(int nIndex) { return(m_nRootParameterIndices[nIndex]); }
-
-	UINT GetTextureType(int nIndex) { return(m_nResourceTypes[nIndex]); }
-	DXGI_FORMAT GetBufferFormat(int nIndex) { return(m_pdxgiBufferFormats[nIndex]); }
-	int GetBufferElements(int nIndex) { return(m_nBufferElements[nIndex]); }
-
-	D3D12_SHADER_RESOURCE_VIEW_DESC GetShaderResourceViewDesc(int nIndex);;
-
-	// Shader Variables
-	void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int nParameterIndex, int nTextureIndex);;
-	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);;
-
-	// Load Texture
-	void LoadTextureFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring strTextureName, UINT nResourceType, UINT nIndex);;
-	void LoadTextureFromWICFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring strTextureName, UINT nResourceType, UINT nIndex);;
-	void LoadBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, DXGI_FORMAT ndxgiFormat, UINT nIndex);;
-	ComPtr<ID3D12Resource> CreateTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nIndex, UINT nResourceType, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue);;
-
-private:
-	std::string m_strName; // Texture Name
-
-	UINT m_nTextureType = 0x00; // Texture Type
-
-	// Texture Variables
-	UINT m_nTextures;
-	std::vector<ComPtr<ID3D12Resource>> m_pd3dTextures;
-	std::vector<ComPtr<ID3D12Resource>> m_pd3dTextureUploadBuffers;
-	std::vector<std::wstring> m_strTextureNames;
-
-	std::vector<UINT> m_nResourceTypes;
-
-	std::vector<DXGI_FORMAT> m_pdxgiBufferFormats;
-	std::vector<int> m_nBufferElements;
-	std::vector<int> m_nBufferStrides;
-
-	int m_nRootParameters = 0;
-	std::vector<int> m_nRootParameterIndices;
-	std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> m_d3dSrvGpuDescriptorHandles;
-
-};
-
 struct CB_GAMEOBJECT_INFO
 {
 	XMFLOAT4X4						m_xmf4x4World;
-};
-
-struct CB_MATERIAL_INFO
-{
-	XMFLOAT4						m_xmf4Ambient;
-	XMFLOAT4						m_xmf4Diffuse;
-	XMFLOAT4						m_xmf4Specular;
-	XMFLOAT4						m_xmf4Emissive;
-	UINT							m_nTexturesMask;
-};
-
-////////////////////////////////////////////////////////////////////////////////////////
-//
-
-#define MATERIAL_ALBEDO_MAP				0x01
-#define MATERIAL_SPECULAR_MAP			0x02
-#define MATERIAL_NORMAL_MAP				0x04
-#define MATERIAL_METALLIC_MAP			0x08
-#define MATERIAL_EMISSION_MAP			0x10
-#define MATERIAL_DETAIL_ALBEDO_MAP		0x20
-#define MATERIAL_DETAIL_NORMAL_MAP		0x40
-
-class CMaterial
-{
-public:
-	CMaterial(int nTextures = 0);;
-	virtual ~CMaterial()
-	{
-		m_ppTextures.clear();
-		m_strTextureNames.clear();
-		m_nTextures = 0;
-		m_nType = 0x00;
-		m_pShader = nullptr;
-		m_pd3dcbMaterial.Reset();
-		m_pcbMappedMaterial = nullptr;
-	};
-
-	// CMaterial Name
-	std::string GetName() { return m_strMaterialName; }
-	void SetName(std::string strName) { m_strMaterialName = strName; }
-
-	void SetMaterialType(UINT nType) { m_nType |= nType; }
-
-	// CMaterial Color
-	DirectX::XMFLOAT4 GetAmbient() { return m_xmf4Ambient; }
-	void SetAmbient(DirectX::XMFLOAT4 xmf4Ambient) { m_xmf4Ambient = xmf4Ambient; }
-
-	DirectX::XMFLOAT4 GetDiffuse() { return m_xmf4Albedo; }
-	void SetAlbedo(DirectX::XMFLOAT4 xmf4Diffuse) { m_xmf4Albedo = xmf4Diffuse; }
-
-	DirectX::XMFLOAT4 GetSpecular() { return m_xmf4Specular; }
-	void SetSpecular(DirectX::XMFLOAT4 xmf4Specular) { m_xmf4Specular = xmf4Specular; }
-
-	DirectX::XMFLOAT4 GetEmissive() { return m_xmf4Emissive; }
-	void SetEmissive(DirectX::XMFLOAT4 xmf4Emissive) { m_xmf4Emissive = xmf4Emissive; }
-	
-	float GetGlossiness() { return m_fGlossiness; }
-	void SetGlossiness(float fGlossiness) { m_fGlossiness = fGlossiness; }
-
-	float GetSmoothness() { return m_fSmoothness; }
-	void SetSmoothness(float fSmoothness) { m_fSmoothness = fSmoothness; }
-
-	float GetSpecularHighlight() { return m_fSpecularHighlight; }
-	void SetSpecularHighlight(float fSpecularHighlight) { m_fSpecularHighlight = fSpecularHighlight; }
-
-	float GetMetallic() { return m_fMetallic; }
-	void SetMetallic(float fMetallic) { m_fMetallic = fMetallic; }
-
-	float GetGlossyReflection() { return m_fGlossyReflection; }
-	void SetGlossyReflection(float fGlossyReflection) { m_fGlossyReflection = fGlossyReflection; }
-
-	// Texture
-	//std::shared_ptr<CTexture> GetTexture() { return m_pTexture; }
-	//void SetTexture(std::shared_ptr<CTexture> pTexture) { m_pTexture = pTexture; }
-	
-	std::shared_ptr<CTexture> GetTexture(int nIndex = 0) { return m_ppTextures[nIndex]; }
-	void SetTexture(std::shared_ptr<CTexture> pTexture) { m_ppTextures.clear(); m_ppTextures.push_back(pTexture); }
-	void SetTexture(std::shared_ptr<CTexture> pTexture, int nIndex) { m_ppTextures[nIndex] = pTexture; }
-	void AddTexture(std::shared_ptr<CTexture> pTexture) { m_ppTextures.push_back(pTexture); }
-
-	// Shader
-	void SetShader(std::shared_ptr<CShader> pShader) { m_pShader = pShader; }
-
-	// Shader Variables
-	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
-	void ReleaseShaderVariables();
-
-	void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, std::wstring& pwstrTextureName, std::shared_ptr<CTexture>& ppTexture, std::shared_ptr<CGameObject> pParent, std::ifstream& File, std::shared_ptr<CShader> pShader);
-
-private:
-	std::string m_strMaterialName; // CMaterial Name
-
-	DirectX::XMFLOAT4 m_xmf4Ambient = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // Ambient Color
-	DirectX::XMFLOAT4 m_xmf4Albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // Diffuse Color
-	DirectX::XMFLOAT4 m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // Specular Color
-	DirectX::XMFLOAT4 m_xmf4Emissive = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f); // Emissive Color
-
-private:
-	float							m_fGlossiness = 0.0f;
-	float							m_fSmoothness = 0.0f;
-	float							m_fSpecularHighlight = 0.0f;
-	float							m_fMetallic = 0.0f;
-	float							m_fGlossyReflection = 0.0f;
-
-public:
-	UINT m_nType = 0x00; // Texture Mask
-	
-	// Shader Variables
-	ComPtr<ID3D12Resource> m_pd3dcbMaterial;
-	CB_MATERIAL_INFO* m_pcbMappedMaterial = nullptr;
-public:
-	UINT m_nTextures = 0;
-	std::vector<std::wstring> m_strTextureNames; // Texture Name
-	std::vector<std::shared_ptr<CTexture>> m_ppTextures; // Texture
-	std::shared_ptr<CShader> m_pShader; // Shader
-
-public:
-	static std::shared_ptr<CShader> m_pStandardShader;
-	static std::shared_ptr<CShader> m_pSkinnedAnimationShader;
-
-	void SetStandardShader() { CMaterial::SetShader(m_pStandardShader); };
-	void SetSkinnedAnimationShader() { CMaterial::SetShader(m_pSkinnedAnimationShader); };
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -266,89 +53,7 @@ public:
 };
 
 //#define _WITH_ANIMATION_SRT
-
-class CAnimationSet
-{
-public:
-	CAnimationSet(float fLength, int nFramesPerSecond, int nKeyFrameTransforms, int nSkinningBones, char* pstrName)
-	{
-		m_fLength = fLength;
-		m_nFramesPerSecond = nFramesPerSecond;
-		m_pstrAnimationSetName = pstrName;
-
-		m_nKeyFrames = nKeyFrameTransforms;
-		m_pfKeyFrameTimes.resize(nKeyFrameTransforms);
-		m_ppxmf4x4KeyFrameTransforms.resize(nKeyFrameTransforms);
-		for (int i = 0; i < nKeyFrameTransforms; i++) m_ppxmf4x4KeyFrameTransforms[i].resize(nSkinningBones);
-	};
-	
-	~CAnimationSet()
-	{
-		m_pfKeyFrameTimes.clear();
-		for (int i = 0; i < m_nKeyFrames; i++) m_ppxmf4x4KeyFrameTransforms[i].clear();
-		m_ppxmf4x4KeyFrameTransforms.clear();
-	};
-
-public:
-	std::string							m_pstrAnimationSetName;
-
-	float							m_fLength = 0.0f;
-	int								m_nFramesPerSecond = 0; //m_fTicksPerSecond
-
-	int								m_nKeyFrames = 0;
-	std::vector<float> m_pfKeyFrameTimes;
-	std::vector<std::vector<XMFLOAT4X4>> m_ppxmf4x4KeyFrameTransforms;
-
-#ifdef _WITH_ANIMATION_SRT
-	int								m_nKeyFrameScales = 0;
-	float* m_pfKeyFrameScaleTimes = NULL;
-	XMFLOAT3** m_ppxmf3KeyFrameScales = NULL;
-	int								m_nKeyFrameRotations = 0;
-	float* m_pfKeyFrameRotationTimes = NULL;
-	XMFLOAT4** m_ppxmf4KeyFrameRotations = NULL;
-	int								m_nKeyFrameTranslations = 0;
-	float* m_pfKeyFrameTranslationTimes = NULL;
-	XMFLOAT3** m_ppxmf3KeyFrameTranslations = NULL;
-#endif
-
-public:
-	XMFLOAT4X4 GetSRT(int nBone, float fPosition)
-	{
-		XMFLOAT4X4 xmf4x4Transform = Matrix4x4::Identity();
-
-		for (int i = 0; i < (m_nKeyFrames - 1); i++)
-		{
-			if ((m_pfKeyFrameTimes[i] <= fPosition) && (fPosition < m_pfKeyFrameTimes[i + 1]))
-			{
-				float t = (fPosition - m_pfKeyFrameTimes[i]) / (m_pfKeyFrameTimes[i + 1] - m_pfKeyFrameTimes[i]);
-				xmf4x4Transform = Matrix4x4::Interpolate(m_ppxmf4x4KeyFrameTransforms[i][nBone], m_ppxmf4x4KeyFrameTransforms[i + 1][nBone], t);
-				break;
-			}
-		}
-		if (fPosition >= m_pfKeyFrameTimes[m_nKeyFrames - 1]) xmf4x4Transform = m_ppxmf4x4KeyFrameTransforms[m_nKeyFrames - 1][nBone];
-
-		return(xmf4x4Transform);
-	};
-};
-
-class CAnimationSets
-{
-public:
-	CAnimationSets(int nAnimationSets)
-	{
-		m_nAnimationSets = nAnimationSets;
-		m_pAnimationSets.resize(nAnimationSets);
-	};
-	~CAnimationSets() {};
-
-public:
-	int	m_nAnimationSets = 0;
-	std::vector<std::shared_ptr<CAnimationSet>> m_pAnimationSets;
-
-	int	m_nBoneFrames = 0;
-	std::vector<std::shared_ptr<CGameObject>> m_ppBoneFrameCaches; //[m_nBoneFrames]
-
-};
+#include "AnimationSet.h"
 
 class CAnimationTrack
 {
