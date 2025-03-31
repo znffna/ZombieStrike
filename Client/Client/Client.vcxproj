@@ -129,6 +129,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AnimationController.h" />
     <ClInclude Include="AnimationSet.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Client.h" />
@@ -152,6 +153,7 @@
     <ClInclude Include="WICTextureLoader12.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AnimationController.cpp" />
     <ClCompile Include="AnimationSet.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Client.cpp" />

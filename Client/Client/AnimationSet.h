@@ -46,11 +46,7 @@ public:
 class CAnimationSets
 {
 public:
-	CAnimationSets(int nAnimationSets)
-	{
-		m_nAnimationSets = nAnimationSets;
-		m_pAnimationSets.resize(nAnimationSets);
-	};
+	CAnimationSets(int nAnimationSets);
 	~CAnimationSets() {};
 
 public:

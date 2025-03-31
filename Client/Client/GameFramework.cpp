@@ -59,6 +59,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(nullptr);
 
+	// 씬들을 생성한다.
 	BuildObjects();
 
 	m_GameTimer.Reset();
@@ -366,6 +367,10 @@ void CGameFramework::BuildObjects()
 {
 	m_pd3dCommandAllocator->Reset();
 	m_pd3dCommandList->Reset(m_pd3dCommandAllocator.Get(), nullptr);
+
+	// 모든 씬이 공유할 요소 생성
+	CScene::InitStaticMembers(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
+	GetResourceManager().Initialize(m_pd3dDevice.Get(), m_pd3dCommandList.Get(), CScene::GetGraphicRootSignature());
 
 	// Framework 정보 생성 (Shader에 전달할 정보)
 	CreateShaderVariables();

@@ -111,11 +111,14 @@ public:
 	virtual void ReleaseObjects();
 	virtual void ReleaseUploadBuffers();
 
+	static void InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
+
 	void BuildDefaultLightsAndMaterials();
 
 	void CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	// static member variable
 	static void DestroyFramework();
+	static ID3D12RootSignature* GetGraphicRootSignature() {return m_pd3dGraphicsRootSignature.Get();	};
 	
 	// Scene Management
 	bool CheckWorkRendering() { return (m_SceneState == SCENE_STATE_RUNNING) || (m_SceneState == SCENE_STATE_PAUSING); }
@@ -128,11 +131,11 @@ public:
 	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 
-	// Shader method
-	ComPtr<ID3D12RootSignature> CreateGraphicsRootSignature(ID3D12Device* pd3dDevice);
-	void CreateRootSignature(ID3D12RootSignature* pd3dRootSignature, ID3D12Device* pd3dDevice);
-	void CreateDescriptorHeap(ID3D12Device* pd3dDevice);
-	void CreateStaticShader(ID3D12Device* pd3dDevice);
+	// static method
+	static ComPtr<ID3D12RootSignature> CreateGraphicsRootSignature(ID3D12Device* pd3dDevice);
+	static void CreateRootSignature(ID3D12RootSignature* pd3dRootSignature, ID3D12Device* pd3dDevice);
+	static void CreateDescriptorHeap(ID3D12Device* pd3dDevice);
+	static void CreateStaticShader(ID3D12Device* pd3dDevice);
 
 	// Descriptor Heap
 	static void CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews);

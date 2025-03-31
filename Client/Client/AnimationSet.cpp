@@ -37,3 +37,12 @@ XMFLOAT4X4 CAnimationSet::GetSRT(int nBone, float fPosition)
 
 	return(xmf4x4Transform);
 }
+
+/////////////////////////////////////////////////////////////////////////////
+//
+
+CAnimationSets::CAnimationSets(int nAnimationSets)
+{
+	m_nAnimationSets = nAnimationSets;
+	m_pAnimationSets.resize(nAnimationSets);
+}

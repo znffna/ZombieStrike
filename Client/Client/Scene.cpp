@@ -139,6 +139,13 @@ void CScene::ReleaseUploadBuffers()
 {
 }
 
+void CScene::InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
+{
+	CreateRootSignature(pd3dRootSignature, pd3dDevice);
+	CreateDescriptorHeap(pd3dDevice);
+	CreateStaticShader(pd3dDevice);
+}
+
 void CScene::BuildDefaultLightsAndMaterials()
 {
 	ZeroMemory(&m_pLights, sizeof(Light) * MAX_LIGHTS);
@@ -765,11 +772,11 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_ppObjects.push_back(pGameObject);
 
 	// Zombie Object
-	std::shared_ptr<CLoadedModelInfo> pModel = resourceManager.GetSkinInfo(L"Model/FuzZombie.bin");
+	std::shared_ptr<CLoadedModelInfo> pModel = resourceManager.GetModelInfo("FuzZombie");
 	if (!pModel)
 	{
-		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
-		resourceManager.SetSkinInfo(L"Model/FuzZombie.bin", pModel);
+		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "FuzZombie", nullptr);
+		resourceManager.SetSkinInfo("FuzZombie", pModel);
 	}
 
 	std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);

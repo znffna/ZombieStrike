@@ -3,7 +3,6 @@
 // GameObject.h : CGameObject 클래스의 헤더 파일
 // Version : 0.1
 ///////////////////////////////////////////////////////////////////////////////
-
 #pragma once
 
 // Library
@@ -12,6 +11,7 @@
 // Component
 #include "Component.h"
 #include "Transform.h"
+#include "AnimationController.h"
 
 // Resource
 #include "Mesh.h"
@@ -26,127 +26,6 @@ class CCamera;
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
-
-struct CB_GAMEOBJECT_INFO
-{
-	XMFLOAT4X4						m_xmf4x4World;
-};
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-struct CALLBACKKEY
-{
-	float  							m_fTime = 0.0f;
-	void* m_pCallbackData = NULL;
-};
-
-#define _WITH_ANIMATION_INTERPOLATION
-
-class CAnimationCallbackHandler
-{
-public:
-	CAnimationCallbackHandler() { }
-	~CAnimationCallbackHandler() { }
-
-public:
-	virtual void HandleCallback(void* pCallbackData, float fTrackPosition) { }
-};
-
-//#define _WITH_ANIMATION_SRT
-#include "AnimationSet.h"
-
-class CAnimationTrack
-{
-public:
-	CAnimationTrack() { };
-	~CAnimationTrack() { };
-
-public:
-	BOOL 							m_bEnable = true;
-	float 							m_fSpeed = 1.0f;
-	float 							m_fPosition = -ANIMATION_CALLBACK_EPSILON;
-	float 							m_fWeight = 1.0f;
-
-	int 							m_nAnimationSet = 0; //AnimationSet Index
-
-	int 							m_nType = ANIMATION_TYPE_LOOP; //Once, Loop, PingPong
-
-	int 							m_nCallbackKeys = 0;
-	std::vector<CALLBACKKEY> m_pCallbackKeys;
-
-	std::shared_ptr<CAnimationCallbackHandler> m_pAnimationCallbackHandler;
-
-public:
-	void SetAnimationSet(int nAnimationSet) { m_nAnimationSet = nAnimationSet; }
-
-	void SetEnable(bool bEnable) { m_bEnable = bEnable; }
-	void SetSpeed(float fSpeed) { m_fSpeed = fSpeed; }
-	void SetWeight(float fWeight) { m_fWeight = fWeight; }
-
-	void SetPosition(float fPosition) { m_fPosition = fPosition; }
-	float UpdatePosition(float fTrackPosition, float fElapsedTime, float fAnimationLength)
-	{
-		float fTrackElapsedTime = fElapsedTime * m_fSpeed;
-		switch (m_nType)
-		{
-		case ANIMATION_TYPE_LOOP:
-		{
-			if (m_fPosition < 0.0f) m_fPosition = 0.0f;
-			else
-			{
-				m_fPosition = fTrackPosition + fTrackElapsedTime;
-				if (m_fPosition > fAnimationLength)
-				{
-					m_fPosition = -ANIMATION_CALLBACK_EPSILON;
-					return(fAnimationLength);
-				}
-			}
-			//			m_fPosition = fmod(fTrackPosition, m_pfKeyFrameTimes[m_nKeyFrames-1]); // m_fPosition = fTrackPosition - int(fTrackPosition / m_pfKeyFrameTimes[m_nKeyFrames-1]) * m_pfKeyFrameTimes[m_nKeyFrames-1];
-			//			m_fPosition = fmod(fTrackPosition, m_fLength); //if (m_fPosition < 0) m_fPosition += m_fLength;
-			//			m_fPosition = fTrackPosition - int(fTrackPosition / m_fLength) * m_fLength;
-			break;
-		}
-		case ANIMATION_TYPE_ONCE:
-			m_fPosition = fTrackPosition + fTrackElapsedTime;
-			if (m_fPosition > fAnimationLength) m_fPosition = fAnimationLength;
-			break;
-		case ANIMATION_TYPE_PINGPONG:
-			break;
-		}
-
-		return(m_fPosition);
-	};
-
-	void SetCallbackKeys(int nCallbackKeys)
-	{
-		m_nCallbackKeys = nCallbackKeys;
-		m_pCallbackKeys.resize(nCallbackKeys);
-	};
-	void SetCallbackKey(int nKeyIndex, float fTime, void* pData)
-	{
-		m_pCallbackKeys[nKeyIndex].m_fTime = fTime;
-		m_pCallbackKeys[nKeyIndex].m_pCallbackData = pData;
-	};
-	void SetAnimationCallbackHandler(std::shared_ptr<CAnimationCallbackHandler> pCallbackHandler)
-	{
-		m_pAnimationCallbackHandler = pCallbackHandler;
-	};
-
-	void HandleCallback()
-	{
-		if (m_pAnimationCallbackHandler)
-		{
-			for (int i = 0; i < m_nCallbackKeys; i++)
-			{
-				if (::IsEqual(m_pCallbackKeys[i].m_fTime, m_fPosition, ANIMATION_CALLBACK_EPSILON))
-				{
-					if (m_pCallbackKeys[i].m_pCallbackData) m_pAnimationCallbackHandler->HandleCallback(m_pCallbackKeys[i].m_pCallbackData, m_fPosition);
-					break;
-				}
-			}
-		}
-	};
-};
 
 class CLoadedModelInfo
 {
@@ -165,101 +44,9 @@ public:
 	void PrepareSkinning();;
 };
 
-class CAnimationController
+struct CB_GAMEOBJECT_INFO
 {
-public:
-	CAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, std::shared_ptr<CLoadedModelInfo> pModel)
-	{
-		m_nAnimationTracks = nAnimationTracks;
-		m_pAnimationTracks.resize(nAnimationTracks);
-
-		m_pModelRootObject = pModel->m_pModelRootObject;
-		m_nSkinnedMeshes = pModel->m_nSkinnedMeshes;
-		m_ppSkinnedMeshes = pModel->m_ppSkinnedMeshes;
-
-		m_pAnimationSets = pModel->m_pAnimationSets;
-
-		m_ppd3dcbSkinningBoneTransforms.resize(m_nSkinnedMeshes);
-		m_ppcbxmf4x4MappedSkinningBoneTransforms.resize(m_nSkinnedMeshes);
-
-		UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256의 배수
-		for (int i = 0; i < m_nSkinnedMeshes; i++)
-		{
-			m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-			m_ppd3dcbSkinningBoneTransforms[i]->Map(0, NULL, (void**)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
-
-			std::wstring name = L"Skinning Bone Transforms [" + std::to_wstring(i) + L"]";
-			m_ppd3dcbSkinningBoneTransforms[i]->SetName(name.c_str());
-		}
-
-		for (int i = 0; i < m_nAnimationTracks; i++)
-		{
-			m_pAnimationTracks[i].SetAnimationSet(0);
-			m_pAnimationTracks[i].SetCallbackKeys(0);
-			m_pAnimationTracks[i].SetAnimationCallbackHandler(NULL);
-		}
-	};
-	
-	~CAnimationController() 
-	{
-		for (int i = 0; i < m_nSkinnedMeshes; i++)
-		{
-			if (m_ppd3dcbSkinningBoneTransforms[i]) {
-				m_ppd3dcbSkinningBoneTransforms[i]->Unmap(0, NULL);
-				m_ppd3dcbSkinningBoneTransforms[i].Reset();
-			}
-			if (m_ppcbxmf4x4MappedSkinningBoneTransforms[i]) m_ppcbxmf4x4MappedSkinningBoneTransforms[i] = NULL;
-		}
-	};
-
-public:
-	float 							m_fTime = 0.0f;
-
-	int 							m_nAnimationTracks = 0;
-	std::vector<CAnimationTrack> m_pAnimationTracks;
-
-	std::shared_ptr<CAnimationSets> m_pAnimationSets;
-
-	int m_nSkinnedMeshes = 0;
-	std::vector<std::shared_ptr<CSkinnedMesh>> m_ppSkinnedMeshes; //[SkinnedMeshes], Skinned Mesh Cache
-
-	std::vector<ComPtr<ID3D12Resource>> m_ppd3dcbSkinningBoneTransforms; //[SkinnedMeshes]
-	std::vector<XMFLOAT4X4*> m_ppcbxmf4x4MappedSkinningBoneTransforms; //[SkinnedMeshes]
-
-public:
-	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
-	{
-		for (int i = 0; i < m_nSkinnedMeshes; i++)
-		{
-			m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i];
-			m_ppSkinnedMeshes[i]->m_pcbxmf4x4MappedSkinningBoneTransforms = m_ppcbxmf4x4MappedSkinningBoneTransforms[i];
-		}
-	};
-
-	void SetTrackAnimationSet(int nAnimationTrack, int nAnimationSet) {	if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].m_nAnimationSet = nAnimationSet;};
-
-	void SetTrackEnable(int nAnimationTrack, bool bEnable) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetEnable(bEnable); };
-	void SetTrackPosition(int nAnimationTrack, float fPosition) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetPosition(fPosition); };
-	void SetTrackSpeed(int nAnimationTrack, float fSpeed) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetSpeed(fSpeed); };
-	void SetTrackWeight(int nAnimationTrack, float fWeight) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetWeight(fWeight); };
-
-	void SetCallbackKeys(int nAnimationTrack, int nCallbackKeys) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetCallbackKeys(nCallbackKeys); };
-	void SetCallbackKey(int nAnimationTrack, int nKeyIndex, float fTime, void* pData) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetCallbackKey(nKeyIndex, fTime, pData); };
-	void SetAnimationCallbackHandler(int nAnimationTrack, std::shared_ptr<CAnimationCallbackHandler> pCallbackHandler) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetAnimationCallbackHandler(pCallbackHandler); };
-
-	void AdvanceTime(float fElapsedTime, CGameObject* pRootGameObject);;
-
-public:
-	bool							m_bRootMotion = false;
-	std::shared_ptr<CGameObject> m_pModelRootObject;
-
-	std::shared_ptr<CGameObject> m_pRootMotionObject;
-	XMFLOAT3 m_xmf3FirstRootMotionPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
-
-	void SetRootMotion(bool bRootMotion) { m_bRootMotion = bRootMotion; }
-
-	virtual void OnRootMotion(CGameObject* pRootGameObject) { }
-	virtual void OnAnimationIK(CGameObject* pRootGameObject) { }
+	XMFLOAT4X4						m_xmf4x4World;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
