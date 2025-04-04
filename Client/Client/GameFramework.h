@@ -10,60 +10,6 @@
 #include "GameTimer.h"
 #include "Scene.h"
 
-class ResourceManager
-{
-public:
-	void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, ID3D12RootSignature* rootsignature) {
-		m_d3dDevice = device;
-		m_d3dGraphicsCommandList = commandList;
-		m_d3dGraphicRootSignature = rootsignature;
-	}
-
-	// 모든 리소스 해제
-	void ReleaseResources() {
-
-		ModelInfos.clear();
-	}
-
-	////////////////////////////////////////////
-
-	// 모델 정보를 저장
-
-	void SetSkinInfo(const std::string& name, std::shared_ptr<CLoadedModelInfo> modelInfo) {
-		ModelInfos[name] = modelInfo;
-	}
-
-	std::shared_ptr<CLoadedModelInfo> GetModelInfo(const std::string& name) {
-		if (ModelInfos.find(name) != ModelInfos.end()) {
-			return ModelInfos[name];
-		}
-
-		// 없는경우 바로 불러와서 저장하고 return 한다.
-		std::string filepath = "Model/" + name + ".bin";
-		auto pModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(m_d3dDevice, m_d3dGraphicsCommandList, m_d3dGraphicRootSignature, filepath.c_str(), nullptr);
-		if (pModelInfo) {
-			SetSkinInfo(name, pModelInfo);
-			return pModelInfo;
-		}
-		else {
-			// 로드 실패
-			std::string strDebug = "Failed to load model: " + name;
-			OutputDebugStringA(strDebug.c_str());
-		}
-		return nullptr;
-	}
-
-private:
-	// CGameFramework에서 상속받는다.
-	ID3D12Device* m_d3dDevice = nullptr;
-	// Resource Manager 전용 CommandList가 필요하다.
-	ID3D12GraphicsCommandList* m_d3dGraphicsCommandList = nullptr;
-	// CSCene에서 상속받는다. (또는 생성을 CGameFramework에서 하고 넘겨받는다.)
-	ID3D12RootSignature* m_d3dGraphicRootSignature = nullptr;
-
-	std::unordered_map<std::string, std::shared_ptr<CLoadedModelInfo>> ModelInfos;
-};
-
 struct CB_FRAMEWORK_INFO
 {
 	float					m_fCurrentTime;
@@ -167,37 +113,5 @@ private:
 protected:
 	ComPtr<ID3D12Resource> m_pd3dcbFrameworkInfo;
 	CB_FRAMEWORK_INFO* m_pcbMappedFrameworkInfo = NULL;
-
-public:
-	// ResourceManager 리소스 관리
-	static ResourceManager& GetResourceManager() {
-		static ResourceManager instance; // 정적 지역 변수
-		return instance;
-	}
-
-	static ComPtr<ID3D12Resource> GetResource(const std::string& name)
-	{
-		return GetResourceManager().GetResource(name);
-	};
-
-	static void StoreResource(const std::string& filename, ComPtr<ID3D12Resource> pResource)
-	{
-		GetResourceManager().SetResource(filename, pResource);
-	};
-
-	static void StoreSkinInfo(const std::string& filename, std::shared_ptr<CLoadedModelInfo> pSkinInfo)
-	{
-		GetResourceManager().SetSkinInfo(filename, pSkinInfo);
-	};
-
-	static std::shared_ptr<CLoadedModelInfo> GetModelInfo(const std::string& objectname)
-	{
-		return GetResourceManager().GetModelInfo(objectname);
-	};
-
-	static void ReleaseResources()
-	{
-		GetResourceManager().ReleaseResources();
-	};
 };
 

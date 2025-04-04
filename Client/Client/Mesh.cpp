@@ -563,7 +563,6 @@ CCubeMesh::CCubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 	m_pxmf3BiTangents = std::move(xmf3BiTangents);
 
 	m_pd3dBiTangentBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3BiTangents.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, m_pd3dBiTangentUploadBuffer.GetAddressOf());
-	m_pd3dBiTangentBuffer->Release();
 	{
 		std::wstring name = debugName + L" : m_pd3dBiTangentBuffer";
 		m_pd3dBiTangentBuffer->SetName(name.c_str());

@@ -49,8 +49,10 @@ CGameObject::~CGameObject()
 	m_pComponents.clear();
 
 	// Debug Output
+#ifdef _DEBUG
 	std::string debugoutput = "Object Name: " + GetName() + " has Destroyed\n";
 	OutputDebugStringA(debugoutput.c_str());
+#endif // _DEBUG
 }
 
 void CGameObject::SetName(const std::string& strName)
@@ -533,7 +535,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		{
 			std::string strModelName;
 			::ReadStringFromFile(file, strModelName);
-			if (auto pModel = CGameFramework::GetResourceManager().GetModelInfo(strModelName)) {
+			if (auto pModel = CScene::GetResourceManager().GetModelInfo(strModelName)) {
 				pGameObject->SetChild(pModel->m_pModelRootObject);
 			}
 			else {

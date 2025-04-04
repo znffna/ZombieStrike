@@ -79,7 +79,6 @@ void CGameFramework::OnDestroy()
 	::CloseHandle(m_hFenceEvent);
 
 	// Scene들을 해제한다.
-	GetResourceManager().ReleaseResources();
 
 	m_Scenes.clear();
 	m_pLoadingScene.reset();
@@ -104,7 +103,6 @@ void CGameFramework::OnDestroy()
 	if (m_pd3dDevice) m_pd3dDevice.Reset();
 	if (m_pdxgiFactory) m_pdxgiFactory.Reset();
 #ifdef _DEBUG
-	ReportLiveObjects();
 	if (m_pd3dDebugController) m_pd3dDebugController.Reset();
 #endif
 }
@@ -370,7 +368,7 @@ void CGameFramework::BuildObjects()
 
 	// 모든 씬이 공유할 요소 생성
 	CScene::InitStaticMembers(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
-	GetResourceManager().Initialize(m_pd3dDevice.Get(), m_pd3dCommandList.Get(), CScene::GetGraphicRootSignature());
+	CScene::GetResourceManager().Initialize(m_pd3dDevice.Get(), m_pd3dCommandList.Get(), CScene::GetGraphicRootSignature());
 
 	// Framework 정보 생성 (Shader에 전달할 정보)
 	CreateShaderVariables();
