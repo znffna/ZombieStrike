@@ -96,7 +96,7 @@ public:
 
 	DirectX::XMFLOAT3 GetLocalPosition() { return m_pTransform->GetLocalPosition(); };
 
-	std::shared_ptr<CTransform> GetTransform() { return m_pTransform; }
+	//std::unique_ptr<CTransform> GetTransform() { return m_pTransform; }
 
 	void SetPosition(DirectX::XMFLOAT3 xmf3Position) { m_pTransform->SetPosition(xmf3Position); }
 	void SetPosition(float fx, float fy, float fz) {  m_pTransform->SetPosition(fx, fy, fz);  }
@@ -117,9 +117,9 @@ public:
 	void Rotate(const XMFLOAT4& pxmf4Quaternion) { m_pTransform->Rotate(pxmf4Quaternion); }
 
 	void SetLocalMatrix(DirectX::XMFLOAT4X4 xmf4x4Local) { m_pTransform->SetLocalMatrix(xmf4x4Local); }
-	void SetLocalTransform(DirectX::XMFLOAT4X4 xmf4x4Local) { SetLocalMatrix(xmf4x4Local); }
+	void SetLocalMatrix(DirectX::XMMATRIX xmf4x4Local) { m_pTransform->SetLocalMatrix(xmf4x4Local); }
 	void SetWorldMatrix(DirectX::XMFLOAT4X4 xmf4x4World) { m_pTransform->SetWorldMatrix(xmf4x4World); }
-	void SetWorldTransform(DirectX::XMFLOAT4X4 xmf4x4World) { SetWorldTransform(xmf4x4World); }
+	void SetWorldMatrix(DirectX::XMMATRIX xmf4x4World) { m_pTransform->SetWorldMatrix(xmf4x4World); }
 
 	void UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
 	void UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix);

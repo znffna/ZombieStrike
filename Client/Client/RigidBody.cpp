@@ -48,7 +48,7 @@ void CRigidBodyComponent::ApplyForce(const XMFLOAT3& f)
 void CRigidBodyComponent::ApplyForceAtPoint(const XMFLOAT3& f, const XMFLOAT3& point)
 {
 	// Transform에서 World Matrix 가져오기
-	XMFLOAT4X4 xmf4x4worldMatrix = GetOwner()->GetTransform()->GetWorldMatrix();
+	XMFLOAT4X4 xmf4x4worldMatrix = GetOwner()->GetWorldMatrix();
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&xmf4x4worldMatrix);
 
 	// 중심 좌표 추출 (Matrix에서 Translation 부분 가져오기)
@@ -71,7 +71,7 @@ void CRigidBodyComponent::ApplyForceAtPoint(const XMFLOAT3& f, const XMFLOAT3& p
 void CRigidBodyComponent::Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT4& rotation)
 {
 	// Transform에서 World Matrix 가져오기
-	XMFLOAT4X4 xmf4x4worldMatrix = GetOwner()->GetTransform()->GetWorldMatrix();
+	XMFLOAT4X4 xmf4x4worldMatrix = GetOwner()->GetWorldMatrix();
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&xmf4x4worldMatrix);
 	XMVECTOR positionVec = worldMatrix.r[3]; // Translation(위치)
 
@@ -100,7 +100,7 @@ void CRigidBodyComponent::Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT
 	worldMatrix.r[3] = positionVec;
 
 	// 업데이트된 Matrix 저장
-	GetOwner()->GetTransform()->SetWorldMatrix(worldMatrix);
+	GetOwner()->SetWorldMatrix(worldMatrix);
 
 	// 힘 및 토크 초기화 (순간적인 힘 처리)
 	m_xmf3Force = { 0, 0, 0 };
