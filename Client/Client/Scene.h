@@ -17,6 +17,8 @@ public:
 		m_d3dDevice = device;
 		m_d3dGraphicsCommandList = commandList;
 		m_d3dGraphicRootSignature = rootsignature;
+
+		LoadModelList();
 	}
 
 	// 모든 리소스 해제
@@ -26,8 +28,35 @@ public:
 	}
 
 	////////////////////////////////////////////
+	// 텍스쳐 정보를 저장
+	void SetTexture(const std::string& name, std::shared_ptr<CTexture> texture) {
+		TextureInfos[name] = texture;
+	}
 
+	std::shared_ptr<CTexture> GetTexture(const std::string& name) {
+		if (TextureInfos.find(name) != TextureInfos.end()) {
+			// 이미 로드된 모델이 있는 경우
+			std::string filepath = name + "이 재사용됨";
+			OutputDebugStringA(filepath.c_str());
+			OutputDebugStringA("\n");
+
+			return TextureInfos[name];
+		}
+
+		return nullptr;
+	}
+	
+	////////////////////////////////////////////
 	// 모델 정보를 저장
+
+	void LoadModelList() {
+        std::ifstream file("Model/ModelList.txt");
+        std::string modelname;
+        while (file >> modelname) {
+            GetModelInfo(modelname);
+        }
+	}
+
 
 	void SetSkinInfo(const std::string& name, std::shared_ptr<CLoadedModelInfo> modelInfo) {
 		ModelInfos[name] = modelInfo;
@@ -35,11 +64,20 @@ public:
 
 	std::shared_ptr<CLoadedModelInfo> GetModelInfo(const std::string& name) {
 		if (ModelInfos.find(name) != ModelInfos.end()) {
+			// 이미 로드된 모델이 있는 경우
+			std::string filepath = name + "이 재사용됨";
+			OutputDebugStringA(filepath.c_str());
+			OutputDebugStringA("\n");
+
+
 			return ModelInfos[name];
 		}
 
 		// 없는경우 바로 불러와서 저장하고 return 한다.
 		std::string filepath = "Model/" + name + ".bin";
+		OutputDebugStringA(filepath.c_str());
+		OutputDebugStringA("\n");
+
 		auto pModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(m_d3dDevice, m_d3dGraphicsCommandList, m_d3dGraphicRootSignature, filepath.c_str(), nullptr);
 		if (pModelInfo) {
 			SetSkinInfo(name, pModelInfo);
@@ -62,6 +100,7 @@ private:
 	ID3D12RootSignature* m_d3dGraphicRootSignature = nullptr;
 
 	std::unordered_map<std::string, std::shared_ptr<CLoadedModelInfo>> ModelInfos;
+	std::unordered_map<std::string, std::shared_ptr<CTexture>> TextureInfos;
 };
 
 #define DIR_FORWARD					0x01
@@ -274,54 +313,17 @@ public:
 	{
 		GetResourceManager().ReleaseResources();
 	};
+
+	static void StoreTexture(const std::string& name, std::shared_ptr<CTexture> texture)
+	{
+		GetResourceManager().SetTexture(name, texture);
+	};
+
+	static std::shared_ptr<CTexture> GetTexture(const std::string& name)
+	{
+		return GetResourceManager().GetTexture(name);
+	};
 };
 
-////////////////////////////////////////////////////////////////////////////////////////////
-//
 
-class CLoadingScene : public CScene
-{
-public:
-	CLoadingScene();
-	virtual ~CLoadingScene();
 
-	// Scene Initialization / Release
-	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
-	virtual void ReleaseObjects() override;
-	virtual void ReleaseUploadBuffers() override;
-
-	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
-
-	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr) override;
-
-	// Shader Variables
-	//void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
-	//void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList) override;
-	//void ReleaseShaderVariables() override;
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////
-//
-
-class CGameScene : public CScene
-{
-public:
-	CGameScene();
-	virtual ~CGameScene();
-
-	// Scene Initialization / Release
-	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
-	virtual void ReleaseObjects() override;
-	virtual void ReleaseUploadBuffers() override;
-
-	virtual void FixedUpdate(float deltaTime) override;
-
-	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
-	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
-	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
-
-	// Shader Variables
-	//void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
-	//void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList) override;
-	//void ReleaseShaderVariables() override;
-};
