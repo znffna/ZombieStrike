@@ -15,15 +15,11 @@
 
 #include "GameFramework.h"
 
+UINT CGameObject::m_nObjectIDCounter = 0;
+
 CGameObject::CGameObject()
 {
-	// Object Info
-	static UINT nGameObjectID = 0;
-	m_bActive = true;
-	m_nObjectID = nGameObjectID++;
-
-	// Default Name
-	m_strName = "GameObject_" + std::to_string(m_nObjectID);
+	Init();
 }
 
 CGameObject::~CGameObject()
@@ -53,6 +49,16 @@ CGameObject::~CGameObject()
 	std::string debugoutput = "Object Name: " + GetName() + " has Destroyed\n";
 	OutputDebugStringA(debugoutput.c_str());
 #endif // _DEBUG
+}
+
+void CGameObject::Init()
+{
+	// Object Info
+	m_bActive = true;
+	m_nObjectID = m_nObjectIDCounter++;
+
+	// Default Name
+	m_strName = "GameObject_" + std::to_string(m_nObjectID);
 }
 
 void CGameObject::SetName(const std::string& strName)

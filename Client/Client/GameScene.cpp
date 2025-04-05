@@ -23,8 +23,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 
 	// Terrain
-	//지형을 확대할 스케일 벡터이다. x-축과 z-축은 8배, y-축은 2배 확대한다. 
-	XMFLOAT3 xmf3Scale(8.0f, 1.0f, 8.0f);
+	XMFLOAT3 xmf3Scale(4.0f, 32.0f / 255.0f, 4.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
 	m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 257, 257, xmf3Scale, xmf4Color);
 	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
@@ -51,7 +50,6 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	auto pMap = resourceManager.GetModelInfo("Map");
 	auto pMapObjects = (pMap->m_pModelRootObject)->GetChilds();
 	m_ppHierarchicalObjects.insert(m_ppHierarchicalObjects.end(), pMapObjects.begin(), pMapObjects.end());
-
 
 	// Default Camera 위치 수정
 	m_pCamera->SetPosition(Vector3::Add(pZombie->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));

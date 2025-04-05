@@ -58,9 +58,20 @@ public:
 	CGameObject();
 	virtual ~CGameObject();
 
+	void Init();
 	// Object Initialization
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList) {
 		// Transform Owner Setting
+		m_pTransform->SetOwner(shared_from_this());
+	};
+
+	virtual void Clone()
+	{
+		// shallow copy
+		
+
+		// Deep copy
+		// Transform 
 		m_pTransform->SetOwner(shared_from_this());
 	};
 
@@ -193,6 +204,9 @@ public:
 
 protected:
 	bool m_bActive; // Active Flag
+
+	// Object ID
+	static UINT m_nObjectIDCounter; // Object ID Counter
 
 	UINT m_nObjectID; // Object ID
 	std::string m_strName;  // Object Name
