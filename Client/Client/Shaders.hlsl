@@ -142,7 +142,7 @@ float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
     }
     cIllumination = Lighting(input.positionW, normalW);
   
-    cColor = cColor + cIllumination;
+//    cColor = cColor + cIllumination;
 //    cColor = cColor * cIllumination;
 //    cColor = cColor / (1 + cColor);
 //    cColor = lerp(cColor, cIllumination, 0.5f);

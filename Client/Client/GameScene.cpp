@@ -43,7 +43,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	}
 
 	std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
-	pZombie->SetPosition(DirectX::XMFLOAT3(100.0f, 50.0f, 100.0f));
+	pZombie->SetPosition(DirectX::XMFLOAT3(549.2253f, 100.0f, 214.4393));
 	m_ppHierarchicalObjects.push_back(pZombie);
 
 	// Map Load

@@ -1,3 +1,4 @@
+Stage_1
 Barn1_Door_A
 Barn1_End_A
 Barn1_End_B
@@ -210,7 +211,6 @@ lo_Rock_A_LOD2
 lo_Rock_B_LOD0
 lo_Rock_B_LOD1
 lo_Rock_B_LOD2
-Map
 Outhouse_A
 Part_ExhaustRings
 Pavement1_Cor_A
@@ -452,3 +452,4 @@ Villa2_Wall_Mid_B
 Villa2_Wall_Mid_C
 Villa2_Wall_Mid_D
 Villa2_Wall_Mid_E
+Map

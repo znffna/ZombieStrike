@@ -542,6 +542,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		{
 			std::string strModelName;
 			::ReadStringFromFile(file, strModelName);
+			if (strModelName == pGameObject->m_strName) continue;
 			if (auto pModel = CScene::GetResourceManager().GetModelInfo(strModelName)) {
 				pGameObject->SetChild(pModel->m_pModelRootObject);
 			}
@@ -569,7 +570,7 @@ std::shared_ptr<CLoadedModelInfo> CGameObject::LoadGeometryAndAnimationFromFile(
 
 	std::shared_ptr<CLoadedModelInfo> pLoadedModel = std::make_shared<CLoadedModelInfo>();
 
-	char pstrToken[64] = { '\0' };
+	char pstrToken[100] = { '\0' };
 
 	for (; ; )
 	{
