@@ -48,9 +48,9 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_ppHierarchicalObjects.push_back(pZombie);
 
 	// Map Load
-	/*auto pMap = resourceManager.GetModelInfo("Map");
+	auto pMap = resourceManager.GetModelInfo("Map");
 	auto pMapObjects = (pMap->m_pModelRootObject)->GetChilds();
-	m_ppHierarchicalObjects.insert(m_ppHierarchicalObjects.end(), pMapObjects.begin(), pMapObjects.end());*/
+	m_ppHierarchicalObjects.insert(m_ppHierarchicalObjects.end(), pMapObjects.begin(), pMapObjects.end());
 
 
 	// Default Camera 위치 수정

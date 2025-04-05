@@ -95,6 +95,16 @@ void CMaterial::ReleaseShaderVariables()
 #endif // _USE_OBJECT_MATERIAL_CBV
 }
 
+void LoadTextureFromFile(std::shared_ptr<CTexture>& ppTexture, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring& pwstrTexturePath, char  pstrTextureName[64], UINT nRootParameter)
+{
+	ppTexture = std::make_shared <CTexture>(1, RESOURCE_TEXTURE2D, 1);
+	
+	(ppTexture)->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, pwstrTexturePath, RESOURCE_TEXTURE2D, 0);
+	ppTexture->SetName(pstrTextureName);
+	
+	CScene::CreateShaderResourceViews(pd3dDevice, ppTexture.get(), 0, nRootParameter);
+}
+
 void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, std::wstring& pwstrTextureName, std::shared_ptr<CTexture>& ppTexture, std::shared_ptr<CGameObject> pParent, std::ifstream& File, std::shared_ptr<CShader> pShader)
 {
 	char pstrTextureName[64] = { '\0' };
@@ -115,7 +125,7 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 		bDuplicated = (pstrTextureName[0] == '@');
 		strcpy_s(pstrFilePath + 15, 64 - 15, (bDuplicated) ? (pstrTextureName + 1) : pstrTextureName);
-		strcpy_s(pstrFilePath + 15 + ((bDuplicated) ? (nStrLength - 1) : nStrLength), 64 - 15 - ((bDuplicated) ? (nStrLength - 1) : nStrLength), ".png");
+		strcpy_s(pstrFilePath + 15 + ((bDuplicated) ? (nStrLength - 1) : nStrLength), 64 - 15 - ((bDuplicated) ? (nStrLength - 1) : nStrLength), ".dds");
 
 		size_t nConverted = 0;
 
@@ -132,10 +142,12 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 #endif
 		if (!bDuplicated)
 		{
-			ppTexture = std::make_shared <CTexture>(1, RESOURCE_TEXTURE2D, 1);
-			(ppTexture)->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, pwstrTextureName, RESOURCE_TEXTURE2D, 0);
-
-			CScene::CreateShaderResourceViews(pd3dDevice, ppTexture.get(), 0, nRootParameter);
+			ppTexture = CScene::GetTexture(pstrTextureName);
+			if (nullptr == ppTexture)
+			{
+				::LoadTextureFromFile(ppTexture, pd3dDevice, pd3dCommandList, pwstrTextureName, pstrTextureName, nRootParameter);
+				CScene::StoreTexture(pstrTextureName, ppTexture);
+			}
 		}
 		else
 		{

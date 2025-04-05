@@ -120,3 +120,5 @@ public:
 	void SetStandardShader();
 	void SetSkinnedAnimationShader();;
 };
+
+void LoadTextureFromFile(std::shared_ptr<CTexture>& ppTexture, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring& pwstrTextureName, char  pstrTextureName[64], UINT nRootParameter);

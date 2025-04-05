@@ -9,8 +9,9 @@
 
 CMesh::CMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	static int nMeshIndex = 0;
 	// 메쉬의 이름 초기화
-	m_strMeshName = "Mesh";
+	m_strMeshName = "Mesh" + std::to_string(nMeshIndex++);
 
 	// 포지션 버퍼 초기화
 	ZeroMemory(&m_d3dPositionBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
@@ -173,6 +174,7 @@ void CStandardMesh::LoadMeshFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 				m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
 				m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
 				m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
 			}
 		}
 		else if (!strcmp(pstrToken, "<Colors>:"))
@@ -303,6 +305,12 @@ void CStandardMesh::LoadMeshFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		}
 		else if (!strcmp(pstrToken, "</Mesh>"))
 		{
+			m_pxmf4Colors.clear();
+			m_pxmf2TextureCoords0.clear();
+			m_pxmf2TextureCoords1.clear();
+			m_pxmf3Normals.clear();
+			m_pxmf3Tangents.clear();
+			m_pxmf3BiTangents.clear();
 			break;
 		}
 	}
