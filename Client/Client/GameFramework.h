@@ -10,6 +10,9 @@
 #include "GameTimer.h"
 #include "Scene.h"
 
+#include "GameScene.h"
+#include "LoadingScene.h"
+
 struct CB_FRAMEWORK_INFO
 {
 	float					m_fCurrentTime;
