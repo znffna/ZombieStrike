@@ -519,6 +519,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 			int nChilds = ::ReadIntegerFromFile(file);
 			if (nChilds > 0)
 			{
+				pGameObject->m_pChilds.reserve(nChilds); 
 				for (int i = 0; i < nChilds; i++)
 				{
 					std::shared_ptr<CGameObject> pChild = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, file, pShader, pnSkinnedMeshes);
