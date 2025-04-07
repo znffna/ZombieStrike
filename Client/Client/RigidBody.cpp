@@ -139,6 +139,7 @@ void CRigidBodyComponent::OnTerrainUpdateCallback(float fTimeElapsed)
 	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pTerrainUpdatedContext;
 	XMFLOAT3 xmf3Scale = pTerrain->GetScale();
 	int xmf4TerrainSize = pTerrain->GetHeightMapWidth();
+	int xmf4TerrainLength = pTerrain->GetHeightMapLength();
 
 	auto owner = GetOwner();
 
@@ -147,12 +148,21 @@ void CRigidBodyComponent::OnTerrainUpdateCallback(float fTimeElapsed)
 	bool bReverseQuad = ((z % 2) != 0);
 	//float fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 6.0f;
 
+	{ // x, z 축에서 Height Map의 넓이, 폭에 한정되게 만듬.
+		if (xmf3PlayerPosition.x < 0.0f) xmf3PlayerPosition.x = 0.0f;
+		if (xmf3PlayerPosition.x > (xmf4TerrainSize - 1) * xmf3Scale.x) xmf3PlayerPosition.x = (xmf4TerrainSize - 1) * xmf3Scale.x - 1.0f;
+		if (xmf3PlayerPosition.z < 0.0f) xmf3PlayerPosition.z = 0.0f;
+		if (xmf3PlayerPosition.z > (xmf4TerrainLength - 1) * xmf3Scale.z) xmf3PlayerPosition.z = (xmf4TerrainLength - 1) * xmf3Scale.z - 1.0f;
+	}
+
+
+	float fHeight = 0.0f;
 	// 지상과의 높이 체크
 	auto AABB = owner->GetComponent<CAABBBoxCollider>();
 	if (AABB) {
 		float modelHeight = AABB->GetBoundingBox().Extents.y / 2;
 
-		float fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z) + modelHeight;
+		fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z) + modelHeight;
 		if (xmf3PlayerPosition.y < fHeight)
 		{
 			XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
@@ -164,7 +174,7 @@ void CRigidBodyComponent::OnTerrainUpdateCallback(float fTimeElapsed)
 	}
 	else {
 
-		float fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z);
+		fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z);
 		if (xmf3PlayerPosition.y < fHeight)
 		{
 			XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
@@ -174,5 +184,9 @@ void CRigidBodyComponent::OnTerrainUpdateCallback(float fTimeElapsed)
 			owner->SetPosition(xmf3PlayerPosition);
 		}
 	}
+
+	std::string output = "Terrain Height: " + std::to_string(fHeight) + "\n";
+	OutputDebugStringA(output.c_str());
+
 }
 

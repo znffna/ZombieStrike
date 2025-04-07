@@ -56,7 +56,7 @@ class CGameObject : public std::enable_shared_from_this<CGameObject>
 {
 public:
 	CGameObject();
-
+	CGameObject(const std::string& strName);
 	virtual ~CGameObject();
 
 	void ClearMemberVariables();
@@ -391,6 +391,9 @@ public:
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
 		LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength,
 		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
+	static std::shared_ptr<CHeightMapTerrain> InitializeByBinary(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
+		LPCTSTR pBinFileName, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength,
+		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
 	virtual std::string GetDefaultName() override { return "CHeightMapTerrain"; }
 
 	static std::shared_ptr<CHeightMapTerrain> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
@@ -401,7 +404,28 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
 
 	//지형의 높이를 계산하는 함수이다(월드 좌표계). 높이 맵의 높이에 스케일의 y를 곱한 값이다. 
-	float GetHeight(float x, float z) { return(m_pHeightMapImage->GetHeight(x / m_xmf3Scale.x, z / m_xmf3Scale.z) * m_xmf3Scale.y); }
+	float GetHeight(float x, float z) {
+		if (isBinary) {
+			//높이 맵의 좌표의 정수 부분과 소수 부분을 계산한다. 
+			int nx = (int)x;
+			int nz = (int)z;
+			float fxPercent = x - nx;
+			float fzPercent = z - nz;
+
+			const auto& fBottomLeft = m_pVertices.at(nx + (nz * m_nWidth)).m_xmf3Position.y;
+			const auto& fBottomRight = m_pVertices.at((nx + 1) + (nz * m_nWidth)).m_xmf3Position.y;
+			const auto& fTopLeft = m_pVertices.at(nx + ((nz + 1) * m_nWidth)).m_xmf3Position.y;
+			const auto& fTopRight = m_pVertices.at((nx + 1) + ((nz + 1) * m_nWidth)).m_xmf3Position.y;
+
+			//사각형의 네 점을 보간하여 높이(픽셀 값)를 계산한다. 
+			float fTopHeight = fTopLeft * (1 - fxPercent) + fTopRight * fxPercent;
+			float fBottomHeight = fBottomLeft * (1 - fxPercent) + fBottomRight * fxPercent;
+			float fHeight = fBottomHeight * (1 - fzPercent) + fTopHeight * fzPercent;
+
+			return(fHeight);
+		}
+		else return(m_pHeightMapImage->GetHeight(x / m_xmf3Scale.x, z / m_xmf3Scale.z) * m_xmf3Scale.y);
+	}
 	
 	//지형의 법선 벡터를 계산하는 함수이다(월드 좌표계). 높이 맵의 법선 벡터를 사용한다. 
 	XMFLOAT3 GetNormal(float x, float z) {
@@ -428,5 +452,11 @@ private:
 
 	//지형을 실제로 몇 배 확대할 것인가를 나타내는 스케일 벡터이다. 
 	XMFLOAT3 m_xmf3Scale;
+
+	// Binary 로 생성시
+	bool isBinary = false;
+
+	std::vector<CTerrainVertex> m_pVertices;
+	std::vector<UINT> m_pIndices;
 };
 

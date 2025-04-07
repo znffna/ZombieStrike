@@ -122,7 +122,7 @@ public:
 	virtual void ReleaseUploadBuffers();
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext);
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet = 0);
 	virtual void OnPostRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext);
 
 	BoundingBox GetBoundingBox();
@@ -502,6 +502,12 @@ public:
 		* pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale =
 		XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f), void
 		* pContext = NULL);
+	CHeightMapGridMesh(
+		ID3D12Device* pd3dDevice,
+		ID3D12GraphicsCommandList* pd3dCommandList,
+		std::vector<CTerrainVertex>& pVertices,
+		std::vector<UINT>& pIndices
+	);
 	virtual ~CHeightMapGridMesh();
 
 	XMFLOAT3 GetScale() { return(m_xmf3Scale); }

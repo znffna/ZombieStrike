@@ -22,6 +22,12 @@ CGameObject::CGameObject()
 	Init();
 }
 
+CGameObject::CGameObject(const std::string& strName)
+{
+	Init();
+	SetName(strName);
+}
+
 void CGameObject::ClearMemberVariables()
 {
 	m_pMesh.reset();
@@ -161,6 +167,11 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			}
 			// Render Mesh
 			m_pMesh->Render(pd3dCommandList, i);
+		}
+		if (m_ppMaterials.empty())
+		{
+			// Render Mesh
+			m_pMesh->Render(pd3dCommandList);
 		}
 	}
 
@@ -781,17 +792,29 @@ void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	{
 		std::shared_ptr<CMesh> pHeightMapGridMesh;
 		std::shared_ptr<CGameObject> pHeightMapGameObject;
+
+		m_pChilds.reserve(cxBlocks * czBlocks); //지형을 표현하기 위한 격자 메쉬의 개수이다.
+
 		for (int z = 0, zStart = 0; z < czBlocks; z++)
 		{
 			for (int x = 0, xStart = 0; x < cxBlocks; x++)
 			{
-				pHeightMapGameObject = std::make_shared<CGameObject>();
+				pHeightMapGameObject = std::make_shared<CGameObject>("HeightMapSub");
 				pHeightMapGameObject->MaterialResize(0);
 				xStart = x * (nBlockWidth - 1);
 				zStart = z * (nBlockLength - 1);
 				pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(pd3dDevice, pd3dCommandList, xStart, zStart, nBlockWidth, nBlockLength, xmf3Scale, xmf4Color, m_pHeightMapImage.get());
 				pHeightMapGameObject->SetMesh(pHeightMapGridMesh);
 				SetChild(pHeightMapGameObject);
+
+				std::string debugoutput =
+					pHeightMapGameObject->GetName()
+					+ " " + std::to_string(xStart) 
+					+ ", " + std::to_string(zStart) 
+					+ ", cxBlocks = " + std::to_string(cxBlocks)
+					+ ", czBlocks = " + std::to_string(czBlocks)
+					+ "\n";
+				OutputDebugStringA(debugoutput.c_str());
 			}
 		}
 	}
@@ -826,6 +849,86 @@ void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	m_ppMaterials.resize(1);
 	m_ppMaterials[0]->SetTexture(pTexture);
+}
+
+std::shared_ptr<CHeightMapTerrain> CHeightMapTerrain::InitializeByBinary(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pBinFileName, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color)
+{
+	std::shared_ptr<CHeightMapTerrain> pHeightMapTerrain = std::make_shared<CHeightMapTerrain>();
+
+	//지형에 사용할 높이 맵의 가로, 세로의 크기이다. 
+	pHeightMapTerrain->m_nWidth = nWidth;
+	pHeightMapTerrain->m_nLength = nLength;
+
+	/*지형 객체는 격자 메쉬들의 배열로 만들 것이다.
+	nBlockWidth, nBlockLength는 격자 메쉬 하나의 가로, 세로 크기이다.
+	cxQuadsPerBlock, czQuadsPerBlock은 격자 메쉬의 가로 방향과 세로 방향 사각형의 개수이다.*/
+	int cxQuadsPerBlock = nBlockWidth - 1;
+	int czQuadsPerBlock = nBlockLength - 1;
+
+	long cxBlocks = (nWidth - 1) / cxQuadsPerBlock;
+	long czBlocks = (nLength - 1) / czQuadsPerBlock;
+
+	//xmf3Scale는 지형을 실제로 몇 배 확대할 것인가를 나타낸다. 
+	pHeightMapTerrain->m_xmf3Scale = xmf3Scale;
+
+	//지형에 사용할 높이 맵을 생성한다. 
+	pHeightMapTerrain->m_pHeightMapImage = std::make_shared<CHeightMapImage>(pFileName, nWidth, nLength, xmf3Scale);
+
+	{
+		std::ifstream in(pBinFileName, std::ios::binary);
+		if (!in.is_open()) return nullptr;
+
+		UINT vertexCount = 0;
+		UINT indexCount = 0;
+
+		in.read(reinterpret_cast<char*>(&vertexCount), sizeof(UINT));
+		in.read(reinterpret_cast<char*>(&indexCount), sizeof(UINT));
+
+		std::vector<CTerrainVertex> outVertices;
+		std::vector<UINT> outIndices;
+
+		outVertices.resize(vertexCount);
+		outIndices.resize(indexCount);
+
+		in.read(reinterpret_cast<char*>(outVertices.data()), vertexCount * sizeof(CTerrainVertex));
+		in.read(reinterpret_cast<char*>(outIndices.data()), indexCount * sizeof(UINT));
+
+		in.close();
+
+		std::cout << "Import successful.\n";
+		std::cout << "Vertices: " << vertexCount << ", Indices: " << indexCount << "\n";
+
+		std::shared_ptr<CMesh> pHeightMapGridMesh;
+		pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(pd3dDevice, pd3dCommandList, outVertices, outIndices);
+		pHeightMapTerrain->SetMesh(pHeightMapGridMesh);
+
+		pHeightMapTerrain->m_pVertices = outVertices;
+		pHeightMapTerrain->m_pIndices = outIndices;
+
+		pHeightMapTerrain->isBinary = true;
+	}
+
+
+#ifdef _WITH_TERRAIN_TESSELATION
+	CTerrainTessellationShader* pShader = new CTerrainTessellationShader();
+#else
+	std::shared_ptr<CShader> pShader = std::make_shared<CTerrainShader>();
+#endif
+	pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature);
+	pShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	pHeightMapTerrain->SetShader(pShader);
+
+	// 이 define 은 stdafx.h 에서 정의되어 있다.
+	std::shared_ptr<CTexture> pTexture = std::make_shared<CTexture>(2, RESOURCE_TEXTURE2D, 2);
+	pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Stone01.jpg", RESOURCE_TEXTURE2D, 0);
+	pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Grass.jpg", RESOURCE_TEXTURE2D, 1);
+
+	CScene::CreateShaderResourceViews(pd3dDevice, pTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+
+	pHeightMapTerrain->m_ppMaterials.resize(1);
+	pHeightMapTerrain->m_ppMaterials[0]->SetTexture(pTexture);
+
+	return pHeightMapTerrain;
 }
 
 void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
