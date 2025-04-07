@@ -56,8 +56,10 @@ class CGameObject : public std::enable_shared_from_this<CGameObject>
 {
 public:
 	CGameObject();
+
 	virtual ~CGameObject();
 
+	void ClearMemberVariables();
 	void Init();
 	// Object Initialization
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList) {
@@ -65,14 +67,39 @@ public:
 		m_pTransform->SetOwner(shared_from_this());
 	};
 
-	virtual void Clone()
+	virtual void GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs)
 	{
-		// shallow copy
-		
+		// 복사 할당 연산자 호출
+		//*this = *rhs.get();
 
-		// Deep copy
-		// Transform 
-		m_pTransform->SetOwner(shared_from_this());
+		// Object Info
+		m_strName = rhs->m_strName;
+
+		/// Resource Copy (shallow copy)
+		// Copy Mesh 
+		if (rhs->m_pMesh) m_pMesh = rhs->m_pMesh;
+
+		// Copy Materials 
+		m_ppMaterials = rhs->m_ppMaterials;
+
+		/// Components Copy (Deep Copy)
+		// Copy Transform
+		// if (rhs->m_pTransform) m_pTransform = std::make_shared<CTransform>(*rhs->m_pTransform);
+
+		// Copy Components
+		for (auto& pComponent : rhs->m_pComponents)
+		{
+			m_pComponents[pComponent.first] = pComponent.second->Clone();
+		}
+
+		// Copy Childs
+		std::shared_ptr<CGameObject> pnewChild;
+		for (auto& pChild : rhs->m_pChilds)
+		{
+			pnewChild = std::make_shared<CGameObject>();
+			pnewChild->GetResourcesAndComponents(pChild);
+			m_pChilds.push_back(pnewChild);
+		}
 	};
 
 	static std::shared_ptr<CGameObject> CreateObject() { return std::make_shared<CGameObject>(); }
@@ -205,6 +232,10 @@ public:
 protected:
 	bool m_bActive; // Active Flag
 
+#ifdef _DEBUG
+	int nLoadFrames = -1;
+#endif
+
 	// Object ID
 	static UINT m_nObjectIDCounter; // Object ID Counter
 
@@ -248,7 +279,8 @@ public:
 	};
 
 	static void LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<CLoadedModelInfo> pLoadedModel);
-	static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes);
+	static bool CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject);
+	static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth = 0);
 	static std::shared_ptr<CLoadedModelInfo> LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* pstrFileName, std::shared_ptr<CShader> pShader);
 
 	std::shared_ptr<CGameObject> FindFrame(std::string strFrameName);

@@ -65,13 +65,11 @@ public:
 	std::shared_ptr<CLoadedModelInfo> GetModelInfo(const std::string& name) {
 		if (ModelInfos.find(name) != ModelInfos.end()) {
 			// 이미 로드된 모델이 있는 경우
-			std::string filepath = name + "이 재사용됨";
-			OutputDebugStringA(filepath.c_str());
-			OutputDebugStringA("\n");
-
-
-			return ModelInfos[name];
+			if (ModelInfos[name]) return ModelInfos[name];
+			else return nullptr;
 		}
+
+		ModelInfos[name] = nullptr;
 
 		// 없는경우 바로 불러와서 저장하고 return 한다.
 		std::string filepath = "Model/" + name + ".bin";

@@ -22,6 +22,14 @@ CGameObject::CGameObject()
 	Init();
 }
 
+void CGameObject::ClearMemberVariables()
+{
+	m_pMesh.reset();
+	m_ppMaterials.clear();
+	m_pComponents.clear();
+	m_pChilds.clear();
+}
+
 CGameObject::~CGameObject()
 {
 	// Release Child Object
@@ -58,7 +66,8 @@ void CGameObject::Init()
 	m_nObjectID = m_nObjectIDCounter++;
 
 	// Default Name
-	m_strName = "GameObject_" + std::to_string(m_nObjectID);
+	m_strName = "Default_GameObject";
+	//m_strName = "GameObject_" + std::to_string(m_nObjectID);
 }
 
 void CGameObject::SetName(const std::string& strName)
@@ -462,7 +471,17 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 	}
 }
 
-std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes)
+bool CGameObject::CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject)
+{
+	if (auto pModel = CScene::GetResourceManager().GetModelInfo(strModelName)) {
+		pGameObject->GetResourcesAndComponents(pModel->m_pModelRootObject);
+		//pGameObject->SetChild(pModel->m_pModelRootObject);
+		return true;
+	}
+	return false;
+}
+
+std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth)
 {
 	char pstrToken[64] = { '\0' };
 	UINT nReads = 0;
@@ -471,6 +490,8 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 
 	std::shared_ptr<CGameObject> pGameObject = std::make_shared<CGameObject>();
 	pGameObject->SetParent(pParent);
+
+	bool isGetModel = false;
 
 	for (; ; )
 	{
@@ -481,6 +502,14 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 			nTextures = ::ReadIntegerFromFile(file);
 
 			::ReadStringFromFile(file, pGameObject->m_strName);
+
+#ifdef _DEBUG
+			pGameObject->nLoadFrames = nFrame;
+			std::string debugoutput = pGameObject->m_strName + " " + std::to_string(nFrame)+ ", Stack Depth = " + std::to_string(nDepth) + "\n";
+			OutputDebugStringA(debugoutput.c_str());
+#endif
+			// Test¿ë
+			isGetModel = CloneByModel(pGameObject->m_strName, pGameObject);
 		}
 		else if (!strcmp(pstrToken, "<Transform>:"))
 		{
@@ -528,8 +557,9 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 				pGameObject->m_pChilds.reserve(nChilds); 
 				for (int i = 0; i < nChilds; i++)
 				{
-					std::shared_ptr<CGameObject> pChild = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, file, pShader, pnSkinnedMeshes);
+					std::shared_ptr<CGameObject> pChild = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, file, pShader, pnSkinnedMeshes, nDepth + 1);
 					if (pChild) pGameObject->SetChild(pChild);
+
 #ifdef _WITH_DEBUG_FRAME_HIERARCHY
 					TCHAR pstrDebug[256] = { 0 };
 					_stprintf_s(pstrDebug, 256, "(Frame: %p) (Parent: %p)\n"), pChild, pGameObject);
@@ -542,15 +572,9 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		{
 			std::string strModelName;
 			::ReadStringFromFile(file, strModelName);
-			if (strModelName == pGameObject->m_strName) continue;
-			if (auto pModel = CScene::GetResourceManager().GetModelInfo(strModelName)) {
-				pGameObject->SetChild(pModel->m_pModelRootObject);
-			}
-			else {
-
-			}
-
-			break;
+			//if (strModelName == pGameObject->m_strName) continue;
+			if (isGetModel) continue;
+			CloneByModel(strModelName, pGameObject);
 		}
 		else if (!strcmp(pstrToken, "</Frame>"))
 		{
@@ -570,7 +594,7 @@ std::shared_ptr<CLoadedModelInfo> CGameObject::LoadGeometryAndAnimationFromFile(
 
 	std::shared_ptr<CLoadedModelInfo> pLoadedModel = std::make_shared<CLoadedModelInfo>();
 
-	char pstrToken[100] = { '\0' };
+	char pstrToken[500] = { '\0' };
 
 	for (; ; )
 	{
@@ -578,7 +602,7 @@ std::shared_ptr<CLoadedModelInfo> CGameObject::LoadGeometryAndAnimationFromFile(
 		{
 			if (!strcmp(pstrToken, "<Hierarchy>:"))
 			{
-				pLoadedModel->m_pModelRootObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, pShader, &pLoadedModel->m_nSkinnedMeshes);
+				pLoadedModel->m_pModelRootObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, pShader, &pLoadedModel->m_nSkinnedMeshes, 0);
 				::ReadStringFromFile(pInFile, pstrToken); //"</Hierarchy>"
 			}
 			else if (!strcmp(pstrToken, "<Animation>:"))
