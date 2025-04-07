@@ -15,6 +15,8 @@ public:
 	CTransformComponent() { }
 	virtual ~CTransformComponent() { }
 
+	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared< CTransformComponent>(*this); };
+
 	// Transform Getter
 	DirectX::XMFLOAT3 GetPosition() { return m_xmf3Position; }
 	DirectX::XMFLOAT3 GetRight() { return Vector3::Normalize(XMFLOAT3(m_xmf4x4World._11, m_xmf4x4World._12, m_xmf4x4World._13)); }

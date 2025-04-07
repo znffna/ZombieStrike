@@ -16,6 +16,8 @@ public:
 	CColliderComponent() { }
 	virtual ~CColliderComponent() { }
 
+	virtual std::shared_ptr<CComponent> Clone() const = 0;
+
 	virtual void Update(float fTimeElapsed) override;
 
 	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) = 0;
@@ -40,6 +42,9 @@ class CSphereCollider : public CColliderComponent
 public:
 	CSphereCollider() { }
 	virtual ~CSphereCollider() { }
+
+	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CSphereCollider>(*this); };
+
 
 	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
 	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends) override
@@ -75,6 +80,9 @@ public:
 	CAABBBoxCollider() { }
 	virtual ~CAABBBoxCollider() { }
 
+	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CAABBBoxCollider>(*this); };
+
+
 	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
 	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents) override
 	{
@@ -102,6 +110,9 @@ class COBBBoxCollider : public CColliderComponent
 public:
 	COBBBoxCollider() { }
 	virtual ~COBBBoxCollider() { }
+
+	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<COBBBoxCollider>(*this); };
+
 
 	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
 	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents) override

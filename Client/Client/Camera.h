@@ -25,6 +25,8 @@ public:
 	CCamera();
 	virtual ~CCamera();
 
+	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CCamera>(*this); };
+
 	// Camera Shader Variables
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);

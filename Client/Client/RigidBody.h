@@ -17,6 +17,8 @@ public:
 	CRigidBodyComponent() {};
 	virtual ~CRigidBodyComponent() {};
 
+	virtual std::shared_ptr<CComponent> Clone() const {	return std::make_shared<CRigidBodyComponent>(*this);};
+
 	void SetVelocity(const XMFLOAT3& xmf3Velocity) { m_xmf3Velocity = xmf3Velocity; }
 	void SetVelocity(float x, float y, float z) { m_xmf3Velocity = XMFLOAT3(x, y, z); }
 	void SetGravity(const XMFLOAT3& xmf3Gravity) { m_xmf3Gravity = xmf3Gravity; }
