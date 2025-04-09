@@ -43,7 +43,7 @@ class OVER_EXP {
 public:
     WSAOVERLAPPED overlapped;
     WSABUF wsabuf[1];
-    char buffer[1024];
+    unsigned char buffer[1024];
     COMP_TYPE compType;
 
 
@@ -55,8 +55,35 @@ public:
     }
 };
 
+struct SESSION;
+struct Quaternion {
+    float x = 0, y = 0, z = 0, w = 1;
+};
+struct ShootPacket {
+    uint8_t GunType; // 총 종류
+    float bulletPos[3];
+    float bulletDir[3];
+};
+struct Player {
+    PlayerInfo player_info;
+    bool isShooting = false;
+    SESSION* session = nullptr; // SESSION 연결
+
+};
+struct Zombie {
+    ZombieInfo zombie_info;
+};
+std::vector<SESSION*> session_st;
+std::vector<Player*> player_st;
+std::vector<Zombie*> zombie_st;
+std::mutex playersMutex;
+std::mutex zombiesMutex;
+bool serverRunning = true;
+uint32_t nextPlayerId = 1;
+
 void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOverlapped, DWORD flags);
 enum SESSION_STATE { ST_FREE, ST_ALLOC, ST_INGAME };
+
 
 struct SESSION {
     SOCKET          socket;
@@ -129,6 +156,41 @@ struct SESSION {
     //    do_send(&p);
     //}
 
+    void process_packet(unsigned char* packet) {
+
+        PacketHeader* header = (PacketHeader*)packet;
+
+        Player* player = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(playersMutex);
+            for (auto& p : player_st) {
+                if (p->session == this) {
+                    player = p;
+                    break;
+                }
+            }
+        }
+
+		if (!player) {
+            std::cout << "[ERROR] No Player for SESSION ID " << id << "\n";
+			return;
+		}
+
+        switch (header->type) {
+        case PacketType::LOGIN:
+            //Login(this, (PKT_CS_LOGIN*)packet);
+            break;
+        case PacketType::MOVE:
+            //Move(this, (PKT_CS_MOVE*)packet);
+            break;
+        case PacketType::SHOOT:
+            
+            break;
+        default:
+            std::cout << "[WARN] Unknown PacketType: " << (int)header->type << "\n";
+            break;
+        }
+    }
     //void process_packet(unsigned char* p)
     //{
     //    const unsigned char packet_type = p[1];
@@ -160,9 +222,7 @@ struct SESSION {
     //}
 
 };
-struct Quaternion {
-    float x = 0, y = 0, z = 0, w = 1;
-};
+
 
 class ThreadPool {
 public:
@@ -211,28 +271,6 @@ private:
     bool stop = false;
 };
 
-struct ShootPacket {
-    uint8_t GunType; // 총 종류
-    float bulletPos[3];
-    float bulletDir[3];
-};
-struct Player {
-    PlayerInfo player_info;
-    bool isShooting = false;
-    SESSION* session = nullptr; // SESSION 연결
-
-};
-struct Zombie {
-    ZombieInfo zombie_info;
-};
-
-std::vector<SESSION*> session_st;
-std::vector<Player*> player_st;
-std::vector<Zombie*> zombie_st;
-std::mutex playersMutex;
-std::mutex zombiesMutex;
-bool serverRunning = true;
-uint32_t nextPlayerId = 1;
 ThreadPool pool(std::thread::hardware_concurrency());
 
 
@@ -277,11 +315,11 @@ void processPlayerPacket(Player* player, char* buffer, int bytesTransferred) {
 }
 
 
-void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOverlapped, DWORD flags) {
+void CALLBACK IoCallback(DWORD err, DWORD io_size, LPWSAOVERLAPPED lpOverlapped, DWORD flags) {
 
     SESSION* session = (SESSION*)lpOverlapped->hEvent;
 
-    if (err != 0 || bytesTransferred == 0)
+    if (err != 0 || io_size == 0)
     {
         std::cout << "Player ID " << session->id << " disconnected\n";
 
@@ -301,30 +339,40 @@ void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOv
         return;
     }
 
-    // --- 정상적으로 데이터 수신된 경우 ---
-    Player* player = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(playersMutex);
-        for (auto& p : player_st)  // SESSION과 연결된 Player 찾아
-        {
-            if (p->session == session)
-            {
-                player = p;
-                break;
-            }
-        }
+    // ----- 패킷 조립 시작 -----
+    unsigned char* recvData = (unsigned char*)session->recv_over->buffer;
+    int totalSize = session->prev_remain + io_size;
+
+    // 앞에 남은 데이터 있으면 이어붙임
+    if (session->prev_remain > 0) {
+        memcpy(session->recv_over->buffer + session->prev_remain, recvData, io_size);
+		recvData = session->recv_over->buffer;
+    }
+    else {
+        memcpy(session->recv_over->buffer, recvData, io_size);
+		recvData = session->recv_over->buffer;
     }
 
-    if (player == nullptr)  // 예외 처리 (SESSION은 있는데 Player가 없을 때)
-    {
-        std::cout << "Player not found for SESSION ID: " << session->id << "\n";
-        return;
+	unsigned char* packet = recvData;
+	int offset = 0;
+
+    while (packet + 1 <= recvData + totalSize)  {
+        unsigned char packetSize = *packet;
+        
+        if (packet + packetSize > recvData + totalSize) break; // 아직 패킷 완성이 안 됨
+
+		session->process_packet(packet); // 완성된 패킷 처리
+		packet += packetSize; // 다음 패킷으로 이동
+		offset += packetSize;
     }
-    processPlayerPacket(player, session->recv_over->buffer, bytesTransferred); // 수신된 데이터 처리 (ShootPacket 등)
 
-    broadcastState_NoLock(); // 모든 클라이언트에게 브로드캐스트
+    // 조립 안 된 데이터는 앞으로 당겨서 저장
+	session->prev_remain = totalSize - offset;
+	if (session->prev_remain > 0) {
+		memcpy(session->recv_over->buffer, packet, session->prev_remain);
+	}
 
-    session->do_recv();  // 다시 Recv 등록 , Recv OVER_EXP 초기화 후 WSARecv 재호출 
+    session->do_recv();  // 다시 수신 등록;
 }
 
 
