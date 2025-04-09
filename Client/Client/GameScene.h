@@ -17,7 +17,7 @@ public:
 	virtual void ReleaseObjects() override;
 	virtual void ReleaseUploadBuffers() override;
 
-	virtual void FixedUpdate(float deltaTime) override;
+	virtual void Update(float deltaTime) override;
 
 	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;

@@ -144,6 +144,8 @@ void CScene::InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	CreateRootSignature(pd3dRootSignature, pd3dDevice);
 	CreateDescriptorHeap(pd3dDevice);
 	CreateStaticShader(pd3dDevice);
+
+	GetResourceManager().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 }
 
 void CScene::BuildDefaultLightsAndMaterials()
@@ -198,7 +200,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
 }
 
-void CScene::FixedUpdate(float deltaTime)
+void CScene::Update(float deltaTime)
 {
 	if (false == CheckWorkUpdating())
 	{

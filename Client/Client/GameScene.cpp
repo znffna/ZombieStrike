@@ -65,9 +65,9 @@ void CGameScene::ReleaseUploadBuffers()
 {
 }
 
-void CGameScene::FixedUpdate(float deltaTime)
+void CGameScene::Update(float deltaTime)
 {
-	CScene::FixedUpdate(deltaTime);
+	CScene::Update(deltaTime);
 
 	// Update Camera Position
 	if (m_pCamera)

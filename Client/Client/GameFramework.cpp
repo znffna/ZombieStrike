@@ -368,7 +368,6 @@ void CGameFramework::BuildObjects()
 
 	// 모든 씬이 공유할 요소 생성
 	CScene::InitStaticMembers(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
-	CScene::GetResourceManager().Initialize(m_pd3dDevice.Get(), m_pd3dCommandList.Get(), CScene::GetGraphicRootSignature());
 
 	// Framework 정보 생성 (Shader에 전달할 정보)
 	CreateShaderVariables();
@@ -428,7 +427,7 @@ void CGameFramework::AdvanceFrame()
 		if (scene->CheckWorkUpdating())
 		{
 			// Scene 정보 업데이트
-			scene->FixedUpdate(m_GameTimer.DeltaTime());
+			scene->Update(m_GameTimer.DeltaTime());
 
 			if (scene->CheckWorkRendering())
 			{
@@ -451,7 +450,7 @@ void CGameFramework::AdvanceFrame()
 			UpdateShaderVariables();
 
 			// Scene 정보 업데이트 및 렌더링
-			m_pLoadingScene->FixedUpdate(m_GameTimer.DeltaTime());
+			m_pLoadingScene->Update(m_GameTimer.DeltaTime());
 			m_pLoadingScene->Render(m_pd3dCommandList.Get(), nullptr);
 		}
 	}
