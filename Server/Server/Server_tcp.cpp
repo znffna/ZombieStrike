@@ -26,28 +26,32 @@ struct Vector3 {
     float z = 0.0f;
 };
 
+void error_display(const char* msg, int err_no) {
+    WCHAR* lpMsgBuf;
+    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+        NULL, err_no, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPTSTR)&lpMsgBuf, 0, NULL);
+    std::cout << msg;
+    std::wcout << L" Error: " << lpMsgBuf << std::endl;
+    LocalFree(lpMsgBuf);
+    exit(1);
+}
+
 enum COMP_TYPE { OP_RECV, OP_SEND };
 
 class OVER_EXP {
 public:
     WSAOVERLAPPED overlapped;
-    WSABUF wsabuf;
+    WSABUF wsabuf[1];
     char buffer[1024];
     COMP_TYPE compType;
 
-    OVER_EXP() {
-        ZeroMemory(&overlapped, sizeof(overlapped));
-        wsabuf.buf = buffer;
-        wsabuf.len = sizeof(buffer);
-        compType = OP_RECV;
-    }
 
-    OVER_EXP(const char* sendData, size_t len) {
+    OVER_EXP(COMP_TYPE op) : compType(op) {
         ZeroMemory(&overlapped, sizeof(overlapped));
-        wsabuf.buf = buffer;
-        memcpy(buffer, sendData, len);
-        wsabuf.len = static_cast<ULONG>(len);
-        compType = OP_SEND;
+
+        wsabuf[0].buf = reinterpret_cast<CHAR*>(buffer);
+        wsabuf[0].len = sizeof(buffer);
     }
 };
 
@@ -55,20 +59,23 @@ void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOv
 enum SESSION_STATE { ST_FREE, ST_ALLOC, ST_INGAME };
 
 struct SESSION {
-    SOCKET socket;
-    int id;
-    SESSION_STATE state = ST_FREE;
-    OVER_EXP* recv_over = nullptr;
-    int prev_remain = 0;
-    std::mutex lock;
+    SOCKET          socket;
+    uint32_t        id;
+
+    SESSION_STATE   state = ST_FREE;
+    OVER_EXP*       recv_over = nullptr;
+
+    int             prev_remain = 0;
+    std::mutex      lock;
+
 
     void do_recv() {
         if (!recv_over) {
-            recv_over = new OVER_EXP();
+            recv_over = new OVER_EXP(OP_RECV);
             recv_over->overlapped.hEvent = (HANDLE)this;
         }
         DWORD flags = 0;
-        int ret = WSARecv(socket, &recv_over->wsabuf, 1, 0, &flags, &recv_over->overlapped, IoCallback);
+        int ret = WSARecv(socket, recv_over->wsabuf, 1, 0, &flags, &recv_over->overlapped, IoCallback);
         if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
             std::cout << "WSARecv failed\n";
         }
@@ -84,59 +91,77 @@ struct SESSION {
             state = ST_FREE;
         }
     }
-};
 
+    void sendPacket(SESSION* s, void *buff) {
+        OVER_EXP* sendOv = new OVER_EXP(OP_SEND);
+        const unsigned char packet_size = reinterpret_cast<unsigned char*>(buff)[0];
+        memcpy(sendOv->buffer, buff, packet_size);
+        sendOv->wsabuf[0].len = packet_size;
+        DWORD size_sent;
+
+        int ret = WSASend(s->socket, sendOv->wsabuf, 1, &size_sent, 0, &(sendOv->overlapped), IoCallback);
+        if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+            delete sendOv;
+        }
+    }
+    //void send_player_info_packet()
+    //{
+    //    sc_packet_avatar_info p;
+    //    p.size = sizeof(p);
+    //    p.type = S2C_P_AVATAR_INFO;
+    //    p.id = _id;
+    //    p.x = _x;
+    //    p.y = _y;
+    //    p.level = 1;
+    //    p.hp = 100;
+    //    p.exp = 200;
+    //    do_send(&p);
+    //}
+
+    //void send_player_position()
+    //{
+    //    sc_packet_move p;
+    //    p.size = sizeof(p);
+    //    p.type = S2C_P_MOVE;
+    //    p.id = _id;
+    //    p.x = _x;
+    //    p.y = _y;
+    //    do_send(&p);
+    //}
+
+    //void process_packet(unsigned char* p)
+    //{
+    //    const unsigned char packet_type = p[1];
+    //    switch (packet_type) {
+    //    case C2S_P_LOGIN:
+    //    {
+    //        cs_packet_login* packet = reinterpret_cast<cs_packet_login*>(p);
+    //        _name = packet->name;
+    //        _x = 4;
+    //        _y = 4;
+    //        send_player_info_packet();
+    //        break;
+    //    }
+    //    case C2S_P_MOVE: {
+    //        cs_packet_move* packet = reinterpret_cast<cs_packet_move*>(p);
+    //        switch (packet->direction) {
+    //        case MOVE_UP: if (_y > 0) _y = _y - 1; break;
+    //        case MOVE_DOWN: if (_y < (MAP_HEIGHT - 1)) _y = _y + 1; break;
+    //        case MOVE_LEFT: if (_x > 0) _x = _x - 1; break;
+    //        case MOVE_RIGHT: if (_x < (MAP_WIDTH - 1)) _x = _x + 1; break;
+    //        }
+    //        send_player_position();
+    //        break;
+    //    }
+    //    default:
+    //        std::cout << "Error Invalid Packet Type\n";
+    //        exit(-1);
+    //    }
+    //}
+
+};
 struct Quaternion {
     float x = 0, y = 0, z = 0, w = 1;
-};
-
-struct ShootPacket {
-    int playerId;
-    int hitZombieId;    // 클라에서 맞췄다고 판단한 좀비 ID
-    Vector3 bulletPos;  // 총알 발사 위치
-    Vector3 bulletDir;  // 총알 방향
-};
-
-struct Player {
-    int id;
-    Vector3 position;
-    Quaternion rotation;
-    int hp = PLAYER_HP;
-    bool isShooting = false;
-    SESSION* session = nullptr; // SESSION 연결
-
-};
-
-struct Zombie {
-    int id;
-    Vector3 position;
-    Quaternion rotation;
-    int hp = ZOMBIE_HP;
-    short state = 0;
-    bool dirty = true;
-
-    int targetPlayerId = -1;    // 현재 따라가는 플레이어 ID
-    std::vector<Vector3> path;  // A* 경로
-    int pathIndex = 0;          // 현재 따라가는 인덱스
-
-};
-
-struct BroadcastPacket {
-    int playerCount;
-    struct {
-        int id;
-        Vector3 position;
-        Quaternion rotation;
-        int hp;
-    } players[MAX_PLAYER_COUNT];
-
-    int zombieCount;
-    struct {
-        int id;
-        Vector3 position;
-        Quaternion rotation;
-        int hp;
-    } zombies[MAX_ZOMBIE_COUNT];
 };
 
 class ThreadPool {
@@ -186,61 +211,71 @@ private:
     bool stop = false;
 };
 
-std::vector<SESSION*> sessions;
-std::vector<Player*> players;
-std::vector<Zombie*> zombies;
+struct ShootPacket {
+    uint8_t GunType; // 총 종류
+    float bulletPos[3];
+    float bulletDir[3];
+};
+struct Player {
+    PlayerInfo player_info;
+    bool isShooting = false;
+    SESSION* session = nullptr; // SESSION 연결
+
+};
+struct Zombie {
+    ZombieInfo zombie_info;
+};
+
+std::vector<SESSION*> session_st;
+std::vector<Player*> player_st;
+std::vector<Zombie*> zombie_st;
 std::mutex playersMutex;
 std::mutex zombiesMutex;
 bool serverRunning = true;
-int nextPlayerId = 1;
+uint32_t nextPlayerId = 1;
 ThreadPool pool(std::thread::hardware_concurrency());
 
-void error_display(const char* msg, int err_no) {
-    WCHAR* lpMsgBuf;
-    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-        NULL, err_no, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR)&lpMsgBuf, 0, NULL);
-    std::cout << msg;
-    std::wcout << L" Error: " << lpMsgBuf << std::endl;
-    LocalFree(lpMsgBuf);
-    exit(1);
-}
 
 void broadcastState_NoLock() {
-    BroadcastPacket pkt;
-    pkt.playerCount = static_cast<int>(players.size());
-    for (int i = 0; i < players.size(); ++i) {
-        pkt.players[i].id = players[i]->id;
-        pkt.players[i].position = players[i]->position;
-        pkt.players[i].rotation = players[i]->rotation;
-        pkt.players[i].hp = players[i]->hp;
-    }
+    //BroadcastPacket pkt;
+    //pkt.playerCount = static_cast<int>(players.size());
+    //for (int i = 0; i < players.size(); ++i) {
+    //    pkt.players[i].id = players[i]->id;
+    //    pkt.players[i].position = players[i]->position;
+    //    pkt.players[i].rotation = players[i]->rotation;
+    //    pkt.players[i].hp = players[i]->hp;
+    //}
 
-    pkt.zombieCount = static_cast<int>(zombies.size());
-    for (int i = 0; i < zombies.size(); ++i) {
-        pkt.zombies[i].id = zombies[i]->id;
-        pkt.zombies[i].position = zombies[i]->position;
-        pkt.zombies[i].rotation = zombies[i]->rotation;
-        pkt.zombies[i].hp = zombies[i]->hp;
-    }
+    //pkt.zombieCount = static_cast<int>(zombies.size());
+    //for (int i = 0; i < zombies.size(); ++i) {
+    //    pkt.zombies[i].id = zombies[i]->id;
+    //    pkt.zombies[i].position = zombies[i]->position;
+    //    pkt.zombies[i].rotation = zombies[i]->rotation;
+    //    pkt.zombies[i].hp = zombies[i]->hp;
+    //}
 
-    for (auto& player : players) {
-        WSABUF wsabuf;
-        wsabuf.buf = (char*)&pkt;
-        wsabuf.len = sizeof(BroadcastPacket);
-        DWORD sentBytes = 0;
-        OVERLAPPED sendOv = {};
-        //int ret = WSASend(player->socket, &wsabuf, 1, &sentBytes, 0, &sendOv, NULL);
-        int ret = WSASend(player->session->socket, &wsabuf, 1, &sentBytes, 0, &sendOv, NULL);
-        if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-            std::cout << "Broadcast failed: Player ID " << player->id << "\n";
-        }
+    //for (auto& player : players) {
+    //    WSABUF wsabuf;
+    //    wsabuf.buf = (char*)&pkt;
+    //    wsabuf.len = sizeof(BroadcastPacket);
+    //    DWORD sentBytes = 0;
+    //    OVERLAPPED sendOv = {};
+    //    //int ret = WSASend(player->socket, &wsabuf, 1, &sentBytes, 0, &sendOv, NULL);
+    //    int ret = WSASend(player->session->socket, &wsabuf, 1, &sentBytes, 0, &sendOv, NULL);
+    //    if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+    //        std::cout << "Broadcast failed: Player ID " << player->id << "\n";
+    //    }
+    //}
+}
+
+
+void processPlayerPacket(Player* player, char* buffer, int bytesTransferred) {
+    if (bytesTransferred >= sizeof(ShootPacket)) {
+        ShootPacket shootPkt;
+        memcpy(&shootPkt, buffer, sizeof(ShootPacket));
     }
 }
 
-void broadcastState() {
-    broadcastState_NoLock();
-}
 
 void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOverlapped, DWORD flags) {
 
@@ -253,13 +288,13 @@ void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOv
         std::lock_guard<std::mutex> lock(playersMutex);
 
         // 연결된 Player 찾기 (SESSION과 연결된 Player 검색)
-        auto it = std::find_if(players.begin(), players.end(), [&](Player* p) { return p->session == session; });
-        if (it != players.end())
+        auto it = std::find_if(player_st.begin(), player_st.end(), [&](Player* p) { return p->session == session; });
+        if (it != player_st.end())
         {
             Player* player = *it;
             session->disconnect();         // 소켓 닫기 + Recv OVER_EXP 해제
             delete session;                // SESSION 메모리 해제
-            players.erase(it);             // players 벡터에서 제거
+            player_st.erase(it);             // players 벡터에서 제거
             delete player;                 // Player 메모리 해제
             broadcastState_NoLock();       // 모든 클라이언트에 상태 브로드캐스트
         }
@@ -270,7 +305,7 @@ void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOv
     Player* player = nullptr;
     {
         std::lock_guard<std::mutex> lock(playersMutex);
-        for (auto& p : players)  // SESSION과 연결된 Player 찾아
+        for (auto& p : player_st)  // SESSION과 연결된 Player 찾아
         {
             if (p->session == session)
             {
@@ -287,9 +322,9 @@ void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOv
     }
     processPlayerPacket(player, session->recv_over->buffer, bytesTransferred); // 수신된 데이터 처리 (ShootPacket 등)
 
-    broadcastState(); // 모든 클라이언트에게 브로드캐스트
+    broadcastState_NoLock(); // 모든 클라이언트에게 브로드캐스트
 
-    session->do_recv();  // 다시 Recv 등록 , Recv OVER_EXP 초기화 후 WSARecv 재호출 , (IOCP 환경에서는.. ) 
+    session->do_recv();  // 다시 Recv 등록 , Recv OVER_EXP 초기화 후 WSARecv 재호출 
 }
 
 
@@ -352,24 +387,23 @@ int main() {
         }
 
         std::lock_guard<std::mutex> lock(playersMutex);
-        if (players.size() >= MAX_PLAYER_COUNT) {
+        if (player_st.size() >= MAX_PLAYER_COUNT) {
             std::cout << "Max clients reached, rejecting connection\n";
             closesocket(clientSocket);
             continue;
         }
-
         SESSION* session = new SESSION;
         session->socket = clientSocket;
         session->id = nextPlayerId;
         session->state = ST_ALLOC;
-        sessions.push_back(session);    // 세션 등록
+        session_st.push_back(session);    // 세션 등록
 
         Player* player = new Player;
-        player->id = nextPlayerId++;
+        player->player_info.id= nextPlayerId++;
         player->session = session;
-        players.push_back(player);      // 플레이어 등록
+        player_st.push_back(player);      // 플레이어 등록
 
-        std::cout << "Player connected, ID: " << player->id << "\n";
+        std::cout << "Player connected, ID: " << player->player_info.id << "\n";
 
         session->do_recv();
         broadcastState_NoLock();

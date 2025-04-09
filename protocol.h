@@ -113,7 +113,7 @@ enum ActionType : uint8_t {
 
 // 플레이어 정보 구조체
 struct PlayerInfo {
-    uint32_t playerId;
+    uint32_t id;
     float position[3];  // X, Y, Z
     uint8_t name[NAME_SIZE];
     ObjectType obj_type;  // 플레이어 객체 타입
@@ -125,7 +125,7 @@ struct PlayerInfo {
 
 // 좀비 정보 구조체
 struct ZombieInfo {
-    uint32_t zombieId;
+    uint32_t id;
     ObjectType obj_type;    // 좀비 타입
     ActionType act_type;    // 플레이어 객체 타입
 	uint8_t damage;         // 좀비 공격력
