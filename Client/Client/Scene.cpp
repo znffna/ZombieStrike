@@ -274,6 +274,12 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		m_pTerrain->Render(pd3dCommandList, pCamera);
 	}
 
+	// Render Map
+	if (m_pMap)
+	{
+		m_pMap->Render(pd3dCommandList, pCamera);
+	}
+
 	// Render GameObjects 
 	for (auto& pObject : m_ppObjects)
 	{

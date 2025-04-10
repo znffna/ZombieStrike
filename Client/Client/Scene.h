@@ -287,6 +287,9 @@ protected:
 	// Terrain
 	std::shared_ptr<CGameObject> m_pTerrain;
 
+	// Map
+	std::shared_ptr<CGameObject> m_pMap;
+
 	// Camera
 	std::shared_ptr<CCamera> m_pCamera;
 
