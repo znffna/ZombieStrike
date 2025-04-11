@@ -81,7 +81,7 @@ public:
 	XMFLOAT4X4 GetColliderMatrix() override
 	{
 		XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
-			XMFLOAT3(m_xmWorldBoundingSphere.Radius, m_xmWorldBoundingSphere.Radius, m_xmWorldBoundingSphere.Radius),
+			XMFLOAT3(m_xmWorldBoundingSphere.Radius * 2, m_xmWorldBoundingSphere.Radius * 2, m_xmWorldBoundingSphere.Radius * 2),
 			XMFLOAT4(0.0f,0.0f,0.0f,1.0f),
 			m_xmWorldBoundingSphere.Center
 		);
@@ -121,7 +121,7 @@ public:
 	XMFLOAT4X4 GetColliderMatrix() override
 	{
 		XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
-			m_xmWorldBoundingBox.Extents,
+			Vector3::ScalarProduct(m_xmWorldBoundingBox.Extents, 2.0f, false),
 			XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),
 			m_xmWorldBoundingBox.Center
 		);
@@ -163,8 +163,8 @@ public:
 	XMFLOAT4X4 GetColliderMatrix() override
 	{
 		XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
-			m_xmWorldBoundingOrientedBox.Extents,
-			XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),
+			Vector3::ScalarProduct(m_xmWorldBoundingOrientedBox.Extents, 2.0f, false),
+			m_xmWorldBoundingOrientedBox.Orientation,
 			m_xmWorldBoundingOrientedBox.Center
 		);
 		return xmf4x4box;
