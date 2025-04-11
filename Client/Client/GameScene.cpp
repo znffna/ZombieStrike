@@ -51,6 +51,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	auto pMap = resourceManager.GetModelInfo("Map");
 	pMap->m_pModelRootObject->UpdateTransform();
 	m_pMap = pMap->m_pModelRootObject;
+	m_pMap->Update(0.0f);
 
 	// Default Camera 위치 수정
 	m_pCamera->SetPosition(Vector3::Add(pZombie->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));

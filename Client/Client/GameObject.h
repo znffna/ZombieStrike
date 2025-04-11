@@ -94,7 +94,9 @@ public:
 		// Copy Components
 		for (auto& pComponent : rhs->m_pComponents)
 		{
-			m_pComponents[pComponent.first] = pComponent.second->Clone();
+			auto pclone = pComponent.second->Clone();
+			m_pComponents[pComponent.first] = pclone;
+			pclone->SetOwner(shared_from_this());
 		}
 
 		// Copy Childs
