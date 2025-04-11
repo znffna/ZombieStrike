@@ -217,8 +217,11 @@ public:
 	SCENE_STATE GetSceneState() { return m_SceneState; }
 	void SetSceneState(SCENE_STATE SceneState) { m_SceneState = SceneState; }
 
+
 	// Scene Method
 	virtual void Update(float deltaTime);
+	void CheckCollision();
+
 	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 

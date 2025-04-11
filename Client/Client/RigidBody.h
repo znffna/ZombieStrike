@@ -60,6 +60,8 @@ public:
 		UpdateRigidBody(fTimeElapsed);
 	}
 
+	void OnCollision(std::shared_ptr<CGameObject> pGameObject);
+
 private:
 	float 		 				m_fMass = 1.0f;
 	float			 			m_fInverseMass = 1.0f / m_fMass;

@@ -9,7 +9,10 @@
 class CCamera;
 
 class CColliderComponent;
-using CCollider = CColliderComponent; // Alias
+class CMesh;
+
+using CCollider = CColliderComponent; // Alias for easier usage
+
 class CColliderComponent : public CComponent
 {
 public:
@@ -27,7 +30,7 @@ public:
 	//virtual void RenderCollider(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) = 0;
 
 	virtual bool IsCollided(CColliderComponent* pCollider) = 0;
-	virtual bool IsCollided(std::shared_ptr<CColliderComponent> pCollider) { IsCollided(pCollider.get()); };
+	virtual bool IsCollided(std::shared_ptr<CColliderComponent> pCollider) { return IsCollided(pCollider.get()); };
 
 	const enum ColliderType { AABB, OBB, Sphere };
 
@@ -74,13 +77,13 @@ private:
 	BoundingSphere m_xmWorldBoundingSphere;
 };
 
-class CAABBBoxCollider : public CColliderComponent
+class CAABBCollider : public CColliderComponent
 {
 public:
-	CAABBBoxCollider() { }
-	virtual ~CAABBBoxCollider() { }
+	CAABBCollider() { }
+	virtual ~CAABBCollider() { }
 
-	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CAABBBoxCollider>(*this); };
+	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CAABBCollider>(*this); };
 
 
 	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
@@ -105,13 +108,13 @@ private:
 	BoundingBox m_xmWorldBoundingBox;
 };
 
-class COBBBoxCollider : public CColliderComponent
+class COBBCollider : public CColliderComponent
 {
 public:
-	COBBBoxCollider() { }
-	virtual ~COBBBoxCollider() { }
+	COBBCollider() { }
+	virtual ~COBBCollider() { }
 
-	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<COBBBoxCollider>(*this); };
+	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<COBBCollider>(*this); };
 
 
 	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;

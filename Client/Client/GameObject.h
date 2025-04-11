@@ -11,6 +11,9 @@
 // Component
 #include "Component.h"
 #include "Transform.h"
+#include "Rigidbody.h"
+#include "Collider.h"
+
 #include "AnimationController.h"
 
 // Resource
@@ -18,6 +21,8 @@
 #include "Texture.h"
 #include "Shader.h"
 #include "Material.h"
+
+#define COMPONENT_KEY(T) std::string(typeid(T).name())
 
 class CGameObject;
 class CTexture;
@@ -190,13 +195,8 @@ public:
 	{
 		std::shared_ptr<T> pComponent = std::make_shared<T>();
 		pComponent->SetOwner(pOwner);
-		m_pComponents[typeid(T).name()] = pComponent;
+		m_pComponents[COMPONENT_KEY(T)] = pComponent;
 		return pComponent;
-	};
-
-	std::shared_ptr<CTransformComponent> GetComponent()
-	{
-		return m_pTransform;
 	};
 
 	template <typename T>
@@ -204,16 +204,33 @@ public:
 	{
 		if constexpr (std::is_same_v<T, CTransform>) return m_pTransform;
 		
-		auto iter = m_pComponents.find(typeid(T).name());
+		auto iter = m_pComponents.find(COMPONENT_KEY(T));
 		if (iter != m_pComponents.end()) return std::dynamic_pointer_cast<T>(iter->second);
 		return nullptr;
 	}
 
+	template <>
+	std::shared_ptr<CTransform> GetComponent<CTransform>()
+	{
+		return m_pTransform;
+	};
+
+	template <>
+	std::shared_ptr<CCollider> GetComponent<CCollider>()
+	{
+		if (GetComponent<CAABBCollider>()) return GetComponent<CAABBCollider>();
+		else if (GetComponent<COBBCollider>()) return GetComponent<COBBCollider>();
+		else if (GetComponent<CSphereCollider>()) return GetComponent<CSphereCollider>();
+		return nullptr;
+	}
+
 	// Object Collision
-	//virtual void OnCollision(CGameObject* pGameObject) {}
+	void IsCollided(std::shared_ptr<CGameObject>& pOther);
+	static void IsCollided(std::shared_ptr<CGameObject> pGameObject1, std::shared_ptr<CGameObject> pGameObject2);
+	virtual void OnCollision(std::shared_ptr<CGameObject> pGameObject);
 
 	// Mesh
-	void SetMesh(std::shared_ptr<CMesh> pMesh) { m_pMesh = pMesh; }
+	void SetMesh(std::shared_ptr<CMesh> pMesh);
 	UINT GetMeshType() { return((m_pMesh) ? m_pMesh->GetType() : 0x00); }
 
 	// Material

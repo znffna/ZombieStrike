@@ -200,6 +200,49 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
 }
 
+void CScene::CheckCollision()
+{
+	for (auto& pObject : m_ppObjects)
+	{
+		for (auto& pOtherObject : m_ppObjects)
+		{
+			if (pObject != pOtherObject)
+			{
+				pObject->IsCollided(pOtherObject);
+			}
+		}
+
+		for (auto& pOtherObject : m_ppHierarchicalObjects)
+		{
+			if (pObject != pOtherObject)
+			{
+				pObject->IsCollided(pOtherObject);
+			}
+		}
+
+		if (m_pMap)
+		{
+			m_pMap->IsCollided(pObject);
+		}
+	}
+
+	for (auto& pObject : m_ppHierarchicalObjects)
+	{
+		for (auto& pOtherObject : m_ppHierarchicalObjects)
+		{
+			if (pObject != pOtherObject)
+			{
+				pObject->IsCollided(pOtherObject);
+			}
+		}
+
+		if (m_pMap)
+		{
+			m_pMap->IsCollided(pObject);
+		}
+	}
+}
+
 void CScene::Update(float deltaTime)
 {
 	if (false == CheckWorkUpdating())
@@ -223,6 +266,10 @@ void CScene::Update(float deltaTime)
 	{
 		pObject->UpdateTransform(nullptr);
 	}
+
+	// Check Collision	
+	CheckCollision();
+
 }
 
 bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)

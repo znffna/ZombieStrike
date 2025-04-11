@@ -107,6 +107,34 @@ void CRigidBodyComponent::Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT
 	m_xmf3Torque = { 0, 0, 0 };
 }
 
+void CRigidBodyComponent::OnCollision(std::shared_ptr<CGameObject> pGameObject)
+{
+	// 충돌 처리
+	auto pCollider = pGameObject->GetComponent<CCollider>();
+
+	if (pCollider)
+	{
+		auto pTransform = GetOwner()->GetComponent<CTransformComponent>();
+
+		auto pOtherCollider = pGameObject->GetComponent<CCollider>();
+		auto pOtherTransform = pGameObject->GetComponent<CTransformComponent>();
+
+		if (pOtherCollider)
+		{
+			XMFLOAT3 xmf3Position = pTransform->GetPosition();
+			XMFLOAT3 xmf3OtherPosition = pOtherTransform->GetPosition();
+			XMFLOAT3 xmf3Direction = Vector3::Subtract(xmf3Position, xmf3OtherPosition);
+			float fDistance = Vector3::Length(xmf3Direction);
+			if (fDistance < 1.0f)
+			{
+				xmf3Direction = Vector3::Normalize(xmf3Direction);
+				xmf3Direction = Vector3::ScalarProduct(xmf3Direction, fDistance * 0.5f);
+				pTransform->Move(xmf3Direction);
+			}
+		}
+	}	
+}
+
 void CRigidBodyComponent::UpdateVelocity(float fTimeElapsed)
 {
 	// 중력 적용
@@ -158,7 +186,7 @@ void CRigidBodyComponent::OnTerrainUpdateCallback(float fTimeElapsed)
 
 	float fHeight = 0.0f;
 	// 지상과의 높이 체크
-	auto AABB = owner->GetComponent<CAABBBoxCollider>();
+	auto AABB = owner->GetComponent<CAABBCollider>();
 	if (AABB) {
 		float modelHeight = AABB->GetBoundingBox().Extents.y / 2;
 
