@@ -22,7 +22,7 @@
 #include "Shader.h"
 #include "Material.h"
 
-#define COMPONENT_KEY(T) std::string(typeid(T).name())
+#define COMPONENT_KEY(T) typeid(T).name()
 
 class CGameObject;
 class CTexture;

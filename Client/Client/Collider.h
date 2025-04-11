@@ -9,6 +9,12 @@
 class CCamera;
 
 class CColliderComponent;
+class CSphereCollider;
+class CAABBCollider;
+class COBBCollider;
+
+using DefaultCollider = CAABBCollider; // Alias for easier usage
+
 class CMesh;
 
 using CCollider = CColliderComponent; // Alias for easier usage

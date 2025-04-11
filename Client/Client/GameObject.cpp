@@ -227,7 +227,7 @@ void CGameObject::SetMesh(std::shared_ptr<CMesh> pMesh)
 {
 	m_pMesh = pMesh; 
 	if (m_pMesh->GetType() && VERTEXT_POSITION) {
-		auto pCollider = AddComponent<CAABBCollider>(shared_from_this());
+		auto pCollider = AddComponent<DefaultCollider>(shared_from_this());
 		pCollider->SetCollider(m_pMesh);
 	}
 }
