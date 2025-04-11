@@ -5,6 +5,8 @@
 /////////////////////////////////////////////////////////////////////////////
 #include "GameFramework.h"
 
+bool g_bRenderCollider = false;
+
 CGameFramework::CGameFramework()
 {
 	m_hInstance = NULL;
@@ -687,6 +689,21 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 	if (m_Scenes.empty() || bProcessed) {
 		m_pLoadingScene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 		return;
+	}
+
+	switch (nMessageID) {
+	case WM_KEYDOWN:
+	{
+		switch (wParam)
+		{
+		case VK_F1:
+			g_bRenderCollider = !g_bRenderCollider;
+			break;
+		default:
+			break;
+		}
+		break;
+	}
 	}
 }
 

@@ -110,6 +110,8 @@ using Microsoft::WRL::ComPtr;
 #define ROOT_PARAMETER_SKINNED_BONE_OFFSETS (ROOT_PARAMETER_SKYBOX + 1)
 #define ROOT_PARAMETER_SKINNED_BONE_TRANSFORM (ROOT_PARAMETER_SKINNED_BONE_OFFSETS + 1)
 
+// GaneFramework
+extern bool g_bRenderCollider;
 
 // Window Size
 extern UINT WINDOW_WIDTH;

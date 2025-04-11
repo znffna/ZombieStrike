@@ -174,6 +174,14 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			// Render Mesh
 			m_pMesh->Render(pd3dCommandList);
 		}
+
+		if (g_bRenderCollider) {
+			if (auto pCollider = GetComponent<CCollider>())
+			{
+				pCollider->Render(pd3dCommandList, pCamera);
+			}
+		}
+		
 	}
 
 	// Render Child Object
@@ -1082,7 +1090,12 @@ CCubeObject::~CCubeObject()
 void CCubeObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	// Mesh
-	std::shared_ptr<CCubeMesh> pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
+	auto pCubeMesh = CScene::GetMesh("CubeMesh");
+	if (nullptr == pCubeMesh)
+	{
+		pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
+		CScene::AddMesh("CubeMesh", pCubeMesh);
+	}
 	SetMesh(pCubeMesh);
 
 	// Material
