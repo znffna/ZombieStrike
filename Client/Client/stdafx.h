@@ -388,6 +388,13 @@ namespace Matrix4x4
 		XMStoreFloat4x4(&xmmtx4x4Result, XMMatrixLookAtLH(XMLoadFloat3(&xmf3EyePosition), XMLoadFloat3(&xmf3LookAtPosition), XMLoadFloat3(&xmf3UpDirection)));
 		return(xmmtx4x4Result);
 	}
+
+	inline XMFLOAT4X4 TransformMatrix(const XMFLOAT3& xmf3Scale, const XMFLOAT4& xmf4Quaternion, const XMFLOAT3& xmf3Position)
+	{
+		XMFLOAT4X4 xmmtx4x4Result;
+		XMStoreFloat4x4(&xmmtx4x4Result, XMMatrixAffineTransformation(XMLoadFloat3(&xmf3Scale), XMVectorZero(), XMLoadFloat4(&xmf4Quaternion), XMLoadFloat3(&xmf3Position)));
+		return(xmmtx4x4Result);
+	}
 }
 
 namespace Triangle

@@ -174,15 +174,26 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			// Render Mesh
 			m_pMesh->Render(pd3dCommandList);
 		}
-
-		if (g_bRenderCollider) {
-			if (auto pCollider = GetComponent<CCollider>())
-			{
-				pCollider->Render(pd3dCommandList, pCamera);
-			}
-		}
-		
 	}
+
+	if (g_bRenderCollider) {
+		if (auto pCollider = GetComponent<CCollider>())
+		{
+			// Update Shader Variables
+			XMFLOAT4X4 xmf4x4World;
+
+			xmf4x4World = pCollider->GetColliderMatrix();
+			XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4World)));
+
+			pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 16, &xmf4x4World, 0);
+
+			// Use Collider Shader
+			CMaterial::m_pColliderShader->OnPrepareRender(pd3dCommandList, 0);
+			
+			CScene::GetMesh("CCubeMesh")->Render(pd3dCommandList);
+		}
+	}
+
 
 	// Render Child Object
 	for (auto& pChild : m_pChilds)
@@ -1090,11 +1101,11 @@ CCubeObject::~CCubeObject()
 void CCubeObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	// Mesh
-	auto pCubeMesh = CScene::GetMesh("CubeMesh");
+	auto pCubeMesh = CScene::GetMesh("CCubeMesh");
 	if (nullptr == pCubeMesh)
 	{
 		pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
-		CScene::AddMesh("CubeMesh", pCubeMesh);
+		CScene::AddMesh("CCubeMesh", pCubeMesh);
 	}
 	SetMesh(pCubeMesh);
 

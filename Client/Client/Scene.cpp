@@ -49,9 +49,9 @@ void CScene::PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CreateRootSignature(pd3dRootSignature, pd3dDevice);
-	CreateDescriptorHeap(pd3dDevice);
-	CreateStaticShader(pd3dDevice);
+	//CreateRootSignature(pd3dRootSignature, pd3dDevice);
+	//CreateDescriptorHeap(pd3dDevice);
+	//CreateStaticShader(pd3dDevice);
 
 	// Fixed Camera
 	CreateFixedCamera(pd3dDevice, pd3dCommandList);
@@ -114,6 +114,17 @@ void CScene::CreateStaticShader(ID3D12Device* pd3dDevice)
 		CMaterial::m_pSkinnedAnimationShader = std::make_shared<CSkinnedAnimationStandardShader>();
 		CMaterial::m_pSkinnedAnimationShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
 	}
+	if (CMaterial::m_pColliderShader == nullptr)
+	{
+		CMaterial::m_pColliderShader = std::make_shared<CColliderShader>();
+		CMaterial::m_pColliderShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+	}
+}
+
+void CScene::CreateStaticMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	AddMesh("CCubeMesh", std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f));
+	//AddMesh("SphereMesh", std::make_shared<CSphereMesh>(pd3dDevice, pd3dCommandList, 1.0f, 20, 20));
 }
 
 void CScene::ReleaseObjects()
@@ -144,6 +155,7 @@ void CScene::InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	CreateRootSignature(pd3dRootSignature, pd3dDevice);
 	CreateDescriptorHeap(pd3dDevice);
 	CreateStaticShader(pd3dDevice);
+	CreateStaticMesh(pd3dDevice, pd3dCommandList);
 
 	GetResourceManager().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 }

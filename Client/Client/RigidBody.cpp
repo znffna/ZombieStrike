@@ -212,9 +212,5 @@ void CRigidBodyComponent::OnTerrainUpdateCallback(float fTimeElapsed)
 			owner->SetPosition(xmf3PlayerPosition);
 		}
 	}
-
-	std::string output = "Terrain Height: " + std::to_string(fHeight) + "\n";
-	OutputDebugStringA(output.c_str());
-
 }
 

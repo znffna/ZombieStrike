@@ -38,6 +38,8 @@ public:
 	virtual bool IsCollided(CColliderComponent* pCollider) = 0;
 	virtual bool IsCollided(std::shared_ptr<CColliderComponent> pCollider) { return IsCollided(pCollider.get()); };
 
+	virtual XMFLOAT4X4 GetColliderMatrix() = 0;
+
 	const enum ColliderType { AABB, OBB, Sphere };
 
 	virtual int GetColliderType() = 0;
@@ -76,6 +78,16 @@ public:
 
 	virtual bool IsCollided(CColliderComponent* pCollider) override;;
 
+	XMFLOAT4X4 GetColliderMatrix() override
+	{
+		XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
+			XMFLOAT3(m_xmWorldBoundingSphere.Radius, m_xmWorldBoundingSphere.Radius, m_xmWorldBoundingSphere.Radius),
+			XMFLOAT4(0.0f,0.0f,0.0f,1.0f),
+			m_xmWorldBoundingSphere.Center
+		);
+		return xmf4x4box;
+	};
+
 	int GetColliderType() override { return ColliderType::Sphere; };
 	const BoundingSphere GetBoundingSphere() { return m_xmWorldBoundingSphere; }
 private:
@@ -105,6 +117,16 @@ public:
 	};
 
 	virtual bool IsCollided(CColliderComponent* pCollider) override;;
+
+	XMFLOAT4X4 GetColliderMatrix() override
+	{
+		XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
+			m_xmWorldBoundingBox.Extents,
+			XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),
+			m_xmWorldBoundingBox.Center
+		);
+		return xmf4x4box;
+	};
 
 	const BoundingBox GetBoundingBox() { return m_xmBoundingBox; }
 	int GetColliderType() override { return ColliderType::AABB; }
@@ -137,6 +159,16 @@ public:
 	};
 
 	virtual bool IsCollided(CColliderComponent* pCollider) override;;
+
+	XMFLOAT4X4 GetColliderMatrix() override
+	{
+		XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
+			m_xmWorldBoundingOrientedBox.Extents,
+			XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),
+			m_xmWorldBoundingOrientedBox.Center
+		);
+		return xmf4x4box;
+	};
 
 	const BoundingOrientedBox GetBoundingOrientedBox() { return m_xmWorldBoundingOrientedBox; }
 	int GetColliderType() override { return ColliderType::OBB; }

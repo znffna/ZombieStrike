@@ -116,9 +116,10 @@ public:
 public:
 	static std::shared_ptr<CShader> m_pStandardShader;
 	static std::shared_ptr<CShader> m_pSkinnedAnimationShader;
+	static std::shared_ptr<CShader> m_pColliderShader;	
 
 	void SetStandardShader();
-	void SetSkinnedAnimationShader();;
+	void SetSkinnedAnimationShader();
 };
 
 void LoadTextureFromFile(std::shared_ptr<CTexture>& ppTexture, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring& pwstrTextureName, char  pstrTextureName[64], UINT nRootParameter);
