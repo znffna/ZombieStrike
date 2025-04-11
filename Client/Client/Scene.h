@@ -49,8 +49,8 @@ public:
 	////////////////////////////////////////////
 	// 모델 정보를 저장
 
-	void LoadModelList() {
-        std::ifstream file("Model/ModelList.txt");
+	void LoadModelList(std::string filepath = "Model/ModelList.txt") {
+        std::ifstream file(filepath);
         std::string modelname;
         while (file >> modelname) {
             GetModelInfo(modelname);
@@ -89,6 +89,18 @@ public:
 		return nullptr;
 	}
 
+	// 메쉬 정보를 저장
+	void SetMesh(const std::string& name, std::shared_ptr<CMesh> pMesh) {
+		MeshInfos[name] = pMesh;
+	}
+
+	std::shared_ptr<CMesh> GetMesh(const std::string& name) {
+		if (MeshInfos.find(name) != MeshInfos.end()) {
+			return MeshInfos[name];
+		}
+		return nullptr;
+	}
+
 private:
 	// CGameFramework에서 상속받는다.
 	ID3D12Device* m_d3dDevice = nullptr;
@@ -99,6 +111,7 @@ private:
 
 	std::unordered_map<std::string, std::shared_ptr<CLoadedModelInfo>> ModelInfos;
 	std::unordered_map<std::string, std::shared_ptr<CTexture>> TextureInfos;
+	std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshInfos;
 };
 
 #define DIR_FORWARD					0x01
@@ -207,6 +220,7 @@ public:
 	void BuildDefaultLightsAndMaterials();
 
 	void CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	
 	// static member variable
 	static void DestroyFramework();
 	static ID3D12RootSignature* GetGraphicRootSignature() {return m_pd3dGraphicsRootSignature.Get();	};
@@ -217,8 +231,11 @@ public:
 	SCENE_STATE GetSceneState() { return m_SceneState; }
 	void SetSceneState(SCENE_STATE SceneState) { m_SceneState = SceneState; }
 
+
 	// Scene Method
-	virtual void FixedUpdate(float deltaTime);
+	virtual void Update(float deltaTime);
+	void CheckCollision();
+
 	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 
@@ -227,6 +244,7 @@ public:
 	static void CreateRootSignature(ID3D12RootSignature* pd3dRootSignature, ID3D12Device* pd3dDevice);
 	static void CreateDescriptorHeap(ID3D12Device* pd3dDevice);
 	static void CreateStaticShader(ID3D12Device* pd3dDevice);
+	static void CreateStaticMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	// Descriptor Heap
 	static void CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews);
@@ -287,6 +305,9 @@ protected:
 	// Terrain
 	std::shared_ptr<CGameObject> m_pTerrain;
 
+	// Map
+	std::shared_ptr<CGameObject> m_pMap;
+
 	// Camera
 	std::shared_ptr<CCamera> m_pCamera;
 
@@ -297,7 +318,13 @@ public:
 		return instance;
 	}
 
-	static void StoreSkinInfo(const std::string& filename, std::shared_ptr<CLoadedModelInfo> pSkinInfo)
+	static void ReleaseResources()
+	{
+		GetResourceManager().ReleaseResources();
+	};
+
+	// Model Set/Get
+	static void StoreModelInfo(const std::string& filename, std::shared_ptr<CLoadedModelInfo> pSkinInfo)
 	{
 		GetResourceManager().SetSkinInfo(filename, pSkinInfo);
 	};
@@ -307,11 +334,7 @@ public:
 		return GetResourceManager().GetModelInfo(objectname);
 	};
 
-	static void ReleaseResources()
-	{
-		GetResourceManager().ReleaseResources();
-	};
-
+	// Texture Set/Get
 	static void StoreTexture(const std::string& name, std::shared_ptr<CTexture> texture)
 	{
 		GetResourceManager().SetTexture(name, texture);
@@ -320,6 +343,17 @@ public:
 	static std::shared_ptr<CTexture> GetTexture(const std::string& name)
 	{
 		return GetResourceManager().GetTexture(name);
+	};
+
+	// Mesh Set/Get
+	static void AddMesh(const std::string& name, std::shared_ptr<CMesh> mesh)
+	{
+		GetResourceManager().SetMesh(name, mesh);
+	};
+
+	static std::shared_ptr<CMesh> GetMesh(const std::string& name)
+	{
+		return GetResourceManager().GetMesh(name);
 	};
 };
 

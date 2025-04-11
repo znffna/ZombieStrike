@@ -110,6 +110,8 @@ using Microsoft::WRL::ComPtr;
 #define ROOT_PARAMETER_SKINNED_BONE_OFFSETS (ROOT_PARAMETER_SKYBOX + 1)
 #define ROOT_PARAMETER_SKINNED_BONE_TRANSFORM (ROOT_PARAMETER_SKINNED_BONE_OFFSETS + 1)
 
+// GaneFramework
+extern bool g_bRenderCollider;
 
 // Window Size
 extern UINT WINDOW_WIDTH;
@@ -384,6 +386,13 @@ namespace Matrix4x4
 	{
 		XMFLOAT4X4 xmmtx4x4Result;
 		XMStoreFloat4x4(&xmmtx4x4Result, XMMatrixLookAtLH(XMLoadFloat3(&xmf3EyePosition), XMLoadFloat3(&xmf3LookAtPosition), XMLoadFloat3(&xmf3UpDirection)));
+		return(xmmtx4x4Result);
+	}
+
+	inline XMFLOAT4X4 TransformMatrix(const XMFLOAT3& xmf3Scale, const XMFLOAT4& xmf4Quaternion, const XMFLOAT3& xmf3Position)
+	{
+		XMFLOAT4X4 xmmtx4x4Result;
+		XMStoreFloat4x4(&xmmtx4x4Result, XMMatrixAffineTransformation(XMLoadFloat3(&xmf3Scale), XMVectorZero(), XMLoadFloat4(&xmf4Quaternion), XMLoadFloat3(&xmf3Position)));
 		return(xmmtx4x4Result);
 	}
 }

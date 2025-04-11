@@ -10,6 +10,7 @@
 #include "Mesh.h"
 #include "Transform.h"
 #include "Rigidbody.h"
+#include "Collider.h"
 
 #include "Scene.h"
 
@@ -175,10 +176,78 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		}
 	}
 
+	if (g_bRenderCollider) {
+		if (auto pCollider = GetComponent<CCollider>())
+		{
+			// Update Shader Variables
+			XMFLOAT4X4 xmf4x4World;
+
+			xmf4x4World = pCollider->GetColliderMatrix();
+			XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4World)));
+
+			pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 16, &xmf4x4World, 0);
+
+			// Use Collider Shader
+			CMaterial::m_pColliderShader->OnPrepareRender(pd3dCommandList, 0);
+			
+			CScene::GetMesh("CCubeMesh")->Render(pd3dCommandList);
+		}
+	}
+
+
 	// Render Child Object
 	for (auto& pChild : m_pChilds)
 	{
 		pChild->Render(pd3dCommandList, pCamera);
+	}
+}
+
+void CGameObject::IsCollided(std::shared_ptr<CGameObject>& pOther)
+{
+	if (auto pCollider = GetComponent<CCollider>()) {
+		if (auto pCollider2 = pOther->GetComponent<CCollider>()) {
+			if (pCollider->IsCollided(pCollider2)) {
+				OnCollision(pOther);
+				pOther->OnCollision(shared_from_this());
+			}
+
+			for (auto& pChild : m_pChilds) {
+				if (pCollider->IsCollided(pChild->GetComponent<CCollider>())) {
+					OnCollision(pChild);
+					pChild->OnCollision(shared_from_this());
+				}
+			}
+		}
+	}
+}
+
+void CGameObject::IsCollided(std::shared_ptr<CGameObject> pGameObject1, std::shared_ptr<CGameObject> pGameObject2)
+{
+	if (auto pCollider = pGameObject1->GetComponent<CCollider>()) {
+		if (auto pCollider2 = pGameObject2->GetComponent<CCollider>()) {
+			if (pCollider->IsCollided(pCollider2)) {
+				pGameObject1->OnCollision(pGameObject2);
+				pGameObject2->OnCollision(pGameObject1);
+			}
+		}
+	}
+}
+
+void CGameObject::OnCollision(std::shared_ptr<CGameObject> pGameObject)
+{
+	// Collision Event
+	if (auto pRigidBody = GetComponent<CRigidBody>()) {
+		pRigidBody->OnCollision(pGameObject);
+	}
+}
+
+// Mesh
+void CGameObject::SetMesh(std::shared_ptr<CMesh> pMesh)
+{
+	m_pMesh = pMesh; 
+	if (m_pMesh->GetType() && VERTEXT_POSITION) {
+		auto pCollider = AddComponent<DefaultCollider>(shared_from_this());
+		pCollider->SetCollider(m_pMesh);
 	}
 }
 
@@ -541,7 +610,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		{
 			std::shared_ptr<CStandardMesh> pMesh = std::make_shared<CStandardMesh>(pd3dDevice, pd3dCommandList);
 			pMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, file);
-			pGameObject->SetMesh(pMesh);
+			pGameObject->SetMesh(pMesh);			
 		}
 		else if (!strcmp(pstrToken, "<SkinningInfo>:"))
 		{
@@ -1032,7 +1101,12 @@ CCubeObject::~CCubeObject()
 void CCubeObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	// Mesh
-	std::shared_ptr<CCubeMesh> pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
+	auto pCubeMesh = CScene::GetMesh("CCubeMesh");
+	if (nullptr == pCubeMesh)
+	{
+		pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
+		CScene::AddMesh("CCubeMesh", pCubeMesh);
+	}
 	SetMesh(pCubeMesh);
 
 	// Material

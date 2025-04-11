@@ -12,6 +12,7 @@
 // static variables
 std::shared_ptr<CShader> CMaterial::m_pStandardShader;
 std::shared_ptr<CShader> CMaterial::m_pSkinnedAnimationShader;
+std::shared_ptr<CShader> CMaterial::m_pColliderShader;
 
 ///////////////////////////////////////////////////////////////////////////////
 // 

@@ -159,6 +159,14 @@ void CStandardMesh::LoadMeshFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		{
 			File.read((char*)&m_xmf3AABBCenter, sizeof(XMFLOAT3));
 			File.read((char*)&m_xmf3AABBExtents, sizeof(XMFLOAT3));
+
+			{
+				std::string debugOutput = m_strMeshName + " ";
+				debugOutput += "/ Center : " + std::to_string(m_xmf3AABBCenter.x) + ", " + std::to_string(m_xmf3AABBCenter.y) + ", " + std::to_string(m_xmf3AABBCenter.z);
+				debugOutput += "/ Extents : " + std::to_string(m_xmf3AABBExtents.x) + ", " + std::to_string(m_xmf3AABBExtents.y) + ", " + std::to_string(m_xmf3AABBExtents.z);
+				debugOutput += "\n";
+				OutputDebugStringA(debugOutput.c_str());
+			}
 		}
 		else if (!strcmp(pstrToken, "<Positions>:"))
 		{

@@ -49,8 +49,9 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	// Map Load
 	auto pMap = resourceManager.GetModelInfo("Map");
-	auto pMapObjects = (pMap->m_pModelRootObject)->GetChilds();
-	m_ppHierarchicalObjects.insert(m_ppHierarchicalObjects.end(), pMapObjects.begin(), pMapObjects.end());
+	pMap->m_pModelRootObject->UpdateTransform();
+	m_pMap = pMap->m_pModelRootObject;
+	m_pMap->Update(0.0f);
 
 	// Default Camera 위치 수정
 	m_pCamera->SetPosition(Vector3::Add(pZombie->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));
@@ -65,9 +66,9 @@ void CGameScene::ReleaseUploadBuffers()
 {
 }
 
-void CGameScene::FixedUpdate(float deltaTime)
+void CGameScene::Update(float deltaTime)
 {
-	CScene::FixedUpdate(deltaTime);
+	CScene::Update(deltaTime);
 
 	// Update Camera Position
 	if (m_pCamera)

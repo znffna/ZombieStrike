@@ -305,3 +305,30 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
 
     return (output);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+//
+
+struct VS_COLLIDER_INPUT
+{
+    float3 position : POSITION;
+};
+
+struct VS_COLLIDER_OUTPUT
+{
+    float4 position : SV_POSITION;
+};
+
+VS_COLLIDER_OUTPUT VSCollider(VS_COLLIDER_INPUT input)
+{
+    VS_COLLIDER_OUTPUT output;
+    output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
+    return (output);
+}
+
+float4 PSCollider(VS_COLLIDER_OUTPUT input) : SV_TARGET
+{
+    float4 cColor = float4(0.0f, 1.0f, 0.0f, 1.0f);
+    
+    return cColor;
+}

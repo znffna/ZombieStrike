@@ -49,9 +49,9 @@ void CScene::PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CreateRootSignature(pd3dRootSignature, pd3dDevice);
-	CreateDescriptorHeap(pd3dDevice);
-	CreateStaticShader(pd3dDevice);
+	//CreateRootSignature(pd3dRootSignature, pd3dDevice);
+	//CreateDescriptorHeap(pd3dDevice);
+	//CreateStaticShader(pd3dDevice);
 
 	// Fixed Camera
 	CreateFixedCamera(pd3dDevice, pd3dCommandList);
@@ -114,6 +114,17 @@ void CScene::CreateStaticShader(ID3D12Device* pd3dDevice)
 		CMaterial::m_pSkinnedAnimationShader = std::make_shared<CSkinnedAnimationStandardShader>();
 		CMaterial::m_pSkinnedAnimationShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
 	}
+	if (CMaterial::m_pColliderShader == nullptr)
+	{
+		CMaterial::m_pColliderShader = std::make_shared<CColliderShader>();
+		CMaterial::m_pColliderShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+	}
+}
+
+void CScene::CreateStaticMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	AddMesh("CCubeMesh", std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f));
+	//AddMesh("SphereMesh", std::make_shared<CSphereMesh>(pd3dDevice, pd3dCommandList, 1.0f, 20, 20));
 }
 
 void CScene::ReleaseObjects()
@@ -144,6 +155,9 @@ void CScene::InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	CreateRootSignature(pd3dRootSignature, pd3dDevice);
 	CreateDescriptorHeap(pd3dDevice);
 	CreateStaticShader(pd3dDevice);
+	CreateStaticMesh(pd3dDevice, pd3dCommandList);
+
+	GetResourceManager().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 }
 
 void CScene::BuildDefaultLightsAndMaterials()
@@ -198,7 +212,50 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
 }
 
-void CScene::FixedUpdate(float deltaTime)
+void CScene::CheckCollision()
+{
+	for (auto& pObject : m_ppObjects)
+	{
+		for (auto& pOtherObject : m_ppObjects)
+		{
+			if (pObject != pOtherObject)
+			{
+				pObject->IsCollided(pOtherObject);
+			}
+		}
+
+		for (auto& pOtherObject : m_ppHierarchicalObjects)
+		{
+			if (pObject != pOtherObject)
+			{
+				pObject->IsCollided(pOtherObject);
+			}
+		}
+
+		if (m_pMap)
+		{
+			m_pMap->IsCollided(pObject);
+		}
+	}
+
+	for (auto& pObject : m_ppHierarchicalObjects)
+	{
+		for (auto& pOtherObject : m_ppHierarchicalObjects)
+		{
+			if (pObject != pOtherObject)
+			{
+				pObject->IsCollided(pOtherObject);
+			}
+		}
+
+		if (m_pMap)
+		{
+			m_pMap->IsCollided(pObject);
+		}
+	}
+}
+
+void CScene::Update(float deltaTime)
 {
 	if (false == CheckWorkUpdating())
 	{
@@ -221,6 +278,10 @@ void CScene::FixedUpdate(float deltaTime)
 	{
 		pObject->UpdateTransform(nullptr);
 	}
+
+	// Check Collision	
+	CheckCollision();
+
 }
 
 bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
@@ -270,6 +331,12 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	if (m_pTerrain)
 	{
 		m_pTerrain->Render(pd3dCommandList, pCamera);
+	}
+
+	// Render Map
+	if (m_pMap)
+	{
+		m_pMap->Render(pd3dCommandList, pCamera);
 	}
 
 	// Render GameObjects 

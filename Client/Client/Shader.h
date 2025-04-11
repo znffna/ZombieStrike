@@ -142,3 +142,19 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override;
 };
 
+//////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+class CColliderShader : public CShader
+{
+public:
+	CColliderShader();
+	virtual ~CColliderShader();
+
+	virtual std::wstring GetShaderName() override { return L"CColliderShader"; }
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState) override;
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override;
+	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState) override;
+};

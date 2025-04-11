@@ -42,12 +42,12 @@ bool CSphereCollider::IsCollided(CColliderComponent* pCollider)
 	}
 	case ColliderType::AABB:
 	{
-		CAABBBoxCollider* pAABBBoxCollider = dynamic_cast<CAABBBoxCollider*>(pCollider);
+		CAABBCollider* pAABBBoxCollider = dynamic_cast<CAABBCollider*>(pCollider);
 		return m_xmWorldBoundingSphere.Intersects(pAABBBoxCollider->GetBoundingBox());
 	}
 	case ColliderType::OBB:
 	{
-		COBBBoxCollider* pOBBBoxCollider = dynamic_cast<COBBBoxCollider*>(pCollider);
+		COBBCollider* pOBBBoxCollider = dynamic_cast<COBBCollider*>(pCollider);
 		return m_xmWorldBoundingSphere.Intersects(pOBBBoxCollider->GetBoundingOrientedBox());
 	}
 	}
@@ -57,11 +57,11 @@ bool CSphereCollider::IsCollided(CColliderComponent* pCollider)
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-void CAABBBoxCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
+void CAABBCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
 {
 	m_xmBoundingBox = pMesh->GetBoundingBox();
 }
-bool CAABBBoxCollider::IsCollided(CColliderComponent* pCollider)
+bool CAABBCollider::IsCollided(CColliderComponent* pCollider)
 {
 	switch (pCollider->GetColliderType())
 	{
@@ -72,12 +72,12 @@ bool CAABBBoxCollider::IsCollided(CColliderComponent* pCollider)
 	}
 	case ColliderType::AABB:
 	{
-		CAABBBoxCollider* pAABBBoxCollider = dynamic_cast<CAABBBoxCollider*>(pCollider);
+		CAABBCollider* pAABBBoxCollider = dynamic_cast<CAABBCollider*>(pCollider);
 		return m_xmWorldBoundingBox.Intersects(pAABBBoxCollider->GetBoundingBox());
 	}
 	case ColliderType::OBB:
 	{
-		COBBBoxCollider* pOBBBoxCollider = dynamic_cast<COBBBoxCollider*>(pCollider);
+		COBBCollider* pOBBBoxCollider = dynamic_cast<COBBCollider*>(pCollider);
 		return m_xmWorldBoundingBox.Intersects(pOBBBoxCollider->GetBoundingOrientedBox());
 	}
 	}
@@ -87,11 +87,11 @@ bool CAABBBoxCollider::IsCollided(CColliderComponent* pCollider)
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-void COBBBoxCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
+void COBBCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
 {
 	m_xmBoundingOrientedBox = pMesh->GetBoundingOrientedBox(XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 }
-bool COBBBoxCollider::IsCollided(CColliderComponent* pCollider)
+bool COBBCollider::IsCollided(CColliderComponent* pCollider)
 {
 	switch (pCollider->GetColliderType())
 	{
@@ -102,12 +102,12 @@ bool COBBBoxCollider::IsCollided(CColliderComponent* pCollider)
 	}
 	case ColliderType::AABB:
 	{
-		CAABBBoxCollider* pAABBBoxCollider = dynamic_cast<CAABBBoxCollider*>(pCollider);
+		CAABBCollider* pAABBBoxCollider = dynamic_cast<CAABBCollider*>(pCollider);
 		return m_xmWorldBoundingOrientedBox.Intersects(pAABBBoxCollider->GetBoundingBox());
 	}
 	case ColliderType::OBB:
 	{
-		COBBBoxCollider* pOBBBoxCollider = dynamic_cast<COBBBoxCollider*>(pCollider);
+		COBBCollider* pOBBBoxCollider = dynamic_cast<COBBCollider*>(pCollider);
 		return m_xmWorldBoundingOrientedBox.Intersects(pOBBBoxCollider->GetBoundingOrientedBox());
 	}
 	}
