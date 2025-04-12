@@ -895,7 +895,7 @@ CHeightMapGridMesh::~CHeightMapGridMesh()
 float CHeightMapGridMesh::OnGetHeight(int x, int z, void* pContext)
 {
 	CHeightMapImage* pHeightMapImage = (CHeightMapImage*)pContext;
-	std::vector<BYTE> pHeightMapPixels = pHeightMapImage->GetHeightMapPixels();
+	std::vector<SHORT> pHeightMapPixels = pHeightMapImage->GetHeightMapPixels();
 	XMFLOAT3 xmf3Scale = pHeightMapImage->GetScale();
 
 	int nWidth = pHeightMapImage->GetHeightMapWidth();

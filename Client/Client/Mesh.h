@@ -305,7 +305,7 @@ class CHeightMapImage
 {
 private:
 	//높이 맵 이미지 픽셀(8-비트)들의 이차원 배열이다. 각 픽셀은 0~255의 값을 갖는다. 
-	std::vector<BYTE> m_pHeightMapPixels;
+	std::vector<SHORT> m_pHeightMapPixels;
 
 	//높이 맵 이미지의 가로와 세로 크기이다. 
 	int m_nWidth;
@@ -321,7 +321,7 @@ public:
 		m_xmf3Scale = xmf3Scale;
 
 		// 이미지 크기만큼 메모리 확보
-		std::vector<BYTE> pHeightMapPixels(m_nWidth * m_nLength);
+		std::vector<SHORT> pHeightMapPixels(m_nWidth * m_nLength);
 
 		// 이미지를 파일에서 읽어서 메모리에 저장
 		FILE* pFile = NULL;
@@ -450,7 +450,7 @@ public:
 	};
 
 	XMFLOAT3 GetScale() { return(m_xmf3Scale); }
-	std::vector<BYTE> GetHeightMapPixels() { return(m_pHeightMapPixels); }
+	std::vector<SHORT> GetHeightMapPixels() { return(m_pHeightMapPixels); }
 	int GetHeightMapWidth() { return(m_nWidth); }
 	int GetHeightMapLength() { return(m_nLength); }
 
