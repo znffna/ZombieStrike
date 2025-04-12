@@ -19,6 +19,15 @@ constexpr short MAX_ZOMBIE_COUNT = 1000;
 constexpr int W_WIDTH = 500;
 constexpr int W_HEIGHT = 500;
 
+// 시작 위치
+const float START_POSITIONS[3][3] = {
+    { 100.0f, 0.0f, 100.0f },
+    { 110.0f, 0.0f, 100.0f },
+    { 120.0f, 0.0f, 100.0f },
+};
+// 플레이어의 체력
+const uint8_t PLAYER_HP = 500;
+
 // 총 정보
 struct BulletInfo {
     float speed;        // 총알 속도 (m/s 또는 게임 단위)
@@ -58,33 +67,30 @@ static const BulletInfo BULLET_TABLE[BULLET_MAX] = {
 // 패킷 ID 정의
 // --------------------------
 
-// 클라이언트 -> 서버 패킷
-namespace PKT_CS {
-    enum PKT_CS : uint8_t {
-        LOGIN   = 1,
-        MOVE    = 2,
-		SHOOT   = 3,
+// 공통 헤더
+enum PKT_TYPE : uint8_t {
 
-		// ... 필요하면 추가
-    };
-}
+    C_S_LOGIN = 1,
+    C_S_MOVE = 2,
+    C_S_SHOOT = 3,
 
-// 서버 -> 클라이언트 패킷
-namespace PKT_SC {
-    enum : uint8_t {
-        LOGIN_OK            = 1,
-        LOGIN_FAIL          = 2,
-        BROADCAST_STATE     = 3,
-        HIT_RESULT          = 4,
-        OBJECT_ADD          = 5,
-        OBJECT_UPDATE       = 6,
-        OBJECT_REMOVE       = 7,
-        STAGE_INFO          = 8,
-        SCORE_INFO          = 9,
+    S_C_LOGIN_OK = 104,
+    S_C_LOGIN_FAIL = 105,
+    S_C_PLAYER_INFO = 106,
 
-        // ... 필요하면 추가
-    };
-}
+    S_C_HIT_RESULT = 201,
+    S_C_PLAYER_ADD = 202,
+    S_C_PLAYER_UPDATE = 203,
+    S_C_PLAYER_REMOVE = 204,
+    S_C_ZOMBIE_ADD = 205,
+    S_C_ZOMBIE_UPDATE = 206,
+    S_C_ZOMBIE_REMOVE = 207,
+
+    S_C_STAGE_INFO = 301,
+    S_C_SCORE_INFO = 302,
+
+    // ...
+};
 
 // --------------------------
 // 패킷 구조체 정의
@@ -115,8 +121,8 @@ enum ActionType : uint8_t {
 struct PlayerInfo {
     uint32_t id;
     float position[3];  // X, Y, Z
-    uint8_t name[NAME_SIZE];
-    ObjectType obj_type;  // 플레이어 객체 타입
+    char name[NAME_SIZE];
+    uint8_t skin_type;  // 플레이어 객체 스킨
 	uint8_t level;      // 레벨
     uint8_t hp;         // 플레이어 체력
     uint16_t score;     // 점수
@@ -136,26 +142,10 @@ struct ZombieInfo {
     //    : zombieId(0), obj_type(ObjectType::ZOMBIE), act_type(ActionType::NONE), damage(30), hp(500) {}
 };
 
-// 공통 헤더
-enum PacketType : uint8_t {
-    LOGIN = 1,
-    MOVE = 2,
-    SHOOT = 3,
-    LOGIN_OK = 100,
-    LOGIN_FAIL = 101,
-    BROADCAST_STATE = 102,
-    HIT_RESULT = 103,
-    OBJECT_ADD = 104,
-    OBJECT_UPDATE = 105,
-    OBJECT_REMOVE = 106,
-    STAGE_INFO = 107,
-    SCORE_INFO = 108,
-    // ...
-};
 
 struct PacketHeader {
     uint16_t size;
-    PacketType type;
+    PKT_TYPE type;
 };
 
 // --------------------------
@@ -164,16 +154,16 @@ struct PacketHeader {
 // 로그인 패킷
 struct PKT_CS_LOGIN {
     PacketHeader header;
-    uint8_t name[NAME_SIZE];
-    uint8_t obj_type;
-    PKT_CS_LOGIN() { header.type = PacketType::LOGIN; }
+    char name[NAME_SIZE];
+    uint8_t skin_type;
+    PKT_CS_LOGIN() { header.type = PKT_TYPE::C_S_LOGIN; }
 };
 
 // 이동 패킷
 struct PKT_CS_MOVE {
     PacketHeader header;
     float position[3];
-    PKT_CS_MOVE() { header.type = PacketType::MOVE; }
+    PKT_CS_MOVE() { header.type = PKT_TYPE::C_S_MOVE; }
 };
 
 // 총알 발사 패킷
@@ -183,8 +173,11 @@ struct PKT_CS_SHOOT {
     //int hitZombieId;
     float bulletPos[3];
     float bulletDir[3];
-    PKT_CS_SHOOT() { header.type = PacketType::SHOOT; }
+    PKT_CS_SHOOT() { header.type = PKT_TYPE::C_S_SHOOT; }
 };
+
+
+
 
 // --------------------------
 // 서버 ->  클라
@@ -193,24 +186,24 @@ struct PKT_CS_SHOOT {
 struct PKT_SC_LOGIN_OK {
     PacketHeader header;
     uint32_t playerId;
-    uint8_t name[NAME_SIZE];
-	uint8_t obj_type;
-    PKT_SC_LOGIN_OK() { header.type = PacketType::LOGIN_OK; }
+    char name[NAME_SIZE];
+	uint8_t skin_type;
+    PKT_SC_LOGIN_OK() { header.type = PKT_TYPE::S_C_LOGIN_OK; }
 };
 
-// 상태 전체 브로드캐스트 패킷
-struct PKT_SC_BROADCAST_STATE {
-    PacketHeader header;
-
-    uint32_t playerCount;    
-    PlayerInfo players[MAX_PLAYER_COUNT];  
-
-    uint32_t zombieCount;    
-    ZombieInfo zombies[MAX_ZOMBIE_COUNT]; 
-
-
-    PKT_SC_BROADCAST_STATE() { header.type = PacketType::BROADCAST_STATE; }
-};
+//// 상태 전체 브로드캐스트 패킷
+//struct PKT_SC_BROADCAST_STATE {
+//    PacketHeader header;
+//
+//    uint32_t playerCount;    
+//    PlayerInfo players[MAX_PLAYER_COUNT];  
+//
+//    uint32_t zombieCount;    
+//    ZombieInfo zombies[MAX_ZOMBIE_COUNT]; 
+//
+//
+//    PKT_SC_BROADCAST_STATE() { header.type = PacketType::BROADCAST_STATE; }
+//};
 
 // 총알 명중 결과
 struct PKT_SC_HIT_RESULT {
@@ -220,29 +213,32 @@ struct PKT_SC_HIT_RESULT {
     uint8_t zombieHp;
     //uint8_t damage;       // 얼마나 깎였는지
 
-    PKT_SC_HIT_RESULT() { header.type = PacketType::HIT_RESULT; }
+    PKT_SC_HIT_RESULT() { header.type = PKT_TYPE::S_C_HIT_RESULT; }
 };
 struct ZombieHit {
     uint32_t zombieId;
     uint8_t hp;
     uint8_t damage;
 };
+
 struct PKT_SC_HIT_RESULT_MULTI {
     PacketHeader header;
     uint8_t hitCount;
     ZombieHit hits[10]; // 최대 10마리 좀비 피격 처리
 };
 
+
 // --- Object 관리 패킷 ---
 // 객체 추가 패킷 (플레이어)
 struct PKT_SC_PLAYER_ADD {
     PacketHeader header;
     uint32_t objectId;      // 플레이어의 고유 ID
+    uint8_t skin_type;      // 플레이어 스킨 타입
     float position[3];      // 플레이어의 위치
+    uint8_t level;          // 플레이어 레벨
     uint8_t hp;             // 플레이어 체력
     uint16_t score;         // 플레이어 점수
-    uint8_t level;          // 플레이어 레벨
-    PKT_SC_PLAYER_ADD() { header.type = PacketType::OBJECT_ADD; }
+    PKT_SC_PLAYER_ADD() { header.type = PKT_TYPE::S_C_PLAYER_ADD; }
 };
 //객체 업데이트 패킷 (플레이어)
 struct PKT_SC_PLAYER_UPDATE {
@@ -252,13 +248,13 @@ struct PKT_SC_PLAYER_UPDATE {
     uint8_t hp;            
     uint16_t score;         
     uint8_t level;          
-    PKT_SC_PLAYER_UPDATE() { header.type = PacketType::OBJECT_UPDATE; }
+    PKT_SC_PLAYER_UPDATE() { header.type = PKT_TYPE::S_C_PLAYER_UPDATE; }
 };
 // 객체 삭제 패킷 (플레이어)
 struct PKT_SC_PLAYER_REMOVE {
     PacketHeader header;
     uint32_t objectId;     
-    PKT_SC_PLAYER_REMOVE() { header.type = PacketType::OBJECT_REMOVE; }
+    PKT_SC_PLAYER_REMOVE() { header.type = PKT_TYPE::S_C_PLAYER_REMOVE; }
 };
 
 // 객체 추가 패킷 (좀비 , 보스)
@@ -267,9 +263,10 @@ struct PKT_SC_ZOMBIE_ADD {
     uint32_t objectId;      // 좀비의 고유 ID
     float position[3];      // 좀비의 위치
     uint8_t hp;             // 좀비 체력
+    uint8_t skin_type;      // 좀비 스킨 
     uint8_t action_type;    // 좀비의 행동 유형
     uint8_t damage;         // 좀비의 공격력
-    PKT_SC_ZOMBIE_ADD() { header.type = PacketType::OBJECT_ADD; }
+    PKT_SC_ZOMBIE_ADD() { header.type = PKT_TYPE::S_C_ZOMBIE_ADD; }
 };
 // 객체 업데이트 패킷(좀비 , 보스)
 struct PKT_SC_ZOMBIE_UPDATE {
@@ -279,14 +276,18 @@ struct PKT_SC_ZOMBIE_UPDATE {
     uint8_t hp;            
     uint8_t action_type;   
     uint8_t damage;         
-    PKT_SC_ZOMBIE_UPDATE() { header.type = PacketType::OBJECT_UPDATE; }
+    PKT_SC_ZOMBIE_UPDATE() { header.type = PKT_TYPE::S_C_ZOMBIE_UPDATE; }
 };
 // 객체 삭제 패킷(좀비, 보스)
 struct PKT_SC_ZOMBIE_REMOVE {
     PacketHeader header;
     uint32_t objectId;      
-    PKT_SC_ZOMBIE_REMOVE() { header.type = PacketType::OBJECT_REMOVE; }
+    PKT_SC_ZOMBIE_REMOVE() { header.type = PKT_TYPE::S_C_ZOMBIE_REMOVE; }
 };
+
+
+
+
 
 // --- 게임 상황 패킷 ---
 // STAGE 정보
@@ -295,13 +296,13 @@ struct PKT_SC_STAGE_INFO {
     uint16_t currentStage;  
     uint16_t totalStages;
     uint32_t timeLeft;
-    PKT_SC_STAGE_INFO() { header.type = PacketType::STAGE_INFO; }
+    PKT_SC_STAGE_INFO() { header.type = PKT_TYPE::S_C_STAGE_INFO; }
 };
 // SCORE 정보
 struct PKT_SC_SCORE_INFO {
     PacketHeader header;
     uint16_t stage_score;
-    PKT_SC_SCORE_INFO() { header.type = PacketType::SCORE_INFO; }
+    PKT_SC_SCORE_INFO() { header.type = PKT_TYPE::S_C_SCORE_INFO; }
 };
 
 
