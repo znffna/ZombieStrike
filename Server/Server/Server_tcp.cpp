@@ -358,16 +358,13 @@ int main() {
 	uint32_t clientId = 0;
 
     while (serverRunning) {
-
-        SOCKET clientSocket = WSAAccept(s_socket, reinterpret_cast<sockaddr*>(&serverAddr), &serverAddr_size, NULL, NULL);
-        if (clientSocket == INVALID_SOCKET) {
+        auto c_socket = WSAAccept(s_socket,reinterpret_cast<sockaddr*>(&serverAddr_size), &serverAddr_size, NULL, NULL);
+        if (c_socket == INVALID_SOCKET) {
             std::cout << "Accept failed\n";
             continue;
         }serverControl;
 
-        auto c_socket = WSAAccept(s_socket,reinterpret_cast<sockaddr*>(&serverAddr_size), &serverAddr_size, NULL, NULL);
         g_users.try_emplace(clientId, clientId, c_socket);
-
         clientId++;
     }
 
