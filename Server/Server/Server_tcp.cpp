@@ -3,7 +3,6 @@
 #include <windows.h>
 #include <iostream>
 #include <vector>
-#include <queue>
 #include <mutex>
 #include <condition_variable>
 #include <functional>
@@ -12,8 +11,6 @@
 #include <cmath>
 #include <unordered_map>
 #include <queue>
-#include <set>
-#include <map>
 #include "../../protocol.h"
 
 #pragma comment(lib, "ws2_32.lib")
@@ -29,16 +26,6 @@ void error_display(const char* msg, int err_no) {
     exit(1);
 }
 
-
-struct Vector3 {
-    float x = 0.0f;
-    float y = 0.0f;
-    float z = 0.0f;
-};
-
-struct Quaternion {
-    float x = 0, y = 0, z = 0, w = 1;
-};
 struct ShootPacket {
     uint8_t GunType; // 총 종류
     float bulletPos[3];
@@ -47,10 +34,12 @@ struct ShootPacket {
 struct Zombie {
     ZombieInfo zombie_info;
 };
-
 std::vector<Zombie*> zombie_st;
 std::mutex zombiesMutex;
+
 bool serverRunning = true;
+
+short IN_g_player_n= 0;
 
 void CALLBACK g_recv_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
 void CALLBACK g_send_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
@@ -75,6 +64,7 @@ public:
 };
 
 class SESSION;
+
 std::unordered_map<uint32_t, SESSION> g_users;
 
 class SESSION {
@@ -108,6 +98,10 @@ public:
     }
 
 public: 
+    SESSION() {
+        std::cout << "DEFAULT SESSION CONSTRUCTOR CALLED!!\n";
+        exit(-1);
+    }
 	SESSION(uint32_t session_id, SOCKET s) : _id(session_id), _c_socket(s) 
     {
         _recv_over._wsabuf[0].len = sizeof(_recv_over._buffer);
@@ -120,7 +114,7 @@ public:
 	}
     ~SESSION() 
     {
-		PKT_SC_PLAYER_REMOVE p;
+		pkt_sc_player_remove p;
 		p.header.size = sizeof(p);
 		p.header.type = PKT_TYPE::S_C_PLAYER_REMOVE;
 		p.objectId = _id;
@@ -131,8 +125,6 @@ public:
 		closesocket(_c_socket);
     }
 
-    
-    
     void recv_callback(int num_bytes) {
         // ----- 패킷 조립 시작 -----
         unsigned char* p = _recv_over._buffer;
@@ -164,53 +156,7 @@ public:
         do_recv(); // 다음 수신
 	}
 
-
-	void process_packet(unsigned char* packet) {
-		const unsigned char packet_type = packet[1];
-        //_recv_over._buffer[] = 0;
-
-        const unsigned char packet_type = packet[1];
-        if (packet_type == 0) {
-            std::cout << "[ERROR] Invalid Packet Type\n";
-            return;
-        }
-
-        short playerNum = 0;
-        switch (packet_type) {
-        case ::PKT_TYPE::C_S_LOGIN:
-        {
-            PKT_CS_LOGIN* loginPacket = reinterpret_cast<PKT_CS_LOGIN*>(packet);
-            _name = loginPacket->name;
-            _skin_type = loginPacket->skin_type;
-            _position[0] = START_POSITIONS[playerNum][0];
-            _position[1] = START_POSITIONS[playerNum][1];
-            _position[2] = START_POSITIONS[playerNum][2];
-            _hp = PLAYER_HP;
-            _level = 1;
-            _score = 0;
-            playerNum++;
-            send_player_info_packet();
-
-            for (auto& u : g_users) {
-                if (u.first != _id) // 나를 제외한 상대방에게 알리고
-                    u.second.do_send(&loginPacket);
-            }
-
-        }
-        case PKT_TYPE::C_S_MOVE:
-            //Move(this, (PKT_CS_MOVE*)packet);
-            break;
-        case PKT_TYPE::C_S_SHOOT:
-
-            break;
-        default:
-            std::cout << "[WARN] Unknown PacketType: " << packet_type << "\n";
-            break;
-        }
-
-	}
-
-    void do_send(void *buff) {
+    void do_send(void* buff) {
         OVER_EXP* send_ov = new OVER_EXP(OP_SEND);
         unsigned char packet_size = reinterpret_cast<unsigned char*>(buff)[0];
         memcpy(send_ov->_buffer, buff, packet_size);
@@ -218,13 +164,97 @@ public:
         DWORD size_sent;
 
         int ret = WSASend(_c_socket, send_ov->_wsabuf, 1, &size_sent, 0, &(send_ov->_over), g_send_callback);
-		if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-			std::cout << "WSASend failed\n";
-		}
+        if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+            std::cout << "WSASend failed\n";
+        }
     }
 
+	void process_packet(unsigned char* packet) {
+
+		const unsigned char packet_type = packet[1];
+        if (packet_type == 0) {
+            std::cout << "[ERROR] Invalid Packet Type\n";
+            return;
+        }
+
+        switch (packet_type) {
+        case ::PKT_TYPE::C_S_LOGIN:
+        {
+            pkt_cs_login* loginPacket = reinterpret_cast<pkt_cs_login*>(packet);
+            _name = loginPacket->name;
+            _skin_type = loginPacket->skin_type;
+            _position[0] = START_POSITIONS[IN_g_player_n][0];
+            _position[1] = START_POSITIONS[IN_g_player_n][1];
+            _position[2] = START_POSITIONS[IN_g_player_n][2];
+            _hp = PLAYER_HP;
+            _level = 1;
+            _score = 0;
+            IN_g_player_n++;
+            send_player_info_packet();
+
+			pkt_sc_player_add p_Add_P;
+			p_Add_P.header.size = sizeof(p_Add_P);
+			p_Add_P.header.type = PKT_TYPE::S_C_PLAYER_ADD;
+			p_Add_P.objectId = _id;
+			strcpy_s(p_Add_P.name, _name.c_str());
+			p_Add_P.skin_type = _skin_type;
+			p_Add_P.position[0] = _position[0];
+			p_Add_P.position[1] = _position[1];
+			p_Add_P.position[2] = _position[2];
+			p_Add_P.hp = _hp;
+			p_Add_P.level = _level;
+			p_Add_P.score = _score;
+
+
+            for (auto& u : g_users) {
+                if (u.first != _id) // 나를 제외한 상대방에게 알리고
+                    u.second.do_send(&p_Add_P);
+            }
+			for (auto& u : g_users) {
+				if (u.first != _id) {// 나를 제외한 상대방의 정보를 나에게 알리고
+					pkt_sc_player_add p_Add_P;
+                    p_Add_P.header.size = sizeof(p_Add_P);
+                    p_Add_P.header.type = PKT_TYPE::S_C_PLAYER_ADD;
+                    p_Add_P.objectId = u.first;
+					strcpy_s(p_Add_P.name, u.second._name.c_str());
+                    p_Add_P.skin_type = u.second._skin_type;
+                    p_Add_P.position[0] = u.second._position[0];
+                    p_Add_P.position[1] = u.second._position[1];
+                    p_Add_P.position[2] = u.second._position[2];
+                    p_Add_P.hp = u.second._hp;
+                    p_Add_P.level = u.second._level;
+                    p_Add_P.score = u.second._score;
+					do_send(&p_Add_P);
+				}
+			}
+
+            break;
+        }
+        case PKT_TYPE::C_S_MOVE:
+        {
+			pkt_cs_move* movePacket = reinterpret_cast<pkt_cs_move*>(packet);
+
+            float deltaTime = 1.0f / 60.0f; // 서버 틱 레이트 기준 (예: 60fps)
+
+            // 이동 거리 = 방향 * 속도 * 시간
+            _position[0] += movePacket->direction[0] * movePacket->speed * deltaTime;
+            _position[1] += movePacket->direction[1] * movePacket->speed * deltaTime;
+            _position[2] += movePacket->direction[2] * movePacket->speed * deltaTime;
+
+            send_player_update();
+            break;
+        }
+
+        case PKT_TYPE::C_S_SHOOT:
+            break;
+        default:
+            std::cout << "[WARN] Unknown PacketType: " << packet_type << "\n";
+            break;
+        }
+	}
+
     void send_player_info_packet() {
-		PKT_SC_PLAYER_ADD p;
+		pkt_sc_player_add p;
 		p.header.size = sizeof(p);
 		p.header.type = PKT_TYPE::S_C_PLAYER_INFO;
 		p.objectId = _id;
@@ -237,9 +267,19 @@ public:
 		p.score = _score;
         do_send(&p);
     }
+    void send_player_move() {
+        pkt_sc_player_move p;
+		p.header.size = sizeof(p);
+		p.header.type = PKT_TYPE::S_C_PLAYER_MOVE;
+		p.objectId = _id;
+		p.position[0] = _position[0];
+		p.position[1] = _position[1];
+		p.position[2] = _position[2];
+		do_send(&p);
+    }
 
     void send_player_update() {
-		PKT_SC_PLAYER_UPDATE p;
+		pkt_sc_plyaer_update p;
 		p.header.size = sizeof(p);
 		p.header.type = PKT_TYPE::S_C_PLAYER_UPDATE;
 		p.objectId = _id;
@@ -290,7 +330,7 @@ int main() {
     else
         std::cout << "WSAStartup 성공\n";
 
-    SOCKET s_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+    SOCKET s_socket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, WSA_FLAG_OVERLAPPED);
     if (s_socket == INVALID_SOCKET)
         error_display("Socket creation failed", WSAGetLastError()); \
     else
