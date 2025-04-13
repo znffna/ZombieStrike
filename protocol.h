@@ -105,7 +105,7 @@ enum ActionType : uint8_t {
 };
 // 플레이어 정보 구조체
 struct PlayerInfo {
-    uint32_t id;
+    uint8_t id;
     float position[3];  // X, Y, Z
     char name[MAX_NAME_SIZE];
     uint8_t skin_type;  // 플레이어 객체 스킨
@@ -178,7 +178,7 @@ struct pkt_cs_hit {
 // 총알 명중 결과
 struct pkt_sc_hit_result {
     PacketHeader header;
-    uint32_t shooterId;   // 누가 쐈는지
+    uint8_t shooterId;   // 누가 쐈는지
     uint32_t zombieId;
     uint8_t zombieHp;
     //uint8_t damage;       // 얼마나 깎였는지
@@ -201,7 +201,7 @@ struct pkt_sc_hit_multi_result {
 // 객체 추가 패킷 (플레이어)
 struct pkt_sc_player_add {
     PacketHeader header;
-    uint32_t objectId;      // 플레이어의 고유 ID
+    uint8_t objectId;      // 플레이어의 고유 ID
 	char name[MAX_NAME_SIZE];   // 플레이어 이름
     uint8_t skin_type;      // 플레이어 스킨 타입
     float position[3];      // 플레이어의 위치
@@ -219,19 +219,19 @@ struct pkt_sc_player_move {
 };
 
 //객체 업데이트 패킷 (플레이어)
-struct pkt_sc_plyaer_update {
+struct pkt_sc_player_update {
     PacketHeader header;
-    uint32_t objectId;     
+    uint8_t objectId;
     float position[3];      
     uint8_t hp;            
     uint16_t score;         
     uint8_t level;          
-    pkt_sc_plyaer_update() { header.type = PKT_TYPE::S_C_PLAYER_UPDATE; }
+    pkt_sc_player_update() { header.type = PKT_TYPE::S_C_PLAYER_UPDATE; }
 };
 // 객체 삭제 패킷 (플레이어)
 struct pkt_sc_player_remove {
     PacketHeader header;
-    uint32_t objectId;     
+    uint8_t objectId;
     pkt_sc_player_remove() { header.type = PKT_TYPE::S_C_PLAYER_REMOVE; }
 };
 

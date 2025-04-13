@@ -59,18 +59,18 @@ public:
 
     WSAOVERLAPPED   _over;
     IO_OP           _io_op;
-    unsigned char   _buffer[1024];
+    uint16_t        _buffer[1024];
     WSABUF          _wsabuf[1];
 };
 
 class SESSION;
 
-std::unordered_map<uint32_t, SESSION> g_users;
+std::unordered_map<uint8_t, SESSION> g_users;
 
 class SESSION {
 public:
     SOCKET          _c_socket;
-    uint32_t        _id;
+    uint8_t        _id;
 
     OVER_EXP        _recv_over{OP_RECV};
     int             _remained = 0;
@@ -127,20 +127,25 @@ public:
 
     void recv_callback(int num_bytes) {
         // ----- 패킷 조립 시작 -----
-        unsigned char* p = _recv_over._buffer;
+        uint16_t* p = _recv_over._buffer;
         int total = _remained + num_bytes;
 
         // 앞에 남은 데이터 있으면 이어붙임
         if (_remained > 0)
             memmove(p, p + _remained, num_bytes);
 
-        unsigned char* packet = p;
+        uint16_t* packet = p;
         int offset = 0;
 
         while (p + 1 <= p + total) {
-            unsigned char packetSize = *p;
+            uint16_t packetSize = *p;
 
             if (p + packetSize > p + total) break; // 아직 패킷 완성이 안 됨
+
+            std::cout << "[RECV][" << _id << "] packetSize = " << (int)packetSize << ", Raw = ";
+            for (int i = 0; i < packetSize; ++i)
+                printf("%02X ", p[i]);
+            std::cout << std::endl;
 
 			process_packet(p);    // 패킷 처리
             p += packetSize;      // 다음 패킷으로 이동
@@ -158,24 +163,26 @@ public:
 
     void do_send(void* buff) {
         OVER_EXP* send_ov = new OVER_EXP(OP_SEND);
-        unsigned char packet_size = reinterpret_cast<unsigned char*>(buff)[0];
+        uint16_t packet_size = reinterpret_cast<uint16_t*>(buff)[0];
         memcpy(send_ov->_buffer, buff, packet_size);
         send_ov->_wsabuf[0].len = packet_size;
         DWORD size_sent;
 
+		std::cout << "[do_send] size = " << packet_size << ", type = " << (int)reinterpret_cast<uint16_t*>(buff)[1] << std::endl;
         int ret = WSASend(_c_socket, send_ov->_wsabuf, 1, &size_sent, 0, &(send_ov->_over), g_send_callback);
         if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
             std::cout << "WSASend failed\n";
         }
     }
 
-	void process_packet(unsigned char* packet) {
+	void process_packet(uint16_t* packet) {
 
 		const unsigned char packet_type = packet[1];
         if (packet_type == 0) {
             std::cout << "[ERROR] Invalid Packet Type\n";
             return;
         }
+		std::cout << "[RECV][" << _id << "] Packet Type: " << (int)packet_type << "\n";
 
         switch (packet_type) {
         case ::PKT_TYPE::C_S_LOGIN:
@@ -190,6 +197,9 @@ public:
             _level = 1;
             _score = 0;
             IN_g_player_n++;
+            
+			std::cout << "[process_packet][RECV][" << _id << "] Login: " << _name << "\n";
+			std::cout << "[process_packet][RECV][" << _id << "] Skin Type: " << (int)_skin_type << "\n";
             send_player_info_packet();
 
 			pkt_sc_player_add p_Add_P;
@@ -235,7 +245,6 @@ public:
 			pkt_cs_move* movePacket = reinterpret_cast<pkt_cs_move*>(packet);
 
             float deltaTime = 1.0f / 60.0f; // 서버 틱 레이트 기준 (예: 60fps)
-
             // 이동 거리 = 방향 * 속도 * 시간
             _position[0] += movePacket->direction[0] * movePacket->speed * deltaTime;
             _position[1] += movePacket->direction[1] * movePacket->speed * deltaTime;
@@ -265,6 +274,7 @@ public:
 		p.hp = _hp;
 		p.level = _level;
 		p.score = _score;
+        std::cout << "[SEND]" << "size: " << p.header.size << ", type: " << (int)p.header.type << std::endl;
         do_send(&p);
     }
     void send_player_move() {
@@ -279,7 +289,7 @@ public:
     }
 
     void send_player_update() {
-		pkt_sc_plyaer_update p;
+        pkt_sc_player_update p;
 		p.header.size = sizeof(p);
 		p.header.type = PKT_TYPE::S_C_PLAYER_UPDATE;
 		p.objectId = _id;
@@ -358,7 +368,7 @@ int main() {
 	uint32_t clientId = 0;
 
     while (serverRunning) {
-        auto c_socket = WSAAccept(s_socket,reinterpret_cast<sockaddr*>(&serverAddr_size), &serverAddr_size, NULL, NULL);
+        auto c_socket = WSAAccept(s_socket,reinterpret_cast<sockaddr*>(&serverAddr), &serverAddr_size, NULL, NULL);
         if (c_socket == INVALID_SOCKET) {
             std::cout << "Accept failed\n";
             continue;
