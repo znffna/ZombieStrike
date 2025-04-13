@@ -12,8 +12,11 @@
 #include <unordered_map>
 #include <queue>
 #include "../../protocol.h"
+#include <print>
 
 #pragma comment(lib, "ws2_32.lib")
+
+#define SESSION_ID uint32_t
 
 void error_display(const char* msg, int err_no) {
     WCHAR* lpMsgBuf;
@@ -65,12 +68,12 @@ public:
 
 class SESSION;
 
-std::unordered_map<uint8_t, SESSION> g_users;
+std::unordered_map<SESSION_ID, SESSION> g_users;
 
 class SESSION {
 public:
     SOCKET          _c_socket;
-    uint8_t        _id;
+    SESSION_ID       _id;
 
     OVER_EXP        _recv_over{OP_RECV};
     int             _remained = 0;
@@ -102,7 +105,7 @@ public:
         std::cout << "DEFAULT SESSION CONSTRUCTOR CALLED!!\n";
         exit(-1);
     }
-	SESSION(uint32_t session_id, SOCKET s) : _id(session_id), _c_socket(s) 
+	SESSION(SESSION_ID session_id, SOCKET s) : _id(session_id), _c_socket(s)
     {
         _recv_over._wsabuf[0].len = sizeof(_recv_over._buffer);
         _recv_over._wsabuf[0].buf = reinterpret_cast<CHAR* >(_recv_over._buffer);
@@ -198,8 +201,8 @@ public:
             _score = 0;
             IN_g_player_n++;
             
-			std::cout << "[process_packet][RECV][" << _id << "] Login: " << _name << "\n";
-			std::cout << "[process_packet][RECV][" << _id << "] Skin Type: " << (int)_skin_type << "\n";
+			std::cout << "[process_packet][RECV][" << (int)_id << "] Login: " << _name << "\n";
+			std::cout << "[process_packet][RECV][" << (int)_id << "] Skin Type: " << (int)_skin_type << "\n";
             send_player_info_packet();
 
 			pkt_sc_player_add p_Add_P;
@@ -365,7 +368,7 @@ int main() {
 
     std::thread(serverControl).detach();
 
-	uint32_t clientId = 0;
+    SESSION_ID clientId = 0;
 
     while (serverRunning) {
         auto c_socket = WSAAccept(s_socket,reinterpret_cast<sockaddr*>(&serverAddr), &serverAddr_size, NULL, NULL);
