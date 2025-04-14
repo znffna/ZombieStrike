@@ -8,7 +8,7 @@
 
 class CCamera;
 
-class CColliderComponent;
+class CCollider;
 class CSphereCollider;
 class CAABBCollider;
 class COBBCollider;
@@ -16,15 +16,15 @@ class COBBCollider;
 using DefaultCollider = CAABBCollider; // Alias for easier usage
 
 class CMesh;
+class CTransform;
 
-using CCollider = CColliderComponent; // Alias for easier usage
-
-class CColliderComponent : public CComponent
+class CCollider : public CComponent
 {
 public:
-	CColliderComponent() { }
-	virtual ~CColliderComponent() { }
+	CCollider(CGameObject* pObject) : CComponent(pObject) { }
+	virtual ~CCollider() { }
 
+	virtual void Init(CGameObject* pObject);
 	virtual std::shared_ptr<CComponent> Clone() const = 0;
 
 	virtual void Update(float fTimeElapsed) override;
@@ -35,23 +35,25 @@ public:
 	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) = 0;
 	//virtual void RenderCollider(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) = 0;
 
-	virtual bool IsCollided(CColliderComponent* pCollider) = 0;
-	virtual bool IsCollided(std::shared_ptr<CColliderComponent> pCollider) { return IsCollided(pCollider.get()); };
+	virtual bool IsCollided(CCollider* pCollider) = 0;
+	virtual bool IsCollided(std::shared_ptr<CCollider> pCollider) { return IsCollided(pCollider.get()); };
 
 	virtual XMFLOAT4X4 GetColliderMatrix() = 0;
 
 	const enum ColliderType { AABB, OBB, Sphere };
 
 	virtual int GetColliderType() = 0;
+
+	std::shared_ptr<CTransform> m_pTransform;
 };
 
 //////////////////////////////////////////////////////////////////////////
 //
 
-class CSphereCollider : public CColliderComponent
+class CSphereCollider : public CCollider
 {
 public:
-	CSphereCollider() { }
+	CSphereCollider(CGameObject* pObject) : CCollider(pObject) {}
 	virtual ~CSphereCollider() { }
 
 	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CSphereCollider>(*this); };
@@ -76,7 +78,7 @@ public:
 
 	};
 
-	virtual bool IsCollided(CColliderComponent* pCollider) override;;
+	virtual bool IsCollided(CCollider* pCollider) override;;
 
 	XMFLOAT4X4 GetColliderMatrix() override
 	{
@@ -95,10 +97,10 @@ private:
 	BoundingSphere m_xmWorldBoundingSphere;
 };
 
-class CAABBCollider : public CColliderComponent
+class CAABBCollider : public CCollider
 {
 public:
-	CAABBCollider() { }
+	CAABBCollider(CGameObject* pObject) : CCollider(pObject) {}
 	virtual ~CAABBCollider() { }
 
 	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CAABBCollider>(*this); };
@@ -116,7 +118,7 @@ public:
 		m_xmBoundingBox.Transform(m_xmWorldBoundingBox, XMLoadFloat4x4(&xmf4x4World));
 	};
 
-	virtual bool IsCollided(CColliderComponent* pCollider) override;;
+	virtual bool IsCollided(CCollider* pCollider) override;;
 
 	XMFLOAT4X4 GetColliderMatrix() override
 	{
@@ -136,10 +138,10 @@ private:
 	BoundingBox m_xmWorldBoundingBox;
 };
 
-class COBBCollider : public CColliderComponent
+class COBBCollider : public CCollider
 {
 public:
-	COBBCollider() { }
+	COBBCollider(CGameObject* pObject) : CCollider(pObject) {}
 	virtual ~COBBCollider() { }
 
 	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<COBBCollider>(*this); };
@@ -158,7 +160,7 @@ public:
 		m_xmBoundingOrientedBox.Transform(m_xmWorldBoundingOrientedBox, XMLoadFloat4x4(&xmf4x4World));
 	};
 
-	virtual bool IsCollided(CColliderComponent* pCollider) override;;
+	virtual bool IsCollided(CCollider* pCollider) override;;
 
 	XMFLOAT4X4 GetColliderMatrix() override
 	{

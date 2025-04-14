@@ -69,7 +69,6 @@ public:
 	// Object Initialization
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList) {
 		// Transform Owner Setting
-		m_pTransform->SetOwner(shared_from_this());
 	};
 
 	virtual void GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs)
@@ -96,7 +95,7 @@ public:
 		{
 			auto pclone = pComponent.second->Clone();
 			m_pComponents[pComponent.first] = pclone;
-			pclone->SetOwner(shared_from_this());
+			pclone->Init(this);
 		}
 
 		// Copy Childs
@@ -195,9 +194,9 @@ public:
 	template <typename T>
 	std::shared_ptr<T> AddComponent(std::shared_ptr<CGameObject> pOwner)
 	{
-		std::shared_ptr<T> pComponent = std::make_shared<T>();
-		pComponent->SetOwner(pOwner);
+		std::shared_ptr<T> pComponent = std::make_shared<T>(pOwner.get());
 		m_pComponents[COMPONENT_KEY(T)] = pComponent;
+		pComponent->Init(pOwner.get());
 		return pComponent;
 	};
 
@@ -268,7 +267,7 @@ protected:
 	std::vector<std::shared_ptr<CMaterial>> m_ppMaterials; // Object CMaterial
 public:
 	// Transform
-	std::shared_ptr<CTransform> m_pTransform = std::make_shared<CTransform>();
+	std::shared_ptr<CTransform> m_pTransform = std::make_shared<CTransform>(this);
 
 	// Component
 	std::unordered_map<std::string, std::shared_ptr<CComponent>> m_pComponents;

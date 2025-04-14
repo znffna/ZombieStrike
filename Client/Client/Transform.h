@@ -7,15 +7,13 @@
 
 #include "Component.h"
 
-class CTransformComponent;
-using CTransform = CTransformComponent; // Alias
-class CTransformComponent : public CComponent, public std::enable_shared_from_this<CTransform>
+class CTransform : public CComponent
 {
 public:
-	CTransformComponent() { }
-	virtual ~CTransformComponent() { }
+	CTransform(CGameObject* pObject) : CComponent(pObject) { }
+	virtual ~CTransform() { }
 
-	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared< CTransformComponent>(*this); };
+	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared< CTransform>(*this); };
 
 	// Transform Getter
 	DirectX::XMFLOAT3 GetPosition() { return m_xmf3Position; }

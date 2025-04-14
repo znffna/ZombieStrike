@@ -6,8 +6,9 @@
 
 #include "Component.h"
 
-CComponent::CComponent()
+CComponent::CComponent(CGameObject* pObject)
 {
+	if (pObject) Init(pObject);
 }
 
 CComponent::~CComponent()

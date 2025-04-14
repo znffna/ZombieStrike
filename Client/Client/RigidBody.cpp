@@ -2,13 +2,19 @@
 #include "Collider.h"
 #include "GameObject.h"
 
+#include "Transform.h"
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-void CRigidBodyComponent::UpdateRigidBody(float fTimeElapsed)
+void CRigidBody::Init(CGameObject* pObject)
 {
-	auto owner = GetOwner();
+	m_pTransform = pObject->GetComponent<CTransform>();
+	m_pCollider = pObject->GetComponent<CCollider>();
+}
 
+void CRigidBody::UpdateRigidBody(float fTimeElapsed)
+{
 	// 중력 적용 및 속도 갱신
 	UpdateVelocity(fTimeElapsed);
 
@@ -28,7 +34,7 @@ void CRigidBodyComponent::UpdateRigidBody(float fTimeElapsed)
 }
 
 // 마찰에 의한 속도 감소
-void CRigidBodyComponent::ApplyDamping(float fTimeElapsed)
+void CRigidBody::ApplyDamping(float fTimeElapsed)
 {
 	// 이동 후처치(속도 감소(및 정지))
 	float fLength = Vector3::Length(m_xmf3Velocity);
@@ -39,16 +45,16 @@ void CRigidBodyComponent::ApplyDamping(float fTimeElapsed)
 }
 
 // 일반적인 힘 적용 (중심에 힘을 가할 때)
-void CRigidBodyComponent::ApplyForce(const XMFLOAT3& f)
+void CRigidBody::ApplyForce(const XMFLOAT3& f)
 {
 	XMStoreFloat3(&m_xmf3Force, XMVectorAdd(XMLoadFloat3(&m_xmf3Force), XMLoadFloat3(&f)));
 }
 
 // 특정 위치에 힘을 가해 Torque를 생성하는 함수
-void CRigidBodyComponent::ApplyForceAtPoint(const XMFLOAT3& f, const XMFLOAT3& point)
+void CRigidBody::ApplyForceAtPoint(const XMFLOAT3& f, const XMFLOAT3& point)
 {
 	// Transform에서 World Matrix 가져오기
-	XMFLOAT4X4 xmf4x4worldMatrix = GetOwner()->GetWorldMatrix();
+	XMFLOAT4X4 xmf4x4worldMatrix = m_pTransform->GetWorldMatrix();
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&xmf4x4worldMatrix);
 
 	// 중심 좌표 추출 (Matrix에서 Translation 부분 가져오기)
@@ -68,10 +74,10 @@ void CRigidBodyComponent::ApplyForceAtPoint(const XMFLOAT3& f, const XMFLOAT3& p
 }
 
 // RigidBody의 업데이트 (물리 연산)
-void CRigidBodyComponent::Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT4& rotation)
+void CRigidBody::Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT4& rotation)
 {
 	// Transform에서 World Matrix 가져오기
-	XMFLOAT4X4 xmf4x4worldMatrix = GetOwner()->GetWorldMatrix();
+	XMFLOAT4X4 xmf4x4worldMatrix = m_pTransform->GetWorldMatrix();
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&xmf4x4worldMatrix);
 	XMVECTOR positionVec = worldMatrix.r[3]; // Translation(위치)
 
@@ -100,28 +106,24 @@ void CRigidBodyComponent::Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT
 	worldMatrix.r[3] = positionVec;
 
 	// 업데이트된 Matrix 저장
-	GetOwner()->SetWorldMatrix(worldMatrix);
+	m_pTransform->SetWorldMatrix(worldMatrix);
 
 	// 힘 및 토크 초기화 (순간적인 힘 처리)
 	m_xmf3Force = { 0, 0, 0 };
 	m_xmf3Torque = { 0, 0, 0 };
 }
 
-void CRigidBodyComponent::OnCollision(std::shared_ptr<CGameObject> pGameObject)
+void CRigidBody::OnCollision(std::shared_ptr<CGameObject> pGameObject)
 {
 	// 충돌 처리
-	auto pCollider = pGameObject->GetComponent<CCollider>();
-
-	if (pCollider)
+	if (m_pCollider)
 	{
-		auto pTransform = GetOwner()->GetComponent<CTransformComponent>();
-
 		auto pOtherCollider = pGameObject->GetComponent<CCollider>();
-		auto pOtherTransform = pGameObject->GetComponent<CTransformComponent>();
+		auto pOtherTransform = pGameObject->GetComponent<CTransform>();
 
 		if (pOtherCollider)
 		{
-			XMFLOAT3 xmf3Position = pTransform->GetPosition();
+			XMFLOAT3 xmf3Position = m_pTransform->GetPosition();
 			XMFLOAT3 xmf3OtherPosition = pOtherTransform->GetPosition();
 			XMFLOAT3 xmf3Direction = Vector3::Subtract(xmf3Position, xmf3OtherPosition);
 			float fDistance = Vector3::Length(xmf3Direction);
@@ -129,13 +131,13 @@ void CRigidBodyComponent::OnCollision(std::shared_ptr<CGameObject> pGameObject)
 			{
 				xmf3Direction = Vector3::Normalize(xmf3Direction);
 				xmf3Direction = Vector3::ScalarProduct(xmf3Direction, fDistance * 0.5f);
-				pTransform->Move(xmf3Direction);
+				m_pTransform->Move(xmf3Direction);
 			}
 		}
 	}	
 }
 
-void CRigidBodyComponent::UpdateVelocity(float fTimeElapsed)
+void CRigidBody::UpdateVelocity(float fTimeElapsed)
 {
 	// 중력 적용
 	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, m_xmf3Gravity);
@@ -158,20 +160,17 @@ void CRigidBodyComponent::UpdateVelocity(float fTimeElapsed)
 	XMFLOAT3 xmf3Velocity = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
 
 	// 이동 거리만큼 이동
-	auto pTransform = GetOwner()->GetComponent<CTransformComponent>();
-	pTransform->Move(xmf3Velocity);
+	m_pTransform->Move(xmf3Velocity);
 }
 
-void CRigidBodyComponent::OnTerrainUpdateCallback(float fTimeElapsed)
+void CRigidBody::OnTerrainUpdateCallback(float fTimeElapsed)
 {
 	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pTerrainUpdatedContext;
 	XMFLOAT3 xmf3Scale = pTerrain->GetScale();
 	int xmf4TerrainSize = pTerrain->GetHeightMapWidth();
 	int xmf4TerrainLength = pTerrain->GetHeightMapLength();
 
-	auto owner = GetOwner();
-
-	XMFLOAT3 xmf3PlayerPosition = owner->GetPosition();
+	XMFLOAT3 xmf3PlayerPosition = m_pTransform->GetPosition();
 	int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
 	//float fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 6.0f;
@@ -186,31 +185,15 @@ void CRigidBodyComponent::OnTerrainUpdateCallback(float fTimeElapsed)
 
 	float fHeight = 0.0f;
 	// 지상과의 높이 체크
-	auto AABB = owner->GetComponent<CAABBCollider>();
-	if (AABB) {
-		float modelHeight = AABB->GetBoundingBox().Extents.y / 2;
-
-		fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z) + modelHeight;
-		if (xmf3PlayerPosition.y < fHeight)
-		{
-			XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
-			xmf3PlayerVelocity.y = 0.0f;
-			SetVelocity(xmf3PlayerVelocity);
-			xmf3PlayerPosition.y = fHeight;
-			owner->SetPosition(xmf3PlayerPosition);
-		}
+	fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z);
+	if (xmf3PlayerPosition.y < fHeight)
+	{
+		XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
+		xmf3PlayerVelocity.y = 0.0f;
+		SetVelocity(xmf3PlayerVelocity);
+		xmf3PlayerPosition.y = fHeight;
+		m_pTransform->SetPosition(xmf3PlayerPosition);
 	}
-	else {
-
-		fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z);
-		if (xmf3PlayerPosition.y < fHeight)
-		{
-			XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
-			xmf3PlayerVelocity.y = 0.0f;
-			SetVelocity(xmf3PlayerVelocity);
-			xmf3PlayerPosition.y = fHeight;
-			owner->SetPosition(xmf3PlayerPosition);
-		}
-	}
+	
 }
 

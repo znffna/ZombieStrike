@@ -9,6 +9,8 @@
 #include "stdafx.h"
 #include "Component.h"
 
+class CTransform;
+
 struct CB_CAMERA_INFO
 {
 	XMFLOAT4X4				m_xmf4x4View;
@@ -22,8 +24,10 @@ struct CB_CAMERA_INFO
 class CCamera : public CComponent
 {
 public:
-	CCamera();
+	CCamera(CGameObject* pObject = nullptr);
 	virtual ~CCamera();
+
+	virtual void Init(CGameObject* pObject);
 
 	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CCamera>(*this); };
 
@@ -68,6 +72,8 @@ public:
 	virtual void Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed) { }
 
 protected:
+	std::shared_ptr<CTransform> m_pChaseTransform;
+	
 	// ViewPort and ScissorRect
 	D3D12_VIEWPORT m_d3dViewport;
 	D3D12_RECT m_d3dScissorRect;

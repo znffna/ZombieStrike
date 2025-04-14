@@ -11,16 +11,17 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-void CColliderComponent::Update(float fTimeElapsed)
+void CCollider::Init(CGameObject* pObject)
 {
-	auto pOwner = GetOwner();
-	if (pOwner)
+	m_pTransform = pObject->GetComponent<CTransform>();
+}
+
+
+void CCollider::Update(float fTimeElapsed)
+{
+	if (m_pTransform)
 	{
-		auto pTransform = pOwner->GetComponent<CTransform>();
-		if (pTransform)
-		{
-			UpdateCollider(pTransform->GetWorldMatrix());
-		}
+		UpdateCollider(m_pTransform->GetWorldMatrix());
 	}
 }
 
@@ -31,7 +32,7 @@ void CSphereCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
 {
 	m_xmBoundingSphere = pMesh->GetBoundingSphere();
 }
-bool CSphereCollider::IsCollided(CColliderComponent* pCollider)
+bool CSphereCollider::IsCollided(CCollider* pCollider)
 {
 	switch (pCollider->GetColliderType())
 	{
@@ -61,7 +62,7 @@ void CAABBCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
 {
 	m_xmBoundingBox = pMesh->GetBoundingBox();
 }
-bool CAABBCollider::IsCollided(CColliderComponent* pCollider)
+bool CAABBCollider::IsCollided(CCollider* pCollider)
 {
 	switch (pCollider->GetColliderType())
 	{
@@ -91,7 +92,7 @@ void COBBCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
 {
 	m_xmBoundingOrientedBox = pMesh->GetBoundingOrientedBox(XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 }
-bool COBBCollider::IsCollided(CColliderComponent* pCollider)
+bool COBBCollider::IsCollided(CCollider* pCollider)
 {
 	switch (pCollider->GetColliderType())
 	{
