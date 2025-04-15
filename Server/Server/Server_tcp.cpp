@@ -16,7 +16,6 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
-#define SESSION_ID uint32_t
 
 void error_display(const char* msg, int err_no) {
     WCHAR* lpMsgBuf;
@@ -34,9 +33,15 @@ struct ShootPacket {
     float bulletPos[3];
     float bulletDir[3];
 };
+
 struct Zombie {
-    ZombieInfo zombie_info;
+	SIZEID id;
+    Objectfixdata zombieobj;
+	ObjectMeta zombiemeta;
+    SIZE2 damage;               
+    SIZE1 act_type;             
 };
+
 std::vector<Zombie*> zombie_st;
 std::mutex zombiesMutex;
 
@@ -62,29 +67,35 @@ public:
 
     WSAOVERLAPPED   _over;
     IO_OP           _io_op;
-    uint16_t        _buffer[1024];
+    SIZE2           _buffer[1024];
     WSABUF          _wsabuf[1];
 };
 
 class SESSION;
 
-std::unordered_map<SESSION_ID, SESSION> g_users;
+std::unordered_map<SIZEID, SESSION> g_users;
 
 class SESSION {
 public:
     SOCKET          _c_socket;
-    SESSION_ID       _id;
+    SIZEID          _id;
 
     OVER_EXP        _recv_over{OP_RECV};
     int             _remained = 0;
 
-    float           _position[3];
+    ObjectType      _obj_type;
+    SIZE1           _skin_type;
     std::string     _name;
-    uint8_t         _hp;
-    uint16_t        _score;
-    uint8_t         _level;
-    uint8_t         _skin_type;
 
+    Vector3         _position;
+    Vector3         _direction;
+	float           _speed;
+    SIZE2           _hp;
+    GunType         _gun_type;     
+    SIZE1           _level;
+    SIZE2           _score;
+    SIZE2           _damage;               
+    SIZE1           _act_type;            
 
     void do_recv() {
         DWORD flags = 0;
@@ -105,7 +116,7 @@ public:
         std::cout << "DEFAULT SESSION CONSTRUCTOR CALLED!!\n";
         exit(-1);
     }
-	SESSION(SESSION_ID session_id, SOCKET s) : _id(session_id), _c_socket(s)
+	SESSION(SIZEID session_id, SOCKET s) : _id(session_id), _c_socket(s)
     {
         _recv_over._wsabuf[0].len = sizeof(_recv_over._buffer);
         _recv_over._wsabuf[0].buf = reinterpret_cast<CHAR* >(_recv_over._buffer);
@@ -117,10 +128,10 @@ public:
 	}
     ~SESSION() 
     {
-		pkt_sc_player_remove p;
+        pkt_sc_object_remove p;
 		p.header.size = sizeof(p);
-		p.header.type = PKT_TYPE::S_C_PLAYER_REMOVE;
-		p.objectId = _id;
+		p.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
+		p.id= _id;
         for (auto& u : g_users) {
 			if (u.first != _id) // 나를 제외한 상대방에게 알리고
 				u.second.do_send(&p);
@@ -177,6 +188,24 @@ public:
             std::cout << "WSASend failed\n";
         }
     }
+    void send_object_update() {
+        pkt_sc_object_update p_update;
+        p_update.header.size = sizeof(p_update);
+        p_update.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
+        p_update.id = _id;
+        p_update.obj.meta.position = _position;
+        p_update.obj.meta.direction = _direction;
+        p_update.obj.meta.speed = _speed;
+        p_update.obj.meta.hp = _hp;
+
+        p_update.obj.gun_type = _gun_type;
+        p_update.obj.level = _level;
+        p_update.obj.score = _score;
+        p_update.obj.damage = _damage;
+        p_update.obj.act_type = _act_type;
+        do_send(&p_update);
+    }
+
 
 	void process_packet(uint16_t* packet) {
 
@@ -191,33 +220,34 @@ public:
         case ::PKT_TYPE::C_S_LOGIN:
         {
             pkt_cs_login* loginPacket = reinterpret_cast<pkt_cs_login*>(packet);
-            _name = loginPacket->name;
-            _skin_type = loginPacket->skin_type;
-            _position[0] = START_POSITIONS[IN_g_player_n][0];
-            _position[1] = START_POSITIONS[IN_g_player_n][1];
-            _position[2] = START_POSITIONS[IN_g_player_n][2];
-            _hp = PLAYER_HP;
-            _level = 1;
-            _score = 0;
-            IN_g_player_n++;
+            _obj_type   = ObjectType::PLAYER;
+            _skin_type  = loginPacket->skin_type;
+            _name       = loginPacket->name;
+            _position   = START_POSITIONS[IN_g_player_n];
+            _direction  = { 0.0f,0.0f, 0.0f };
+            _speed      = 0.0f;
+            _hp         = PLAYER_HP;
+			_gun_type   = GunType::BULLET_PISTOL; // 총 종류
+            _level      = 1;
+            _score      = 0;
+            _damage     = 0;
+			_act_type   = ActionType::NONE;
             
+            IN_g_player_n++;
 			std::cout << "[process_packet][RECV][" << (int)_id << "] Login: " << _name << "\n";
 			std::cout << "[process_packet][RECV][" << (int)_id << "] Skin Type: " << (int)_skin_type << "\n";
-            send_player_info_packet();
+            send_object_update();
 
-			pkt_sc_player_add p_Add_P;
+			pkt_sc_object_add p_Add_P;
 			p_Add_P.header.size = sizeof(p_Add_P);
-			p_Add_P.header.type = PKT_TYPE::S_C_PLAYER_ADD;
-			p_Add_P.objectId = _id;
-			strcpy_s(p_Add_P.name, _name.c_str());
-			p_Add_P.skin_type = _skin_type;
-			p_Add_P.position[0] = _position[0];
-			p_Add_P.position[1] = _position[1];
-			p_Add_P.position[2] = _position[2];
-			p_Add_P.hp = _hp;
-			p_Add_P.level = _level;
-			p_Add_P.score = _score;
-
+			p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+			p_Add_P.id = _id;
+			p_Add_P.fixdata.obj_type = ObjectType::PLAYER;
+			p_Add_P.fixdata.skin_type = _skin_type;
+            strcpy_s(p_Add_P.fixdata.name, _name.c_str());
+			p_Add_P.fixdata.startposition = _position;
+			p_Add_P.fixdata.starthp = _hp;
+            
 
             for (auto& u : g_users) {
                 if (u.first != _id) // 나를 제외한 상대방에게 알리고
@@ -225,35 +255,46 @@ public:
             }
 			for (auto& u : g_users) {
 				if (u.first != _id) {// 나를 제외한 상대방의 정보를 나에게 알리고
-					pkt_sc_player_add p_Add_P;
+                    pkt_sc_object_add p_Add_P;
                     p_Add_P.header.size = sizeof(p_Add_P);
-                    p_Add_P.header.type = PKT_TYPE::S_C_PLAYER_ADD;
-                    p_Add_P.objectId = u.first;
-					strcpy_s(p_Add_P.name, u.second._name.c_str());
-                    p_Add_P.skin_type = u.second._skin_type;
-                    p_Add_P.position[0] = u.second._position[0];
-                    p_Add_P.position[1] = u.second._position[1];
-                    p_Add_P.position[2] = u.second._position[2];
-                    p_Add_P.hp = u.second._hp;
-                    p_Add_P.level = u.second._level;
-                    p_Add_P.score = u.second._score;
+                    p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+
+                    p_Add_P.id = u.first;
+                    p_Add_P.fixdata.obj_type = ObjectType::PLAYER;
+                    p_Add_P.fixdata.skin_type = _skin_type;
+                    strcpy_s(p_Add_P.fixdata.name, _name.c_str());
+                    p_Add_P.fixdata.startposition = u.second._position;
+                    p_Add_P.fixdata.starthp = u.second._hp;
 					do_send(&p_Add_P);
 				}
 			}
-
             break;
         }
-        case PKT_TYPE::C_S_MOVE:
+        case PKT_TYPE::C_S_UPDATE:
         {
-			pkt_cs_move* movePacket = reinterpret_cast<pkt_cs_move*>(packet);
+			pkt_cs_update* updatePacket = reinterpret_cast<pkt_cs_update*>(packet);
 
             float deltaTime = 1.0f / 60.0f; // 서버 틱 레이트 기준 (예: 60fps)
             // 이동 거리 = 방향 * 속도 * 시간
-            _position[0] += movePacket->direction[0] * movePacket->speed * deltaTime;
-            _position[1] += movePacket->direction[1] * movePacket->speed * deltaTime;
-            _position[2] += movePacket->direction[2] * movePacket->speed * deltaTime;
+            _position += updatePacket->obj.meta.direction * updatePacket->obj.meta.speed * deltaTime;
+         
+            pkt_cs_update u_move_p;
+			u_move_p.header.size = sizeof(u_move_p);
+			u_move_p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
+			u_move_p.id = _id;
+			u_move_p.obj.meta.position = _position;
+			u_move_p.obj.meta.direction = _direction;
+			u_move_p.obj.meta.speed = _speed;
+			u_move_p.obj.meta.hp = _hp;
+			u_move_p.obj.gun_type = _gun_type;
+			u_move_p.obj.level = _level;
+			u_move_p.obj.score = _score;
+			u_move_p.obj.damage = _damage;
+			u_move_p.obj.act_type = _act_type;
+			for (auto& u : g_users) {
+				u.second.do_send(&u_move_p); // 나포함 모두에게 알림 좌표의 이동을
+			}
 
-            send_player_update();
             break;
         }
 
@@ -265,47 +306,8 @@ public:
         }
 	}
 
-    void send_player_info_packet() {
-		pkt_sc_player_add p;
-		p.header.size = sizeof(p);
-		p.header.type = PKT_TYPE::S_C_PLAYER_INFO;
-		p.objectId = _id;
-		p.skin_type = _skin_type;
-        p.position[0] = _position[0];
-		p.position[1] = _position[1];
-		p.position[2] = _position[2];
-		p.hp = _hp;
-		p.level = _level;
-		p.score = _score;
-        std::cout << "[SEND]" << "size: " << p.header.size << ", type: " << (int)p.header.type << std::endl;
-        do_send(&p);
-    }
-    void send_player_move() {
-        pkt_sc_player_move p;
-		p.header.size = sizeof(p);
-		p.header.type = PKT_TYPE::S_C_PLAYER_MOVE;
-		p.objectId = _id;
-		p.position[0] = _position[0];
-		p.position[1] = _position[1];
-		p.position[2] = _position[2];
-		do_send(&p);
-    }
-
-    void send_player_update() {
-        pkt_sc_player_update p;
-		p.header.size = sizeof(p);
-		p.header.type = PKT_TYPE::S_C_PLAYER_UPDATE;
-		p.objectId = _id;
-		p.position[0] = _position[0];
-		p.position[1] = _position[1];
-		p.position[2] = _position[2];
-		p.hp = _hp;
-		p.level = _level;
-		p.score = _score;
-        do_send(&p);
-    }
-
 };
+
 void CALLBACK g_send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
 {
     OVER_EXP* send_ov = reinterpret_cast<OVER_EXP*>(p_over);
@@ -314,12 +316,11 @@ void CALLBACK g_send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
 
 void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
 {
-    auto my_id = reinterpret_cast<uint32_t>(p_over->hEvent);
+    auto my_id = reinterpret_cast<SIZEID>(p_over->hEvent);
 
     g_users[my_id].recv_callback(num_bytes);
 
 }
-
 
 void serverControl() {
     while (true) {
@@ -368,7 +369,7 @@ int main() {
 
     std::thread(serverControl).detach();
 
-    SESSION_ID clientId = 0;
+    SIZEID clientId = 0;
 
     while (serverRunning) {
         auto c_socket = WSAAccept(s_socket,reinterpret_cast<sockaddr*>(&serverAddr), &serverAddr_size, NULL, NULL);

@@ -29,7 +29,6 @@ using SIZE3   = uint32_t;
 const uint8_t PLAYER_HP = 500;
 
 
-
 // --------------------------
 // 패킷 ID 정의
 // --------------------------
@@ -48,8 +47,7 @@ enum PKT_TYPE : SIZE1 {
     S_C_HIT_RESULT = 200,
 
     // 오브젝트 패킷 공통 처리용
-	S_C_OBJECT_ENTER = 300,
-    S_C_OBJECT_ADD ,
+    S_C_OBJECT_ADD = 300,
     S_C_OBJECT_UPDATE ,
     S_C_OBJECT_REMOVE ,
 
@@ -96,7 +94,6 @@ struct Vector3 {
         return sqrtf(x * x + y * y + z * z);
     }
 };
-
 
 
 // 시작 위치
@@ -162,7 +159,7 @@ struct Objectfixdata {          // 고정정보
     ObjectType obj_type;
     SIZE1 skin_type;
     char name[MAX_NAME_SIZE];
-    Vector3 position;           // 초기 위치
+    Vector3 startposition;      // 초기 위치
 };
 
 struct ObjectMeta {             // 필수정보
@@ -227,15 +224,15 @@ struct pkt_cs_login {
 struct pkt_cs_update {
     PacketHeader header;
     SIZEID id;
-    ObjectDynamicInfo obj;         // 플레이어 정보
+    ObjectDynamicInfo obj;          // 플레이어 정보
     pkt_cs_update() { header.type = PKT_TYPE::C_S_UPDATE; }
 };
 
 // 총알 발사 패킷
 struct pkt_cs_shoot {
     PacketHeader header;
-	SIZEID id;                  // 누가 쐈는지
-    SIZE1 GunType; // 총 종류
+	SIZEID id;                      // 누가 쐈는지
+    SIZE1 GunType;                  // 총 종류
     //int hitZombieId;
     float bulletPos[3];
     float bulletDir[3];
@@ -245,8 +242,8 @@ struct pkt_cs_shoot {
 // 총알 명중 패킷
 struct pkt_cs_hit {
 	PacketHeader header;
-    SIZEID shooterId;   // 누가 쐈는지
-    SIZEID zombieId;    // 맞은 좀비 ID
+    SIZEID shooterId;               // 누가 쐈는지
+    SIZEID zombieId;                // 맞은 좀비 ID
 	pkt_cs_hit() { header.type = PKT_TYPE::C_S_SHOOT; }
 };
 
@@ -257,10 +254,10 @@ struct pkt_cs_hit {
 // 총알 명중 결과
 struct pkt_sc_hit_result {
     PacketHeader header;
-    SIZEID shooterId;   // 누가 쐈는지
+    SIZEID shooterId;               // 누가 쐈는지
     SIZEID zombieId;
     SIZE2 zombieHp;
-    //uint8_t damage;       // 얼마나 깎였는지
+    //uint8_t damage;               // 얼마나 깎였는지
 
     pkt_sc_hit_result() { header.type = PKT_TYPE::S_C_HIT_RESULT; }
 };
@@ -272,23 +269,23 @@ struct ZombieHit {
 struct pkt_sc_hit_multi_result {
     PacketHeader header;
     uint8_t hitCount;
-    ZombieHit hits[10]; // 최대 10마리 좀비 피격 처리
+    ZombieHit hits[10];             // 최대 10마리 좀비 피격 처리
 };
 
 
 // --- Object 관리 패킷 ---
-struct pkt_sc_object_Add {
+struct pkt_sc_object_add {
 	PacketHeader header;
 	SIZEID id; // ID
-	Objectfixdata fixdata; // 고정정보
-    pkt_sc_object_Add() { header.type = PKT_TYPE::S_C_OBJECT_ADD; }
+	Objectfixdata fixdata;          // 고정정보
+    pkt_sc_object_add() { header.type = PKT_TYPE::S_C_OBJECT_ADD; }
 };
 
 // 객체 업데이트
 struct pkt_sc_object_update {
     PacketHeader header;
 	SIZEID id; // ID
-    ObjectDynamicInfo obj; // 동적정보
+    ObjectDynamicInfo obj;          // 동적정보
     pkt_sc_object_update() { header.type = PKT_TYPE::S_C_OBJECT_UPDATE; }
 };
 // 객체 삭제
