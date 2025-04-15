@@ -107,7 +107,9 @@ public:
 
         int ret = WSARecv(_c_socket, _recv_over._wsabuf, 1, 0, &flags, &_recv_over._over, g_recv_callback);
         if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-            std::cout << "WSARecv failed\n";
+            std::cout << "[ERROR] WSARecv failed for session " << _id << "\n";
+            closesocket(_c_socket);
+            g_users.erase(_id);
         }
     }
 
@@ -128,14 +130,15 @@ public:
 	}
     ~SESSION() 
     {
-        std::cout << "DEFAULT SESSION S_C_OBJECT_REMOVE\n";
-        pkt_sc_object_remove p;
-		p.header.size = sizeof(p);
-		p.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
-		p.id= _id;
+        std::cout << "[SESSION::~SESSION] Removing ID = " << _id << "\n";
+
+        pkt_sc_object_remove rem_p;
+        rem_p.header.size = sizeof(rem_p);
+        rem_p.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
+        rem_p.id= _id;
         for (auto& u : g_users) {
 			if (u.first != _id) // 나를 제외한 상대방에게 알리고
-				u.second.do_send(&p);
+				u.second.do_send(&rem_p);
         }
 		closesocket(_c_socket);
     }
