@@ -19,14 +19,14 @@ constexpr short MAX_ZOMBIE_COUNT = 1000;
 constexpr int W_WIDTH = 500;
 constexpr int W_HEIGHT = 500;
 
-using SIZEID = uint32_t;
+using SIZEID  = uint32_t;
 using SIZE1   = uint8_t;
 using SIZE2   = uint16_t;
 using SIZE3   = uint32_t;
 
 
 // 플레이어의 체력
-const uint8_t PLAYER_HP = 500;
+const SIZE2 PLAYER_HP = 500;
 
 
 // --------------------------
@@ -37,22 +37,22 @@ const uint8_t PLAYER_HP = 500;
 enum PKT_TYPE : SIZE1 {
 
     C_S_LOGIN = 1,
-    C_S_UPDATE = 2,
-    C_S_SHOOT = 3,
+    C_S_UPDATE ,
+    C_S_SHOOT ,
+	C_S_HIT,
 
-    S_C_LOGIN_OK = 104,
-    S_C_LOGIN_FAIL = 105,
-    S_C_PLAYER_INFO = 106,
-
-    S_C_HIT_RESULT = 200,
+    //S_C_LOGIN_OK = 14,
+    //S_C_LOGIN_FAIL = 15,
+    //S_C_PLAYER_INFO = 16,
+    S_C_HIT_RESULT = 10,
 
     // 오브젝트 패킷 공통 처리용
-    S_C_OBJECT_ADD = 300,
+    S_C_OBJECT_ADD = 30,
     S_C_OBJECT_UPDATE ,
     S_C_OBJECT_REMOVE ,
 
-    S_C_STAGE_INFO = 401,
-    S_C_SCORE_INFO = 402,
+    S_C_STAGE_INFO = 40,
+    S_C_SCORE_INFO,
     // ...
 };
 
@@ -128,7 +128,7 @@ enum SkinType : SIZE1 {
     PLAYER_SOLDIER ,
 
     // 좀비 스킨 타입
-    ZOMBIE_NORMAL = 100,
+    ZOMBIE_NORMAL = 10,
     ZOMBIE_RUNNER ,
     ZOMBIE_WITCH ,
     ZOMBIE_BOSS,
@@ -160,6 +160,7 @@ struct Objectfixdata {          // 고정정보
     SIZE1 skin_type;
     char name[MAX_NAME_SIZE];
     Vector3 startposition;      // 초기 위치
+    SIZE2 starthp;              // 체력
 };
 
 struct ObjectMeta {             // 필수정보
@@ -213,7 +214,6 @@ struct PacketHeader {
 // 로그인 패킷
 struct pkt_cs_login {
     PacketHeader header;
-	SIZEID id;                
     SIZE1 skin_type;
     char name[MAX_NAME_SIZE];
 
@@ -223,7 +223,6 @@ struct pkt_cs_login {
 // 플레이어 업데이트 패킷
 struct pkt_cs_update {
     PacketHeader header;
-    SIZEID id;
     ObjectDynamicInfo obj;          // 플레이어 정보
     pkt_cs_update() { header.type = PKT_TYPE::C_S_UPDATE; }
 };

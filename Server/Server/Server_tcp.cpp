@@ -29,7 +29,7 @@ void error_display(const char* msg, int err_no) {
 }
 
 struct ShootPacket {
-    uint8_t GunType; // 총 종류
+    SIZE1 GunType; // 총 종류
     float bulletPos[3];
     float bulletDir[3];
 };
@@ -81,7 +81,7 @@ public:
     SIZEID          _id;
 
     OVER_EXP        _recv_over{OP_RECV};
-    int             _remained = 0;
+    SIZE2           _remained = 0;
 
     ObjectType      _obj_type;
     SIZE1           _skin_type;
@@ -128,6 +128,7 @@ public:
 	}
     ~SESSION() 
     {
+        std::cout << "DEFAULT SESSION S_C_OBJECT_REMOVE\n";
         pkt_sc_object_remove p;
 		p.header.size = sizeof(p);
 		p.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
@@ -141,22 +142,22 @@ public:
 
     void recv_callback(int num_bytes) {
         // ----- 패킷 조립 시작 -----
-        uint16_t* p = _recv_over._buffer;
-        int total = _remained + num_bytes;
+        SIZE2* p = _recv_over._buffer;
+        SIZE3 total = _remained + num_bytes;
 
         // 앞에 남은 데이터 있으면 이어붙임
         if (_remained > 0)
             memmove(p, p + _remained, num_bytes);
 
-        uint16_t* packet = p;
-        int offset = 0;
+        SIZE2* packet = p;
+        SIZE3 offset = 0;
 
         while (p + 1 <= p + total) {
-            uint16_t packetSize = *p;
+            SIZE2 packetSize = *p;
 
             if (p + packetSize > p + total) break; // 아직 패킷 완성이 안 됨
 
-            std::cout << "[RECV][" << _id << "] packetSize = " << (int)packetSize << ", Raw = ";
+            std::cout << "[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << ", Raw = ";
             for (int i = 0; i < packetSize; ++i)
                 printf("%02X ", p[i]);
             std::cout << std::endl;
@@ -177,12 +178,12 @@ public:
 
     void do_send(void* buff) {
         OVER_EXP* send_ov = new OVER_EXP(OP_SEND);
-        uint16_t packet_size = reinterpret_cast<uint16_t*>(buff)[0];
+        SIZE2 packet_size = reinterpret_cast<SIZE2*>(buff)[0];
         memcpy(send_ov->_buffer, buff, packet_size);
         send_ov->_wsabuf[0].len = packet_size;
         DWORD size_sent;
 
-		std::cout << "[do_send] size = " << packet_size << ", type = " << (int)reinterpret_cast<uint16_t*>(buff)[1] << std::endl;
+		std::cout << "[do_send] size = " << packet_size << ", type = " << (int)reinterpret_cast<SIZE2*>(buff)[1] << std::endl;
         int ret = WSASend(_c_socket, send_ov->_wsabuf, 1, &size_sent, 0, &(send_ov->_over), g_send_callback);
         if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
             std::cout << "WSASend failed\n";
@@ -207,7 +208,7 @@ public:
     }
 
 
-	void process_packet(uint16_t* packet) {
+	void process_packet(SIZE2* packet) {
 
 		const unsigned char packet_type = packet[1];
         if (packet_type == 0) {
@@ -278,7 +279,7 @@ public:
             // 이동 거리 = 방향 * 속도 * 시간
             _position += updatePacket->obj.meta.direction * updatePacket->obj.meta.speed * deltaTime;
          
-            pkt_cs_update u_move_p;
+            pkt_sc_object_update u_move_p;
 			u_move_p.header.size = sizeof(u_move_p);
 			u_move_p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
 			u_move_p.id = _id;

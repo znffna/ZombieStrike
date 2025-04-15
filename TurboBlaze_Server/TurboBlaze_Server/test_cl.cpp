@@ -36,53 +36,65 @@ void CALLBACK recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, 
         return;
     }
 
-    char* p = recv_buffer;
-    int offset = 0;
+    char* recv_p = recv_buffer;
+    SIZE2 offset = 0;
     while (offset < num_bytes) {
-        uint16_t size = *(uint16_t*)(p);     // 패킷 길이
-        PKT_TYPE type = *(PKT_TYPE*)(p + 2); // 패킷 타입
+        SIZE2 size = *(SIZE2*)(recv_p);     // 패킷 길이
+        PKT_TYPE type = *(PKT_TYPE*)(recv_p + 2); // 패킷 타입
 
         std::cout << "[클라] 수신 패킷 :size = " << size << ", type = "<< static_cast<int>(type) << "\n";
 
-        switch (type)
+        switch (type) {
+        case S_C_HIT_RESULT:
         {
-        case S_C_LOGIN_OK:
-            break;
-        case S_C_LOGIN_FAIL:
-            break;
-        case S_C_PLAYER_INFO:
-        {
-            auto* pkt = reinterpret_cast<pkt_sc_player_add*>(p);
-            std::cout << "  > PLAYER ID: " << pkt->objectId
-                << " HP: " << (int)pkt->hp << " LV: " << (int)pkt->level
-                << " POS: (" << pkt->position[0] << ", " << pkt->position[1] << ", " << pkt->position[2] << ")\n";
             break;
         }
-        case S_C_HIT_RESULT:
+        case S_C_OBJECT_ADD:
+        {
+            pkt_sc_object_add* addPkt = reinterpret_cast<pkt_sc_object_add*>(recv_p);
+
+            std::cout << "[클라] S_C_OBJECT_ADD : id = " << addPkt->id << ", obj_type = " << addPkt->fixdata.obj_type << ", skin_type = " << addPkt->fixdata.skin_type
+                << " name = " << addPkt->fixdata.name << ", startposition = (" << addPkt->fixdata.startposition.x << ", " << addPkt->fixdata.startposition.y << ", " << addPkt->fixdata.startposition.z << ") "
+                << ", starthp = " << addPkt->fixdata.starthp << std::endl;
             break;
-        case S_C_PLAYER_ADD:
+
+        }
+        case S_C_OBJECT_UPDATE:
+        {
+
+            pkt_sc_object_update* updatePkt = reinterpret_cast<pkt_sc_object_update*>(recv_p);
+            std::cout << "[클라] S_C_OBJECT_UPDATE : id = " << updatePkt->id << ",position = (" << updatePkt->obj.meta.position.x << ", " << updatePkt->obj.meta.position.y << ", " << updatePkt->obj.meta.position.z << ") "
+                << ", direction = (" << updatePkt->obj.meta.direction.x << ", " << updatePkt->obj.meta.direction.y << ", " << updatePkt->obj.meta.direction.z << ") "
+                << ", speed = " << updatePkt->obj.meta.speed << ", hp = " << updatePkt->obj.meta.hp
+                << ", hp  =" << updatePkt->obj.meta.hp
+                << ". gun_type = " << updatePkt->obj.gun_type
+                << ", level = " << updatePkt->obj.level
+                << ", score = " << updatePkt->obj.score
+                << ", damage = " << updatePkt->obj.damage
+                << ", act_type = " << updatePkt->obj.act_type << std::endl;
             break;
-        case S_C_PLAYER_MOVE:
+        }
+        case S_C_OBJECT_REMOVE:
+        {
+            pkt_sc_object_remove* removePkt = reinterpret_cast<pkt_sc_object_remove*>(recv_p);
+            std::cout << "[클라] S_C_OBJECT_REMOVE : id = " << removePkt->id << std::endl;
             break;
-        case S_C_PLAYER_UPDATE:
-            break;
-        case S_C_PLAYER_REMOVE:
-            break;
-        case S_C_ZOMBIE_ADD:
-            break;
-        case S_C_ZOMBIE_UPDATE:
-            break;
-        case S_C_ZOMBIE_REMOVE:
-            break;
+        }
+			
         case S_C_STAGE_INFO:
+        {
             break;
+        }
         case S_C_SCORE_INFO:
+        {
             break;
+
+        }
         default:
             break;
         }
         offset += size;
-        p += size;
+        recv_p += size;
     }
 
     // 다시 수신 등록
@@ -113,7 +125,6 @@ std::string chooseServerIP() {
     std::cout << "2. 루프백 IP (" << LOOPBACK_IP << ") 로 접속\n";
     std::cout << "==============================" << std::endl;
     std::cout << "선택 (1/2): ";
-
 
     int choice;
     std::cin >> choice;
@@ -156,6 +167,10 @@ int main()
 
     std::cout << "서버 연결 성공\n";
 
+    std::cout << "아이디 입력: ";
+    std::string name;
+    std::cin >> name;
+
     // 수신 등록
     recv_wsabuf[0].buf = recv_buffer;
     recv_wsabuf[0].len = sizeof(recv_buffer);
@@ -167,23 +182,29 @@ int main()
     pkt_cs_login loginPkt{};
     loginPkt.header.size = sizeof(loginPkt);
     loginPkt.header.type = PKT_TYPE::C_S_LOGIN;
-    strcpy_s((char*)loginPkt.name, MAX_NAME_SIZE, "EchoClient");
     loginPkt.skin_type = 1;
+    strcpy_s(loginPkt.name, MAX_NAME_SIZE, name.c_str());
     send_packet(&loginPkt, sizeof(loginPkt));
 	std::cout << "[클라] 로그인 패킷 전송 size = " << sizeof(loginPkt) << ", type = " << (int)loginPkt.header.type << "\n";
 
     Sleep(100); // 서버 처리 대기
 
     // 2. 이동 패킷 전송
-    pkt_cs_move movePkt{};
-    movePkt.header.size = sizeof(movePkt);
-    movePkt.header.type = PKT_TYPE::C_S_MOVE;
-    movePkt.direction[0] = 1.0f;
-    movePkt.direction[1] = 0.0f;
-    movePkt.direction[2] = 0.0f;
-    movePkt.speed = 5.0f;
-    send_packet(&movePkt, sizeof(movePkt));
-	std::cout << "[클라] 이동 패킷 전송 size = " << sizeof(movePkt) << ", type = " << (int)movePkt.header.type << "\n";
+    pkt_cs_update u_movePkt{};
+    u_movePkt.header.size = sizeof(u_movePkt);
+    u_movePkt.header.type = PKT_TYPE::C_S_UPDATE;
+	u_movePkt.obj.meta.position = { 0.0f, 0.0f, 0.0f }; // 현재 위치
+	u_movePkt.obj.meta.direction = { 1.0f, 0.0f, 0.0f }; // 이동 방향
+	u_movePkt.obj.meta.speed = 5.0f; // 이동 속도
+	u_movePkt.obj.meta.hp = 100; // 체력
+	u_movePkt.obj.gun_type = GunType::BULLET_PISTOL; // 총 종류
+	u_movePkt.obj.level = 1; // 레벨
+	u_movePkt.obj.score = 0; // 점수
+	u_movePkt.obj.damage = 0; // 공격력
+	u_movePkt.obj.act_type = ActionType::NONE; // 행동 타입
+
+    send_packet(&u_movePkt, sizeof(u_movePkt));
+	std::cout << "[클라] 이동 패킷 전송 size = " << sizeof(u_movePkt) << ", type = " << (int)u_movePkt.header.type << "\n";
 
     // 메시지 루프 유지
     while (is_running)
