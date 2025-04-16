@@ -45,6 +45,7 @@ public:
 
 	std::shared_ptr<CAnimationSets> m_pAnimationSets;
 
+	BoundingBox m_ModelBoundingBox;
 public:
 	void PrepareSkinning();;
 };
@@ -186,8 +187,6 @@ public:
 	// Object Update
 	virtual void Update(float fTimeElapsed);
 
-
-
 	// Object Render
 	virtual void OnPrepareRender() { }
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
@@ -230,6 +229,8 @@ public:
 	// Object Collision
 	virtual bool IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth = 0);// Collision Check
 	virtual void OnCollision(std::shared_ptr<CGameObject>& pGameObject); // Collision Event
+
+	BoundingBox GetMergedBoundingBox(BoundingBox* pVolume = nullptr);
 
 	// Mesh
 	void SetMesh(std::shared_ptr<CMesh> pMesh);

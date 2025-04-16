@@ -173,14 +173,57 @@ void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pGameObject)
 	std::shared_ptr<CCollider> otherCollider = pGameObject->GetComponent<CCollider>();
 	std::shared_ptr<CRigidBody> otherRigidBody = pGameObject->GetComponent<CRigidBody>();
 
-	if (collider->IsCollided(pGameObject->GetComponent<CCollider>())) {
-		XMFLOAT3 mtv = collider->GetCorrectionVector(otherCollider);
+	// 최소 거리 측정
+	XMFLOAT3 mtv = collider->GetCorrectionVector(otherCollider);
 
-		// 양쪽에 절반씩 나눠주는 예시
+	if (rigidBody && otherRigidBody)
+	{
 		XMFLOAT3 halfMTV = Vector3::ScalarProduct(mtv, 0.5f);
+		XMFLOAT3 reversehalfMTV = Vector3::ScalarProduct(halfMTV, -1.0f);
 
 		rigidBody->ApplyCorrection(halfMTV);
-		otherRigidBody->ApplyCorrection(Vector3::ScalarProduct(halfMTV, -1.0f));
+		otherRigidBody->ApplyCorrection(reversehalfMTV);
+	}
+	else if (rigidBody)
+	{
+		rigidBody->ApplyCorrection(mtv);
+	}
+	else if (otherRigidBody)
+	{
+		otherRigidBody->ApplyCorrection(Vector3::ScalarProduct(mtv, -1.0f));
+	}
+}
+
+BoundingBox CGameObject::GetMergedBoundingBox(BoundingBox* pVolume)
+{
+	if (nullptr == pVolume)
+	{
+		BoundingBox boundingBox{};
+
+		if (auto pCollider = GetComponent<CCollider>())
+		{
+			BoundingBox::CreateMerged(boundingBox, boundingBox, pCollider->GetBoundingBox());
+		}
+
+		for (auto& pChild : m_pChilds)
+		{
+			pChild->GetMergedBoundingBox(&boundingBox);
+		}
+
+		return boundingBox;
+	}
+	else {
+		if (auto pCollider = GetComponent<CCollider>())
+		{
+			BoundingBox::CreateMerged(*pVolume, *pVolume, pCollider->GetBoundingBox());
+		}
+
+		for (auto& pChild : m_pChilds)
+		{
+			pChild->GetMergedBoundingBox(pVolume);
+		}
+
+		return *pVolume;
 	}
 }
 
@@ -687,6 +730,11 @@ std::shared_ptr<CLoadedModelInfo> CGameObject::LoadGeometryAndAnimationFromFile(
 			{
 				pLoadedModel->m_pModelRootObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, pShader, &pLoadedModel->m_nSkinnedMeshes, 0);
 				::ReadStringFromFile(pInFile, pstrToken); //"</Hierarchy>"
+
+				// Model BoundingVolume 계산
+				pLoadedModel->m_pModelRootObject->Update(0.0f);
+				pLoadedModel->m_pModelRootObject->UpdateTransform();
+				pLoadedModel->m_ModelBoundingBox = pLoadedModel->m_pModelRootObject->GetMergedBoundingBox();
 			}
 			else if (!strcmp(pstrToken, "<Animation>:"))
 			{
