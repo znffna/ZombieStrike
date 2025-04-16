@@ -277,6 +277,10 @@ void CScene::ProcessCollisions()
 				if (pObject != pOtherObject)
 				{
 					if (pObject->IsCollided(pOtherObject)) {
+						// 충돌처리
+						std::string DebugOutput = "Collision Detected: " + pObject->GetName() + " <-> " + pOtherObject->GetName() + "\n";
+						OutputDebugStringA(DebugOutput.c_str());
+
 						pObject->OnCollision(pOtherObject);
 						pOtherObject->OnCollision(pObject);
 					}

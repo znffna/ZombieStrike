@@ -7,6 +7,8 @@
 
 #include "stdafx.h"
 #include "GameObject.h"
+#include "Zombie.h" 
+
 #include "Camera.h"
 #include "Shader.h"
 
