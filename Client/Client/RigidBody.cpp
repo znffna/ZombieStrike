@@ -113,28 +113,9 @@ void CRigidBody::Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT4& rotati
 	m_xmf3Torque = { 0, 0, 0 };
 }
 
-void CRigidBody::OnCollision(std::shared_ptr<CGameObject> pGameObject)
+void CRigidBody::ApplyCorrection(const XMFLOAT3& xmf3Correction)
 {
-	// 충돌 처리
-	if (m_pCollider)
-	{
-		auto pOtherCollider = pGameObject->GetComponent<CCollider>();
-		auto pOtherTransform = pGameObject->GetComponent<CTransform>();
-
-		if (pOtherCollider)
-		{
-			XMFLOAT3 xmf3Position = m_pTransform->GetPosition();
-			XMFLOAT3 xmf3OtherPosition = pOtherTransform->GetPosition();
-			XMFLOAT3 xmf3Direction = Vector3::Subtract(xmf3Position, xmf3OtherPosition);
-			float fDistance = Vector3::Length(xmf3Direction);
-			if (fDistance < 1.0f)
-			{
-				xmf3Direction = Vector3::Normalize(xmf3Direction);
-				xmf3Direction = Vector3::ScalarProduct(xmf3Direction, fDistance * 0.5f);
-				m_pTransform->Move(xmf3Direction);
-			}
-		}
-	}	
+	m_pTransform->Move(xmf3Correction);
 }
 
 void CRigidBody::UpdateVelocity(float fTimeElapsed)

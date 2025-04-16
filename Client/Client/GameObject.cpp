@@ -142,6 +142,48 @@ void CGameObject::Update(float fTimeElapsed)
 	for (auto& pChild : m_pChilds) pChild->Update(fTimeElapsed);
 }
 
+bool CGameObject::IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth)
+{
+	auto pCollider = GetComponent<CCollider>();
+	auto pOtherCollider = pGameObject->GetComponent<CCollider>();
+	if (pCollider && pOtherCollider)
+	{
+		bool isCollide = pCollider->IsCollided(pOtherCollider);
+		if (isCollide) {
+			std::string DebugOutput = "Collision Detected: " + GetName() + " <-> " + pGameObject->GetName() + "\n";
+			OutputDebugStringA(DebugOutput.c_str());
+		}
+		return isCollide;
+	}
+
+	if (nDepth > 0) {
+		for (auto& pChild : m_pChilds) {
+			if (pChild->IsCollided(pGameObject, nDepth - 1)) return true;
+		}
+	}
+	return false;
+}
+
+void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pGameObject)
+{
+	// Collision Event
+	std::shared_ptr<CCollider> collider = GetComponent<CCollider>();
+	std::shared_ptr<CRigidBody> rigidBody = GetComponent<CRigidBody>();
+
+	std::shared_ptr<CCollider> otherCollider = pGameObject->GetComponent<CCollider>();
+	std::shared_ptr<CRigidBody> otherRigidBody = pGameObject->GetComponent<CRigidBody>();
+
+	if (collider->IsCollided(pGameObject->GetComponent<CCollider>())) {
+		XMFLOAT3 mtv = collider->GetCorrectionVector(otherCollider);
+
+		// 양쪽에 절반씩 나눠주는 예시
+		XMFLOAT3 halfMTV = Vector3::ScalarProduct(mtv, 0.5f);
+
+		rigidBody->ApplyCorrection(halfMTV);
+		otherRigidBody->ApplyCorrection(Vector3::ScalarProduct(halfMTV, -1.0f));
+	}
+}
+
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	if (false == m_bActive) return;
@@ -199,45 +241,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	for (auto& pChild : m_pChilds)
 	{
 		pChild->Render(pd3dCommandList, pCamera);
-	}
-}
-
-void CGameObject::IsCollided(std::shared_ptr<CGameObject>& pOther)
-{
-	if (auto pCollider = GetComponent<CCollider>()) {
-		if (auto pCollider2 = pOther->GetComponent<CCollider>()) {
-			if (pCollider->IsCollided(pCollider2)) {
-				OnCollision(pOther);
-				pOther->OnCollision(shared_from_this());
-			}
-
-			for (auto& pChild : m_pChilds) {
-				if (pCollider->IsCollided(pChild->GetComponent<CCollider>())) {
-					OnCollision(pChild);
-					pChild->OnCollision(shared_from_this());
-				}
-			}
-		}
-	}
-}
-
-void CGameObject::IsCollided(std::shared_ptr<CGameObject> pGameObject1, std::shared_ptr<CGameObject> pGameObject2)
-{
-	if (auto pCollider = pGameObject1->GetComponent<CCollider>()) {
-		if (auto pCollider2 = pGameObject2->GetComponent<CCollider>()) {
-			if (pCollider->IsCollided(pCollider2)) {
-				pGameObject1->OnCollision(pGameObject2);
-				pGameObject2->OnCollision(pGameObject1);
-			}
-		}
-	}
-}
-
-void CGameObject::OnCollision(std::shared_ptr<CGameObject> pGameObject)
-{
-	// Collision Event
-	if (auto pRigidBody = GetComponent<CRigidBody>()) {
-		pRigidBody->OnCollision(pGameObject);
 	}
 }
 

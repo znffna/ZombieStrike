@@ -36,7 +36,7 @@ bool CSphereCollider::IsCollided(CCollider* pCollider)
 {
 	switch (pCollider->GetColliderType())
 	{
-	case ColliderType::Sphere:
+	case ColliderType::SPHERE:
 	{
 		CSphereCollider* pSphereCollider = dynamic_cast<CSphereCollider*>(pCollider);
 		return m_xmWorldBoundingSphere.Intersects(pSphereCollider->GetBoundingSphere());
@@ -66,7 +66,7 @@ bool CAABBCollider::IsCollided(CCollider* pCollider)
 {
 	switch (pCollider->GetColliderType())
 	{
-	case ColliderType::Sphere:
+	case ColliderType::SPHERE:
 	{
 		CSphereCollider* pSphereCollider = dynamic_cast<CSphereCollider*>(pCollider);
 		return m_xmWorldBoundingBox.Intersects(pSphereCollider->GetBoundingSphere());
@@ -96,7 +96,7 @@ bool COBBCollider::IsCollided(CCollider* pCollider)
 {
 	switch (pCollider->GetColliderType())
 	{
-	case ColliderType::Sphere:
+	case ColliderType::SPHERE:
 	{
 		CSphereCollider* pSphereCollider = dynamic_cast<CSphereCollider*>(pCollider);
 		return m_xmWorldBoundingOrientedBox.Intersects(pSphereCollider->GetBoundingSphere());
@@ -113,4 +113,16 @@ bool COBBCollider::IsCollided(CCollider* pCollider)
 	}
 	}
 	return false;
+}
+
+XMFLOAT3 CCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
+{
+	XMFLOAT3 xmf3Center = GetCenter();
+	XMFLOAT3 xmf3OtherCenter = pCollider->GetCenter();
+
+	// 일단 거리기반으로 통일
+	XMFLOAT3 xmf3CorrectionVector = Vector3::Subtract(xmf3Center, xmf3OtherCenter);
+	Vector3::Normalize(xmf3CorrectionVector);
+
+	return xmf3CorrectionVector;
 }

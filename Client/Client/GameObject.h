@@ -186,6 +186,8 @@ public:
 	// Object Update
 	virtual void Update(float fTimeElapsed);
 
+
+
 	// Object Render
 	virtual void OnPrepareRender() { }
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
@@ -226,9 +228,8 @@ public:
 	}
 
 	// Object Collision
-	void IsCollided(std::shared_ptr<CGameObject>& pOther);
-	static void IsCollided(std::shared_ptr<CGameObject> pGameObject1, std::shared_ptr<CGameObject> pGameObject2);
-	virtual void OnCollision(std::shared_ptr<CGameObject> pGameObject);
+	virtual bool IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth = 0);// Collision Check
+	virtual void OnCollision(std::shared_ptr<CGameObject>& pGameObject); // Collision Event
 
 	// Mesh
 	void SetMesh(std::shared_ptr<CMesh> pMesh);

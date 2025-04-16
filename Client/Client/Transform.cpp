@@ -81,7 +81,7 @@ void CTransform::Rotate(const XMFLOAT3& pxmf3Axis, float fAngle)
 	XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&pxmf3Axis), XMConvertToRadians(fAngle));
 	m_xmf4x4Local = Matrix4x4::Multiply(xmmtxRotate, m_xmf4x4Local);
 
-	m_xmf3Rotation = ExtractEulerAngles(m_xmf4x4Local, m_xmf3Scale);
+	m_xmf3Rotation = GetEulerAngles(m_xmf4x4Local, m_xmf3Scale);
 
 	UpdateTransform(nullptr);
 }
@@ -91,12 +91,12 @@ void CTransform::Rotate(const XMFLOAT4& pxmf4Quaternion)
 	XMMATRIX xmmtxRotate = XMMatrixRotationQuaternion(XMLoadFloat4(&pxmf4Quaternion));
 	m_xmf4x4Local = Matrix4x4::Multiply(xmmtxRotate, m_xmf4x4Local);
 
-	m_xmf3Rotation = ExtractEulerAngles(m_xmf4x4Local, m_xmf3Scale);
+	m_xmf3Rotation = GetEulerAngles(m_xmf4x4Local, m_xmf3Scale);
 
 	UpdateTransform(nullptr);
 }
 
-XMFLOAT3 CTransform::ExtractEulerAngles(const XMFLOAT4X4& worldMatrix, const XMFLOAT3& scale)
+XMFLOAT3 CTransform::GetEulerAngles(const XMFLOAT4X4& worldMatrix, const XMFLOAT3& scale) const
 {
 	// 스케일을 제거한 회전 행렬을 얻기 위해 각 축을 정규화
 	XMFLOAT3X3 rotationMatrix;

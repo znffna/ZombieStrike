@@ -58,12 +58,12 @@ public:
 	void ApplyForceAtPoint(const XMFLOAT3& f, const XMFLOAT3& point);
 	void Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT4& rotation);
 
+	void ApplyCorrection(const XMFLOAT3& xmf3Correction);
+	
 	virtual void Update(float fTimeElapsed) override
 	{
 		UpdateRigidBody(fTimeElapsed);
 	}
-
-	void OnCollision(std::shared_ptr<CGameObject> pGameObject);
 
 private:
 	std::shared_ptr<CTransform> m_pTransform;

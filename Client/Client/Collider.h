@@ -18,6 +18,8 @@ using DefaultCollider = CAABBCollider; // Alias for easier usage
 class CMesh;
 class CTransform;
 
+const enum ColliderType { AABB, OBB, SPHERE };
+
 class CCollider : public CComponent
 {
 public:
@@ -29,8 +31,16 @@ public:
 
 	virtual void Update(float fTimeElapsed) override;
 
+	virtual int GetColliderType() = 0;
+	virtual XMFLOAT3 GetCenter() = 0;
+	virtual XMFLOAT3 GetExtends() = 0;
+	virtual XMFLOAT4X4 GetColliderMatrix() = 0;
+
+	XMFLOAT3 GetCorrectionVector(std::shared_ptr<CCollider>& pCollider);
+
 	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) = 0;
 	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends) = 0;
+
 
 	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) = 0;
 	//virtual void RenderCollider(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) = 0;
@@ -38,13 +48,7 @@ public:
 	virtual bool IsCollided(CCollider* pCollider) = 0;
 	virtual bool IsCollided(std::shared_ptr<CCollider> pCollider) { return IsCollided(pCollider.get()); };
 
-	virtual XMFLOAT4X4 GetColliderMatrix() = 0;
-
-	const enum ColliderType { AABB, OBB, Sphere };
-
-	virtual int GetColliderType() = 0;
-
-	std::shared_ptr<CTransform> m_pTransform;
+	std::shared_ptr<const CTransform> m_pTransform;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -58,6 +62,8 @@ public:
 
 	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CSphereCollider>(*this); };
 
+	virtual XMFLOAT3 GetCenter() override { return m_xmWorldBoundingSphere.Center; }
+	virtual XMFLOAT3 GetExtends() override { return XMFLOAT3{ m_xmWorldBoundingSphere.Radius,m_xmWorldBoundingSphere.Radius,m_xmWorldBoundingSphere.Radius }; };
 
 	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
 	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends) override
@@ -90,7 +96,7 @@ public:
 		return xmf4x4box;
 	};
 
-	int GetColliderType() override { return ColliderType::Sphere; };
+	int GetColliderType() override { return ColliderType::SPHERE; };
 	const BoundingSphere GetBoundingSphere() { return m_xmWorldBoundingSphere; }
 private:
 	BoundingSphere m_xmBoundingSphere;
@@ -105,6 +111,8 @@ public:
 
 	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CAABBCollider>(*this); };
 
+	virtual XMFLOAT3 GetCenter() override { return m_xmWorldBoundingBox.Center; };
+	virtual XMFLOAT3 GetExtends() override { return m_xmWorldBoundingBox.Extents; };
 
 	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
 	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents) override
@@ -130,7 +138,7 @@ public:
 		return xmf4x4box;
 	};
 
-	const BoundingBox GetBoundingBox() { return m_xmBoundingBox; }
+	const BoundingBox GetBoundingBox() { return m_xmWorldBoundingBox; }
 	int GetColliderType() override { return ColliderType::AABB; }
 
 private:
@@ -146,6 +154,8 @@ public:
 
 	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<COBBCollider>(*this); };
 
+	virtual XMFLOAT3 GetCenter() override { return m_xmWorldBoundingOrientedBox.Center; };
+	virtual XMFLOAT3 GetExtends() override { return m_xmWorldBoundingOrientedBox.Extents; };
 
 	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
 	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents) override

@@ -16,21 +16,21 @@ public:
 	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared< CTransform>(*this); };
 
 	// Transform Getter
-	DirectX::XMFLOAT3 GetPosition() { return m_xmf3Position; }
-	DirectX::XMFLOAT3 GetRight() { return Vector3::Normalize(XMFLOAT3(m_xmf4x4World._11, m_xmf4x4World._12, m_xmf4x4World._13)); }
-	DirectX::XMFLOAT3 GetUp() { return (Vector3::Normalize(XMFLOAT3(m_xmf4x4World._21, m_xmf4x4World._22, m_xmf4x4World._23))); }
-	DirectX::XMFLOAT3 GetLook() { return (Vector3::Normalize(XMFLOAT3(m_xmf4x4World._31, m_xmf4x4World._32, m_xmf4x4World._33))); }
-	DirectX::XMFLOAT3 GetScale() { return m_xmf3Scale; }
+	DirectX::XMFLOAT3 GetPosition() const { return m_xmf3Position; }
+	DirectX::XMFLOAT3 GetRight() const { return Vector3::Normalize(XMFLOAT3(m_xmf4x4World._11, m_xmf4x4World._12, m_xmf4x4World._13)); }
+	DirectX::XMFLOAT3 GetUp() const { return (Vector3::Normalize(XMFLOAT3(m_xmf4x4World._21, m_xmf4x4World._22, m_xmf4x4World._23))); }
+	DirectX::XMFLOAT3 GetLook() const { return (Vector3::Normalize(XMFLOAT3(m_xmf4x4World._31, m_xmf4x4World._32, m_xmf4x4World._33))); }
+	DirectX::XMFLOAT3 GetScale() const { return m_xmf3Scale; }
 
-	DirectX::XMFLOAT3 GetRotation() { return m_xmf3Rotation; }
+	DirectX::XMFLOAT3 GetRotation() const { return m_xmf3Rotation; }
 	float GetPitch() { return m_xmf3Rotation.x; } // X 축을	기준으로 회전
 	float GetYaw() { return m_xmf3Rotation.y; } // Y 축을 기준으로 회전
 	float GetRoll() { return m_xmf3Rotation.z; } // Z 축을 기준으로 회전
 
-	DirectX::XMFLOAT4X4 GetLocalMatrix() { return m_xmf4x4Local; }
-	DirectX::XMFLOAT4X4 GetWorldMatrix() { return m_xmf4x4World; }
+	DirectX::XMFLOAT4X4 GetLocalMatrix() const { return m_xmf4x4Local; }
+	DirectX::XMFLOAT4X4 GetWorldMatrix() const { return m_xmf4x4World; }
 
-	DirectX::XMFLOAT3 GetLocalPosition() { return(XMFLOAT3(m_xmf4x4Local._41, m_xmf4x4Local._42, m_xmf4x4Local._43)); };
+	DirectX::XMFLOAT3 GetLocalPosition() const { return(XMFLOAT3(m_xmf4x4Local._41, m_xmf4x4Local._42, m_xmf4x4Local._43)); };
 
 	// Transform Setter
 	void SetPosition(DirectX::XMFLOAT3 xmf3Position) { SetPosition(xmf3Position.x, xmf3Position.y, xmf3Position.z); }
@@ -49,7 +49,7 @@ public:
 	void Rotate(const XMFLOAT3& pxmf3Axis, float fAngle);
 	void Rotate(const XMFLOAT4& pxmf4Quaternion);
 
-	XMFLOAT3 ExtractEulerAngles(const XMFLOAT4X4& worldMatrix, const XMFLOAT3& scale);
+	XMFLOAT3 GetEulerAngles (const XMFLOAT4X4& worldMatrix, const XMFLOAT3& scale) const;
 
 	void SetLocalMatrix(DirectX::XMFLOAT4X4 xmf4x4Local) { m_xmf4x4Local = xmf4x4Local; }
 	void SetLocalMatrix(const XMMATRIX& xmf4x4Local) { XMStoreFloat4x4(&m_xmf4x4Local, xmf4x4Local); }
