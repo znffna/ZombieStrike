@@ -18,10 +18,6 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
-const int MAX_CLIENTS = 10;
-const int ZOMBIE_COUNT = 1000;
-const short PORT = 4000;
-
 struct Zombie;
 std::unordered_map<int, Zombie*> zombieMap;
 const int MAP_WIDTH = 100;          // 유니티에서 타일맵 사이즈
@@ -255,7 +251,7 @@ struct BroadcastPacket {
         Vector3 position;
         Quaternion rotation;
         int hp;
-    } players[MAX_CLIENTS];
+    } players[MAX_PLAYER_COUNT];
 
     int zombieCount;
     struct {
@@ -263,7 +259,7 @@ struct BroadcastPacket {
         Vector3 position;
         Quaternion rotation;
         int hp;
-    } zombies[ZOMBIE_COUNT];
+    } zombies[MAX_ZOMBIE_COUNT];
 };
 
 class ThreadPool {
@@ -525,7 +521,7 @@ void CALLBACK IoCallback(DWORD err, DWORD bytesTransferred, LPWSAOVERLAPPED lpOv
     session->do_recv();  // 다시 Recv 등록 , Recv OVER_EXP 초기화 후 WSARecv 재호출 , (IOCP 환경에서는.. ) 
 }
 void zombieAILoop() {
-    for (int i = 0; i < ZOMBIE_COUNT; ++i) {
+    for (int i = 0; i < MAX_ZOMBIE_COUNT; ++i) {
         Zombie* z = new Zombie();
         z->id = i;
         zombies.push_back(z);
@@ -577,8 +573,9 @@ int main() {
 
     sockaddr_in serverAddr = {};
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(PORT);
+    serverAddr.sin_port = htons(PORT_NUM);
     serverAddr.sin_addr.s_addr = INADDR_ANY;
+
     if (bind(listenSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
         error_display("Bind failed", WSAGetLastError());
     else
@@ -589,7 +586,7 @@ int main() {
     else
         std::cout << "Listen 성공\n";
 
-    std::cout << "Zombie Strike 3D Server running on port: " << PORT << "\n";
+    std::cout << "Zombie Strike 3D Server running on port: " << PORT_NUM << "\n";
 
     std::thread(serverControl).detach();
     std::thread(zombieAILoop).detach();
@@ -604,7 +601,7 @@ int main() {
         }
 
         std::lock_guard<std::mutex> lock(playersMutex);
-        if (players.size() >= MAX_CLIENTS) {
+        if (players.size() >= MAX_PLAYER_COUNT) {
             std::cout << "Max clients reached, rejecting connection\n";
             closesocket(clientSocket);
             continue;
