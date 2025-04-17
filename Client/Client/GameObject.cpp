@@ -330,10 +330,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 void CGameObject::SetMesh(std::shared_ptr<CMesh> pMesh)
 {
 	m_pMesh = pMesh; 
-	if (m_pMesh->GetType() && VERTEXT_POSITION) {
-		auto pCollider = AddComponent<DefaultCollider>(shared_from_this());
-		pCollider->SetCollider(m_pMesh);
-	}
 }
 
 void CGameObject::SetShader(std::shared_ptr<CShader> pShader, int nIndex)

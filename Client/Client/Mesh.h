@@ -172,7 +172,11 @@ protected:
 	// Index 데이터의 갯수에 따라서 인덱스 버퍼를 생성하는 함수
 	void SetSubMeshCount(int nSubMeshes);
 
+	BoundingBox GetBoundingBox(const XMFLOAT4X4& xmf4x4WorldMatrix);
+
 protected:
+	// AABB
+	BoundingBox m_xmBoundingBox;	// AABB
 	XMFLOAT3 m_xmf3AABBCenter;	// AABB의 중심
 	XMFLOAT3 m_xmf3AABBExtents;	// AABB의 반지름
 };
