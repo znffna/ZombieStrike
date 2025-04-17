@@ -104,6 +104,13 @@ void CMesh::SetSubMeshCount(int nSubMeshes)
 	m_pd3dSubSetIndexBufferViews.resize(nSubMeshes);
 }
 
+BoundingBox CMesh::GetBoundingBox(const XMFLOAT4X4& xmf4x4WorldMatrix)
+{
+	BoundingBox boundingBox;
+	m_xmBoundingBox.Transform(boundingBox, XMLoadFloat4x4(&xmf4x4WorldMatrix));
+	return boundingBox;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 
@@ -160,7 +167,7 @@ void CStandardMesh::LoadMeshFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		{
 			File.read((char*)&m_xmf3AABBCenter, sizeof(XMFLOAT3));
 			File.read((char*)&m_xmf3AABBExtents, sizeof(XMFLOAT3));
-
+			m_xmBoundingBox = BoundingBox(m_xmf3AABBCenter, m_xmf3AABBExtents);
 			/*{
 				std::string debugOutput = m_strMeshName + " ";
 				debugOutput += "/ Center : " + std::to_string(m_xmf3AABBCenter.x) + ", " + std::to_string(m_xmf3AABBCenter.y) + ", " + std::to_string(m_xmf3AABBCenter.z);

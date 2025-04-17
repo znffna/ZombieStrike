@@ -231,9 +231,9 @@ BoundingBox CGameObject::GetMergedBoundingBox(BoundingBox* pVolume)
 	{
 		BoundingBox boundingBox{};
 
-		if (auto pCollider = GetComponent<CCollider>())
+		if (m_pMesh)
 		{
-			BoundingBox::CreateMerged(boundingBox, boundingBox, pCollider->GetBoundingBox());
+			BoundingBox::CreateMerged(boundingBox, boundingBox, m_pMesh->GetBoundingBox());
 		}
 
 		for (auto& pChild : m_pChilds)
@@ -244,9 +244,9 @@ BoundingBox CGameObject::GetMergedBoundingBox(BoundingBox* pVolume)
 		return boundingBox;
 	}
 	else {
-		if (auto pCollider = GetComponent<CCollider>())
+		if (m_pMesh)
 		{
-			BoundingBox::CreateMerged(*pVolume, *pVolume, pCollider->GetBoundingBox());
+			BoundingBox::CreateMerged(*pVolume, *pVolume, m_pMesh->GetBoundingBox());
 		}
 
 		for (auto& pChild : m_pChilds)
@@ -330,10 +330,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 void CGameObject::SetMesh(std::shared_ptr<CMesh> pMesh)
 {
 	m_pMesh = pMesh; 
-	if (m_pMesh->GetType() && VERTEXT_POSITION) {
-		auto pCollider = AddComponent<DefaultCollider>(shared_from_this());
-		pCollider->SetCollider(m_pMesh);
-	}
 }
 
 void CGameObject::SetShader(std::shared_ptr<CShader> pShader, int nIndex)

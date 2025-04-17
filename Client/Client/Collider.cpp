@@ -210,27 +210,27 @@ XMFLOAT3 GetAABB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA,
 	float px = (extentA.x + extentB.x) - std::abs(dx);
 	if (px <= 0) return { 0.0f, 0.0f, 0.0f };
 
-	/*float dy = centerB.y - centerA.y;
+	float dy = centerB.y - centerA.y;
 	float py = (extentA.y + extentB.y) - std::abs(dy);
-	if (py <= 0) return { 0.0f, 0.0f, 0.0f };*/
+	if (py <= 0) return { 0.0f, 0.0f, 0.0f };
 
 	float dz = centerB.z - centerA.z;
 	float pz = (extentA.z + extentB.z) - std::abs(dz);
 	if (pz <= 0) return { 0.0f, 0.0f, 0.0f };
 
 	// 최소 겹침 축 선택
-	if (px < pz) {
+	/*if (px < pz) {
 		return { dx < 0 ? -px : px, 0.0f, 0.0f };
 	}
 	else {
 		return { 0.0f, 0.0f, dz < 0 ? -pz : pz };
-	}
-	/*if (px < py && px < pz)
-		return { dx < 0 ? -px : px, 0.0f, 0.0f };
+	}*/
+	if (px < py && px < pz)
+		return { dx < 0 ? px : -px, 0.0f, 0.0f };
 	else if (py < pz)
-		return { 0.0f, dy < 0 ? -py : py, 0.0f };
+		return { 0.0f, dy < 0 ? py : -py, 0.0f };
 	else
-		return { 0.0f, 0.0f, dz < 0 ? -pz : pz };*/
+		return { 0.0f, 0.0f, dz < 0 ? pz : -pz };
 }
 
 XMFLOAT3 CCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
