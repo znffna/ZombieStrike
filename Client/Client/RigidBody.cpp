@@ -116,7 +116,7 @@ void CRigidBody::Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT4& rotati
 void CRigidBody::ApplyCorrection(const XMFLOAT3& xmf3Correction)
 {
 	m_pTransform->Move(xmf3Correction);
-	m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f); // 속도 초기화
+	m_xmf3Velocity = Vector3::ScalarProduct(m_xmf3Velocity, -1.0f); // 속도 초기화
 }
 
 void CRigidBody::UpdateVelocity(float fTimeElapsed)
