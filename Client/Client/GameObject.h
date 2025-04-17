@@ -72,42 +72,7 @@ public:
 		// Transform Owner Setting
 	};
 
-	virtual void GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs)
-	{
-		// 복사 할당 연산자 호출
-		//*this = *rhs.get();
-
-		// Object Info
-		m_strName = rhs->m_strName;
-
-		/// Resource Copy (shallow copy)
-		// Copy Mesh 
-		if (rhs->m_pMesh) m_pMesh = rhs->m_pMesh;
-
-		// Copy Materials 
-		m_ppMaterials = rhs->m_ppMaterials;
-
-		/// Components Copy (Deep Copy)
-		// Copy Transform
-		// if (rhs->m_pTransform) m_pTransform = std::make_shared<CTransform>(*rhs->m_pTransform);
-
-		// Copy Components
-		for (auto& pComponent : rhs->m_pComponents)
-		{
-			auto pclone = pComponent.second->Clone();
-			m_pComponents[pComponent.first] = pclone;
-			pclone->Init(this);
-		}
-
-		// Copy Childs
-		std::shared_ptr<CGameObject> pnewChild;
-		for (auto& pChild : rhs->m_pChilds)
-		{
-			pnewChild = std::make_shared<CGameObject>();
-			pnewChild->GetResourcesAndComponents(pChild);
-			m_pChilds.push_back(pnewChild);
-		}
-	};
+	virtual void GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs);;
 
 	static std::shared_ptr<CGameObject> CreateObject() { return std::make_shared<CGameObject>(); }
 
@@ -188,7 +153,7 @@ public:
 	virtual void Update(float fTimeElapsed);
 
 	// Object Render
-	virtual void OnPrepareRender() { }
+	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 
 	// Component
@@ -351,11 +316,6 @@ public:
 
 	static std::shared_ptr<CCubeObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 };
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-
-class CHeightMapTerrain;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

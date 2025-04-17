@@ -77,6 +77,43 @@ void CGameObject::Init()
 	//m_strName = "GameObject_" + std::to_string(m_nObjectID);
 }
 
+void CGameObject::GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs)
+{
+	// 복사 할당 연산자 호출
+	//*this = *rhs.get();
+
+	// Object Info
+	m_strName = rhs->m_strName;
+
+	/// Resource Copy (shallow copy)
+	// Copy Mesh 
+	if (rhs->m_pMesh) m_pMesh = rhs->m_pMesh;
+
+	// Copy Materials 
+	m_ppMaterials = rhs->m_ppMaterials;
+
+	/// Components Copy (Deep Copy)
+	// Copy Transform
+	// if (rhs->m_pTransform) m_pTransform = std::make_shared<CTransform>(*rhs->m_pTransform);
+
+	// Copy Components
+	for (auto& pComponent : rhs->m_pComponents)
+	{
+		auto pclone = pComponent.second->Clone();
+		m_pComponents[pComponent.first] = pclone;
+		pclone->Init(this);
+	}
+
+	// Copy Childs
+	std::shared_ptr<CGameObject> pnewChild;
+	for (auto& pChild : rhs->m_pChilds)
+	{
+		pnewChild = std::make_shared<CGameObject>();
+		pnewChild->GetResourcesAndComponents(pChild);
+		m_pChilds.push_back(pnewChild);
+	}
+}
+
 void CGameObject::SetName(const std::string& strName)
 {
 	if (strName.length() > 0)
@@ -129,7 +166,7 @@ void CGameObject::UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix)
 
 void CGameObject::Update(float fTimeElapsed)
 {
-	// Component Update
+	// Component Update // 순서좀 생각해야 될 듯?
 	for (auto& pComponent : m_pComponents)
 	{
 		pComponent.second->Update(fTimeElapsed);
@@ -179,19 +216,13 @@ void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pGameObject)
 	if (rigidBody && otherRigidBody)
 	{
 		XMFLOAT3 halfMTV = Vector3::ScalarProduct(mtv, 0.5f);
-		XMFLOAT3 reversehalfMTV = Vector3::ScalarProduct(halfMTV, -1.0f);
-
 		rigidBody->ApplyCorrection(halfMTV);
-		otherRigidBody->ApplyCorrection(reversehalfMTV);
 	}
 	else if (rigidBody)
 	{
 		rigidBody->ApplyCorrection(mtv);
 	}
-	else if (otherRigidBody)
-	{
-		otherRigidBody->ApplyCorrection(Vector3::ScalarProduct(mtv, -1.0f));
-	}
+	
 }
 
 BoundingBox CGameObject::GetMergedBoundingBox(BoundingBox* pVolume)
@@ -224,6 +255,14 @@ BoundingBox CGameObject::GetMergedBoundingBox(BoundingBox* pVolume)
 		}
 
 		return *pVolume;
+	}
+}
+
+void CGameObject::OnPrepareRender()
+{
+	if (auto pCollider = GetComponent<CCollider>())
+	{
+		pCollider->UpdateCollider(GetWorldMatrix());
 	}
 }
 
@@ -601,6 +640,8 @@ bool CGameObject::CloneByModel(std::string& strModelName, std::shared_ptr<CGameO
 {
 	if (auto pModel = CScene::GetResourceManager().GetModelInfo(strModelName)) {
 		pGameObject->GetResourcesAndComponents(pModel->m_pModelRootObject);
+		auto pCollider = pGameObject->AddComponent<CAABBCollider>(pGameObject); // Collider 추가
+		pCollider->SetCollider(pModel->m_ModelBoundingBox); // Collider 설정
 		//pGameObject->SetChild(pModel->m_pModelRootObject);
 		return true;
 	}
@@ -730,6 +771,9 @@ std::shared_ptr<CLoadedModelInfo> CGameObject::LoadGeometryAndAnimationFromFile(
 			{
 				pLoadedModel->m_pModelRootObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, pShader, &pLoadedModel->m_nSkinnedMeshes, 0);
 				::ReadStringFromFile(pInFile, pstrToken); //"</Hierarchy>"
+
+				// 모델의 Root Transform을 초기화	
+				pLoadedModel->m_pModelRootObject->SetLocalMatrix(Matrix4x4::Identity());
 
 				// Model BoundingVolume 계산
 				pLoadedModel->m_pModelRootObject->Update(0.0f);
