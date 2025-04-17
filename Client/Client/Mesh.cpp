@@ -97,6 +97,7 @@ BoundingOrientedBox CMesh::GetBoundingOrientedBox(const XMFLOAT4& xmf4x4Quaterni
 
 void CMesh::SetSubMeshCount(int nSubMeshes)
 {
+	m_nSubMeshes = nSubMeshes;
 	m_ppnSubSetIndices.resize(nSubMeshes);
 	m_ppd3dSubSetIndexBuffers.resize(nSubMeshes);
 	m_ppd3dSubSetIndexUploadBuffers.resize(nSubMeshes);
@@ -1098,4 +1099,48 @@ void CSkinnedMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void*
 {
 	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[7] = { m_d3dPositionBufferView, m_d3dTextureCoord0BufferView, m_d3dNormalBufferView, m_d3dTangentBufferView, m_d3dBiTangentBufferView, m_d3dBoneIndexBufferView, m_d3dBoneWeightBufferView };
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 7, pVertexBufferViews);
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+//
+
+CSphereMesh::CSphereMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fRadius, int nSlices, int nStacks)
+	: CMesh(pd3dDevice, pd3dCommandList)
+{
+	std::ifstream pInFile("SphereCollider.bin");
+	if (!pInFile.is_open())
+	{
+		MessageBox(0, L"SphereCollider.bin not found", L"Error", MB_OK);
+		return;
+	}
+
+	m_nVertices = ReadIntegerFromFile(pInFile);
+
+	std::vector<XMFLOAT3> pxmf3Positions(m_nVertices);
+	pInFile.read((char*)pxmf3Positions.data(), sizeof(XMFLOAT3) * m_nVertices);
+
+	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+	SetSubMeshCount(1);
+	UINT nIndices = ReadIntegerFromFile(pInFile);
+
+	for (UINT i = 0; i < m_nSubMeshes; i++)
+	{
+		m_ppnSubSetIndices[i].resize(nIndices);
+		pInFile.read((char*)m_ppnSubSetIndices[i].data(), sizeof(UINT) * nIndices);
+
+		m_ppd3dSubSetIndexBuffers[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[i].data(), sizeof(UINT) * (UINT)m_ppnSubSetIndices[i].size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[i]);
+
+		m_pd3dSubSetIndexBufferViews[i].BufferLocation = m_ppd3dSubSetIndexBuffers[i]->GetGPUVirtualAddress();
+		m_pd3dSubSetIndexBufferViews[i].Format = DXGI_FORMAT_R32_UINT;
+		m_pd3dSubSetIndexBufferViews[i].SizeInBytes = (UINT)(sizeof(UINT) * m_ppnSubSetIndices[i].size());
+	}
+}
+
+CSphereMesh::~CSphereMesh()
+{
 }

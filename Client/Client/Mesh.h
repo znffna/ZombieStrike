@@ -287,6 +287,13 @@ public:
 	virtual ~CCubeMesh();
 };
 
+class CSphereMesh : public CMesh
+{
+public:
+	CSphereMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fRadius = 1.0f, int nSlices = 16, int nStacks = 16);
+	virtual ~CSphereMesh();
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 
