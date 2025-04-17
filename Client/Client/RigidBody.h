@@ -8,16 +8,19 @@
 //////////////////////////////////////////////////////////////////////////
 //
 
-class CRigidBodyComponent;
-using CRigidBody = CRigidBodyComponent; // Alias
+class CCollider;
+class CTransform;
+class CGameObject;
 
-class CRigidBodyComponent : public CComponent
+class CRigidBody : public CComponent
 {
 public:
-	CRigidBodyComponent() {};
-	virtual ~CRigidBodyComponent() {};
+	CRigidBody(CGameObject* pObject) : CComponent(pObject) {};
+	virtual ~CRigidBody() {};
 
-	virtual std::shared_ptr<CComponent> Clone() const {	return std::make_shared<CRigidBodyComponent>(*this);};
+	virtual void Init(CGameObject* pObject) override;
+
+	virtual std::shared_ptr<CComponent> Clone() const {	return std::make_shared<CRigidBody>(*this);};
 
 	void SetVelocity(const XMFLOAT3& xmf3Velocity) { m_xmf3Velocity = xmf3Velocity; }
 	void SetVelocity(float x, float y, float z) { m_xmf3Velocity = XMFLOAT3(x, y, z); }
@@ -55,12 +58,16 @@ public:
 	void ApplyForceAtPoint(const XMFLOAT3& f, const XMFLOAT3& point);
 	void Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT4& rotation);
 
+	void ApplyCorrection(const XMFLOAT3& xmf3Correction);
+	
 	virtual void Update(float fTimeElapsed) override
 	{
 		UpdateRigidBody(fTimeElapsed);
 	}
 
-	void OnCollision(std::shared_ptr<CGameObject> pGameObject);
+private:
+	std::shared_ptr<CTransform> m_pTransform;
+	std::shared_ptr<CCollider> m_pCollider;
 
 private:
 	float 		 				m_fMass = 1.0f;

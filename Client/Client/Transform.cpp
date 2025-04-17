@@ -10,7 +10,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-void CTransformComponent::SetPosition(float fx, float fy, float fz)
+void CTransform::SetPosition(float fx, float fy, float fz)
 {
 	m_xmf3Position = DirectX::XMFLOAT3(fx, fy, fz);
 
@@ -21,7 +21,7 @@ void CTransformComponent::SetPosition(float fx, float fy, float fz)
 	UpdateTransform(nullptr);
 }
 
-void CTransformComponent::SetScale(float fx, float fy, float fz)
+void CTransform::SetScale(float fx, float fy, float fz)
 {
 	m_xmf3Scale = DirectX::XMFLOAT3(fx, fy, fz);
 
@@ -32,7 +32,7 @@ void CTransformComponent::SetScale(float fx, float fy, float fz)
 	UpdateTransform(nullptr);
 }
 
-void CTransformComponent::Move(DirectX::XMFLOAT3 xmf3Shift)
+void CTransform::Move(DirectX::XMFLOAT3 xmf3Shift)
 {
 	m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
 
@@ -43,28 +43,28 @@ void CTransformComponent::Move(DirectX::XMFLOAT3 xmf3Shift)
 	UpdateTransform(nullptr);
 }
 
-void CTransformComponent::MoveStrafe(float fDistance)
+void CTransform::MoveStrafe(float fDistance)
 {
 	DirectX::XMFLOAT3 xmf3Right = GetRight();
 	DirectX::XMFLOAT3 xmf3Shift = Vector3::ScalarProduct(xmf3Right, fDistance);
 	Move(xmf3Shift);
 }
 
-void CTransformComponent::MoveUp(float fDistance)
+void CTransform::MoveUp(float fDistance)
 {
 	DirectX::XMFLOAT3 xmf3Up = GetUp();
 	DirectX::XMFLOAT3 xmf3Shift = Vector3::ScalarProduct(xmf3Up, fDistance);
 	Move(xmf3Shift);
 }
 
-void CTransformComponent::MoveForward(float fDistance)
+void CTransform::MoveForward(float fDistance)
 {
 	DirectX::XMFLOAT3 xmf3Look = GetLook();
 	DirectX::XMFLOAT3 xmf3Shift = Vector3::ScalarProduct(xmf3Look, fDistance);
 	Move(xmf3Shift);
 }
 
-void CTransformComponent::Rotate(float fPitch, float fYaw, float fRoll)
+void CTransform::Rotate(float fPitch, float fYaw, float fRoll)
 {
 	m_xmf3Rotation.x += fPitch;
 	m_xmf3Rotation.y += fYaw;
@@ -76,27 +76,27 @@ void CTransformComponent::Rotate(float fPitch, float fYaw, float fRoll)
 	UpdateTransform(nullptr);
 }
 
-void CTransformComponent::Rotate(const XMFLOAT3& pxmf3Axis, float fAngle)
+void CTransform::Rotate(const XMFLOAT3& pxmf3Axis, float fAngle)
 {
 	XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&pxmf3Axis), XMConvertToRadians(fAngle));
 	m_xmf4x4Local = Matrix4x4::Multiply(xmmtxRotate, m_xmf4x4Local);
 
-	m_xmf3Rotation = ExtractEulerAngles(m_xmf4x4Local, m_xmf3Scale);
+	m_xmf3Rotation = GetEulerAngles(m_xmf4x4Local, m_xmf3Scale);
 
 	UpdateTransform(nullptr);
 }
 
-void CTransformComponent::Rotate(const XMFLOAT4& pxmf4Quaternion)
+void CTransform::Rotate(const XMFLOAT4& pxmf4Quaternion)
 {
 	XMMATRIX xmmtxRotate = XMMatrixRotationQuaternion(XMLoadFloat4(&pxmf4Quaternion));
 	m_xmf4x4Local = Matrix4x4::Multiply(xmmtxRotate, m_xmf4x4Local);
 
-	m_xmf3Rotation = ExtractEulerAngles(m_xmf4x4Local, m_xmf3Scale);
+	m_xmf3Rotation = GetEulerAngles(m_xmf4x4Local, m_xmf3Scale);
 
 	UpdateTransform(nullptr);
 }
 
-XMFLOAT3 CTransformComponent::ExtractEulerAngles(const XMFLOAT4X4& worldMatrix, const XMFLOAT3& scale)
+XMFLOAT3 CTransform::GetEulerAngles(const XMFLOAT4X4& worldMatrix, const XMFLOAT3& scale) const
 {
 	// 스케일을 제거한 회전 행렬을 얻기 위해 각 축을 정규화
 	XMFLOAT3X3 rotationMatrix;
@@ -124,7 +124,7 @@ XMFLOAT3 CTransformComponent::ExtractEulerAngles(const XMFLOAT4X4& worldMatrix, 
 	return XMFLOAT3(pitch, yaw, roll); // 각도(x,y,z) 값 반환
 }
 
-void CTransformComponent::UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
+void CTransform::UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
 {
 	m_xmf4x4World = (xmf4x4ParentMatrix) ? Matrix4x4::Multiply(m_xmf4x4Local, *xmf4x4ParentMatrix) : m_xmf4x4Local;
 
@@ -136,7 +136,7 @@ void CTransformComponent::UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4Paren
 #endif
 }
 
-void CTransformComponent::UpdateTransform(const std::shared_ptr<CGameObject> pParentObject)
+void CTransform::UpdateTransform(const std::shared_ptr<CGameObject> pParentObject)
 {
 	SetWorldMatrix((pParentObject) ? Matrix4x4::Multiply(m_xmf4x4Local, (pParentObject->GetWorldMatrix())) : m_xmf4x4Local);
 #ifdef	_WITH_TRANSFORM_HIERARCHY

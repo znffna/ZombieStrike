@@ -1,180 +1,154 @@
-///////////////////////////////////////////////////////////////////////////////
-// Date: 2025-03-28
-// Collider.h : CCollider 클래스의 헤더 파일
-// Version : 0.1
-///////////////////////////////////////////////////////////////////////////////
-#pragma once
-#include "Component.h"
+///////////////////////////////////////////////////////////////////////////////  
+// Date: 2025-03-28  
+// Collider.h : CCollider 클래스의 헤더 파일  
+// Version : 0.1  
+///////////////////////////////////////////////////////////////////////////////  
+#pragma once  
+#include "Component.h"  
 
-class CCamera;
+class CCamera;  
 
-class CColliderComponent;
-class CSphereCollider;
-class CAABBCollider;
-class COBBCollider;
+class CCollider;  
+class CSphereCollider;  
+class CAABBCollider;  
+class COBBCollider;  
 
-using DefaultCollider = CAABBCollider; // Alias for easier usage
+using DefaultCollider = CAABBCollider; // Alias for easier usage  
 
-class CMesh;
+class CMesh;  
+class CTransform;  
 
-using CCollider = CColliderComponent; // Alias for easier usage
+const enum ColliderType { AABB, OBB, SPHERE };  
 
-class CColliderComponent : public CComponent
-{
-public:
-	CColliderComponent() { }
-	virtual ~CColliderComponent() { }
+class CCollider : public CComponent  
+{  
+public:  
+	CCollider(CGameObject* pObject) : CComponent(pObject) { }  
+	virtual ~CCollider() { }  
 
-	virtual std::shared_ptr<CComponent> Clone() const = 0;
+	// Initialization
+	virtual void Init(CGameObject* pObject);
 
+	// Clone
+	virtual std::shared_ptr<CComponent> Clone() const = 0;  
+
+	// getters  
+	virtual int GetColliderType() = 0;  
+	virtual XMFLOAT3 GetCenter() = 0;  
+	virtual XMFLOAT3 GetExtends() = 0;  
+	virtual XMFLOAT4X4 GetColliderMatrix() = 0;  
+	virtual BoundingBox GetBoundingBox() { return BoundingBox(GetCenter(), GetExtends()); }  
+
+	XMFLOAT3 GetCorrectionVector(std::shared_ptr<CCollider>& pCollider);  
+
+	// setters  
+	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) = 0;  
+	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends) = 0;  
+	virtual void SetCollider(BoundingBox boundingBox) = 0;  
+
+	// methods  
 	virtual void Update(float fTimeElapsed) override;
-
-	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) = 0;
-	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends) = 0;
-
 	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) = 0;
-	//virtual void RenderCollider(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) = 0;
+	virtual bool IsCollided(CCollider* pCollider) = 0;  
+	virtual bool IsCollided(std::shared_ptr<CCollider> pCollider) { return IsCollided(pCollider.get()); };  
 
-	virtual bool IsCollided(CColliderComponent* pCollider) = 0;
-	virtual bool IsCollided(std::shared_ptr<CColliderComponent> pCollider) { return IsCollided(pCollider.get()); };
+	// reference members  
+	std::shared_ptr<const CTransform> m_pTransform;  
+};  
 
-	virtual XMFLOAT4X4 GetColliderMatrix() = 0;
+//////////////////////////////////////////////////////////////////////////  
+//  
 
-	const enum ColliderType { AABB, OBB, Sphere };
+class CSphereCollider : public CCollider  
+{  
+public:  
+	// Constructor & Destructor  
+	CSphereCollider(CGameObject* pObject) : CCollider(pObject) {}  
+	virtual ~CSphereCollider() { }  
 
-	virtual int GetColliderType() = 0;
+	// Clone  
+	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CSphereCollider>(*this); };  
+
+	// Getters  
+	virtual XMFLOAT3 GetCenter() override { return m_xmWorldBoundingSphere.Center; }  
+	virtual XMFLOAT3 GetExtends() override { return XMFLOAT3{ m_xmWorldBoundingSphere.Radius, m_xmWorldBoundingSphere.Radius, m_xmWorldBoundingSphere.Radius }; };  
+	virtual int GetColliderType() override { return ColliderType::SPHERE; };  
+	XMFLOAT4X4 GetColliderMatrix() override;;  
+	const BoundingSphere GetBoundingVolume() { return m_xmWorldBoundingSphere; }  
+
+	// Setters  
+	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;  
+	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends) override;  
+	void SetCollider(const XMFLOAT3& xmf3Center, float fRadius);  
+	void SetCollider(BoundingBox boundingBox) override;  
+
+	// Methods  
+	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) override;;  
+	virtual bool IsCollided(CCollider* pCollider) override;;  
+
+private:  
+	BoundingSphere m_xmBoundingSphere;  
+	BoundingSphere m_xmWorldBoundingSphere;  
 };
 
-//////////////////////////////////////////////////////////////////////////
-//
+class CAABBCollider : public CCollider    
+{    
+public:    
+	CAABBCollider(CGameObject* pObject) : CCollider(pObject) {}    
+	virtual ~CAABBCollider() {}    
 
-class CSphereCollider : public CColliderComponent
-{
-public:
-	CSphereCollider() { }
-	virtual ~CSphereCollider() { }
+	// Clone    
+	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CAABBCollider>(*this); };    
 
-	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CSphereCollider>(*this); };
+	// Getters    
+	virtual XMFLOAT3 GetCenter() override { return m_xmWorldBoundingBox.Center; };  
+	virtual XMFLOAT3 GetExtends() override { return m_xmWorldBoundingBox.Extents; };  
+	const BoundingBox GetBoundingVolume() { return m_xmWorldBoundingBox; }  
+	int GetColliderType() override { return ColliderType::AABB; }    
 
+	// Setters    
+	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;    
+	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents) override;    
+	void SetCollider(BoundingBox boundingBox) override;    
 
-	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
-	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends) override
-	{
-		m_xmBoundingSphere.Center = xmf3Center;
-		m_xmBoundingSphere.Radius = Vector3::Length(Extends);
-	};
-	void SetCollider(const XMFLOAT3& xmf3Center, float fRadius)
-	{
-		m_xmBoundingSphere.Center = xmf3Center;
-		m_xmBoundingSphere.Radius = fRadius;
-	};
+	// Methods    
+	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) override;    
+	virtual bool IsCollided(CCollider* pCollider) override;    
+	XMFLOAT4X4 GetColliderMatrix() override;    
 
-	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) override
-	{
-		m_xmWorldBoundingSphere.Center = Vector3::TransformCoord(m_xmBoundingSphere.Center, xmf4x4World);
-		m_xmWorldBoundingSphere.Radius = m_xmBoundingSphere.Radius;
+private:    
+	BoundingBox m_xmBoundingBox;    
+	BoundingBox m_xmWorldBoundingBox;  
+};  
 
-	};
+class COBBCollider : public CCollider    
+{    
+public:    
+	// Special functions    
+	COBBCollider(CGameObject* pObject) : CCollider(pObject) {}    
+	virtual ~COBBCollider() {}    
 
-	virtual bool IsCollided(CColliderComponent* pCollider) override;;
+	// Clone
+	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<COBBCollider>(*this); };    
 
-	XMFLOAT4X4 GetColliderMatrix() override
-	{
-		XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
-			XMFLOAT3(m_xmWorldBoundingSphere.Radius * 2, m_xmWorldBoundingSphere.Radius * 2, m_xmWorldBoundingSphere.Radius * 2),
-			XMFLOAT4(0.0f,0.0f,0.0f,1.0f),
-			m_xmWorldBoundingSphere.Center
-		);
-		return xmf4x4box;
-	};
+	// Getters    
+	virtual XMFLOAT3 GetCenter() override { return m_xmWorldBoundingOrientedBox.Center; };    
+	virtual XMFLOAT3 GetExtends() override { return m_xmWorldBoundingOrientedBox.Extents; };    
+	XMFLOAT4X4 GetColliderMatrix() override;    
+	const BoundingOrientedBox GetBoundingVolume() { return m_xmWorldBoundingOrientedBox; }    
+	int GetColliderType() override { return ColliderType::OBB; }    
 
-	int GetColliderType() override { return ColliderType::Sphere; };
-	const BoundingSphere GetBoundingSphere() { return m_xmWorldBoundingSphere; }
-private:
-	BoundingSphere m_xmBoundingSphere;
-	BoundingSphere m_xmWorldBoundingSphere;
-};
+	// Setters    
+	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;    
+	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents) override;    
+	void SetCollider(const BoundingOrientedBox& OBB) { m_xmBoundingOrientedBox = OBB; };    
+	void SetCollider(BoundingBox boundingBox) override;    
 
-class CAABBCollider : public CColliderComponent
-{
-public:
-	CAABBCollider() { }
-	virtual ~CAABBCollider() { }
+	// Methods    
+	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) override;    
+	virtual bool IsCollided(CCollider* pCollider) override;    
 
-	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CAABBCollider>(*this); };
-
-
-	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
-	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents) override
-	{
-		m_xmBoundingBox.Center = xmf3Center;
-		m_xmBoundingBox.Extents = xmf3Extents;
-	};
-
-	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) override
-	{
-		m_xmBoundingBox.Transform(m_xmWorldBoundingBox, XMLoadFloat4x4(&xmf4x4World));
-	};
-
-	virtual bool IsCollided(CColliderComponent* pCollider) override;;
-
-	XMFLOAT4X4 GetColliderMatrix() override
-	{
-		XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
-			Vector3::ScalarProduct(m_xmWorldBoundingBox.Extents, 2.0f, false),
-			XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),
-			m_xmWorldBoundingBox.Center
-		);
-		return xmf4x4box;
-	};
-
-	const BoundingBox GetBoundingBox() { return m_xmBoundingBox; }
-	int GetColliderType() override { return ColliderType::AABB; }
-
-private:
-	BoundingBox m_xmBoundingBox;
-	BoundingBox m_xmWorldBoundingBox;
-};
-
-class COBBCollider : public CColliderComponent
-{
-public:
-	COBBCollider() { }
-	virtual ~COBBCollider() { }
-
-	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<COBBCollider>(*this); };
-
-
-	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
-	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents) override
-	{
-		m_xmBoundingOrientedBox.Center = xmf3Center;
-		m_xmBoundingOrientedBox.Extents = xmf3Extents;
-	};
-	void SetCollider(const BoundingOrientedBox& OBB) { m_xmBoundingOrientedBox = OBB; };
-
-	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) override
-	{
-		m_xmBoundingOrientedBox.Transform(m_xmWorldBoundingOrientedBox, XMLoadFloat4x4(&xmf4x4World));
-	};
-
-	virtual bool IsCollided(CColliderComponent* pCollider) override;;
-
-	XMFLOAT4X4 GetColliderMatrix() override
-	{
-		XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
-			Vector3::ScalarProduct(m_xmWorldBoundingOrientedBox.Extents, 2.0f, false),
-			m_xmWorldBoundingOrientedBox.Orientation,
-			m_xmWorldBoundingOrientedBox.Center
-		);
-		return xmf4x4box;
-	};
-
-	const BoundingOrientedBox GetBoundingOrientedBox() { return m_xmWorldBoundingOrientedBox; }
-	int GetColliderType() override { return ColliderType::OBB; }
-
-private:
-
-	BoundingOrientedBox m_xmBoundingOrientedBox;
-	BoundingOrientedBox m_xmWorldBoundingOrientedBox;
+private:    
+	BoundingOrientedBox m_xmBoundingOrientedBox;    
+	BoundingOrientedBox m_xmWorldBoundingOrientedBox;    
 };

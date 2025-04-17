@@ -45,6 +45,7 @@ public:
 
 	std::shared_ptr<CAnimationSets> m_pAnimationSets;
 
+	BoundingBox m_ModelBoundingBox;
 public:
 	void PrepareSkinning();;
 };
@@ -69,45 +70,9 @@ public:
 	// Object Initialization
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList) {
 		// Transform Owner Setting
-		m_pTransform->SetOwner(shared_from_this());
 	};
 
-	virtual void GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs)
-	{
-		// 복사 할당 연산자 호출
-		//*this = *rhs.get();
-
-		// Object Info
-		m_strName = rhs->m_strName;
-
-		/// Resource Copy (shallow copy)
-		// Copy Mesh 
-		if (rhs->m_pMesh) m_pMesh = rhs->m_pMesh;
-
-		// Copy Materials 
-		m_ppMaterials = rhs->m_ppMaterials;
-
-		/// Components Copy (Deep Copy)
-		// Copy Transform
-		// if (rhs->m_pTransform) m_pTransform = std::make_shared<CTransform>(*rhs->m_pTransform);
-
-		// Copy Components
-		for (auto& pComponent : rhs->m_pComponents)
-		{
-			auto pclone = pComponent.second->Clone();
-			m_pComponents[pComponent.first] = pclone;
-			pclone->SetOwner(shared_from_this());
-		}
-
-		// Copy Childs
-		std::shared_ptr<CGameObject> pnewChild;
-		for (auto& pChild : rhs->m_pChilds)
-		{
-			pnewChild = std::make_shared<CGameObject>();
-			pnewChild->GetResourcesAndComponents(pChild);
-			m_pChilds.push_back(pnewChild);
-		}
-	};
+	virtual void GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs);;
 
 	static std::shared_ptr<CGameObject> CreateObject() { return std::make_shared<CGameObject>(); }
 
@@ -188,16 +153,16 @@ public:
 	virtual void Update(float fTimeElapsed);
 
 	// Object Render
-	virtual void OnPrepareRender() { }
+	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 
 	// Component
 	template <typename T>
 	std::shared_ptr<T> AddComponent(std::shared_ptr<CGameObject> pOwner)
 	{
-		std::shared_ptr<T> pComponent = std::make_shared<T>();
-		pComponent->SetOwner(pOwner);
+		std::shared_ptr<T> pComponent = std::make_shared<T>(pOwner.get());
 		m_pComponents[COMPONENT_KEY(T)] = pComponent;
+		pComponent->Init(pOwner.get());
 		return pComponent;
 	};
 
@@ -227,9 +192,10 @@ public:
 	}
 
 	// Object Collision
-	void IsCollided(std::shared_ptr<CGameObject>& pOther);
-	static void IsCollided(std::shared_ptr<CGameObject> pGameObject1, std::shared_ptr<CGameObject> pGameObject2);
-	virtual void OnCollision(std::shared_ptr<CGameObject> pGameObject);
+	virtual bool IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth = 0);// Collision Check
+	virtual void OnCollision(std::shared_ptr<CGameObject>& pGameObject); // Collision Event
+
+	BoundingBox GetMergedBoundingBox(BoundingBox* pVolume = nullptr);
 
 	// Mesh
 	void SetMesh(std::shared_ptr<CMesh> pMesh);
@@ -268,7 +234,7 @@ protected:
 	std::vector<std::shared_ptr<CMaterial>> m_ppMaterials; // Object CMaterial
 public:
 	// Transform
-	std::shared_ptr<CTransform> m_pTransform = std::make_shared<CTransform>();
+	std::shared_ptr<CTransform> m_pTransform = std::make_shared<CTransform>(this);
 
 	// Component
 	std::unordered_map<std::string, std::shared_ptr<CComponent>> m_pComponents;
@@ -303,16 +269,6 @@ public:
 	static std::shared_ptr<CLoadedModelInfo> LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* pstrFileName, std::shared_ptr<CShader> pShader);
 
 	std::shared_ptr<CGameObject> FindFrame(std::string strFrameName);
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-
-class CZombieAnimationController : public CAnimationController
-{
-public:
-	CZombieAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, std::shared_ptr<CLoadedModelInfo> pModel);
-	virtual ~CZombieAnimationController();
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -359,24 +315,6 @@ public:
 	virtual std::string GetDefaultName() override { return "CCubeObject"; }
 
 	static std::shared_ptr<CCubeObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-
-class CHeightMapTerrain;
-
-class CZombieObject : public CGameObject
-{
-public:
-	CZombieObject();
-	virtual ~CZombieObject();
-
-	// Object Initialization
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks);
-	virtual std::string GetDefaultName() override { return "CZombieObject"; }
-
-	static std::shared_ptr<CZombieObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

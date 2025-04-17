@@ -124,7 +124,7 @@ void CScene::CreateStaticShader(ID3D12Device* pd3dDevice)
 void CScene::CreateStaticMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	AddMesh("CCubeMesh", std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f));
-	//AddMesh("SphereMesh", std::make_shared<CSphereMesh>(pd3dDevice, pd3dCommandList, 1.0f, 20, 20));
+	AddMesh("SphereMesh", std::make_shared<CSphereMesh>(pd3dDevice, pd3dCommandList));
 }
 
 void CScene::ReleaseObjects()
@@ -212,7 +212,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
 }
 
-void CScene::CheckCollision()
+void CScene::ProcessCollisions()
 {
 	for (auto& pObject : m_ppObjects)
 	{
@@ -220,7 +220,10 @@ void CScene::CheckCollision()
 		{
 			if (pObject != pOtherObject)
 			{
-				pObject->IsCollided(pOtherObject);
+				if (pObject->IsCollided(pOtherObject)) {
+					pObject->OnCollision(pOtherObject);
+					pOtherObject->OnCollision(pObject);
+				}
 			}
 		}
 
@@ -228,13 +231,27 @@ void CScene::CheckCollision()
 		{
 			if (pObject != pOtherObject)
 			{
-				pObject->IsCollided(pOtherObject);
+				if (pObject->IsCollided(pOtherObject)) {
+					pObject->OnCollision(pOtherObject);
+					pOtherObject->OnCollision(pObject);
+				}
 			}
 		}
 
 		if (m_pMap)
 		{
-			m_pMap->IsCollided(pObject);
+			// map은 root를 제외한 실제 맵 구성 Object들과 충돌처리를 해야한다.
+			auto mapObjects = m_pMap->GetChilds();
+			for (auto& pOtherObject : mapObjects)
+			{
+				if (pObject != pOtherObject)
+				{
+					if (pObject->IsCollided(pOtherObject)) {
+						pObject->OnCollision(pOtherObject);
+						pOtherObject->OnCollision(pObject);
+					}
+				}
+			}
 		}
 	}
 
@@ -244,43 +261,49 @@ void CScene::CheckCollision()
 		{
 			if (pObject != pOtherObject)
 			{
-				pObject->IsCollided(pOtherObject);
+				if (pObject->IsCollided(pOtherObject)) {
+					pObject->OnCollision(pOtherObject);
+					pOtherObject->OnCollision(pObject);
+				}
 			}
 		}
 
 		if (m_pMap)
 		{
-			m_pMap->IsCollided(pObject);
+			// map은 root를 제외한 실제 맵 구성 Object들과 충돌처리를 해야한다.
+			auto mapObjects = m_pMap->GetChilds(); 
+			for (auto& pOtherObject : mapObjects)
+			{
+				if (pObject != pOtherObject)
+				{
+					if (pObject->IsCollided(pOtherObject)) {
+						// 충돌처리
+						std::string DebugOutput = "Collision Detected: " + pObject->GetName() + " <-> " + pOtherObject->GetName() + "\n";
+						OutputDebugStringA(DebugOutput.c_str());
+
+						pObject->OnCollision(pOtherObject);
+						pOtherObject->OnCollision(pObject);
+					}
+				}
+			}
 		}
 	}
 }
 
 void CScene::Update(float deltaTime)
 {
-	if (false == CheckWorkUpdating())
-	{
-		// Scene is not running
-		return;
-	}
+	if (false == CheckWorkUpdating()) return;
 
 	m_fElapsedTime = deltaTime;
 
 	// Update GameObjects
-	for (auto& pObject : m_ppObjects)
-	{
-		pObject->Update(deltaTime);
-	}
-
-	// Collision Check and Resolve
+	for (auto& pObject : m_ppObjects) pObject->Update(deltaTime);
 
 	// Update Matrix
-	for (auto& pObject : m_ppObjects)
-	{
-		pObject->UpdateTransform(nullptr);
-	}
+	for (auto& pObject : m_ppObjects) pObject->UpdateTransform(nullptr);
 
 	// Check Collision	
-	CheckCollision();
+	ProcessCollisions();
 
 }
 

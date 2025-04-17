@@ -77,6 +77,43 @@ void CGameObject::Init()
 	//m_strName = "GameObject_" + std::to_string(m_nObjectID);
 }
 
+void CGameObject::GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs)
+{
+	// 복사 할당 연산자 호출
+	//*this = *rhs.get();
+
+	// Object Info
+	m_strName = rhs->m_strName;
+
+	/// Resource Copy (shallow copy)
+	// Copy Mesh 
+	if (rhs->m_pMesh) m_pMesh = rhs->m_pMesh;
+
+	// Copy Materials 
+	m_ppMaterials = rhs->m_ppMaterials;
+
+	/// Components Copy (Deep Copy)
+	// Copy Transform
+	// if (rhs->m_pTransform) m_pTransform = std::make_shared<CTransform>(*rhs->m_pTransform);
+
+	// Copy Components
+	for (auto& pComponent : rhs->m_pComponents)
+	{
+		auto pclone = pComponent.second->Clone();
+		m_pComponents[pComponent.first] = pclone;
+		pclone->Init(this);
+	}
+
+	// Copy Childs
+	std::shared_ptr<CGameObject> pnewChild;
+	for (auto& pChild : rhs->m_pChilds)
+	{
+		pnewChild = std::make_shared<CGameObject>();
+		pnewChild->GetResourcesAndComponents(pChild);
+		m_pChilds.push_back(pnewChild);
+	}
+}
+
 void CGameObject::SetName(const std::string& strName)
 {
 	if (strName.length() > 0)
@@ -129,7 +166,7 @@ void CGameObject::UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix)
 
 void CGameObject::Update(float fTimeElapsed)
 {
-	// Component Update
+	// Component Update // 순서좀 생각해야 될 듯?
 	for (auto& pComponent : m_pComponents)
 	{
 		pComponent.second->Update(fTimeElapsed);
@@ -140,6 +177,93 @@ void CGameObject::Update(float fTimeElapsed)
 	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 
 	for (auto& pChild : m_pChilds) pChild->Update(fTimeElapsed);
+}
+
+bool CGameObject::IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth)
+{
+	auto pCollider = GetComponent<CCollider>();
+	auto pOtherCollider = pGameObject->GetComponent<CCollider>();
+	if (pCollider && pOtherCollider)
+	{
+		bool isCollide = pCollider->IsCollided(pOtherCollider);
+		if (isCollide) {
+			std::string DebugOutput = "Collision Detected: " + GetName() + " <-> " + pGameObject->GetName() + "\n";
+			OutputDebugStringA(DebugOutput.c_str());
+		}
+		return isCollide;
+	}
+
+	if (nDepth > 0) {
+		for (auto& pChild : m_pChilds) {
+			if (pChild->IsCollided(pGameObject, nDepth - 1)) return true;
+		}
+	}
+	return false;
+}
+
+void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pGameObject)
+{
+	// Collision Event
+	std::shared_ptr<CCollider> collider = GetComponent<CCollider>();
+	std::shared_ptr<CRigidBody> rigidBody = GetComponent<CRigidBody>();
+
+	std::shared_ptr<CCollider> otherCollider = pGameObject->GetComponent<CCollider>();
+	std::shared_ptr<CRigidBody> otherRigidBody = pGameObject->GetComponent<CRigidBody>();
+
+	// 최소 거리 측정
+	XMFLOAT3 mtv = collider->GetCorrectionVector(otherCollider);
+
+	if (rigidBody && otherRigidBody)
+	{
+		XMFLOAT3 halfMTV = Vector3::ScalarProduct(mtv, 0.5f);
+		rigidBody->ApplyCorrection(halfMTV);
+	}
+	else if (rigidBody)
+	{
+		rigidBody->ApplyCorrection(mtv);
+	}
+	
+}
+
+BoundingBox CGameObject::GetMergedBoundingBox(BoundingBox* pVolume)
+{
+	if (nullptr == pVolume)
+	{
+		BoundingBox boundingBox{};
+
+		if (auto pCollider = GetComponent<CCollider>())
+		{
+			BoundingBox::CreateMerged(boundingBox, boundingBox, pCollider->GetBoundingBox());
+		}
+
+		for (auto& pChild : m_pChilds)
+		{
+			pChild->GetMergedBoundingBox(&boundingBox);
+		}
+
+		return boundingBox;
+	}
+	else {
+		if (auto pCollider = GetComponent<CCollider>())
+		{
+			BoundingBox::CreateMerged(*pVolume, *pVolume, pCollider->GetBoundingBox());
+		}
+
+		for (auto& pChild : m_pChilds)
+		{
+			pChild->GetMergedBoundingBox(pVolume);
+		}
+
+		return *pVolume;
+	}
+}
+
+void CGameObject::OnPrepareRender()
+{
+	if (auto pCollider = GetComponent<CCollider>())
+	{
+		pCollider->UpdateCollider(GetWorldMatrix());
+	}
 }
 
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -199,45 +323,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	for (auto& pChild : m_pChilds)
 	{
 		pChild->Render(pd3dCommandList, pCamera);
-	}
-}
-
-void CGameObject::IsCollided(std::shared_ptr<CGameObject>& pOther)
-{
-	if (auto pCollider = GetComponent<CCollider>()) {
-		if (auto pCollider2 = pOther->GetComponent<CCollider>()) {
-			if (pCollider->IsCollided(pCollider2)) {
-				OnCollision(pOther);
-				pOther->OnCollision(shared_from_this());
-			}
-
-			for (auto& pChild : m_pChilds) {
-				if (pCollider->IsCollided(pChild->GetComponent<CCollider>())) {
-					OnCollision(pChild);
-					pChild->OnCollision(shared_from_this());
-				}
-			}
-		}
-	}
-}
-
-void CGameObject::IsCollided(std::shared_ptr<CGameObject> pGameObject1, std::shared_ptr<CGameObject> pGameObject2)
-{
-	if (auto pCollider = pGameObject1->GetComponent<CCollider>()) {
-		if (auto pCollider2 = pGameObject2->GetComponent<CCollider>()) {
-			if (pCollider->IsCollided(pCollider2)) {
-				pGameObject1->OnCollision(pGameObject2);
-				pGameObject2->OnCollision(pGameObject1);
-			}
-		}
-	}
-}
-
-void CGameObject::OnCollision(std::shared_ptr<CGameObject> pGameObject)
-{
-	// Collision Event
-	if (auto pRigidBody = GetComponent<CRigidBody>()) {
-		pRigidBody->OnCollision(pGameObject);
 	}
 }
 
@@ -555,6 +640,8 @@ bool CGameObject::CloneByModel(std::string& strModelName, std::shared_ptr<CGameO
 {
 	if (auto pModel = CScene::GetResourceManager().GetModelInfo(strModelName)) {
 		pGameObject->GetResourcesAndComponents(pModel->m_pModelRootObject);
+		auto pCollider = pGameObject->AddComponent<CAABBCollider>(pGameObject); // Collider 추가
+		pCollider->SetCollider(pModel->m_ModelBoundingBox); // Collider 설정
 		//pGameObject->SetChild(pModel->m_pModelRootObject);
 		return true;
 	}
@@ -684,6 +771,14 @@ std::shared_ptr<CLoadedModelInfo> CGameObject::LoadGeometryAndAnimationFromFile(
 			{
 				pLoadedModel->m_pModelRootObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, pShader, &pLoadedModel->m_nSkinnedMeshes, 0);
 				::ReadStringFromFile(pInFile, pstrToken); //"</Hierarchy>"
+
+				// 모델의 Root Transform을 초기화	
+				pLoadedModel->m_pModelRootObject->SetLocalMatrix(Matrix4x4::Identity());
+
+				// Model BoundingVolume 계산
+				pLoadedModel->m_pModelRootObject->Update(0.0f);
+				pLoadedModel->m_pModelRootObject->UpdateTransform();
+				pLoadedModel->m_ModelBoundingBox = pLoadedModel->m_pModelRootObject->GetMergedBoundingBox();
 			}
 			else if (!strcmp(pstrToken, "<Animation>:"))
 			{
@@ -1017,71 +1112,6 @@ void CLoadedModelInfo::PrepareSkinning()
 	m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes, &nSkinnedMesh);
 
 	for (int i = 0; i < m_nSkinnedMeshes; i++) m_ppSkinnedMeshes[i]->PrepareSkinning(m_pModelRootObject);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//
-
-CZombieObject::CZombieObject()
-{
-}
-
-CZombieObject::~CZombieObject()
-{
-}
-
-void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks)
-{
-	CGameObject::Initialize(pd3dDevice, pd3dCommandList);
-
-	// Object Info
-	static UINT nGameObjectID = 0;
-	m_bActive = true;
-	m_nObjectID = nGameObjectID++;
-
-	m_strName = "Zombie_" + std::to_string(m_nObjectID);
-
-	// Model Info
-	std::shared_ptr<CLoadedModelInfo> pAngrybotModel = pModel;
-	if (!pAngrybotModel) pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/FuzZombie.bin", NULL);
-	SetChild(pAngrybotModel->m_pModelRootObject);
-
-	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pAngrybotModel);
-
-	m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);
-	m_pSkinnedAnimationController->SetTrackEnable(1, false);
-
-	// Component
-	std::shared_ptr<CRigidBody> pRigidBody = AddComponent<CRigidBody>(shared_from_this());
-	pRigidBody->SetVelocity(XMFLOAT3(0.0f, -9.0f, 0.0f));
-
-}
-
-std::shared_ptr<CZombieObject> CZombieObject::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks)
-{
-	std::shared_ptr<CZombieObject> pZombie = std::make_shared<CZombieObject>();
-	pZombie->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pModel, nAnimationTracks);
-	pZombie->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(pTerrain.get());
-
-	return pZombie;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-//
-
-CZombieAnimationController::CZombieAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, std::shared_ptr<CLoadedModelInfo> pModel)
-	: CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pModel)
-{
-}
-
-CZombieAnimationController::~CZombieAnimationController()
-{
 }
 
 ///////////////////////////////////////////////////////////////////////////////

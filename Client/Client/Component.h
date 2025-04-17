@@ -15,17 +15,13 @@ class CCamera;
 class CComponent
 {
 public:
-	CComponent();
+	CComponent(CGameObject* pObject = nullptr);
 	virtual ~CComponent();
+
+	virtual void Init(CGameObject* pObject) {};
 
 	virtual std::shared_ptr<CComponent> Clone() const = 0;
 
-	void SetOwner(std::weak_ptr<CGameObject> pOwnerGameObject) { m_pOwnerGameObject = pOwnerGameObject; }
-	const std::shared_ptr<CGameObject> GetOwner() { return m_pOwnerGameObject.lock(); }
-
 	virtual void Update(float fTimeElapsed) { }
-
-private:
-	std::weak_ptr<CGameObject> m_pOwnerGameObject;
 };
 

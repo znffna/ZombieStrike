@@ -7,6 +7,8 @@
 
 #include "stdafx.h"
 #include "GameObject.h"
+#include "Zombie.h" 
+
 #include "Camera.h"
 #include "Shader.h"
 
@@ -73,8 +75,8 @@ public:
 
 		// 없는경우 바로 불러와서 저장하고 return 한다.
 		std::string filepath = "Model/" + name + ".bin";
-		OutputDebugStringA(filepath.c_str());
-		OutputDebugStringA("\n");
+		/*OutputDebugStringA(filepath.c_str());
+		OutputDebugStringA("\n");*/
 
 		auto pModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(m_d3dDevice, m_d3dGraphicsCommandList, m_d3dGraphicRootSignature, filepath.c_str(), nullptr);
 		if (pModelInfo) {
@@ -83,9 +85,9 @@ public:
 		}
 		else {
 			// 로드 실패
-			std::string strDebug = "Failed to load model: " + name;
+		/*	std::string strDebug = "Failed to load model: " + name;
 			OutputDebugStringA(strDebug.c_str());
-		}
+		*/}
 		return nullptr;
 	}
 
@@ -231,10 +233,9 @@ public:
 	SCENE_STATE GetSceneState() { return m_SceneState; }
 	void SetSceneState(SCENE_STATE SceneState) { m_SceneState = SceneState; }
 
-
 	// Scene Method
 	virtual void Update(float deltaTime);
-	void CheckCollision();
+	void ProcessCollisions();
 
 	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
