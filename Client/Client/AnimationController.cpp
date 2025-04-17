@@ -163,48 +163,6 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 				m_pAnimationTracks[k].HandleCallback();
 			}
 		}
-#ifdef _WITH_DEBUG_ANIMATION_UPDATE
-#ifdef _WITH_OBJECT_TRANSFORM
-		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
-		{
-			XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local;
-
-			// Print Matrix
-			TCHAR pstrDebug[256] = { 0 };
-			_stprintf_s(pstrDebug, 256, _T("Bone Frame %d\n"), j);
-			OutputDebugString(pstrDebug);
-			_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._11, xmf4x4Transform._12, xmf4x4Transform._13, xmf4x4Transform._14);
-			OutputDebugString(pstrDebug);
-			_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._21, xmf4x4Transform._22, xmf4x4Transform._23, xmf4x4Transform._24);
-			OutputDebugString(pstrDebug);
-			_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._31, xmf4x4Transform._32, xmf4x4Transform._33, xmf4x4Transform._34);
-			OutputDebugString(pstrDebug);
-			_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._41, xmf4x4Transform._42, xmf4x4Transform._43, xmf4x4Transform._44);
-			OutputDebugString(pstrDebug);
-			_stprintf_s(pstrDebug, 256, _T("----------------\n"));
-		}
-#else
-		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
-		{
-			XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->GetLocalMatrix();
-
-			// Print Matrix
-			TCHAR pstrDebug[256] = { 0 };
-			_stprintf_s(pstrDebug, 256, _T("Bone Frame %d\n"), j);
-			OutputDebugString(pstrDebug);
-			_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._11, xmf4x4Transform._12, xmf4x4Transform._13, xmf4x4Transform._14);
-			OutputDebugString(pstrDebug);
-			_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._21, xmf4x4Transform._22, xmf4x4Transform._23, xmf4x4Transform._24);
-			OutputDebugString(pstrDebug);
-			_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._31, xmf4x4Transform._32, xmf4x4Transform._33, xmf4x4Transform._34);
-			OutputDebugString(pstrDebug);
-			_stprintf_s(pstrDebug, 256, _T("%f %f %f %f\n"), xmf4x4Transform._41, xmf4x4Transform._42, xmf4x4Transform._43, xmf4x4Transform._44);
-			OutputDebugString(pstrDebug);
-			_stprintf_s(pstrDebug, 256, _T("----------------\n"));
-		}
-#endif // _WITH_OBJECT_TRANSFORM/
-
-#endif // _WITH_DEBUG_ANIMATION_UPDATE/
 
 		pRootGameObject->UpdateTransform(NULL);
 
