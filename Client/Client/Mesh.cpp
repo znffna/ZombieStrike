@@ -1107,17 +1107,19 @@ void CSkinnedMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void*
 CSphereMesh::CSphereMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fRadius, int nSlices, int nStacks)
 	: CMesh(pd3dDevice, pd3dCommandList)
 {
-	std::ifstream pInFile("SphereCollider.bin");
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+
+	std::ifstream pInFile("SphereCollider.bin", std::ios::binary);
 	if (!pInFile.is_open())
 	{
 		MessageBox(0, L"SphereCollider.bin not found", L"Error", MB_OK);
 		return;
 	}
 
-	m_nVertices = ReadIntegerFromFile(pInFile);
+	pInFile.read((char*)&m_nVertices, sizeof(UINT));
 
-	std::vector<XMFLOAT3> pxmf3Positions(m_nVertices);
-	pInFile.read((char*)pxmf3Positions.data(), sizeof(XMFLOAT3) * m_nVertices);
+	m_pxmf3Positions.resize(m_nVertices);
+	pInFile.read((char*)m_pxmf3Positions.data(), sizeof(XMFLOAT3) * m_nVertices);
 
 	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
 
@@ -1126,10 +1128,11 @@ CSphereMesh::CSphereMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
 
 	SetSubMeshCount(1);
-	UINT nIndices = ReadIntegerFromFile(pInFile);
 
 	for (UINT i = 0; i < m_nSubMeshes; i++)
 	{
+		UINT nIndices = ReadIntegerFromFile(pInFile);
+
 		m_ppnSubSetIndices[i].resize(nIndices);
 		pInFile.read((char*)m_ppnSubSetIndices[i].data(), sizeof(UINT) * nIndices);
 
