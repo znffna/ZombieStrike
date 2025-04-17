@@ -231,9 +231,9 @@ BoundingBox CGameObject::GetMergedBoundingBox(BoundingBox* pVolume)
 	{
 		BoundingBox boundingBox{};
 
-		if (auto pCollider = GetComponent<CCollider>())
+		if (m_pMesh)
 		{
-			BoundingBox::CreateMerged(boundingBox, boundingBox, pCollider->GetBoundingBox());
+			BoundingBox::CreateMerged(boundingBox, boundingBox, m_pMesh->GetBoundingBox());
 		}
 
 		for (auto& pChild : m_pChilds)
@@ -244,9 +244,9 @@ BoundingBox CGameObject::GetMergedBoundingBox(BoundingBox* pVolume)
 		return boundingBox;
 	}
 	else {
-		if (auto pCollider = GetComponent<CCollider>())
+		if (m_pMesh)
 		{
-			BoundingBox::CreateMerged(*pVolume, *pVolume, pCollider->GetBoundingBox());
+			BoundingBox::CreateMerged(*pVolume, *pVolume, m_pMesh->GetBoundingBox());
 		}
 
 		for (auto& pChild : m_pChilds)
