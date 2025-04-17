@@ -5,7 +5,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "GameScene.h"
 
-
 CGameScene::CGameScene()
 {
 }
@@ -39,12 +38,12 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	std::shared_ptr<CLoadedModelInfo> pModel = resourceManager.GetModelInfo("FuzZombie");
 	if (!pModel)
 	{
-		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "FuzZombie", nullptr);
+		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
 		resourceManager.SetSkinInfo("FuzZombie", pModel);
 	}
 
 	std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
-	pZombie->SetPosition(DirectX::XMFLOAT3(549.2253f, 100.0f, 214.4393f));
+	pZombie->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 0.0f));
 	m_ppHierarchicalObjects.push_back(pZombie);
 
 	// Map Load
