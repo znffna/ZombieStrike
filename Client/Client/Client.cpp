@@ -48,6 +48,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // 기본 메시지 루프입니다:
     while (true)
     {
+
         if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
             if (msg.message == WM_QUIT) break;
@@ -58,6 +59,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             }
         }
         else {
+            SleepEx(0, TRUE); // 네트워크 I/O 콜백 처리
+
             gGameFramework.AdvanceFrame();
         }
     }
