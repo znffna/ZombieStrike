@@ -13,7 +13,7 @@ void NetworkingClient::Init()
     if (c_socket == INVALID_SOCKET) error_display("家南 积己 角菩", WSAGetLastError());
 
     sockaddr_in serverAddr{};
-    std::string serverIP = chooseServerIP();
+    std::string serverIP = LOOPBACK_IP;
 
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(PORT_NUM);
@@ -126,7 +126,7 @@ void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
 
 void NetworkingClient::send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
 {
-
+    delete p_over;
 }
 
 void NetworkingClient::ProcessPacket(char* recv_p)  

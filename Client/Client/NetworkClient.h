@@ -15,7 +15,7 @@ constexpr const char* LOOPBACK_IP = "127.0.0.1";
 
 class SendOverlapped {
 public:
-    WSAOVERLAPPED overlapped;
+	WSAOVERLAPPED overlapped; // overlapped狼 林家啊 梆 SendOverlapped狼 林家
     SOCKET c_socket;
     char send_buffer[1024];
 	WSABUF wsabuf;

@@ -27,6 +27,9 @@
     <Filter Include="소스 파일\Scene">
       <UniqueIdentifier>{ad57feca-08e5-42af-babd-09924dcab9c5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Network">
+      <UniqueIdentifier>{bd8ca0a7-bd93-4e59-bf3d-f26e455ac2dc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Component.h">
@@ -104,6 +107,9 @@
     <ClInclude Include="Zombie.h">
       <Filter>소스 파일\GameObject</Filter>
     </ClInclude>
+    <ClInclude Include="NetworkClient.h">
+      <Filter>소스 파일\Network</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Component.cpp">
@@ -174,6 +180,9 @@
     </ClCompile>
     <ClCompile Include="Zombie.cpp">
       <Filter>소스 파일\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkClient.cpp">
+      <Filter>소스 파일\Network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
