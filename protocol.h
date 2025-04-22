@@ -61,32 +61,32 @@ enum PKT_TYPE : SIZE1 {
 // --------------------------
 #pragma pack (push, 1) 
 
-struct Vector3 {
+struct Vec3 {
     float x, y, z;
 
-    constexpr Vector3(float _x = 0.f, float _y = 0.f, float _z = 0.f)
+    constexpr Vec3(float _x = 0.f, float _y = 0.f, float _z = 0.f)
         : x(_x), y(_y), z(_z) {}
 
     // 스칼라 곱
-    Vector3 operator*(float scalar) const {
-        return Vector3(x * scalar, y * scalar, z * scalar);
+    Vec3 operator*(float scalar) const {
+        return Vec3(x * scalar, y * scalar, z * scalar);
     }
     // 누적 덧셈
-    Vector3& operator+=(const Vector3& rhs) {
+    Vec3& operator+=(const Vec3& rhs) {
         x += rhs.x; 
         y += rhs.y; 
         z += rhs.z;
         return *this;
     }
     // 벡터 덧셈
-    Vector3 operator+(const Vector3& rhs) const {
-        return Vector3(x + rhs.x, y + rhs.y, z + rhs.z);
+    Vec3 operator+(const Vec3& rhs) const {
+        return Vec3(x + rhs.x, y + rhs.y, z + rhs.z);
     }
 
     // 벡터 정규화
-    Vector3 Normalize() const {
+    Vec3 Normalize() const {
         float len = sqrtf(x * x + y * y + z * z);
-        return (len > 0.f) ? Vector3(x / len, y / len, z / len) : Vector3();
+        return (len > 0.f) ? Vec3(x / len, y / len, z / len) : Vec3();
     }
 
     // 벡터 길이
@@ -97,7 +97,7 @@ struct Vector3 {
 
 
 // 시작 위치
-constexpr Vector3 START_POSITIONS[3] = {
+constexpr Vec3 START_POSITIONS[3] = {
     { 100.0f, 0.0f, 100.0f },
     { 110.0f, 0.0f, 100.0f },
     { 120.0f, 0.0f, 100.0f },
@@ -159,13 +159,13 @@ struct Objectfixdata {          // 고정정보
     ObjectType obj_type;
     SIZE1 skin_type;
     char name[MAX_NAME_SIZE];
-    Vector3 startposition;      // 초기 위치
+    Vec3 startposition;      // 초기 위치
     SIZE2 starthp;              // 체력
 };
 
 struct ObjectMeta {             // 필수정보
-    Vector3 position;           // 위치
-    Vector3 direction;          // 방향
+    Vec3 position;           // 위치
+    Vec3 direction;          // 방향
     float speed;                // 이동 속도 (단위: m/s 또는 유닛/s)
     SIZE2 hp;                   // 체력
 };
@@ -213,37 +213,32 @@ struct PacketHeader {
 // --------------------------
 // 로그인 패킷
 struct pkt_cs_login {
-    PacketHeader header;
+    PacketHeader header{0, PKT_TYPE::C_S_LOGIN };
     SIZE1 skin_type;
     char name[MAX_NAME_SIZE];
-
-    pkt_cs_login() { header.type = PKT_TYPE::C_S_LOGIN; }
 };
 
 // 플레이어 업데이트 패킷
 struct pkt_cs_update {
-    PacketHeader header;
+    PacketHeader header{0, PKT_TYPE::C_S_UPDATE };
     ObjectDynamicInfo obj;          // 플레이어 정보
-    pkt_cs_update() { header.type = PKT_TYPE::C_S_UPDATE; }
 };
 
 // 총알 발사 패킷
 struct pkt_cs_shoot {
-    PacketHeader header;
+    PacketHeader header{0, PKT_TYPE::C_S_SHOOT };
 	SIZEID id;                      // 누가 쐈는지
     SIZE1 GunType;                  // 총 종류
     //int hitZombieId;
     float bulletPos[3];
     float bulletDir[3];
-    pkt_cs_shoot() { header.type = PKT_TYPE::C_S_SHOOT; }
 };
 
 // 총알 명중 패킷
 struct pkt_cs_hit {
-	PacketHeader header;
+    PacketHeader header{0,PKT_TYPE::C_S_SHOOT };
     SIZEID shooterId;               // 누가 쐈는지
     SIZEID zombieId;                // 맞은 좀비 ID
-	pkt_cs_hit() { header.type = PKT_TYPE::C_S_SHOOT; }
 };
 
 
@@ -252,13 +247,11 @@ struct pkt_cs_hit {
 // --------------------------
 // 총알 명중 결과
 struct pkt_sc_hit_result {
-    PacketHeader header;
+    PacketHeader header{0, PKT_TYPE::S_C_HIT_RESULT };
     SIZEID shooterId;               // 누가 쐈는지
     SIZEID zombieId;
     SIZE2 zombieHp;
     //uint8_t damage;               // 얼마나 깎였는지
-
-    pkt_sc_hit_result() { header.type = PKT_TYPE::S_C_HIT_RESULT; }
 };
 struct ZombieHit {
     SIZEID zombieId;
@@ -274,41 +267,36 @@ struct pkt_sc_hit_multi_result {
 
 // --- Object 관리 패킷 ---
 struct pkt_sc_object_add {
-	PacketHeader header;
+    PacketHeader header{0, PKT_TYPE::S_C_OBJECT_ADD };
 	SIZEID id; // ID
 	Objectfixdata fixdata;          // 고정정보
-    pkt_sc_object_add() { header.type = PKT_TYPE::S_C_OBJECT_ADD; }
 };
 
 // 객체 업데이트
 struct pkt_sc_object_update {
-    PacketHeader header;
+    PacketHeader header{0,PKT_TYPE::S_C_OBJECT_UPDATE };
 	SIZEID id; // ID
     ObjectDynamicInfo obj;          // 동적정보
-    pkt_sc_object_update() { header.type = PKT_TYPE::S_C_OBJECT_UPDATE; }
 };
 // 객체 삭제
 struct pkt_sc_object_remove {
-    PacketHeader header;
+    PacketHeader header{0,PKT_TYPE::S_C_OBJECT_REMOVE };
     SIZEID id;
     // ObjectType obj_type;
-    pkt_sc_object_remove() { header.type = PKT_TYPE::S_C_OBJECT_REMOVE; }
 };
 
 // --- 게임 상황 패킷 ---
 // STAGE 정보
 struct pkt_sc_stage_info {
-    PacketHeader header;
+    PacketHeader header{0,PKT_TYPE::S_C_STAGE_INFO };
     SIZE2 currentStage;
     SIZE2 totalStages;
     SIZE3 timeLeft;
-    pkt_sc_stage_info() { header.type = PKT_TYPE::S_C_STAGE_INFO; }
 };
 // SCORE 정보
 struct pkt_sc_score_info {
-    PacketHeader header;
+    PacketHeader header{0,PKT_TYPE::S_C_SCORE_INFO };
     SIZE2 stage_score;
-    pkt_sc_score_info() { header.type = PKT_TYPE::S_C_SCORE_INFO; }
 };
 
 #pragma pack (pop)
