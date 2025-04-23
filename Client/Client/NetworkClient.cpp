@@ -1,10 +1,10 @@
 #include "NetworkClient.h"
 
-#pragma comment (lib, "WS2_32.LIB")
+//#pragma comment (lib, "WS2_32.LIB")
 
-constexpr const char* LOOPBACK_IP = "127.0.0.1";
+//constexpr const char* LOOPBACK_IP = "127.0.0.1";
 
-void NetworkingClient::Init()
+void NetworkingClient::Connect()
 {
     WSADATA wsaData;
     auto ret = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -13,7 +13,7 @@ void NetworkingClient::Init()
     if (c_socket == INVALID_SOCKET) error_display("소켓 생성 실패", WSAGetLastError());
 
     sockaddr_in serverAddr{};
-    std::string serverIP = chooseServerIP();
+    std::string serverIP = LOOPBACK_IP;
 
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(PORT_NUM);
@@ -26,13 +26,20 @@ void NetworkingClient::Init()
 
     std::cout << "서버 연결 성공\n";
 
-    // 예시,
+    // 연결 시 flag 초기화
+    is_running = true;
+    is_recvLoopDone = false;
+
+
+    // 사실상 아래 코드는 Network를 사용하는 Scene에서 호출해야함.
+	// 예시 클라이언트 이름 (나중에 입력받도록 수정 가능)
     std::string name{ "Client" };
 
     // 1. 로그인 패킷 전송
     SendLoginPacket(name);
 
     // 수신 등록
+    is_recvLoopDone = false;
     recv_packet();
 
     // 2. 이동 패킷 전송 (예시, 이 처리는 실제 게임의 Input시 호출됨.)
@@ -41,6 +48,10 @@ void NetworkingClient::Init()
 
 void NetworkingClient::Logout()
 {
+	is_running = false;
+	while (false == is_recvLoopDone) {
+        SleepEx(0, TRUE); // 네트워크 I/O 콜백 처리
+	}
     closesocket(c_socket);
     WSACleanup();
 }
@@ -66,7 +77,7 @@ void NetworkingClient::SendMovePacket()
 void NetworkingClient::SendLoginPacket(std::string& name)
 {
     pkt_cs_login loginPkt{};
-    loginPkt.header.size = sizeof(loginPkt);
+    loginPkt.header.size = sizeof(pkt_cs_login);
     loginPkt.header.type = PKT_TYPE::C_S_LOGIN;
     loginPkt.skin_type = 1;
     strcpy_s(loginPkt.name, MAX_NAME_SIZE, name.c_str());
@@ -89,25 +100,26 @@ void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
 {
     NetworkingClient* client = reinterpret_cast<NetworkingClient*>(p_over);
 
+	// 수신된 바이트 수가 0이거나 에러가 발생한 경우 통신을 종료한다.
     if (err != 0 || num_bytes == 0) {
-        client->is_running = false;
-        return;
+        client->Logout();
     }
 
-    char* recv_p = client->recv_buffer;
+    // 패킷 조립
+    PacketHeader* recv_p = (PacketHeader*)client->recv_buffer;
     SIZE2 offset = 0;
     DWORD remain_bytes = client->remain_bytes + num_bytes;
 
     while (offset < remain_bytes) {
-        if (remain_bytes - offset < sizeof(SIZE2)) {
-			// 잔여 데이터가 패킷 길이보다 작을 경우
+        if (remain_bytes - offset < sizeof(recv_p->size)) {
+			// 잔여 데이터가 패킷 길이 버퍼보다 작을 경우
             memcpy(client->recv_buffer, recv_p, remain_bytes - offset);
             break;
         }
 
-        SIZE2 size = *(SIZE2*)(recv_p);     // 패킷 길이
+        SIZE2 size = recv_p->size;     // 패킷 길이
 
-		if (num_bytes - offset < size) {
+		if (remain_bytes - offset < size) {
             // 수신된 패킷이 완전하지 않은 경우
             memcpy(client->recv_buffer, recv_p, remain_bytes - offset);
             break;
@@ -120,23 +132,39 @@ void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
     }
     client->remain_bytes = remain_bytes - offset;
 
+    // 루프 종료 판단
+    if (false == client->is_running) {
+        // 루프 종료됬음을 전달.
+        client->is_recvLoopDone = true;
+        return;
+    }
+
     // 다시 수신 등록
     client->recv_packet();
 }
 
 void NetworkingClient::send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
 {
-
+    delete p_over;
 }
 
-void NetworkingClient::ProcessPacket(char* recv_p)  
+void NetworkingClient::ProcessPacket(PacketHeader* recv_p)
 {  
-   PKT_TYPE type = *(PKT_TYPE*)(recv_p + 2); // 패킷 타입  
+   PKT_TYPE type = recv_p->type; // 패킷 타입  
 
    switch (type) {  
    case S_C_OBJECT_ADD:  
    {  
        pkt_sc_object_add* addPkt = reinterpret_cast<pkt_sc_object_add*>(recv_p);  
+	   std::string debugOutput = "Object Add Packet\n";
+	   debugOutput += "Object ID: " + std::to_string(addPkt->id) + "\n";
+       debugOutput += "Object Position: ";
+       debugOutput += addPkt->fixdata.name;
+       debugOutput = debugOutput + ", skinType" + std::to_string(addPkt->fixdata.skin_type) + ", ";
+       debugOutput = debugOutput + ", position (" + std::to_string(addPkt->fixdata.startposition.x) + ", ";
+       debugOutput = debugOutput + ", " + std::to_string(addPkt->fixdata.startposition.y) + ", ";
+       debugOutput = debugOutput + ", " + std::to_string(addPkt->fixdata.startposition.z) + ") ";
+	   OutputDebugStringA(debugOutput.c_str());
        break;  
    }  
    case S_C_OBJECT_UPDATE:  
@@ -163,7 +191,6 @@ void NetworkingClient::ProcessPacket(char* recv_p)
        break;  
    }  
 }
-
 
 void NetworkingClient::recv_packet()
 {

@@ -143,6 +143,7 @@
     <ClInclude Include="LoadingScene.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
+    <ClInclude Include="OnlineScene.h" />
     <ClInclude Include="RenderConfig.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="RigidBody.h" />
@@ -150,6 +151,7 @@
     <ClInclude Include="Shader.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="NetworkClient.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="Transform.h" />
     <ClInclude Include="WICTextureLoader12.h" />
@@ -170,11 +172,13 @@
     <ClCompile Include="LoadingScene.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="OnlineScene.cpp" />
     <ClCompile Include="RenderConfig.cpp" />
     <ClCompile Include="RigidBody.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="NetworkClient.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="Transform.cpp" />
     <ClCompile Include="WICTextureLoader12.cpp" />

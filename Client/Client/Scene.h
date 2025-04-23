@@ -211,9 +211,9 @@ public:
 
 	// Scene Initialization / Release
 	void Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
-	void PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
+	virtual void PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
 	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
-	void PostInitializeObjects();
+	virtual void PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature);
 	virtual void ReleaseObjects();
 	virtual void ReleaseUploadBuffers();
 
@@ -308,6 +308,9 @@ protected:
 
 	// Map
 	std::shared_ptr<CGameObject> m_pMap;
+
+	// Player
+	std::shared_ptr<CGameObject> m_pPlayer;
 
 	// Camera
 	std::shared_ptr<CCamera> m_pCamera;

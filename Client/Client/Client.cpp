@@ -60,7 +60,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
         else {
             SleepEx(0, TRUE); // 네트워크 I/O 콜백 처리
-
             gGameFramework.AdvanceFrame();
         }
     }

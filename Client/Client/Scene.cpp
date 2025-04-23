@@ -37,7 +37,7 @@ void CScene::Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dComma
 	// Scene 초기화
 	PreInitializeObjects(pd3dDevice, pd3dCommandList, pd3dRootSignature);
 	InitializeObjects(pd3dDevice, pd3dCommandList, pd3dRootSignature);
-	PostInitializeObjects();
+	PostInitializeObjects(pd3dDevice, pd3dCommandList, pd3dRootSignature);
 }
 
 void CScene::PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
@@ -53,22 +53,25 @@ void CScene::PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 	//CreateDescriptorHeap(pd3dDevice);
 	//CreateStaticShader(pd3dDevice);
 
-	// Fixed Camera
-	CreateFixedCamera(pd3dDevice, pd3dCommandList);
+
 }
 
 void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {	
 }
 
-void CScene::PostInitializeObjects()
+void CScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
+	// Fixed Camera
+	CreateFixedCamera(pd3dDevice, pd3dCommandList);
+
 	// Scene 생성 완료
 	m_SceneState = SCENE_STATE_RUNNING;
 }
 
 void CScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	if (m_pCamera) return;
 	m_pCamera = std::make_shared<CCamera>();
 	m_pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 	m_pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);

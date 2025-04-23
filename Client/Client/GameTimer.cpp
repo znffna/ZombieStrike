@@ -136,6 +136,7 @@ void CGameTimer::Tick(float fLockFPS)
 			::QueryPerformanceCounter((LARGE_INTEGER*)&currTime);
 			m_nCurrTime = currTime;
 			m_fDeltaTime = float((m_nCurrTime - m_nPrevTime) * m_fSecondsPerCount);
+			SleepEx(0, TRUE); // 匙飘况农 I/O 妮归 贸府
 		}
 	}
 	recordTimeDifference(m_fDeltaTime);
