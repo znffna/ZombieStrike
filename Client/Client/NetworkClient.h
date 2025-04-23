@@ -29,6 +29,7 @@ public:
 };
 
 class NetworkingClient {
+public:
     WSAOVERLAPPED recv_over;
     SOCKET c_socket;
     char recv_buffer[1024];
@@ -36,21 +37,22 @@ class NetworkingClient {
 
 	DWORD remain_bytes = 0;
 
-    bool is_running = true;
+    bool is_running = true; // 종료 여부
+	bool is_recvLoopDone = false; // recv loop 종료 여부
 
 public:
-	void Init();   // 소켓 초기화 및 서버 연결
+	void Connect();   // 소켓 초기화 및 서버 연결
     void Logout(); // Scene의 종료시 호출하도록 구현할 것
     void error_display(const char* msg, int err_no);
 
     static void CALLBACK recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
     static void CALLBACK send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
     
-    void ProcessPacket(char* recv_p);
+    void ProcessPacket(PacketHeader* recv_p);
     void recv_packet();
     void send_packet(char* packet);
 
-    // SendPacket
+    // SendPacket (테스트로 구현)
     void SendLoginPacket(std::string& name);
     void SendMovePacket();
 

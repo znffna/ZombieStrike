@@ -12,6 +12,7 @@
 
 #include "GameScene.h"
 #include "LoadingScene.h"
+#include "OnlineScene.h"
 
 
 struct CB_FRAMEWORK_INFO

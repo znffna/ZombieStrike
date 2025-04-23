@@ -380,7 +380,7 @@ void CGameFramework::BuildObjects()
 	m_pLoadingScene = std::move(pLoadingScene);
 
 	// MainScene »ý¼º
-	std::unique_ptr<CScene> pMainScene = std::make_unique<CGameScene>();
+	std::unique_ptr<CScene> pMainScene = std::make_unique<COnlineScene>();
 	pMainScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
 	m_Scenes.push_back(std::move(pMainScene));
 

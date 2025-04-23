@@ -45,6 +45,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
 	pZombie->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 0.0f));
 	m_ppHierarchicalObjects.push_back(pZombie);
+	m_pPlayer = pZombie;
 
 	// Map Load
 	auto pMap = resourceManager.GetModelInfo("Map");
@@ -52,9 +53,19 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pMap = pMap->m_pModelRootObject;
 	m_pMap->Update(0.0f);
 
-	// Default Camera 위치 수정
-	m_pCamera->SetPosition(Vector3::Add(pZombie->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));
+	//// Default Camera 위치 수정
+	//m_pCamera->SetPosition(Vector3::Add(pZombie->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));
+	//m_pCamera->RegenerateViewMatrix();
+}
+
+void CGameScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
+{
+	CreateFixedCamera(pd3dDevice, pd3dCommandList);
+
+	m_pCamera->SetPosition(Vector3::Add(m_pPlayer->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));
 	m_pCamera->RegenerateViewMatrix();
+
+	m_SceneState = SCENE_STATE_RUNNING;
 }
 
 void CGameScene::ReleaseObjects()
@@ -73,10 +84,10 @@ void CGameScene::Update(float deltaTime)
 	if (m_pCamera)
 	{
 		// Camera Follow Zombie
-		if (m_ppHierarchicalObjects.size() > 0)
+		if (m_pPlayer)
 		{
 			//XMFLOAT3 xmf3CameraPosition = Vector3::Add(m_ppHierarchicalObjects[0]->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f));
-			XMFLOAT3 xmf3CameraPosition = Vector3::Add(m_ppHierarchicalObjects[0]->GetPosition(), Vector3::ScalarProduct(m_pCamera->GetLook(), -10.0f));
+			XMFLOAT3 xmf3CameraPosition = Vector3::Add(m_pPlayer->GetPosition(), Vector3::ScalarProduct(m_pCamera->GetLook(), -10.0f));
 			m_pCamera->SetPosition(xmf3CameraPosition);
 			m_pCamera->RegenerateViewMatrix();
 		}

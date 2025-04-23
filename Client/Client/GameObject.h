@@ -90,11 +90,11 @@ public:
 	virtual std::string GetDefaultName() { return "CGameObject"; }
 
 	// Transform
-	DirectX::XMFLOAT3 GetPosition() { return m_pTransform->GetPosition(); }
-	DirectX::XMFLOAT3 GetRightVector() { return m_pTransform->GetRight(); }
-	DirectX::XMFLOAT3 GetUpVector() { return m_pTransform->GetUp(); }
-	DirectX::XMFLOAT3 GetLookVector() { return m_pTransform->GetLook(); }
-	DirectX::XMFLOAT3 GetScale() { return m_pTransform->GetScale(); }
+	const DirectX::XMFLOAT3 GetPosition() { return m_pTransform->GetPosition(); }
+	const DirectX::XMFLOAT3 GetRightVector() { return m_pTransform->GetRight(); }
+	const DirectX::XMFLOAT3 GetUpVector() { return m_pTransform->GetUp(); }
+	const DirectX::XMFLOAT3 GetLookVector() { return m_pTransform->GetLook(); }
+	const DirectX::XMFLOAT3 GetScale() { return m_pTransform->GetScale(); }
 
 	DirectX::XMFLOAT3 GetRotation() { return m_pTransform->GetRotation(); }
 	float GetPitch() { return m_pTransform->GetRotation().x; } // X 축을	기준으로 회전
