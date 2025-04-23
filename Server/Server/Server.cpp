@@ -27,7 +27,7 @@ int tileMap[MAP_HEIGHT][MAP_WIDTH]; // 0: 빈 공간, 1: 벽/장애물
 const int PLAYER_HP = 100;
 const int ZOMBIE_HP = 50;
 
-struct Vector3 {
+struct Vec3 {
     float x = 0.0f;
     float y = 0.0f;
     float z = 0.0f;
@@ -42,8 +42,8 @@ struct AStarNode {
     bool operator>(const AStarNode& other) const { return fCost() > other.fCost(); }
 };
 
-std::vector<Vector3> FindPath(Vector3 startPos, Vector3 targetPos) {
-    std::vector<Vector3> path;
+std::vector<Vec3> FindPath(Vec3 startPos, Vec3 targetPos) {
+    std::vector<Vec3> path;
 
     int startX = static_cast<int>(startPos.x);
     int startY = static_cast<int>(startPos.z);
@@ -177,13 +177,13 @@ struct Quaternion {
 struct ShootPacket {
     int playerId;
     int hitZombieId;    // 클라에서 맞췄다고 판단한 좀비 ID
-    Vector3 bulletPos;  // 총알 발사 위치
-    Vector3 bulletDir;  // 총알 방향
+    Vec3 bulletPos;  // 총알 발사 위치
+    Vec3 bulletDir;  // 총알 방향
 };
 
 struct Player {
     int id;
-    Vector3 position;
+    Vec3 position;
     Quaternion rotation;
     int hp = PLAYER_HP;
     bool isShooting = false;
@@ -197,14 +197,14 @@ struct Player {
 
 struct Zombie {
     int id;
-    Vector3 position;
+    Vec3 position;
     Quaternion rotation;
     int hp = ZOMBIE_HP;
     short state = 0;
     bool dirty = true;
 
     int targetPlayerId = -1;    // 현재 따라가는 플레이어 ID
-    std::vector<Vector3> path;  // A* 경로
+    std::vector<Vec3> path;  // A* 경로
     int pathIndex = 0;          // 현재 따라가는 인덱스
 
     void UpdateAI(const std::vector<Player*>& players) {
@@ -225,14 +225,14 @@ struct Zombie {
         }
 
         if (targetPlayer) {
-            Vector3 target = targetPlayer->position;
+            Vec3 target = targetPlayer->position;
             if (path.empty() || pathIndex >= path.size()) {
                 path = FindPath(position, target);
                 pathIndex = 0;
             }
 
             if (pathIndex < path.size()) {
-                Vector3 next = path[pathIndex];
+                Vec3 next = path[pathIndex];
                 position.x += (next.x - position.x) * 0.1f;
                 position.z += (next.z - position.z) * 0.1f;
                 if (fabsf(position.x - next.x) < 0.1f && fabsf(position.z - next.z) < 0.1f) {
@@ -248,7 +248,7 @@ struct BroadcastPacket {
     int playerCount;
     struct {
         int id;
-        Vector3 position;
+        Vec3 position;
         Quaternion rotation;
         int hp;
     } players[MAX_PLAYER_COUNT];
@@ -256,7 +256,7 @@ struct BroadcastPacket {
     int zombieCount;
     struct {
         int id;
-        Vector3 position;
+        Vec3 position;
         Quaternion rotation;
         int hp;
     } zombies[MAX_ZOMBIE_COUNT];
@@ -367,10 +367,10 @@ void broadcastState() {
     broadcastState_NoLock();
 }
 
-bool checkRaySphereIntersection(Vector3 rayOrigin, Vector3 rayDir, Vector3 sphereCenter, float radius) {
-    Vector3 oc = { sphereCenter.x - rayOrigin.x, sphereCenter.y - rayOrigin.y, sphereCenter.z - rayOrigin.z };
+bool checkRaySphereIntersection(Vec3 rayOrigin, Vec3 rayDir, Vec3 sphereCenter, float radius) {
+    Vec3 oc = { sphereCenter.x - rayOrigin.x, sphereCenter.y - rayOrigin.y, sphereCenter.z - rayOrigin.z };
     float t = oc.x * rayDir.x + oc.y * rayDir.y + oc.z * rayDir.z;
-    Vector3 closestPoint = { rayOrigin.x + rayDir.x * t, rayOrigin.y + rayDir.y * t, rayOrigin.z + rayDir.z * t };
+    Vec3 closestPoint = { rayOrigin.x + rayDir.x * t, rayOrigin.y + rayDir.y * t, rayOrigin.z + rayDir.z * t };
     float distSq = powf(sphereCenter.x - closestPoint.x, 2) + powf(sphereCenter.y - closestPoint.y, 2) + powf(sphereCenter.z - closestPoint.z, 2);
     return distSq <= radius * radius;
 }

@@ -87,8 +87,8 @@ public:
     SIZE1           _skin_type;
     std::string     _name;
 
-    Vector3         _position;
-    Vector3         _direction;
+    Vec3         _position;
+    Vec3         _direction;
 	float           _speed;
     SIZE2           _hp;
     GunType         _gun_type;     
@@ -152,13 +152,12 @@ public:
         if (_remained > 0)
             memmove(p, p + _remained, num_bytes);
 
-        SIZE2* packet = p;
         SIZE3 offset = 0;
 
-        while (p + 1 <= p + total) {
+        while (offset < total) {
             SIZE2 packetSize = *p;
 
-            if (p + packetSize > p + total) break; // 아직 패킷 완성이 안 됨
+            if (offset + packetSize > total) break; // 아직 패킷 완성이 안 됨
 
             std::cout << "[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << ", Raw = ";
             for (int i = 0; i < packetSize; ++i)
@@ -166,7 +165,7 @@ public:
             std::cout << std::endl;
 
 			process_packet(p);    // 패킷 처리
-            p += packetSize;      // 다음 패킷으로 이동
+            p += (packetSize)/sizeof(SIZE2);      // 다음 패킷으로 이동
             offset += packetSize;
         }
 
@@ -298,6 +297,9 @@ public:
 			for (auto& u : g_users) {
 				u.second.do_send(&u_move_p); // 나포함 모두에게 알림 좌표의 이동을
 			}
+            std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
+            std::cout << "[process_packet][RECV][" << (int)_id << "] position: (" << _position.x << ", " << _position.y << ", " << _position.z << ") " << "\n";
+            std::cout << "[process_packet][RECV][" << (int)_id << "] direction: (" << _direction.x << ", " << _direction.y << ", " << _direction.z << ") " << "\n";
 
             break;
         }
