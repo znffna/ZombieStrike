@@ -4,6 +4,12 @@
 
 //constexpr const char* LOOPBACK_IP = "127.0.0.1";
 
+NetworkingClient::NetworkingClient(CScene* pScene) : m_pScene(pScene) {
+    ZeroMemory(&recv_over, sizeof(recv_over));
+    ZeroMemory(recv_buffer, sizeof(recv_buffer));
+    ZeroMemory(&recv_wsabuf, sizeof(recv_wsabuf));
+}
+
 void NetworkingClient::Connect()
 {
     WSADATA wsaData;
@@ -28,8 +34,10 @@ void NetworkingClient::Connect()
 
     // 연결 시 flag 초기화
     is_running = true;
-    is_recvLoopDone = false;
 
+    // 수신 루프 등록
+    is_recvLoopDone = false;
+    recv_packet();
 
     // 사실상 아래 코드는 Network를 사용하는 Scene에서 호출해야함.
 	// 예시 클라이언트 이름 (나중에 입력받도록 수정 가능)
@@ -37,13 +45,6 @@ void NetworkingClient::Connect()
 
     // 1. 로그인 패킷 전송
     SendLoginPacket(name);
-
-    // 수신 등록
-    is_recvLoopDone = false;
-    recv_packet();
-
-    // 2. 이동 패킷 전송 (예시, 이 처리는 실제 게임의 Input시 호출됨.)
-    SendMovePacket();
 }
 
 void NetworkingClient::Logout()

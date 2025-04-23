@@ -28,6 +28,8 @@ public:
 	}
 };
 
+class CScene;
+
 class NetworkingClient {
 public:
     WSAOVERLAPPED recv_over;
@@ -40,7 +42,10 @@ public:
     bool is_running = true; // 종료 여부
 	bool is_recvLoopDone = false; // recv loop 종료 여부
 
+	CScene* m_pScene; // Scene 포인터
 public:
+	NetworkingClient(CScene* pScene);
+
 	void Connect();   // 소켓 초기화 및 서버 연결
     void Logout(); // Scene의 종료시 호출하도록 구현할 것
     void error_display(const char* msg, int err_no);
