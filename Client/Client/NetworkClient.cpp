@@ -1,10 +1,10 @@
 #include "NetworkClient.h"
-
+#include "OnlineScene.h"
 //#pragma comment (lib, "WS2_32.LIB")
 
 //constexpr const char* LOOPBACK_IP = "127.0.0.1";
 
-NetworkingClient::NetworkingClient(CScene* pScene) : m_pScene(pScene) {
+NetworkingClient::NetworkingClient(COnlineScene* pScene) : m_pScene(pScene) {
     ZeroMemory(&recv_over, sizeof(recv_over));
     ZeroMemory(recv_buffer, sizeof(recv_buffer));
     ZeroMemory(&recv_wsabuf, sizeof(recv_wsabuf));
@@ -107,31 +107,33 @@ void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
     }
 
     // 패킷 조립
-    PacketHeader* recv_p = (PacketHeader*)client->recv_buffer;
+    char* recv_p = client->recv_buffer;
     SIZE2 offset = 0;
     DWORD remain_bytes = client->remain_bytes + num_bytes;
 
     while (offset < remain_bytes) {
-        if (remain_bytes - offset < sizeof(recv_p->size)) {
+		PacketHeader* packet_header = (PacketHeader*)recv_p;
+        if (remain_bytes - offset < sizeof(packet_header->size)) {
 			// 잔여 데이터가 패킷 길이 버퍼보다 작을 경우
-            memcpy(client->recv_buffer, recv_p, remain_bytes - offset);
             break;
         }
 
-        SIZE2 size = recv_p->size;     // 패킷 길이
+        SIZE2 size = packet_header->size;     // 패킷 길이
 
 		if (remain_bytes - offset < size) {
             // 수신된 패킷이 완전하지 않은 경우
-            memcpy(client->recv_buffer, recv_p, remain_bytes - offset);
             break;
 		}
 
-        client->ProcessPacket(recv_p);
+        client->ProcessPacket(packet_header);
 
         offset += size;
         recv_p += size;
     }
+
+	// 패킷 처리 후 남은 바이트 수
     client->remain_bytes = remain_bytes - offset;
+    memcpy(client->recv_buffer, recv_p, client->remain_bytes);
 
     // 루프 종료 판단
     if (false == client->is_running) {
@@ -151,46 +153,8 @@ void NetworkingClient::send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
 
 void NetworkingClient::ProcessPacket(PacketHeader* recv_p)
 {  
-   PKT_TYPE type = recv_p->type; // 패킷 타입  
-
-   switch (type) {  
-   case S_C_OBJECT_ADD:  
-   {  
-       pkt_sc_object_add* addPkt = reinterpret_cast<pkt_sc_object_add*>(recv_p);  
-	   std::string debugOutput = "Object Add Packet\n";
-	   debugOutput += "Object ID: " + std::to_string(addPkt->id) + "\n";
-       debugOutput += "Object Position: ";
-       debugOutput += addPkt->fixdata.name;
-       debugOutput = debugOutput + ", skinType" + std::to_string(addPkt->fixdata.skin_type) + ", ";
-       debugOutput = debugOutput + ", position (" + std::to_string(addPkt->fixdata.startposition.x) + ", ";
-       debugOutput = debugOutput + ", " + std::to_string(addPkt->fixdata.startposition.y) + ", ";
-       debugOutput = debugOutput + ", " + std::to_string(addPkt->fixdata.startposition.z) + ") ";
-	   OutputDebugStringA(debugOutput.c_str());
-       break;  
-   }  
-   case S_C_OBJECT_UPDATE:  
-   {  
-       pkt_sc_object_update* updatePkt = reinterpret_cast<pkt_sc_object_update*>(recv_p);  
-       break;  
-   }  
-   case S_C_OBJECT_REMOVE:  
-   {  
-       pkt_sc_object_remove* removePkt = reinterpret_cast<pkt_sc_object_remove*>(recv_p);  
-       break;  
-   }  
-
-   case S_C_STAGE_INFO:  
-   {  
-       break;  
-   }  
-   case S_C_SCORE_INFO:  
-   {  
-       break;  
-
-   }  
-   default:  
-       break;  
-   }  
+	if (is_running == false) return; // 종료된 경우 패킷 처리하지 않음
+    if (m_pScene) m_pScene->ProcessPacket(recv_p); // Scene이 nullptr인 경우 처리하지 않음  
 }
 
 void NetworkingClient::recv_packet()

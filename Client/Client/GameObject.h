@@ -68,9 +68,7 @@ public:
 	void ClearMemberVariables();
 	void Init();
 	// Object Initialization
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList) {
-		// Transform Owner Setting
-	};
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList) {};
 
 	virtual void GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs);;
 
@@ -122,7 +120,7 @@ public:
 	void MoveUp(float fDistance = 1.0f) { m_pTransform->MoveUp(fDistance); };
 	void MoveForward(float fDistance = 1.0f) { m_pTransform->MoveForward(fDistance); };
 
-	void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f) { m_pTransform->Rotate(fPitch, fYaw, fRoll); }
+	void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f) { m_pTransform->Rotate(fPitch, fYaw, fRoll); }
 	void Rotate(const XMFLOAT3& pxmf3Axis, float fAngle) { m_pTransform->Rotate(pxmf3Axis, fAngle); }
 	void Rotate(const XMFLOAT4& pxmf4Quaternion) { m_pTransform->Rotate(pxmf4Quaternion); }
 

@@ -91,7 +91,7 @@ void CCamera::GenerateViewMatrix()
 	m_xmf4x4View = Matrix4x4::LookAtLH(m_xmf3Position, m_xmf3Look, m_xmf3Up);
 }
 
-void CCamera::GenerateViewMatrix(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3LookAt, XMFLOAT3 xmf3Up)
+void CCamera::GenerateViewMatrix(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3LookAt, const XMFLOAT3& xmf3Up)
 {
 	m_xmf3Position = xmf3Position;
 	m_xmf3Look = xmf3LookAt;
@@ -180,10 +180,17 @@ void CCamera::Rotate(float x, float y, float z)
 	}
 }
 
+// Follow Object
+void CCamera::SetTarget(std::shared_ptr<CGameObject> pTarget)
+{
+	m_pChaseTransform = pTarget->GetComponent<CTransform>(); 
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-CThirdPersonCamera::CThirdPersonCamera(CCamera* pCamera)
+CThirdPersonCamera::CThirdPersonCamera(CGameObject* pObject)
+	: CCamera(pObject)
 {
 }
 
@@ -191,7 +198,7 @@ CThirdPersonCamera::~CThirdPersonCamera()
 {
 }
 
-void CThirdPersonCamera::Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed)
+void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 {
 	if (m_pChaseTransform)
 	{
@@ -221,11 +228,17 @@ void CThirdPersonCamera::Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 		{
 			m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Direction, fDistance);
 			SetLookAt(xmf3LookAt);
+
+			std::string DebugOutput = "Player Position : \(" + std::to_string(xmf3LookAt.x) + ", " + std::to_string(xmf3LookAt.y) + ", " + std::to_string(xmf3LookAt.z) + ")\n";
+			DebugOutput = DebugOutput +"Camera Position : \(" + std::to_string(m_xmf3Position.x) + ", " + std::to_string(m_xmf3Position.y) + ", " + std::to_string(m_xmf3Position.z) + ")\n";
+			OutputDebugStringA(DebugOutput.c_str());
+
+			RegenerateViewMatrix();
 		}
 	}
 }
 
-void CThirdPersonCamera::SetLookAt(XMFLOAT3& vLookAt)
+void CThirdPersonCamera::SetLookAt(const XMFLOAT3& vLookAt)
 {
 	XMFLOAT4X4 mtxLookAt = Matrix4x4::LookAtLH(m_xmf3Position, m_xmf3Look, m_pChaseTransform->GetUp());
 	m_xmf3Right = XMFLOAT3(mtxLookAt._11, mtxLookAt._21, mtxLookAt._31);

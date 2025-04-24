@@ -10,6 +10,7 @@
 #include "Component.h"
 
 class CTransform;
+class CGameObject;
 
 struct CB_CAMERA_INFO
 {
@@ -44,14 +45,16 @@ public:
 
 	// Matrix Functions
 	void GenerateViewMatrix();
-	void GenerateViewMatrix(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3LookAt, XMFLOAT3 xmf3Up);
+	void GenerateViewMatrix(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3LookAt, const XMFLOAT3& xmf3Up);
 	void RegenerateViewMatrix();
 
 	void GenerateProjectionMatrix(float aspectRatio, float fov, float nearZ, float farZ);
 
 	// Camera Position
 	void SetPosition(float x, float y, float z) { m_xmf3Position = XMFLOAT3(x, y, z); };
-	void SetPosition(XMFLOAT3 xmf3Position) { m_xmf3Position = xmf3Position; };
+	void SetPosition(const XMFLOAT3& xmf3Position) { m_xmf3Position = xmf3Position; };
+
+	void SetOffset(const XMFLOAT3& xmf3Offset) { m_xmf3Offset = xmf3Offset; };
 
 	XMFLOAT3 GetPosition() { return m_xmf3Position; };
 	void Move(XMFLOAT3 xmf3Shift) { m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift); };
@@ -69,7 +72,10 @@ public:
 	void Rotate(float x, float y, float z);
 	void Rotate(const XMFLOAT3& xmf3Shift) { Rotate(xmf3Shift.x, xmf3Shift.y, xmf3Shift.z); }
 
-	virtual void Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed) { }
+	virtual void Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed) { }
+
+	// Follow Object
+	void SetTarget(std::shared_ptr<CGameObject> pTarget);
 
 protected:
 	std::shared_ptr<CTransform> m_pChaseTransform;
@@ -117,10 +123,10 @@ protected:
 class CThirdPersonCamera : public CCamera
 {
 public:
-	CThirdPersonCamera(CCamera* pCamera);
+	CThirdPersonCamera(CGameObject* pObject = nullptr);
 	virtual ~CThirdPersonCamera();
 
-	virtual void Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed) override;
-	virtual void SetLookAt(XMFLOAT3& vLookAt);
+	virtual void Update(const XMFLOAT3 & xmf3LookAt, float fTimeElapsed) override;
+	virtual void SetLookAt(const XMFLOAT3 & vLookAt);
 };
 

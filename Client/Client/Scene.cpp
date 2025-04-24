@@ -293,6 +293,32 @@ void CScene::ProcessCollisions()
 	}
 }
 
+void CScene::AddObject(const std::shared_ptr<CGameObject>& pObject)
+{
+	if (pObject)
+	{
+		m_ppObjects.push_back(pObject);
+	}
+}
+
+void CScene::RemoveObject(std::shared_ptr<CGameObject> pObject)
+{
+	if (pObject)
+	{
+		auto it = std::find(m_ppObjects.begin(), m_ppObjects.end(), pObject);
+		if (it != m_ppObjects.end())
+		{
+			m_ppObjects.erase(it); // 순회중 삭제 수정해야함.
+		}
+	}
+}
+
+void CScene::SetPlayer(std::shared_ptr<CGameObject> pPlayer)
+{ 
+	m_pPlayer = pPlayer; 
+	m_pCamera->SetTarget(m_pPlayer); 
+}
+
 void CScene::Update(float deltaTime)
 {
 	if (false == CheckWorkUpdating()) return;
@@ -304,6 +330,12 @@ void CScene::Update(float deltaTime)
 
 	// Update Matrix
 	for (auto& pObject : m_ppObjects) pObject->UpdateTransform(nullptr);
+
+	if (m_pPlayer)
+	{
+		m_pPlayer->Update(deltaTime);
+		if (!m_pPlayer->m_pSkinnedAnimationController) m_pPlayer->UpdateTransform(nullptr);
+	}
 
 	// Check Collision	
 	ProcessCollisions();
@@ -376,6 +408,13 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		pObject->Update(m_fElapsedTime);
 		if (!pObject->m_pSkinnedAnimationController) pObject->UpdateTransform(NULL);
 		pObject->Render(pd3dCommandList, pCamera);
+	}
+
+	if (m_pPlayer)
+	{
+		m_pPlayer->Update(m_fElapsedTime);
+		if (!m_pPlayer->m_pSkinnedAnimationController) m_pPlayer->UpdateTransform(NULL);
+		m_pPlayer->Render(pd3dCommandList, pCamera);
 	}
 
 	// Render SkyBox
@@ -771,4 +810,48 @@ void CScene::ReleaseShaderVariables()
 	if (m_pd3dcbLights) m_pd3dcbLights->Unmap(0, nullptr);
 	m_pd3dcbLights.Reset();
 	m_pcbMappedLights = nullptr;
+}
+
+// ResourceManager 리소스 관리
+ResourceManager& CScene::GetResourceManager() {
+	static ResourceManager instance; // 정적 지역 변수
+	return instance;
+}
+
+void CScene::ReleaseResources()
+{
+	GetResourceManager().ReleaseResources();
+}
+
+// Model Set/Get
+void CScene::StoreModelInfo(const std::string& filename, std::shared_ptr<CLoadedModelInfo> pSkinInfo)
+{
+	GetResourceManager().SetSkinInfo(filename, pSkinInfo);
+}
+
+std::shared_ptr<CLoadedModelInfo> CScene::GetModelInfo(const std::string& objectname)
+{
+	return GetResourceManager().GetModelInfo(objectname);
+}
+
+// Texture Set/Get
+void CScene::StoreTexture(const std::string& name, std::shared_ptr<CTexture> texture)
+{
+	GetResourceManager().SetTexture(name, texture);
+}
+
+std::shared_ptr<CTexture> CScene::GetTexture(const std::string& name)
+{
+	return GetResourceManager().GetTexture(name);
+}
+
+// Mesh Set/Get
+void CScene::AddMesh(const std::string& name, std::shared_ptr<CMesh> mesh)
+{
+	GetResourceManager().SetMesh(name, mesh);
+}
+
+std::shared_ptr<CMesh> CScene::GetMesh(const std::string& name)
+{
+	return GetResourceManager().GetMesh(name);
 }

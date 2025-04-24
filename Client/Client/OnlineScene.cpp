@@ -57,7 +57,30 @@ void COnlineScene::Update(float deltaTime)
 
 bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 {
-	return false;
+	DWORD dwDirection = 0;
+	if (pBuffer.pKeysBuffer[VK_UP] & 0xF0)dwDirection |= DIR_FORWARD;
+	if (pBuffer.pKeysBuffer[VK_DOWN] & 0xF0)dwDirection |= DIR_BACKWARD;
+	if (pBuffer.pKeysBuffer[VK_LEFT] & 0xF0)dwDirection |= DIR_LEFT;
+	if (pBuffer.pKeysBuffer[VK_RIGHT] & 0xF0)dwDirection |= DIR_RIGHT;
+	if (pBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
+	if (pBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
+
+	if (dwDirection || pBuffer.cxDelta != 0.0f || pBuffer.cyDelta != 0.0f)
+	{
+		if (m_pPlayer)
+		{
+			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
+			m_pPlayer->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
+		}
+
+		/*if (m_pCamera)
+		{
+			m_pCamera->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
+			m_pCamera->RegenerateViewMatrix();
+		}*/
+	}
+
+	return true;
 }
 
 void COnlineScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -68,8 +91,81 @@ void COnlineScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARA
 {
 }
 
-void COnlineScene::ProcessPacket(char* recv_p)
+void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 {	
+	PKT_TYPE type = recv_p->type; // 패킷 타입  
+
+	switch (type) {
+	case S_C_PLAYER_INFO:
+	{
+		pkt_sc_player_info* packet = reinterpret_cast<pkt_sc_player_info*>(recv_p);
+
+		std::shared_ptr<CGameObject> pZombie = GetZombie();
+		pZombie->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
+		m_mapGameObjects[packet->id] = pZombie;
+		SetPlayer(pZombie);
+		break;
+	}
+	case S_C_OBJECT_ADD:
+	{
+		pkt_sc_object_add* packet = reinterpret_cast<pkt_sc_object_add*>(recv_p);
+		switch (packet->fixdata.obj_type)
+		{
+		case ObjectType::PLAYER:
+		{
+			// 플레이어 오브젝트 추가
+			std::shared_ptr<CGameObject> pZombie = GetZombie();
+			pZombie->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
+			m_mapGameObjects[packet->id] = pZombie;
+			//AddObject(pZombie);
+			break;
+		}
+		case ObjectType::ZOMBIE:
+		{
+			// 좀비 오브젝트 추가
+			std::shared_ptr<CGameObject> pZombie = GetZombie();
+			pZombie->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
+			m_mapGameObjects[packet->id] = pZombie;
+			AddObject(pZombie);
+			break;
+		}
+		case ObjectType::BULLET:
+		{
+			// 총알 오브젝트 추가
+			/*std::shared_ptr<CGameObject> pBullet = std::make_shared<CBulletObject>();
+			pBullet->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
+			m_mapGameObjects[packet->id] = pBullet;*/
+			break;
+		}
+		}
+		// 게임 오브젝트 추가
+		break;
+	}
+	case S_C_OBJECT_UPDATE:
+	{
+		pkt_sc_object_update* updatePkt = reinterpret_cast<pkt_sc_object_update*>(recv_p);
+		Vec3 position = updatePkt->obj.meta.position;
+		m_mapGameObjects[updatePkt->id]->SetPosition(position.x, position.y, position.z);
+		break;
+	}
+	case S_C_OBJECT_REMOVE:
+	{
+		pkt_sc_object_remove* removePkt = reinterpret_cast<pkt_sc_object_remove*>(recv_p);
+		break;
+	}
+
+	case S_C_STAGE_INFO:
+	{
+		break;
+	}
+	case S_C_SCORE_INFO:
+	{
+		break;
+
+	}
+	default:
+		break;
+	}
 }
 
 void COnlineScene::SendPlayerState()
@@ -84,7 +180,7 @@ void COnlineScene::SendPlayerState()
 		packet.obj.damage = 0; // 공격력
 
 		XMFLOAT3 position = m_pPlayer->GetPosition();
-		XMFLOAT3 direction = m_pPlayer->GetLookVector();
+		XMFLOAT3 direction = m_pPlayer->GetComponent<CRigidBody>()->GetVelocity();
 		memcpy(&packet.obj.meta.position, &position, sizeof(XMFLOAT3)); // 현재 위치
 		memcpy(&packet.obj.meta.direction, &direction, sizeof(XMFLOAT3)); // 이동 방향
 

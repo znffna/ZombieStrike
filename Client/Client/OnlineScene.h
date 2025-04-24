@@ -21,12 +21,15 @@ public:
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 
+
 	// Network Override
-	virtual void ProcessPacket(char* recv_p); // Recv 내용 처리 (m_NetworkClient로 부터	호출됨)
+	virtual void ProcessPacket(PacketHeader* recv_p); // Recv 내용 처리 (m_NetworkClient로 부터	호출됨)
 
 	void SendPlayerState();
 
+
 private:
 	NetworkingClient m_NetworkClient{ this };
+	std::unordered_map<int, std::shared_ptr<CGameObject>> m_mapGameObjects;
 };
 

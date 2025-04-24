@@ -221,7 +221,7 @@ public:
 
 	void BuildDefaultLightsAndMaterials();
 
-	void CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	
 	// static member variable
 	static void DestroyFramework();
@@ -232,6 +232,12 @@ public:
 	bool CheckWorkUpdating() { return (m_SceneState == SCENE_STATE_RUNNING); }
 	SCENE_STATE GetSceneState() { return m_SceneState; }
 	void SetSceneState(SCENE_STATE SceneState) { m_SceneState = SceneState; }
+
+	// Object Management
+	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
+	virtual void RemoveObject(std::shared_ptr<CGameObject> pObject);
+
+	void SetPlayer(std::shared_ptr<CGameObject> pPlayer);
 
 	// Scene Method
 	virtual void Update(float deltaTime);
@@ -317,48 +323,52 @@ protected:
 
 public:
 	// ResourceManager 府家胶 包府
-	static ResourceManager& GetResourceManager() {
-		static ResourceManager instance; // 沥利 瘤开 函荐
-		return instance;
-	}
-
-	static void ReleaseResources()
-	{
-		GetResourceManager().ReleaseResources();
-	};
+	static ResourceManager& GetResourceManager();
+	static void ReleaseResources();;
 
 	// Model Set/Get
-	static void StoreModelInfo(const std::string& filename, std::shared_ptr<CLoadedModelInfo> pSkinInfo)
-	{
-		GetResourceManager().SetSkinInfo(filename, pSkinInfo);
-	};
-
-	static std::shared_ptr<CLoadedModelInfo> GetModelInfo(const std::string& objectname)
-	{
-		return GetResourceManager().GetModelInfo(objectname);
-	};
+	static void StoreModelInfo(const std::string& filename, std::shared_ptr<CLoadedModelInfo> pSkinInfo);;
+	static std::shared_ptr<CLoadedModelInfo> GetModelInfo(const std::string& objectname);;
 
 	// Texture Set/Get
-	static void StoreTexture(const std::string& name, std::shared_ptr<CTexture> texture)
-	{
-		GetResourceManager().SetTexture(name, texture);
-	};
-
-	static std::shared_ptr<CTexture> GetTexture(const std::string& name)
-	{
-		return GetResourceManager().GetTexture(name);
-	};
+	static void StoreTexture(const std::string& name, std::shared_ptr<CTexture> texture);;
+	static std::shared_ptr<CTexture> GetTexture(const std::string& name);;
 
 	// Mesh Set/Get
-	static void AddMesh(const std::string& name, std::shared_ptr<CMesh> mesh)
+	static void AddMesh(const std::string& name, std::shared_ptr<CMesh> mesh);;
+	static std::shared_ptr<CMesh> GetMesh(const std::string& name);;
+
+	// ObjectPool
+	std::vector<std::shared_ptr<CZombieObject>> m_pZombiePool;
+
+	void StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)
 	{
-		GetResourceManager().SetMesh(name, mesh);
+		std::shared_ptr<CLoadedModelInfo> pModel = GetModelInfo("FuzZombie");
+		if (!pModel)
+		{
+			pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
+			StoreModelInfo("FuzZombie", pModel);
+		}
+
+		for (int i = 0; i < nZombieCount; ++i)
+		{
+			std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
+			pZombie->SetActive(false);
+			m_pZombiePool.push_back(pZombie);
+		}
+	}
+	std::shared_ptr<CZombieObject> GetZombie()
+	{
+		for (auto& pZombie : m_pZombiePool)
+		{
+			if (false == pZombie->IsActive())
+			{
+				pZombie->SetActive(true); 
+				return pZombie;
+			}
+		}
 	};
 
-	static std::shared_ptr<CMesh> GetMesh(const std::string& name)
-	{
-		return GetResourceManager().GetMesh(name);
-	};
 };
 
 

@@ -28,7 +28,7 @@ public:
 	}
 };
 
-class CScene;
+class COnlineScene;
 
 class NetworkingClient {
 public:
@@ -42,9 +42,9 @@ public:
     bool is_running = true; // 종료 여부
 	bool is_recvLoopDone = false; // recv loop 종료 여부
 
-	CScene* m_pScene; // Scene 포인터
+    COnlineScene* m_pScene; // Scene 포인터
 public:
-	NetworkingClient(CScene* pScene);
+	NetworkingClient(COnlineScene* pScene);
 
 	void Connect();   // 소켓 초기화 및 서버 연결
     void Logout(); // Scene의 종료시 호출하도록 구현할 것

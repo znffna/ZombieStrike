@@ -187,6 +187,32 @@ public:
             std::cout << "WSASend failed\n";
         }
     }
+
+    void send_player_info() {
+		pkt_sc_player_info packet;
+		ZeroMemory(&packet, sizeof(packet));
+		packet.header.size = sizeof(packet);
+        packet.header.type = PKT_TYPE::S_C_PLAYER_INFO;
+		packet.id = _id;
+		packet.fixdata.obj_type = _obj_type;
+		packet.fixdata.skin_type = _skin_type;
+		strcpy_s(packet.fixdata.name, _name.c_str());
+		packet.fixdata.startposition = _position;
+		packet.fixdata.starthp = _hp;
+
+		packet.obj.act_type = _act_type;
+		packet.obj.gun_type = _gun_type;
+
+		packet.obj.level = _level;
+		packet.obj.score = _score;
+		packet.obj.damage = _damage;
+		packet.obj.meta.position = _position;
+		packet.obj.meta.direction = _direction;
+		packet.obj.meta.speed = _speed;
+		packet.obj.meta.hp = _hp;
+        do_send(&packet);
+    }
+
     void send_object_update() {
         pkt_sc_object_update p_update;
         p_update.header.size = sizeof(p_update);
@@ -235,7 +261,8 @@ public:
             IN_g_player_n++;
 			std::cout << "[process_packet][RECV][" << (int)_id << "] Login: " << _name << "\n";
 			std::cout << "[process_packet][RECV][" << (int)_id << "] Skin Type: " << (int)_skin_type << "\n";
-            send_object_update();
+            send_player_info();
+            //send_object_update();
 
 			pkt_sc_object_add p_Add_P;
 			p_Add_P.header.size = sizeof(p_Add_P);
@@ -378,7 +405,8 @@ int main() {
         if (c_socket == INVALID_SOCKET) {
             std::cout << "Accept failed\n";
             continue;
-        }serverControl;
+        }
+        serverControl;
 
         g_users.try_emplace(clientId, clientId, c_socket);
         clientId++;

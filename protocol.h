@@ -43,7 +43,7 @@ enum PKT_TYPE : SIZE1 {
 
     //S_C_LOGIN_OK = 14,
     //S_C_LOGIN_FAIL = 15,
-    //S_C_PLAYER_INFO = 16,
+    S_C_PLAYER_INFO = 16,
     S_C_HIT_RESULT = 10,
 
     // 오브젝트 패킷 공통 처리용
@@ -246,6 +246,15 @@ struct pkt_cs_hit {
 // 서버 ->  클라
 // --------------------------
 // 총알 명중 결과
+
+struct pkt_sc_player_info {
+	PacketHeader header{ 0, PKT_TYPE::S_C_PLAYER_INFO };
+	SIZEID id;                      // 누가 쐈는지
+	Objectfixdata fixdata;          // 고정정보
+	ObjectDynamicInfo obj;          // 동적정보
+};
+
+
 struct pkt_sc_hit_result {
     PacketHeader header{0, PKT_TYPE::S_C_HIT_RESULT };
     SIZEID shooterId;               // 누가 쐈는지
