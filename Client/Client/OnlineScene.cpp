@@ -1,14 +1,19 @@
 #include "OnlineScene.h"
 
+bool g_bNetworkDebugMode = true;
+
 COnlineScene::COnlineScene()
 {	
-	std::string debugOutput = "OnlineScene 积己凳";
-	debugOutput += "m_NetworkClient Address : ";
-	debugOutput += std::to_string(reinterpret_cast<uintptr_t>(&m_NetworkClient));
-	debugOutput += "\n";
-	debugOutput += "m_NetworkClient.Overlapped Address : ";
-	debugOutput += std::to_string(reinterpret_cast<uintptr_t>(&m_NetworkClient.recv_over));
-	OutputDebugStringA(debugOutput.c_str());
+	if(g_bNetworkDebugMode)
+	{
+		std::string debugOutput = "OnlineScene 积己凳";
+		debugOutput += "m_NetworkClient Address : ";
+		debugOutput += std::to_string(reinterpret_cast<uintptr_t>(&m_NetworkClient));
+		debugOutput += "\n";
+		debugOutput += "m_NetworkClient.Overlapped Address : ";
+		debugOutput += std::to_string(reinterpret_cast<uintptr_t>(&m_NetworkClient.recv_over));
+		OutputDebugStringA(debugOutput.c_str());
+	}
 }
 
 COnlineScene::~COnlineScene()
@@ -35,17 +40,6 @@ void COnlineScene::ReleaseUploadBuffers()
 void COnlineScene::Update(float deltaTime)
 {
 	CGameScene::Update(deltaTime);
-	// Update Camera Position
-	if (m_pCamera)
-	{
-		// Camera Follow Zombie
-		if (m_ppHierarchicalObjects.size() > 0)
-		{
-			XMFLOAT3 xmf3CameraPosition = Vector3::Add(m_ppHierarchicalObjects[0]->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f));
-			m_pCamera->SetPosition(xmf3CameraPosition);
-			m_pCamera->RegenerateViewMatrix();
-		}
-	}
 
 	// Network Client Update
 	if (m_NetworkClient.is_running)
@@ -69,8 +63,8 @@ bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 	{
 		if (m_pPlayer)
 		{
-			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
 			m_pPlayer->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
+			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
 		}
 
 		/*if (m_pCamera)
@@ -100,10 +94,16 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	{
 		pkt_sc_player_info* packet = reinterpret_cast<pkt_sc_player_info*>(recv_p);
 
-		std::shared_ptr<CGameObject> pZombie = GetZombie();
+		std::shared_ptr<CGameObject> pZombie = m_pPlayer;
 		pZombie->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
 		m_mapGameObjects[packet->id] = pZombie;
 		SetPlayer(pZombie);
+
+		if(g_bNetworkDebugMode){
+			std::string DebugOutput = "S_C_PLAYER_INFO 菩哦 荐脚\n";
+			DebugOutput += "position : (" + std::to_string(packet->fixdata.startposition.x) + ", " + std::to_string(packet->fixdata.startposition.y) + ", " + std::to_string(packet->fixdata.startposition.z) + ")\n";
+			OutputDebugStringA(DebugOutput.c_str());
+		}
 		break;
 	}
 	case S_C_OBJECT_ADD:
@@ -146,6 +146,11 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		pkt_sc_object_update* updatePkt = reinterpret_cast<pkt_sc_object_update*>(recv_p);
 		Vec3 position = updatePkt->obj.meta.position;
 		m_mapGameObjects[updatePkt->id]->SetPosition(position.x, position.y, position.z);
+		if (g_bNetworkDebugMode) {
+			std::string DebugOutput = "S_C_OBJECT_UPDATE[" + std::to_string(updatePkt->id) + "] ";
+			DebugOutput += "position : (" + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + ")\n";
+			OutputDebugStringA(DebugOutput.c_str());
+		}
 		break;
 	}
 	case S_C_OBJECT_REMOVE:

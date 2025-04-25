@@ -301,6 +301,14 @@ void CScene::AddObject(const std::shared_ptr<CGameObject>& pObject)
 	}
 }
 
+void CScene::AddHierarchicalObject(const std::shared_ptr<CGameObject>& pHierarchicalObject)
+{
+	if (pHierarchicalObject)
+	{
+		m_ppHierarchicalObjects.push_back(pHierarchicalObject);
+	}
+}
+
 void CScene::RemoveObject(std::shared_ptr<CGameObject> pObject)
 {
 	if (pObject)

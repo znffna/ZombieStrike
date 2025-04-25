@@ -4,6 +4,8 @@
 #include "NetworkClient.h"
 #include "GameScene.h"
 
+extern bool g_bNetworkDebugMode;
+
 class COnlineScene : public CGameScene
 {
 public:

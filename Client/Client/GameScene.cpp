@@ -42,10 +42,10 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		resourceManager.SetSkinInfo("FuzZombie", pModel);
 	}
 
-	/*std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
+	std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
 	pZombie->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 0.0f));
 	m_ppHierarchicalObjects.push_back(pZombie);
-	m_pPlayer = pZombie;*/
+	m_pPlayer = pZombie;
 
 	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 1000);
 

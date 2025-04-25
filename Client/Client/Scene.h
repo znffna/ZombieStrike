@@ -235,6 +235,7 @@ public:
 
 	// Object Management
 	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
+	virtual void AddHierarchicalObject(const std::shared_ptr<CGameObject>& pHierarchicalObject);
 	virtual void RemoveObject(std::shared_ptr<CGameObject> pObject);
 
 	void SetPlayer(std::shared_ptr<CGameObject> pPlayer);

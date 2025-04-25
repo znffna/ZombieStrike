@@ -155,10 +155,7 @@ public:
 
             if (offset + packetSize > total) break; // 아직 패킷 완성이 안 됨
 
-            std::cout << "[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << ", Raw = ";
-            for (int i = 0; i < packetSize; ++i)
-                printf("%02X ", p[i]);
-            std::cout << std::endl;
+            std::cout << "[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << std::endl;
 
 			process_packet(p);    // 패킷 처리
             p += (packetSize)/sizeof(SIZE2);      // 다음 패킷으로 이동
