@@ -147,11 +147,6 @@ public:
         // ----- 패킷 조립 시작 -----
         SIZE2* p = _recv_over._buffer;
         SIZE3 total = _remained + num_bytes;
-
-        // 앞에 남은 데이터 있으면 이어붙임
-        if (_remained > 0)
-            memmove(p, p + _remained, num_bytes);
-
         SIZE3 offset = 0;
 
         while (offset < total) {
