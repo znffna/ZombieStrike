@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <mutex>
 #include <random>
 #include <conio.h> 
 #include "../../protocol.h"
@@ -19,7 +20,7 @@ constexpr int ZOMBIE_START_Z = 2;
 constexpr int PLAYER_START_X = 40;
 constexpr int PLAYER_START_Z = 41;
 // 추가 정보
-constexpr int NUM_ZOMBIES = 100;          // 추가: 생성할 좀비 수
+constexpr int NUM_ZOMBIES = 50;          // 추가: 생성할 좀비 수
 constexpr float CELL_SIZE = 1.0f;        // 노드당 크기
 constexpr float ZOMBIE_HALF_SIZE = 0.4f; // 좀비 AABB 반 사이즈
 // ==================
@@ -281,6 +282,7 @@ private:
 
 void PrintMap(const std::vector<std::vector<int>>& map, const std::vector<ZombieAI*>& zombies)
 {
+	int zombieCount = 0;
     std::vector<std::vector<char>> display(MAP_HEIGHT, std::vector<char>(MAP_WIDTH, '0'));
 
     // 벽 표시
@@ -319,9 +321,17 @@ void PrintMap(const std::vector<std::vector<int>>& map, const std::vector<Zombie
     for (int z = 0; z < MAP_HEIGHT; ++z) {
         for (int x = 0; x < MAP_WIDTH; ++x) {
             std::cout << display[z][x];
+            if (display[z][x] == 'Z')
+                zombieCount++;
         }
         std::cout << "\n";
     }
+    // 출력 끝나고 난 뒤, 좀비 개수 체크
+    std::cout << "\n[현재 맵에 표시된 좀비 수] : " << zombieCount << "\n";
+    if (zombieCount == NUM_ZOMBIES)
+        std::cout << "[ok] 좀비 전부 찍혔습니다!\n";
+    else
+        std::cout << "[bad] 좀비 수가 맞지 않습니다! (" << zombieCount << " / " << NUM_ZOMBIES << ")\n";
 }
 
 // =========================================================
