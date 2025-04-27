@@ -41,12 +41,7 @@ std::vector<std::vector<int>> LoadMap(const std::string& filename)
         }
 
         if (!row.empty()) {
-
             map.push_back(row);
-
-            /*          for (int v : row) {
-                          std::cout << v;
-                      }*/
         }
     }
 
