@@ -7,6 +7,7 @@
 #include <sstream>
 #include <algorithm>
 #include <mutex>
+#include <random>
 
 // test 용
 constexpr int MAP_WIDTH = 50;
@@ -57,29 +58,51 @@ std::vector<std::vector<int>> LoadMap(const std::string& filename)
 }
 
 // 맵과 경로 표시
-void PrintMap(const std::vector<std::vector<int>>& map, const std::vector<std::pair<int, int>>& path)
+void PrintMap(const std::vector<std::vector<int>>& map, const std::vector<std::pair<int, int>>& path,
+    int zombieX, int zombieZ, int playerX, int playerZ) 
 {
     std::vector<std::vector<char>> display(MAP_HEIGHT, std::vector<char>(MAP_WIDTH, '0'));
 
+    // 벽 표시
     for (int z = 0; z < MAP_HEIGHT; ++z) {
         for (int x = 0; x < MAP_WIDTH; ++x) {
             if (map[z][x] == 1)
-                display[z][x] = '#'; // 벽
+                display[z][x] = '#'; 
         }
     }
-
-    for (auto& [x, z] : path) {
-        display[z][x] = '*'; // 경로
+    // 경로 표시 (벽 위에는 표시 안 함)
+    for (auto& p : path) {
+        if (display[p.second][p.first] == '0')
+            display[p.second][p.first] = '*';
     }
 
-    display[ZOMBIE_START_Z][ZOMBIE_START_X] = 'Z'; // 좀비 시작
-    display[PLAYER_START_Z][PLAYER_START_X] = 'P'; // 플레이어 목표
+    // 좀비 위치 표시
+    display[zombieZ][zombieX] = 'Z';
+    // 플레이어 위치 표시
+    display[playerZ][playerX] = 'P';
 
+    // 맵 출력
     for (int z = 0; z < MAP_HEIGHT; ++z) {
         for (int x = 0; x < MAP_WIDTH; ++x) {
             std::cout << display[z][x];
         }
         std::cout << "\n";
+    }
+}
+
+std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map)
+{
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distX(0, MAP_WIDTH - 1);
+    std::uniform_int_distribution<> distZ(0, MAP_HEIGHT - 1);
+
+    while (true) {
+        int x = distX(gen);
+        int z = distZ(gen);
+        if (map[z][x] == 0) { // 이동 가능한 곳
+            return { x, z };
+        }
     }
 }
 
@@ -113,7 +136,7 @@ private:
 
     float Heuristic(int x1, int z1, int x2, int z2)
     {
-        return std::abs(x1 - x2) + std::abs(z1 - z2); // Manhattan Distance
+        return std::abs(x1 - x2) + std::abs(z1 - z2); // (가로, 세로) 대각선 x
     }
 };
 
@@ -217,6 +240,9 @@ public:
     int GetID() const { return m_id; }
     float GetX() const { return m_x; }
     float GetZ() const { return m_z; }
+    // test 용도 
+    float GetPlayerX() const { return m_playerX; }
+    float GetPlayerZ() const { return m_playerZ; }
 
 private:
     AStar m_astar;
@@ -238,31 +264,32 @@ int main()
     zombieAI.SetPosition((float)ZOMBIE_START_X, (float)ZOMBIE_START_Z);
     zombieAI.SetPlayerPosition((float)PLAYER_START_X, (float)PLAYER_START_Z);
 
-    // 3. 경로 찾기
-    auto path = zombieAI.FindPathToPlayer();
-    //auto path = zombieAI.m_astar.FindPath(ZOMBIE_START_X, ZOMBIE_START_Z, PLAYER_START_X, PLAYER_START_Z);
+    while (true)
+    {
+        // 3. 초기 상태 경로 찾기
+        auto path = zombieAI.FindPathToPlayer();
 
-    if (path.empty()) {
-        std::cout << "플레이어까지 경로를 찾을 수 없습니다!\n";
-    }
-    else {
-        std::cout << "경로 찾기 성공! 경로 길이: " << path.size() << "\n";
+        if (path.empty()) {
+            std::cout << "플레이어까지 경로를 찾을 수 없습니다!\n";
+        }
+        else {
+            std::cout << "경로 찾기 성공! 경로 길이: " << path.size() << "\n";
+            PrintMap(map, path, 
+                (int)zombieAI.GetX(), (int)zombieAI.GetZ(), (int)zombieAI.GetPlayerX(), (int)zombieAI.GetPlayerZ());
+        }
 
-        //for (int z = 0; z < MAP_HEIGHT; ++z) {
-        //    for (int x = 0; x < MAP_WIDTH; ++x) {
-        //        std::cout << map[z][x]; // 맵 출력
-        //    }
-        //    std::cout << "\n";
+        std::cout << "\n[엔터 입력시 랜덤 이동] (Ctrl+C로 종료)\n";
+        std::cin.get();
 
-        //}
-        //std::cout << "[경로 좌표]\n";
-        //for (auto& [x, z] : path) {
-        //    std::cout << "(" << x << "," << z << ") ";
-        //}
-        //std::cout << "\n";
+        // 4. 좀비, 플레이어를 랜덤 위치로 이동
+        auto zombiePos = GetRandomPosition(map);
+        auto playerPos = GetRandomPosition(map);
 
-        // 4. 맵 출력
-        PrintMap(map, path);
+        zombieAI.SetPosition((float)zombiePos.first, (float)zombiePos.second);
+        zombieAI.SetPlayerPosition((float)playerPos.first, (float)playerPos.second);
+
+        std::cout << "좀비 이동 (" << zombiePos.first << ", " << zombiePos.second << ")\n";
+        std::cout << "플레이어 이동 (" << playerPos.first << ", " << playerPos.second << ")\n";
     }
 
     return 0;
