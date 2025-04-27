@@ -1,4 +1,3 @@
-#pragma once
 #include <vector>
 #include <queue>
 #include <unordered_set>
@@ -8,6 +7,84 @@
 #include <sstream>
 #include <algorithm>
 #include <mutex>
+
+// test 용
+constexpr int MAP_WIDTH = 50;
+constexpr int MAP_HEIGHT = 50;
+// 플레이어, 좀비 시작 위치
+const int ZOMBIE_START_X = 2;
+const int ZOMBIE_START_Z = 2;
+const int PLAYER_START_X = 40;
+const int PLAYER_START_Z = 41;
+// ==================
+
+// 맵 파일 읽기
+std::vector<std::vector<int>> LoadMap(const std::string& filename)
+{
+    std::vector<std::vector<int>> map;
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cout << "[Error] map.txt 파일 열기 실패!\n";
+        exit(1);
+    }
+
+    std::string line;
+    while (std::getline(file, line))
+    {
+        if (line.empty() || !isdigit(line[0])) continue;
+        std::vector<int> row;
+        for (char c : line) {
+            if (c == '0' || c == '1') {
+                row.push_back(c - '0');
+            }
+        }
+
+        if (!row.empty()) {
+
+            map.push_back(row);
+
+            /*          for (int v : row) {
+                          std::cout << v;
+                      }*/
+        }
+    }
+
+    
+    file.close();
+
+
+    return map;
+}
+
+// 맵과 경로 표시
+void PrintMap(const std::vector<std::vector<int>>& map, const std::vector<std::pair<int, int>>& path)
+{
+    std::vector<std::vector<char>> display(MAP_HEIGHT, std::vector<char>(MAP_WIDTH, '0'));
+
+    for (int z = 0; z < MAP_HEIGHT; ++z) {
+        for (int x = 0; x < MAP_WIDTH; ++x) {
+            if (map[z][x] == 1)
+                display[z][x] = '#'; // 벽
+        }
+    }
+
+    for (auto& [x, z] : path) {
+        display[z][x] = '*'; // 경로
+    }
+
+    display[ZOMBIE_START_Z][ZOMBIE_START_X] = 'Z'; // 좀비 시작
+    display[PLAYER_START_Z][PLAYER_START_X] = 'P'; // 플레이어 목표
+
+    for (int z = 0; z < MAP_HEIGHT; ++z) {
+        for (int x = 0; x < MAP_WIDTH; ++x) {
+            std::cout << display[z][x];
+        }
+        std::cout << "\n";
+    }
+}
+
+// =========================================================
+
 
 const int my_gCost = 1.0f;
 
@@ -133,6 +210,10 @@ public:
         }
     }
 
+    std::vector<std::pair<int, int>> FindPathToPlayer() {
+        return m_astar.FindPath((int)m_x, (int)m_z, (int)m_playerX, (int)m_playerZ);
+    }
+
     int GetID() const { return m_id; }
     float GetX() const { return m_x; }
     float GetZ() const { return m_z; }
@@ -147,3 +228,42 @@ private:
 }; 
 
 // =========================================================
+int main()
+{
+    // 1. 맵 로드
+    auto map = LoadMap("map.txt");
+
+    // 2. ZombieAI 생성
+    ZombieAI zombieAI(map, 1);
+    zombieAI.SetPosition((float)ZOMBIE_START_X, (float)ZOMBIE_START_Z);
+    zombieAI.SetPlayerPosition((float)PLAYER_START_X, (float)PLAYER_START_Z);
+
+    // 3. 경로 찾기
+    auto path = zombieAI.FindPathToPlayer();
+    //auto path = zombieAI.m_astar.FindPath(ZOMBIE_START_X, ZOMBIE_START_Z, PLAYER_START_X, PLAYER_START_Z);
+
+    if (path.empty()) {
+        std::cout << "플레이어까지 경로를 찾을 수 없습니다!\n";
+    }
+    else {
+        std::cout << "경로 찾기 성공! 경로 길이: " << path.size() << "\n";
+
+        //for (int z = 0; z < MAP_HEIGHT; ++z) {
+        //    for (int x = 0; x < MAP_WIDTH; ++x) {
+        //        std::cout << map[z][x]; // 맵 출력
+        //    }
+        //    std::cout << "\n";
+
+        //}
+        //std::cout << "[경로 좌표]\n";
+        //for (auto& [x, z] : path) {
+        //    std::cout << "(" << x << "," << z << ") ";
+        //}
+        //std::cout << "\n";
+
+        // 4. 맵 출력
+        PrintMap(map, path);
+    }
+
+    return 0;
+}
