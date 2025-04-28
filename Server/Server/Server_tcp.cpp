@@ -29,7 +29,7 @@ void error_display(const char* msg, int err_no) {
 }
 
 struct ShootPacket {
-    SIZE1 GunType; // ÃÑ Á¾·ù
+    SIZE1 GunType; // ì´ ì¢…ë¥˜
     float bulletPos[3];
     float bulletDir[3];
 };
@@ -100,9 +100,9 @@ public:
     void do_recv() {
         DWORD flags = 0;
         ZeroMemory(&_recv_over._over, sizeof(_recv_over._over));
-        _recv_over._over.hEvent = reinterpret_cast<HANDLE>(_id); // ¼¼¼Ç ID¸¦ ÀÌº¥Æ® ÇÚµé·Î »ç¿ë
+        _recv_over._over.hEvent = reinterpret_cast<HANDLE>(_id); // ì„¸ì…˜ IDë¥¼ ì´ë²¤íŠ¸ í•¸ë“¤ë¡œ ì‚¬ìš©
 
-        _recv_over._wsabuf[0].buf = reinterpret_cast<CHAR*>(_recv_over._buffer) + _remained;	//prev_remain ºÎºĞ¿¡ ÀÌ¾î¼­ ¼ö½ÅÇÏ±â À§ÇØ¼­
+        _recv_over._wsabuf[0].buf = reinterpret_cast<CHAR*>(_recv_over._buffer) + _remained;	//prev_remain ë¶€ë¶„ì— ì´ì–´ì„œ ìˆ˜ì‹ í•˜ê¸° ìœ„í•´ì„œ
         _recv_over._wsabuf[0].len = sizeof(_recv_over._buffer) - _remained;
 
         int ret = WSARecv(_c_socket, _recv_over._wsabuf, 1, 0, &flags, &_recv_over._over, g_recv_callback);
@@ -137,14 +137,14 @@ public:
         rem_p.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
         rem_p.id= _id;
         for (auto& u : g_users) {
-			if (u.first != _id) // ³ª¸¦ Á¦¿ÜÇÑ »ó´ë¹æ¿¡°Ô ¾Ë¸®°í
+			if (u.first != _id) // ë‚˜ë¥¼ ì œì™¸í•œ ìƒëŒ€ë°©ì—ê²Œ ì•Œë¦¬ê³ 
 				u.second.do_send(&rem_p);
         }
 		closesocket(_c_socket);
     }
 
     void recv_callback(int num_bytes) {
-        // ----- ÆĞÅ¶ Á¶¸³ ½ÃÀÛ -----
+        // ----- íŒ¨í‚· ì¡°ë¦½ ì‹œì‘ -----
         SIZE2* p = _recv_over._buffer;
         SIZE3 total = _remained + num_bytes;
 
@@ -153,22 +153,22 @@ public:
         while (offset < total) {
             SIZE2 packetSize = *p;
 
-            if (offset + packetSize > total) break; // ¾ÆÁ÷ ÆĞÅ¶ ¿Ï¼ºÀÌ ¾È µÊ
+            if (offset + packetSize > total) break; // ì•„ì§ íŒ¨í‚· ì™„ì„±ì´ ì•ˆ ë¨
 
             std::cout << "[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << std::endl;
 
-			process_packet(p);    // ÆĞÅ¶ Ã³¸®
-            p += (packetSize)/sizeof(SIZE2);      // ´ÙÀ½ ÆĞÅ¶À¸·Î ÀÌµ¿
+			process_packet(p);    // íŒ¨í‚· ì²˜ë¦¬
+            p += (packetSize)/sizeof(SIZE2);      // ë‹¤ìŒ íŒ¨í‚·ìœ¼ë¡œ ì´ë™
             offset += packetSize;
         }
 
-        // Á¶¸³ ¾È µÈ µ¥ÀÌÅÍ´Â ¾ÕÀ¸·Î ´ç°Ü¼­ ÀúÀå
+        // ì¡°ë¦½ ì•ˆ ëœ ë°ì´í„°ëŠ” ì•ìœ¼ë¡œ ë‹¹ê²¨ì„œ ì €ì¥
         _remained = total - offset;
 
         if (_remained > 0)
             memmove(_recv_over._buffer, p, _remained);
 
-        do_recv(); // ´ÙÀ½ ¼ö½Å
+        do_recv(); // ë‹¤ìŒ ìˆ˜ì‹ 
 	}
 
     void do_send(void* buff) {
@@ -249,7 +249,7 @@ public:
             _direction  = { 0.0f,0.0f, 0.0f };
             _speed      = 0.0f;
             _hp         = PLAYER_HP;
-			_gun_type   = GunType::BULLET_PISTOL; // ÃÑ Á¾·ù
+			_gun_type   = GunType::BULLET_PISTOL; // ì´ ì¢…ë¥˜
             _level      = 1;
             _score      = 0;
             _damage     = 0;
@@ -273,11 +273,11 @@ public:
             
 
             for (auto& u : g_users) {
-                if (u.first != _id) // ³ª¸¦ Á¦¿ÜÇÑ »ó´ë¹æ¿¡°Ô ¾Ë¸®°í
+                if (u.first != _id) // ë‚˜ë¥¼ ì œì™¸í•œ ìƒëŒ€ë°©ì—ê²Œ ì•Œë¦¬ê³ 
                     u.second.do_send(&p_Add_P);
             }
 			for (auto& u : g_users) {
-				if (u.first != _id) {// ³ª¸¦ Á¦¿ÜÇÑ »ó´ë¹æÀÇ Á¤º¸¸¦ ³ª¿¡°Ô ¾Ë¸®°í
+				if (u.first != _id) {// ë‚˜ë¥¼ ì œì™¸í•œ ìƒëŒ€ë°©ì˜ ì •ë³´ë¥¼ ë‚˜ì—ê²Œ ì•Œë¦¬ê³ 
                     pkt_sc_object_add p_Add_P;
                     p_Add_P.header.size = sizeof(p_Add_P);
                     p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
@@ -297,8 +297,8 @@ public:
         {
 			pkt_cs_update* updatePacket = reinterpret_cast<pkt_cs_update*>(packet);
 
-            float deltaTime = 1.0f / 60.0f; // ¼­¹ö Æ½ ·¹ÀÌÆ® ±âÁØ (¿¹: 60fps)
-            // ÀÌµ¿ °Å¸® = ¹æÇâ * ¼Óµµ * ½Ã°£
+            float deltaTime = 1.0f / 60.0f; // ì„œë²„ í‹± ë ˆì´íŠ¸ ê¸°ì¤€ (ì˜ˆ: 60fps)
+            // ì´ë™ ê±°ë¦¬ = ë°©í–¥ * ì†ë„ * ì‹œê°„
             _position += updatePacket->obj.meta.direction * updatePacket->obj.meta.speed * deltaTime;
          
             pkt_sc_object_update u_move_p;
@@ -315,7 +315,7 @@ public:
 			u_move_p.obj.damage = _damage;
 			u_move_p.obj.act_type = _act_type;
 			for (auto& u : g_users) {
-				u.second.do_send(&u_move_p); // ³ªÆ÷ÇÔ ¸ğµÎ¿¡°Ô ¾Ë¸² ÁÂÇ¥ÀÇ ÀÌµ¿À»
+				u.second.do_send(&u_move_p); // ë‚˜í¬í•¨ ëª¨ë‘ì—ê²Œ ì•Œë¦¼ ì¢Œí‘œì˜ ì´ë™ì„
 			}
             std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
             std::cout << "[process_packet][RECV][" << (int)_id << "] position: (" << _position.x << ", " << _position.y << ", " << _position.z << ") " << "\n";
@@ -353,7 +353,7 @@ void serverControl() {
         char cmd;
         std::cin >> cmd;
         if (cmd == 'q') {
-            std::cout << "¼­¹ö Á¾·á ¸í·É\n";
+            std::cout << "ì„œë²„ ì¢…ë£Œ ëª…ë ¹\n";
             serverRunning = false;
             break;
         }
@@ -368,13 +368,13 @@ int main() {
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
         error_display("WSAStartup failed", WSAGetLastError());
     else
-        std::cout << "WSAStartup ¼º°ø\n";
+        std::cout << "WSAStartup ì„±ê³µ\n";
 
     SOCKET s_socket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, WSA_FLAG_OVERLAPPED);
     if (s_socket == INVALID_SOCKET)
         error_display("Socket creation failed", WSAGetLastError()); \
     else
-        std::cout << "Socket creation ¼º°ø\n";
+        std::cout << "Socket creation ì„±ê³µ\n";
 
     SOCKADDR_IN serverAddr;
     serverAddr.sin_family = AF_INET;
@@ -383,11 +383,11 @@ int main() {
 
     if (bind (s_socket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(SOCKADDR_IN)) == SOCKET_ERROR)
         error_display("Bind failed", WSAGetLastError());
-    else { std::cout << "Bind ¼º°ø\n"; }
+    else { std::cout << "Bind ì„±ê³µ\n"; }
 
     if (listen (s_socket, SOMAXCONN) == SOCKET_ERROR)
         error_display("Listen failed", WSAGetLastError());
-    else { std::cout << "Listen ¼º°ø\n"; }
+    else { std::cout << "Listen ì„±ê³µ\n"; }
 
     INT serverAddr_size = sizeof(SOCKADDR_IN);
 
@@ -409,7 +409,7 @@ int main() {
         clientId++;
     }
 
-    std::cout << "¼­¹ö Á¾·á Áß...\n";
+    std::cout << "ì„œë²„ ì¢…ë£Œ ì¤‘...\n";
     closesocket(s_socket);
     WSACleanup();
 }
