@@ -33,7 +33,7 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	// Model Info
 	std::shared_ptr<CLoadedModelInfo> pAngrybotModel = pModel;
-	if (!pAngrybotModel) pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/PoliceZombie.bin", NULL);
+	//if (!pAngrybotModel) pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/PoliceZombie.bin", NULL);
 	SetChild(pAngrybotModel->m_pModelRootObject);
 
 	Update(0.0f);

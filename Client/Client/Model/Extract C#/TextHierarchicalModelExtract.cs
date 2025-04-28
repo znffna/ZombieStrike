@@ -503,6 +503,8 @@ public class TextHierarchicalModelExtract : MonoBehaviour
         WriteTransform(nLevel+1, "<Transform>:", current);
         WriteLocalMatrix(nLevel+1, "<TransformMatrix>:", current);
 
+        WriteBoxColliders(nLevel + 1, current);
+
         MeshFilter meshFilter = current.gameObject.GetComponent<MeshFilter>();
         MeshRenderer meshRenderer = current.gameObject.GetComponent<MeshRenderer>();
 
@@ -522,6 +524,22 @@ public class TextHierarchicalModelExtract : MonoBehaviour
 
                 Material[] materials = skinMeshRenderer.materials;
                 if (materials.Length > 0) WriteMaterials(nLevel+1, materials);
+            }
+        }
+
+    }
+
+    private void WriteBoxColliders(int nLevel, Transform current)
+    {
+        BoxCollider[] boxColliders = current.gameObject.GetComponents<BoxCollider>();
+        if(boxColliders.Length > 0)
+        { 
+            WriteString(nLevel, "<BoxCollider>: " + boxColliders.Length + " ");
+            foreach (var boxCollider in boxColliders)
+            {
+                WriteVector(boxCollider.center);
+                WriteVector(boxCollider.size);
+                m_rTextWriter.WriteLine(" ");
             }
         }
     }

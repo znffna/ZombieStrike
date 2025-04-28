@@ -591,6 +591,8 @@ public class BinaryHierarchicalModelExtract : MonoBehaviour
         WriteTransform("<Transform>:", current);
         WriteLocalMatrix("<TransformMatrix>:", current);
 
+        WriteColliders("<Colliders>:", current);
+
         MeshFilter meshFilter = current.gameObject.GetComponent<MeshFilter>();
         MeshRenderer meshRenderer = current.gameObject.GetComponent<MeshRenderer>();
 
@@ -610,6 +612,35 @@ public class BinaryHierarchicalModelExtract : MonoBehaviour
 
                 Material[] materials = skinMeshRenderer.materials;
                 if (materials.Length > 0) WriteMaterials(materials);
+            }
+        }
+    }
+
+    private void WriteCollider(string strHeader, Transform current)
+    {
+        BoxCollider boxCollider = current.gameObject.GetComponent<BoxCollider>();
+        if (boxCollider)
+        {
+            binaryWriter.Write(strHeader);
+            WriteVector(boxCollider.center);
+            WriteVector(boxCollider.size);
+        }
+    }
+
+    private void WriteColliders(string strHeader, Transform current)
+    {
+        BoxCollider[] boxColliders = current.gameObject.GetComponents<BoxCollider>();
+        if(boxColliders.Length > 0)
+        {
+            binaryWriter.Write(strHeader);
+            WriteInteger(boxColliders.Length);
+            foreach (var boxCollider in boxColliders)
+            {
+                if (boxCollider != null)
+                {
+                    WriteVector(boxCollider.center);
+                    WriteVector(boxCollider.size);
+                }
             }
         }
     }

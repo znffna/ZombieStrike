@@ -47,6 +47,8 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_ppHierarchicalObjects.push_back(pZombie);
 	m_pPlayer = pZombie;
 
+	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 1000);
+
 	// Map Load
 	auto pMap = resourceManager.GetModelInfo("Map");
 	pMap->m_pModelRootObject->UpdateTransform();
@@ -61,11 +63,27 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 void CGameScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
 	CreateFixedCamera(pd3dDevice, pd3dCommandList);
+	if(m_pPlayer)
+	{
+		m_pCamera->SetPosition(Vector3::Add(m_pPlayer->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));
+		m_pCamera->RegenerateViewMatrix();
 
-	m_pCamera->SetPosition(Vector3::Add(m_pPlayer->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));
-	m_pCamera->RegenerateViewMatrix();
+		m_pCamera->SetTarget(m_pPlayer);
+	}
 
 	m_SceneState = SCENE_STATE_RUNNING;
+}
+
+void CGameScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (m_pCamera) return;
+	m_pCamera = std::make_shared<CThirdPersonCamera>();
+	m_pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	m_pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	m_pCamera->SetOffset(XMFLOAT3(0.0f, 0.0f, -5.0f));
+	m_pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	m_pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
+	m_pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
 void CGameScene::ReleaseObjects()
@@ -83,14 +101,7 @@ void CGameScene::Update(float deltaTime)
 	// Update Camera Position
 	if (m_pCamera)
 	{
-		// Camera Follow Zombie
-		if (m_pPlayer)
-		{
-			//XMFLOAT3 xmf3CameraPosition = Vector3::Add(m_ppHierarchicalObjects[0]->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f));
-			XMFLOAT3 xmf3CameraPosition = Vector3::Add(m_pPlayer->GetPosition(), Vector3::ScalarProduct(m_pCamera->GetLook(), -10.0f));
-			m_pCamera->SetPosition(xmf3CameraPosition);
-			m_pCamera->RegenerateViewMatrix();
-		}
+		m_pCamera->Update(m_pPlayer->GetPosition(), deltaTime);
 	}
 }
 
@@ -107,15 +118,10 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 
 	if (dwDirection || pBuffer.cxDelta != 0.0f || pBuffer.cyDelta != 0.0f)
 	{
-		if (m_ppHierarchicalObjects.size() > 0)
+		if (m_pPlayer)
 		{
-			m_ppHierarchicalObjects[0]->Move(dwDirection, 10.0f, deltaTime);
-		}
-
-		if (m_pCamera)
-		{
-			m_pCamera->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
-			m_pCamera->RegenerateViewMatrix();
+			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
+			m_pPlayer->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
 		}
 	}
 
