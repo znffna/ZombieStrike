@@ -78,7 +78,9 @@ public:
 class CAnimationController
 {
 public:
-	CAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, std::shared_ptr<CLoadedModelInfo> pModel);;
+	CAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, std::shared_ptr<CLoadedModelInfo> pModel);
+	void SettingByModel(std::shared_ptr<CLoadedModelInfo>& pModel);
+	;
 	~CAnimationController();;
 
 public:

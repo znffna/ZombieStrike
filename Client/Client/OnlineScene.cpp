@@ -121,7 +121,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		case ObjectType::ZOMBIE:
 		{
 			// 좀비 오브젝트 추가
-			std::shared_ptr<CGameObject> pZombie = GetZombie();
+			std::shared_ptr<CGameObject> pZombie = GetZombie(packet->fixdata.skin_type);
 			pZombie->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
 			m_mapGameObjects[packet->id] = pZombie;
 			AddObject(pZombie);

@@ -358,12 +358,13 @@ public:
 			m_pZombiePool.push_back(pZombie);
 		}
 	}
-	std::shared_ptr<CZombieObject> GetZombie()
+	std::shared_ptr<CZombieObject> GetZombie(int nSkinType = 0)
 	{
 		for (auto& pZombie : m_pZombiePool)
 		{
 			if (false == pZombie->IsActive())
 			{
+				pZombie->SetSkinType(nSkinType);
 				pZombie->SetActive(true); 
 				return pZombie;
 			}

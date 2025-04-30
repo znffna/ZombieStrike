@@ -107,11 +107,11 @@ public:
 	//std::unique_ptr<CTransform> GetTransform() { return m_pTransform; }
 
 	void SetPosition(DirectX::XMFLOAT3 xmf3Position) { m_pTransform->SetPosition(xmf3Position); }
-	void SetPosition(float fx, float fy, float fz) {  m_pTransform->SetPosition(fx, fy, fz);  }
+	void SetPosition(float fx, float fy, float fz) { m_pTransform->SetPosition(fx, fy, fz); }
 	void SetScale(DirectX::XMFLOAT3 xmf3Scale) { m_pTransform->SetPosition(xmf3Scale); };
 	void SetScale(float fx, float fy, float fz) { m_pTransform->SetPosition(fx, fy, fz); };
 
-	void Move(DirectX::XMFLOAT3 xmf3Shift) { m_pTransform->Move(xmf3Shift); } ;
+	void Move(DirectX::XMFLOAT3 xmf3Shift) { m_pTransform->Move(xmf3Shift); };
 	void Move(float x, float y, float z) { Move(DirectX::XMFLOAT3(x, y, z)); }
 
 	void Move(DWORD dwDirection, float fDistance, float deltaTime);
@@ -133,7 +133,7 @@ public:
 	void UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix);
 	void UpdateTransform(std::shared_ptr<CGameObject>& pGameobject)
 	{
-		m_pTransform->UpdateTransform(pGameobject); 
+		m_pTransform->UpdateTransform(pGameobject);
 
 		// Update Child
 		for (auto& pChild : m_pChilds) pChild->UpdateTransform(GetWorldMatrix());
@@ -146,7 +146,7 @@ public:
 
 	void SetParent(std::shared_ptr<CGameObject> pParent) { m_pParent = pParent; };
 	void SetChild(std::shared_ptr<CGameObject> pChild) { m_pChilds.push_back(pChild); pChild->SetParent(shared_from_this()); };
-	
+
 	// Object Update
 	virtual void Update(float fTimeElapsed);
 
@@ -165,27 +165,26 @@ public:
 	};
 
 	template <typename T>
-	std::shared_ptr<T> GetComponent()
+	std::shared_ptr<T> GetComponent() const
 	{
-		if constexpr (std::is_same_v<T, CTransform>) return m_pTransform;
-		
 		auto iter = m_pComponents.find(COMPONENT_KEY(T));
 		if (iter != m_pComponents.end()) return std::dynamic_pointer_cast<T>(iter->second);
 		return nullptr;
 	}
 
 	template <>
-	std::shared_ptr<CTransform> GetComponent<CTransform>()
+	std::shared_ptr<CTransform> GetComponent<CTransform>() const
 	{
 		return m_pTransform;
 	};
 
+	// TODO : Mesh Collider로 사용 예정
 	template <>
-	std::shared_ptr<CCollider> GetComponent<CCollider>()
+	std::shared_ptr<CCollider> GetComponent<CCollider>() const 
 	{
-		if (GetComponent<CAABBCollider>()) return GetComponent<CAABBCollider>();
-		else if (GetComponent<COBBCollider>()) return GetComponent<COBBCollider>();
-		else if (GetComponent<CSphereCollider>()) return GetComponent<CSphereCollider>();
+		if (auto p = GetComponent<CAABBCollider>()) return p;
+		else if (auto p = GetComponent<CSphereCollider>()) return p;
+		else if (auto p = GetComponent<COBBCollider>()) return p;
 		return nullptr;
 	}
 
@@ -241,6 +240,8 @@ public:
 	ComPtr<ID3D12Resource> m_pd3dcbGameObject;
 	CB_GAMEOBJECT_INFO* m_pcbMappedObject = nullptr;
 
+	// Model BoundingBox 
+	BoundingBox MergedBoundingBox;
 protected:
 	// Parent
 	std::weak_ptr<CGameObject> m_pParent;
@@ -263,6 +264,7 @@ public:
 
 	static void LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<CLoadedModelInfo> pLoadedModel);
 	static bool CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject);
+	static bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject);
 	static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth = 0);
 	static std::shared_ptr<CLoadedModelInfo> LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* pstrFileName, std::shared_ptr<CShader> pShader);
 

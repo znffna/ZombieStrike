@@ -1,4 +1,5 @@
 #include "Zombie.h"
+#include "Scene.h"
 
 CZombieCAnimationController::CZombieCAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, std::shared_ptr<CLoadedModelInfo> pModel)
 	: CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pModel)
@@ -51,7 +52,6 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	// Component
 	std::shared_ptr<CRigidBody> pRigidBody = AddComponent<CRigidBody>(shared_from_this());
 	pRigidBody->SetVelocity(XMFLOAT3(0.0f, -9.0f, 0.0f));
-
 }
 
 std::shared_ptr<CZombieObject> CZombieObject::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks)
@@ -62,3 +62,21 @@ std::shared_ptr<CZombieObject> CZombieObject::Create(ID3D12Device* pd3dDevice, I
 
 	return pZombie;
 }
+
+// Skin State
+void CZombieObject::SetSkinType(int nSkinType)
+{
+	if (m_nSkinType != nSkinType) {
+		m_pChilds.clear();
+	}
+	m_nSkinType = nSkinType; 
+
+	auto pModel = CScene::GetModelInfo(ModelName[m_nSkinType]);
+
+	auto thisObject = shared_from_this();
+	CloneByModel(pModel, thisObject);
+	
+	m_pSkinnedAnimationController->SettingByModel(pModel);
+}
+
+int CZombieObject::GetSkinType() const { return m_nSkinType; }

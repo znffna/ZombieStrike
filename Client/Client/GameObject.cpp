@@ -635,10 +635,19 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 bool CGameObject::CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject)
 {
 	if (auto pModel = CScene::GetResourceManager().GetModelInfo(strModelName)) {
-		pGameObject->GetResourcesAndComponents(pModel->m_pModelRootObject);
+		return CloneByModel(pModel, pGameObject);
+	}
+	return false;
+}
+
+bool CGameObject::CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject)
+{
+	if (pLoadModel) {
+		pGameObject->GetResourcesAndComponents(pLoadModel->m_pModelRootObject);
+		// TODO : 여기서 생성하여 주는 Collider는 Model Collider이기에 Model Colldier를 변수로 추가해야 한다.
 		auto pCollider = pGameObject->AddComponent<CAABBCollider>(pGameObject); // Collider 추가
-		pCollider->SetCollider(pModel->m_ModelBoundingBox); // Collider 설정
-		//pGameObject->SetChild(pModel->m_pModelRootObject);
+		pCollider->SetCollider(pLoadModel->m_ModelBoundingBox); // Collider 설정
+		// /TODO
 		return true;
 	}
 	return false;
