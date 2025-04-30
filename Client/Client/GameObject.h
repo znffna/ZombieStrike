@@ -263,8 +263,8 @@ public:
 	// Clone
 	static bool CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject);
 	static bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject);
-	bool CloneByModel(std::string& strModelName) { auto pThis = shared_from_this();  CloneByModel(strModelName, pThis); };
-	bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel) { auto pThis = shared_from_this();  CloneByModel(pLoadModel, pThis); };
+	bool CloneByModel(std::string& strModelName) { auto pThis = shared_from_this();  return CloneByModel(strModelName, pThis); };
+	bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel) { auto pThis = shared_from_this(); return CloneByModel(pLoadModel, pThis); };
 	
 	std::shared_ptr<CGameObject> FindFrame(std::string strFrameName);
 };
