@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Struct_ExtStairs_A_bb2
+		<Transform>: -9.46 1.35198 0.51 0 0 0 1 1 1 0 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 0 0 0 0 1 0 -9.46 1.35198 0.51 1  
+		<BoxCollider>: 1 2.9944 0.01766872 0.522934 0.7867737 2.63183 2.045868  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

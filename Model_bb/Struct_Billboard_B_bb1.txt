@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Struct_Billboard_B_bb1
+		<Transform>: -5.51 0.55 -0.4721985 0 0 0 1 1 1 0 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 0 0 0 0 1 0 -5.51 0.55 -0.4721985 1  
+		<BoxCollider>: 1 -0.01904297 4.672683 0.0266571 2.028809 10.6121 3.478729  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Church1_Base_Stairs_A_bb3
+		<Transform>: -1.2 0.5224648 1.270813 -2.504478E-06 0 0 1 1 1 -2.185569E-08 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 -4.371139E-08 0 0 4.371139E-08 1 0 -1.2 0.5224648 1.270813 1  
+		<BoxCollider>: 1 -0.2900085 0.01082134 -0.8786926 0.4199829 1.021643 0.8009033  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

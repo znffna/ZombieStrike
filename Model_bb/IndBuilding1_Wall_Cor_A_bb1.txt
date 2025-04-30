@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 IndBuilding1_Wall_Cor_A_bb1
+		<Transform>: 1.62 2.5 0.27 0 90 0 1 1 1 0 0.7071068 0 0.7071068  
+		<TransformMatrix>: -1.192093E-07 0 -1 0 0 1 0 0 1 0 -1.192093E-07 0 1.62 2.5 0.27 1  
+		<BoxCollider>: 1 0.3000679 0.0002858639 -0.008453369 0.3998642 5.024018 3.180786  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

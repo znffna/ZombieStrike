@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Church1_End_B_bb5
+		<Transform>: -2.25 1.07 -2.02 0 0 90 1 1 1 0 0 0.7071068 0.7071068  
+		<TransformMatrix>: -1.192093E-07 1 0 0 -1 -1.192093E-07 0 0 0 0 1 0 -2.25 1.07 -2.02 1  
+		<BoxCollider>: 1 5.944436 0.9085293 -3.23413 12.01489 2.163764 1.679795  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

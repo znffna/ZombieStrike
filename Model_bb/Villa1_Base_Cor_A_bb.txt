@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Villa1_Base_Cor_A_bb
+		<Transform>: 2.400001 0.4999999 -1.6 0 0 0 1 1 1 0 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 0 0 0 0 1 0 2.400001 0.4999999 -1.6 1  
+		<BoxCollider>: 1 1.788094 0 0.05133355 1.222444 1 4.730185  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

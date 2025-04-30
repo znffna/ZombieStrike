@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Struct_Pavilion_A_bb1
+		<Transform>: 4.65 -0.39 2.2 90 0 0 1 1 1 0.7071068 0 0 0.7071068  
+		<TransformMatrix>: 1 0 0 0 0 -1.192093E-07 1 0 0 -1 -1.192093E-07 0 4.65 -0.39 2.2 1  
+		<BoxCollider>: 1 0.3328247 0.3677565 0.08670044 0.3343506 0.2893675 12.1541  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

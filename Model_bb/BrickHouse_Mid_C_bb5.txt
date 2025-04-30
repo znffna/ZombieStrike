@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 BrickHouse_Mid_C_bb5
+		<Transform>: 4.79 3.58 -0.23 2.504478E-06 0 0 1 1 -1 2.185569E-08 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 4.371139E-08 0 0 4.371139E-08 -1 0 4.79 3.58 -0.23 1  
+		<BoxCollider>: 1 -2.806551 -3.083643 -0.2453179 3.95319 0.967999 11.81997  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

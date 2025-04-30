@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Box_Collider_(2)
+		<Transform>: 4.04 0.69 -1.85 2.504478E-06 0 0 1 1 -1 2.185569E-08 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 4.371139E-08 0 0 4.371139E-08 -1 0 4.04 0.69 -1.85 1  
+		<BoxCollider>: 1 -0.07542229 1.759649 0.1174872 0.1703606 4.886322 4.148642  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

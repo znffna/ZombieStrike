@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 GreenHouse1_End_A_bb3
+		<Transform>: 1.88 4.982304 -2.207459 -2.504478E-06 0 0 1 1 1 -2.185569E-08 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 -4.371139E-08 0 0 4.371139E-08 1 0 1.88 4.982304 -2.207459 1  
+		<BoxCollider>: 1 7.926697 3.921793 2.24942 8.669312 6.041744 0.2202759  
+		<Children>: 0
+	</Frame>
+</Hierarchy>
