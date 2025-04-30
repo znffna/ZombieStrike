@@ -380,7 +380,8 @@ void CGameFramework::BuildObjects()
 	m_pLoadingScene = std::move(pLoadingScene);
 
 	// MainScene 생성
-	std::unique_ptr<CScene> pMainScene = std::make_unique<COnlineScene>();
+	std::unique_ptr<CScene> pMainScene = std::make_unique<CGameScene>();
+	//std::unique_ptr<CScene> pMainScene = std::make_unique<COnlineScene>();
 	pMainScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
 	m_Scenes.push_back(std::move(pMainScene));
 
@@ -480,8 +481,7 @@ void CGameFramework::AdvanceFrame()
 	// Swap Chain의 Back Buffer를 화면에 표시
 	m_pdxgiSwapChain->Present(0, 0);
 
-	// 다음 Frame으로 이동 (Fence Value를 각 Swap Chain Buffer Index마다 생성하였기에,
-	// 이전 스왑체인 버퍼의 Present이 끝나기를 기다린다.)
+	// 다음 Frame으로 이동
 	MoveToNextFrame();
 
 	// Time / FPS 출력

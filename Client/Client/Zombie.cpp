@@ -72,10 +72,7 @@ void CZombieObject::SetSkinType(int nSkinType)
 	m_nSkinType = nSkinType; 
 
 	auto pModel = CScene::GetModelInfo(ModelName[m_nSkinType]);
-
-	auto thisObject = shared_from_this();
-	CloneByModel(pModel, thisObject);
-	
+	CloneByModel(pModel);
 	m_pSkinnedAnimationController->SettingByModel(pModel);
 }
 

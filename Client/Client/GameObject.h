@@ -254,20 +254,18 @@ public:
 	// Load Model
 	void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> pParent, std::ifstream& File, std::shared_ptr<CShader> pShader);
 	std::shared_ptr<CTexture> FindReplicatedTexture(const _TCHAR* pstrTextureName);
+	void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& ppSkinnedMeshes, int* pnSkinnedMesh);;
 	
-	void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& ppSkinnedMeshes, int* pnSkinnedMesh)
-	{
-		if (m_pMesh && (m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT)) ppSkinnedMeshes[(*pnSkinnedMesh)++] = std::dynamic_pointer_cast<CSkinnedMesh>(m_pMesh) ;
-		
-		for (auto& pChild : m_pChilds) pChild->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
-	};
-
 	static void LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<CLoadedModelInfo> pLoadedModel);
-	static bool CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject);
-	static bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject);
 	static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth = 0);
 	static std::shared_ptr<CLoadedModelInfo> LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* pstrFileName, std::shared_ptr<CShader> pShader);
-
+	
+	// Clone
+	static bool CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject);
+	static bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject);
+	bool CloneByModel(std::string& strModelName) { auto pThis = shared_from_this();  CloneByModel(strModelName, pThis); };
+	bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel) { auto pThis = shared_from_this();  CloneByModel(pLoadModel, pThis); };
+	
 	std::shared_ptr<CGameObject> FindFrame(std::string strFrameName);
 };
 
@@ -417,3 +415,22 @@ private:
 	std::vector<UINT> m_pIndices;
 };
 
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+class CPlayer : public CGameObject
+{
+public:
+	CPlayer();
+	virtual ~CPlayer();
+	// Object Initialization
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual std::string GetDefaultName() override { return "CPlayer"; }
+	static std::shared_ptr<CPlayer> Create(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	// Object Update
+	virtual void Update(float fTimeElapsed) override;
+
+private:
+
+};
