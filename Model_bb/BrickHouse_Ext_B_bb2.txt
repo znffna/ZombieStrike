@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 BrickHouse_Ext_B_bb2
+		<Transform>: -4.032162 1.8 -4.48 90 0 0 1 1 1 0.7071068 0 0 0.7071068  
+		<TransformMatrix>: 1 0 0 0 0 -1.192093E-07 1 0 0 -1 -1.192093E-07 0 -4.032162 1.8 -4.48 1  
+		<BoxCollider>: 1 0.0993185 -0.1579139 -1.498379 6.760454 0.3226485 6.584333  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

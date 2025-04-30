@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 IndBuilding1_Wall_Int_B_bb1
+		<Transform>: 2.825 2.499899 -1.092741E-07 -2.504478E-06 0 0 1 1 1 -2.185569E-08 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 -4.371139E-08 0 0 4.371139E-08 1 0 2.825 2.499899 -1.092741E-07 1  
+		<BoxCollider>: 1 -0.183033 -0.0137372 0.003433228 0.6918869 4.9701 0.3200073  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

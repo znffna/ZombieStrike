@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 BrickHouse_Deco_Handrail_A_bb
+		<Transform>: 0 -0.512 0 0 0 0 1 1 1 0 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 0 0 0 0 1 0 0 -0.512 0 1  
+		<BoxCollider>: 1 -0.007537842 0.02008146 -0.03012192 0.1917114 1.040163 0.06622314  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

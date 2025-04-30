@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 IndBuilding1_IntStairs_A_bb1
+		<Transform>: -5.5 -0.25 0.43 0 0 38.65199 1 1 1 0 0 0.3309426 0.9436509  
+		<TransformMatrix>: 0.780954 0.6245885 0 0 -0.6245885 0.780954 0 0 0 0 1 0 -5.5 -0.25 0.43 1  
+		<BoxCollider>: 1 0.03862768 -1.456073 1.036427 4.044095 0.2041645 3.072853  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

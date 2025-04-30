@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Struct_BillBoard_A_bb
+		<Transform>: -5.09 0.3 0.3668671 0 0 0 1 1 1 0 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 0 0 0 0 1 0 -5.09 0.3 0.3668671 1  
+		<BoxCollider>: 1 0.2758331 3.76727 -0.0565033 1.551666 8.53454 3.502045  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

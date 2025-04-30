@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 GuardHouse_A_bb5
+		<Transform>: 3.59 4.06 -0.13 0 180 90 1 1 1 0.7071068 0.7071068 0 0  
+		<TransformMatrix>: -1.192093E-07 1 0 0 1 -1.192093E-07 0 0 0 0 -1 0 3.59 4.06 -0.13 1  
+		<BoxCollider>: 1 1.68827 0.2170353 -0.002336025 11.55507 0.374845 8.28218  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

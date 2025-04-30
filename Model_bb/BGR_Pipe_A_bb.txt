@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 BGR_Pipe_A_bb
+		<Transform>: 55.11804 1.635536 -10.8667 0 0 0 1 1 1 0 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 0 0 0 0 1 0 55.11804 1.635536 -10.8667 1  
+		<BoxCollider>: 1 -14.41206 -1.686121 8.397614 80.73514 4.372242 9.78595  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

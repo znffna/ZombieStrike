@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Villa2_Wall_Mid_D_bb1
+		<Transform>: -1.02 2.998507 0.0008251965 0 0 0 1 1 1 0 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 0 0 0 0 1 0 -1.02 2.998507 0.0008251965 1  
+		<BoxCollider>: 1 1.504111 -0.005675793 -0.01135179 0.9659448 5.960728 0.5686323  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

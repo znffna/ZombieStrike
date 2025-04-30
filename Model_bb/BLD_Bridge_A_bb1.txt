@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 BLD_Bridge_A_bb1
+		<Transform>: 0 7.4 -6.4 90 0 0 1 1 1 0.7071068 0 0 0.7071068  
+		<TransformMatrix>: 1 0 0 0 0 -1.192093E-07 1 0 0 -1 -1.192093E-07 0 0 7.4 -6.4 1  
+		<BoxCollider>: 1 -29.36505 -0.06875396 0.9156914 61.03723 1.137508 15.57906  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

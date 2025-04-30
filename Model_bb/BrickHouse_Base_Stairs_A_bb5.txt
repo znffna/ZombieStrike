@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 BrickHouse_Base_Stairs_A_bb5
+		<Transform>: -1.261 0.162 -3.031 0 0 0 1 1 1 0 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 0 0 0 0 1 0 -1.261 0.162 -3.031 1  
+		<BoxCollider>: 1 0.5750231 0.7587729 1.534088 1.418296 0.3515644 0.4268197  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

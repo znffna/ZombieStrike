@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Villa1_Ext_A_bb1
+		<Transform>: 0.1521802 0.43 3.33 90 0 0 1 1 1 0.7071068 0 0 0.7071068  
+		<TransformMatrix>: 1 0 0 0 0 -1.192093E-07 1 0 0 -1 -1.192093E-07 0 0.1521802 0.43 3.33 1  
+		<BoxCollider>: 1 -5.969781 -1.383363E-14 -7.026543 1.093331 1 14.94078  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

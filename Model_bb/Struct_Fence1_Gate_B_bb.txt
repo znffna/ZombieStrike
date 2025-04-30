@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Struct_Fence1_Gate_B_bb
+		<Transform>: -6.97 1.432476 -0.04 0 0 0 1 1 1 0 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 0 0 0 0 1 0 -6.97 1.432476 -0.04 1  
+		<BoxCollider>: 1 -1.747833 1.491079 0 4.495667 5.799099 1  
+		<Children>: 0
+	</Frame>
+</Hierarchy>
