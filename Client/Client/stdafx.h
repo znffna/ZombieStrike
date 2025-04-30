@@ -39,6 +39,7 @@
 
 // C++ STL Algorithms
 #include <algorithm>
+#include <thread>
 
 // DirectX 12
 #include <d3d12.h>

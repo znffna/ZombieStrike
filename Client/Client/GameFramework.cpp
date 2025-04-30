@@ -59,7 +59,8 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CreateRenderTargetView();
 	CreateDepthStencilView();
 
-	CoInitialize(nullptr);
+	CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+	//CoInitialize(nullptr);
 
 	// 씬들을 생성한다.
 	BuildObjects();
@@ -251,6 +252,20 @@ void CGameFramework::CreateCommandQueueAndList()
 		m_pd3dCommandList[i]->Close();
 	}
 
+	// Scene 생성용 Command Allocator와 Command List 생성
+	{
+		hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_pd3dSceneMadeCommandAllocator));
+		if (FAILED(hResult)) {
+			OutputDebugString(L"Failed to create command allocator\n");
+		}
+
+		hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dSceneMadeCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_pd3dSceneMadeCommandList));
+		if (FAILED(hResult)) {
+			OutputDebugString(L"Failed to create command list\n");
+		}
+		m_pd3dSceneMadeCommandList->Close();
+	}
+
 }
 
 void CGameFramework::CreateRtvAndDsvDescriptorHeap()
@@ -382,13 +397,41 @@ void CGameFramework::BuildObjects()
 	// LoadingScene 생성
 	std::unique_ptr<CScene> pLoadingScene = std::make_unique<CLoadingScene>();
 	pLoadingScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
+	pLoadingScene->SetSceneState(SCENE_STATE_RUNNING);
 	m_pLoadingScene = std::move(pLoadingScene);
 
 	// MainScene 생성
-	std::unique_ptr<CScene> pMainScene = std::make_unique<CGameScene>();
-	//std::unique_ptr<CScene> pMainScene = std::make_unique<COnlineScene>();
-	pMainScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
-	m_Scenes.push_back(std::move(pMainScene));
+	std::thread thread([this]() mutable {
+
+		std::unique_ptr<CScene> pMainScene = std::make_unique<CGameScene>();
+		//std::unique_ptr<CScene> pMainScene = std::make_unique<COnlineScene>();
+		m_pd3dSceneMadeCommandAllocator->Reset();
+		m_pd3dSceneMadeCommandList->Reset(m_pd3dSceneMadeCommandAllocator.Get(), nullptr);
+
+		CScene::GetResourceManager().Initialize(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get(), nullptr);
+
+		pMainScene->Init(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get());
+
+		m_pd3dSceneMadeCommandList->Close();
+
+		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dSceneMadeCommandList.Get() };
+		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+
+		const UINT64 nFenceValue = ++m_nFenceValueForSignal;
+
+		HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), nFenceValue);
+
+		if (m_pd3dFence->GetCompletedValue() < nFenceValue)
+		{
+			hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
+			HRESULT hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
+			::WaitForSingleObject(m_hFenceEvent, INFINITE);
+		}
+
+		pMainScene->SetSceneState(SCENE_STATE_RUNNING);
+		m_Scenes.push_back(std::move(pMainScene));
+	});
+	thread.detach();
 
 	// Command List에 대한 명령들을 종료
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->Close();

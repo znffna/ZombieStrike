@@ -45,7 +45,6 @@ public:
 
 	void BuildObjects();
 
-
 	void AdvanceFrame();
 	void OMSetBackBuffer();
 	void ClearRtvAndDsv();
@@ -93,6 +92,9 @@ private:
 	ComPtr<ID3D12CommandQueue>								m_pd3dCommandQueue;
 	std::array<ComPtr<ID3D12CommandAllocator>, m_nSwapChainBuffers>		m_pd3dCommandAllocator;
 	std::array<ComPtr<ID3D12GraphicsCommandList>, m_nSwapChainBuffers>	m_pd3dCommandList;
+
+	ComPtr<ID3D12CommandAllocator>							m_pd3dSceneMadeCommandAllocator;
+	ComPtr<ID3D12GraphicsCommandList>						m_pd3dSceneMadeCommandList;
 
 	ComPtr<ID3D12Fence>										m_pd3dFence;
 	UINT64													m_nFenceValueForSignal;

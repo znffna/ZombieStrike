@@ -66,7 +66,7 @@ void CScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	CreateFixedCamera(pd3dDevice, pd3dCommandList);
 
 	// Scene 생성 완료
-	m_SceneState = SCENE_STATE_RUNNING;
+	//m_SceneState = SCENE_STATE_RUNNING;
 }
 
 void CScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -160,7 +160,7 @@ void CScene::InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	CreateStaticShader(pd3dDevice);
 	CreateStaticMesh(pd3dDevice, pd3dCommandList);
 
-	GetResourceManager().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
+	//GetResourceManager().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 }
 
 void CScene::BuildDefaultLightsAndMaterials()

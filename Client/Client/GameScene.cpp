@@ -71,7 +71,7 @@ void CGameScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 		m_pCamera->SetTarget(m_pPlayer);
 	}
 
-	m_SceneState = SCENE_STATE_RUNNING;
+	//m_SceneState = SCENE_STATE_RUNNING;
 }
 
 void CGameScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
