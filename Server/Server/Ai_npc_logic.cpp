@@ -12,68 +12,78 @@
 #include "../../protocol.h"
 
 // test 용
-constexpr int MAP_WIDTH = 50;
-constexpr int MAP_HEIGHT = 50;
+constexpr int MAP_WIDTH = 1024;
+constexpr int MAP_HEIGHT = 1024;
 // 플레이어, 좀비 시작 위치
 constexpr int ZOMBIE_START_X = 2;
 constexpr int ZOMBIE_START_Z = 2;
-constexpr int PLAYER_START_X = 40;
-constexpr int PLAYER_START_Z = 41;
+constexpr int PLAYER_START_X = 610;
+constexpr int PLAYER_START_Z = 412;
 // 추가 정보
 constexpr int NUM_ZOMBIES = 50;          // 추가: 생성할 좀비 수
 constexpr float CELL_SIZE = 1.0f;        // 노드당 크기
 constexpr float ZOMBIE_HALF_SIZE = 0.4f; // 좀비 AABB 반 사이즈
-// ==================
+// ================== 맵 파일 읽기 ==================
 
-// 맵 파일 읽기
-std::vector<std::vector<int>> LoadMap(const std::string& filename)
+//std::vector<std::vector<int>> LoadMap(const std::string& filename)
+//{
+//    std::vector<std::vector<int>> map;
+//    std::ifstream file(filename);
+//    if (!file.is_open()) {
+//        std::cout << "[Error] map.txt 파일 열기 실패!\n";
+//        exit(1);
+//    }
+//
+//    std::string line;
+//    while (std::getline(file, line))
+//    {
+//        if (line.empty() || !isdigit(line[0])) continue;
+//        std::vector<int> row;
+//        for (char c : line) {
+//            if (c == '0' || c == '1') {
+//                row.push_back(c - '0');
+//            }
+//        }
+//
+//        if (!row.empty()) {
+//            map.push_back(row);
+//        }
+//    }
+//
+//    
+//    file.close();
+//
+//
+//    return map;
+//}
+std::vector<std::vector<int>> LoadMapBin(const std::string& filename)
 {
-    std::vector<std::vector<int>> map;
-    std::ifstream file(filename);
+    const int MAP_SIZE = 1024; // obstacle_mask.bin은 1024 x 1024
+    std::vector<std::vector<int>> map(MAP_SIZE, std::vector<int>(MAP_SIZE, 0));
+
+    std::ifstream file(filename, std::ios::binary);
     if (!file.is_open()) {
-        std::cout << "[Error] map.txt 파일 열기 실패!\n";
+        std::cout << "[ERROR] obstacle_mask.bin 열기 실패!\n";
         exit(1);
     }
 
-    std::string line;
-    while (std::getline(file, line))
-    {
-        if (line.empty() || !isdigit(line[0])) continue;
-        std::vector<int> row;
-        for (char c : line) {
-            if (c == '0' || c == '1') {
-                row.push_back(c - '0');
+    for (int y = 0; y < MAP_SIZE; ++y) {
+        for (int x = 0; x < MAP_SIZE; ++x) {
+            char value;
+            file.read(&value, 1);
+            if (file.eof()) {
+                std::cerr << "[ERROR] 파일 끝에 도달했습니다. 크기가 너무 작습니다.\n";
+                exit(1);
             }
-        }
-
-        if (!row.empty()) {
-            map.push_back(row);
+            map[y][x] = (value == 1) ? 1 : 0; // 1 = 장애물, 0 = 길
         }
     }
 
-    
     file.close();
-
-
+    std::cout << "[OK] obstacle_mask.bin 로드 완료\n";
     return map;
 }
 
-
-std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map)
-{
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distX(0, MAP_WIDTH - 1);
-    std::uniform_int_distribution<> distZ(0, MAP_HEIGHT - 1);
-
-    while (true) {
-        int x = distX(gen);
-        int z = distZ(gen);
-        if (map[z][x] == 0) { // 이동 가능한 곳
-            return { x, z };
-        }
-    }
-}
 
 // ======================= FindPath ==========================
 
@@ -280,14 +290,36 @@ private:
  
 // ================== PrintMap ================== 
 
-void PrintMap(const std::vector<std::vector<int>>& map, const std::vector<ZombieAI*>& zombies)
+std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map)
+{
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distX(412, 611);
+    std::uniform_int_distribution<> distZ(412, 611);
+
+    while (true) {
+        int x = distX(gen);
+        int z = distZ(gen);
+        if (map[z][x] == 0) { // 이동 가능한 곳
+            return { x, z };
+        }
+    }
+}
+
+
+void PrintMap(
+    const std::vector<std::vector<int>>& map, 
+    const std::vector<ZombieAI*>& zombies)
 {
 	int zombieCount = 0;
-    std::vector<std::vector<char>> display(MAP_HEIGHT, std::vector<char>(MAP_WIDTH, '0'));
+    int height = map.size();
+    int width = map[0].size();
+
+    std::vector<std::vector<char>> display(height, std::vector<char>(width, '0'));
 
     // 벽 표시
-    for (int z = 0; z < MAP_HEIGHT; ++z) {
-        for (int x = 0; x < MAP_WIDTH; ++x) {
+    for (int z = 0; z < height; ++z) {
+        for (int x = 0; x < width; ++x) {
             if (map[z][x] == 1)
                 display[z][x] = '#';
         }
@@ -297,9 +329,9 @@ void PrintMap(const std::vector<std::vector<int>>& map, const std::vector<Zombie
     {
         for (auto& [x, z] : zombie->GetPath()) // m_path를 
         {
-            if (x >= 0 && x < MAP_WIDTH && z >= 0 && z < MAP_HEIGHT)
+            if (x >= 0 && x < width && z >= 0 && z < height)
             {
-                if (display[z][x] == '0') 
+                if (display[z][x] == ' ') 
                     display[z][x] = '*';
             }
         }
@@ -309,17 +341,17 @@ void PrintMap(const std::vector<std::vector<int>>& map, const std::vector<Zombie
     {
         int zx = (int)zombie->GetX();
         int zz = (int)zombie->GetZ();
-        if (zx >= 0 && zx < MAP_WIDTH && zz >= 0 && zz < MAP_HEIGHT)
+        if (zx >= 0 && zx < width && zz >= 0 && zz < height)
             display[zz][zx] = 'Z';
     }
 
     // 플레이어 위치 표시
-    if (PLAYER_START_X >= 0 && PLAYER_START_X < MAP_WIDTH && PLAYER_START_Z >= 0 && PLAYER_START_Z < MAP_HEIGHT)
+    if (PLAYER_START_X >= 0 && PLAYER_START_X < width && PLAYER_START_Z >= 0 && PLAYER_START_Z < height)
         display[PLAYER_START_Z][PLAYER_START_X] = 'P';
 
     // 맵 출력
-    for (int z = 0; z < MAP_HEIGHT; ++z) {
-        for (int x = 0; x < MAP_WIDTH; ++x) {
+    for (int z = 0; z < height; ++z) {
+        for (int x = 0; x < width; ++x) {
             std::cout << display[z][x];
             if (display[z][x] == 'Z')
                 zombieCount++;
@@ -334,10 +366,69 @@ void PrintMap(const std::vector<std::vector<int>>& map, const std::vector<Zombie
         std::cout << "[bad] 좀비 수가 맞지 않습니다! (" << zombieCount << " / " << NUM_ZOMBIES << ")\n";
 }
 
+void PrintMap2(
+    const std::vector<std::vector<int>>& map,
+    const std::vector<ZombieAI*>& zombies,
+    int startY, int startX,
+    int height, int width)
+{
+    int zombieCount = 0;
+
+    // 출력
+    for (int z = startY; z < startY + height; ++z) {
+        for (int x = startX; x < startX + width; ++x) {
+            if (z < 0 || z >= MAP_HEIGHT || x < 0 || x >= MAP_WIDTH) {
+                std::cout << ' ';
+                continue;
+            }
+
+            char ch = map[z][x] == 1 ? '#' : ' ';
+
+            // 경로 위에 있으면 *
+            for (auto zombie : zombies)
+            {
+                for (auto& [px, pz] : zombie->GetPath())
+                {
+                    if (px == x && pz == z) {
+                        ch = '.';
+                        break;
+                    }
+                }
+            }
+
+            // 좀비가 이 자리에 있으면 Z
+            for (auto zombie : zombies)
+            {
+                int zx = (int)zombie->GetX();
+                int zz = (int)zombie->GetZ();
+                if (zx == x && zz == z) {
+                    ch = 'Z';
+                    zombieCount++;
+                    break;
+                }
+            }
+
+            // 플레이어 위치는 항상 최우선
+            if ((int)PLAYER_START_X == x && (int)PLAYER_START_Z == z)
+                ch = 'P';
+
+            std::cout << ch;
+        }
+        std::cout << "\n";
+    }
+
+    std::cout << "\n[현재 맵에 표시된 좀비 수] : " << zombieCount << "\n";
+    if (zombieCount == NUM_ZOMBIES)
+        std::cout << "[ok] 좀비 전부 찍혔습니다!\n";
+    else
+        std::cout << "[bad] 좀비 수가 맞지 않습니다! (" << zombieCount << " / " << NUM_ZOMBIES << ")\n";
+}
+
+
 // =========================================================
 int main()
 {
-    auto map = LoadMap("map.txt");
+    auto map = LoadMapBin("../../Map/Node/obstacle_mask.bin");
 
     std::vector<ZombieAI*> zombies;
 
@@ -370,7 +461,7 @@ int main()
                 z->FindPath(); // 경로 다시 찾기
             }
 
-            PrintMap(map, zombies);
+            PrintMap2(map, zombies, 412, 412, 200, 200);
         }
         else if (key == 27) // ESC (ASCII 27)
         {
