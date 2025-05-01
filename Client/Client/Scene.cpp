@@ -863,3 +863,34 @@ std::shared_ptr<CMesh> CScene::GetMesh(const std::string& name)
 {
 	return GetResourceManager().GetMesh(name);
 }
+
+void CScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)
+{
+	std::shared_ptr<CLoadedModelInfo> pModel = GetModelInfo("FuzZombie");
+	if (!pModel)
+	{
+		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
+		StoreModelInfo("FuzZombie", pModel);
+	}
+
+	m_pZombiePool.reserve(nZombieCount);
+	for (int i = 0; i < nZombieCount; ++i)
+	{
+		std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
+		pZombie->SetActive(false);
+		m_pZombiePool.push_back(pZombie);
+	}
+}
+
+std::shared_ptr<CZombieObject> CScene::GetZombie(int nSkinType)
+{
+	for (auto& pZombie : m_pZombiePool)
+	{
+		if (false == pZombie->IsActive())
+		{
+			pZombie->SetSkinType(nSkinType);
+			pZombie->SetActive(true);
+			return pZombie;
+		}
+	}
+}

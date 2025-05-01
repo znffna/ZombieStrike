@@ -391,15 +391,6 @@ void CGameFramework::BuildObjects()
 	// 모든 씬이 공유할 요소 생성
 	CScene::InitStaticMembers(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 
-	// Framework 정보 생성 (Shader에 전달할 정보)
-	CreateShaderVariables();
-
-	// LoadingScene 생성
-	std::unique_ptr<CScene> pLoadingScene = std::make_unique<CLoadingScene>();
-	pLoadingScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
-	pLoadingScene->SetSceneState(SCENE_STATE_RUNNING);
-	m_pLoadingScene = std::move(pLoadingScene);
-
 	// MainScene 생성
 	std::thread thread([this]() mutable {
 
@@ -417,21 +408,23 @@ void CGameFramework::BuildObjects()
 		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dSceneMadeCommandList.Get() };
 		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
-		const UINT64 nFenceValue = ++m_nFenceValueForSignal;
-
-		HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), nFenceValue);
-
-		if (m_pd3dFence->GetCompletedValue() < nFenceValue)
-		{
-			hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
-			HRESULT hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
-			::WaitForSingleObject(m_hFenceEvent, INFINITE);
-		}
+		WaitGpuWithoutPresent();
 
 		pMainScene->SetSceneState(SCENE_STATE_RUNNING);
 		m_Scenes.push_back(std::move(pMainScene));
 	});
 	thread.detach();
+
+	// Framework 정보 생성 (Shader에 전달할 정보)
+	CreateShaderVariables();
+
+	// LoadingScene 생성
+	std::unique_ptr<CScene> pLoadingScene = std::make_unique<CLoadingScene>();
+	pLoadingScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
+	pLoadingScene->SetSceneState(SCENE_STATE_RUNNING);
+	m_pLoadingScene = std::move(pLoadingScene);
+
+	
 
 	// Command List에 대한 명령들을 종료
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->Close();
