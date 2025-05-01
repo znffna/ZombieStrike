@@ -159,7 +159,7 @@ public:
 	std::shared_ptr<T> AddComponent(std::shared_ptr<CGameObject> pOwner)
 	{
 		std::shared_ptr<T> pComponent = std::make_shared<T>(pOwner.get());
-		m_pComponents[COMPONENT_KEY(T)] = pComponent;
+		m_pComponents.insert({ COMPONENT_KEY(T), pComponent });
 		pComponent->Init(pOwner.get());
 		return pComponent;
 	};
@@ -186,6 +186,18 @@ public:
 		else if (auto p = GetComponent<CSphereCollider>()) return p;
 		else if (auto p = GetComponent<COBBCollider>()) return p;
 		return nullptr;
+	}
+
+	template <typename T>
+	std::vector<std::shared_ptr<T>> GetComponents() {
+		std::vector<std::shared_ptr<T>> result;
+		auto range = m_pComponents.equal_range(COMPONENT_KEY(T));
+		for (auto it = range.first; it != range.second; ++it) {
+			if (auto casted = std::dynamic_pointer_cast<T>(it->second)) {
+				result.push_back(casted);
+			}
+		}
+		return result;
 	}
 
 	// Object Collision
@@ -235,7 +247,7 @@ public:
 	std::shared_ptr<CTransform> m_pTransform = std::make_shared<CTransform>(this);
 
 	// Component
-	std::unordered_map<std::string, std::shared_ptr<CComponent>> m_pComponents;
+	std::unordered_multimap<std::string, std::shared_ptr<CComponent>> m_pComponents;
 
 	// Shader Variables
 	ComPtr<ID3D12Resource> m_pd3dcbGameObject;
@@ -420,18 +432,18 @@ private:
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-class CPlayer : public CGameObject
-{
-public:
-	CPlayer();
-	virtual ~CPlayer();
-	// Object Initialization
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-	virtual std::string GetDefaultName() override { return "CPlayer"; }
-	static std::shared_ptr<CPlayer> Create(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-	// Object Update
-	virtual void Update(float fTimeElapsed) override;
-
-private:
-
-};
+//class CPlayer : public CGameObject
+//{
+//public:
+//	CPlayer();
+//	virtual ~CPlayer();
+//	// Object Initialization
+//	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+//	virtual std::string GetDefaultName() override { return "CPlayer"; }
+//	static std::shared_ptr<CPlayer> Create(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+//	// Object Update
+//	virtual void Update(float fTimeElapsed) override;
+//
+//private:
+//
+//};

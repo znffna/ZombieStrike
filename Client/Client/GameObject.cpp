@@ -102,7 +102,7 @@ void CGameObject::GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs)
 	for (auto& pComponent : rhs->m_pComponents)
 	{
 		auto pclone = pComponent.second->Clone();
-		m_pComponents[pComponent.first] = pclone;
+		m_pComponents.insert({ pComponent.first, pclone });
 		pclone->Init(this);
 	}
 
@@ -196,17 +196,26 @@ bool CGameObject::IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDe
 	}
 
 	// 실제 Collider끼리 충돌검사를 수행한다.
-	auto pCollider = GetComponent<CCollider>();
-	auto pOtherCollider = pGameObject->GetComponent<CCollider>();
+	auto pColliders = GetComponents<CCollider>();
+	auto pOtherColliders = pGameObject->GetComponents<CCollider>();
 
 	// 만약	두 GameObject 모두 Collider가 존재한다면 충돌검사를 수행한다.
-	if (pCollider && pOtherCollider)
+	if (pColliders.size() && pOtherColliders.size())
 	{
-		bool isCollide = pCollider->IsCollided(pOtherCollider);
-		if (isCollide) {
-			std::string DebugOutput = "Collision Detected: " + GetName() + " <-> " + pGameObject->GetName() + "\n";
-			OutputDebugStringA(DebugOutput.c_str());
+		bool isCollide{false};
+
+		for (auto& pCollider : pColliders)
+		{
+			for (auto& pOtherCollider : pOtherColliders)
+			{
+				isCollide = pCollider->IsCollided(pOtherCollider);
+				if (isCollide) {
+					std::string DebugOutput = "Collision Detected: " + GetName() + " <-> " + pGameObject->GetName() + "\n";
+					OutputDebugStringA(DebugOutput.c_str());
+				}
+			}
 		}
+		
 		return isCollide;
 	}
 
@@ -759,16 +768,19 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		{
 			pGameObject->LoadMaterialsFromFile(pd3dDevice, pd3dCommandList, pParent, file, pShader);
 		}
-		else if (!strcmp(pstrToken, "<BoxCollider>:"))
+		else if (!strcmp(pstrToken, "<Colliders>:"))
 		{
 			int nCollider = ::ReadIntegerFromFile(file);
 
 			XMFLOAT3 xmf3Center, xmf3Extents;
-			file.read((char*)&xmf3Center, sizeof(float) * 3);
-			file.read((char*)&xmf3Extents, sizeof(float) * 3);
+			for (int i = 0; i < nCollider; i++)
+			{
+				file.read((char*)&xmf3Center, sizeof(float) * 3);
+				file.read((char*)&xmf3Extents, sizeof(float) * 3);
 
-			auto pCollider = pGameObject->AddComponent<CAABBCollider>(pGameObject);
-			pCollider->SetCollider(xmf3Center, xmf3Extents);
+				auto pCollider = pGameObject->AddComponent<COBBCollider>(pGameObject);
+				pCollider->SetCollider(xmf3Center, xmf3Extents);
+			}
 		}
 		else if (!strcmp(pstrToken, "<Children>:"))
 		{
