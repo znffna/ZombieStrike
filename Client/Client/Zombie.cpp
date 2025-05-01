@@ -41,7 +41,7 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	UpdateTransform();
 
 	auto pCollider = AddComponent<CAABBCollider>(shared_from_this());
-	pCollider->SetCollider(pAngrybotModel->m_ModelBoundingBox.Center, pAngrybotModel->m_ModelBoundingBox.Extents);
+	pCollider->SetCollider(pAngrybotModel->m_MeshBoundingBox.Center, pAngrybotModel->m_MeshBoundingBox.Extents);
 
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pAngrybotModel);
 

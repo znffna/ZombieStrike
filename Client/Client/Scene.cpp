@@ -215,7 +215,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
 }
 
-void CScene::ProcessCollisions()
+void CScene::CollisionsCheck()
 {
 	for (auto& pObject : m_ppObjects)
 	{
@@ -346,7 +346,7 @@ void CScene::Update(float deltaTime)
 	}
 
 	// Check Collision	
-	ProcessCollisions();
+	CollisionsCheck();
 
 }
 

@@ -45,7 +45,7 @@ public:
 
 	std::shared_ptr<CAnimationSets> m_pAnimationSets;
 
-	BoundingBox m_ModelBoundingBox;
+	BoundingBox m_MeshBoundingBox;
 public:
 	void PrepareSkinning();;
 };
@@ -192,7 +192,8 @@ public:
 	virtual bool IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth = 0);// Collision Check
 	virtual void OnCollision(std::shared_ptr<CGameObject>& pGameObject); // Collision Event
 
-	BoundingBox GetMergedBoundingBox(BoundingBox* pVolume = nullptr);
+	BoundingBox GetMergedMeshBound(BoundingBox* pVolume = nullptr);
+	void UpdateLocalBoundingBox(const XMFLOAT4X4& pParentTransform = Matrix4x4::Identity());
 
 	// Mesh
 	void SetMesh(std::shared_ptr<CMesh> pMesh);
@@ -241,7 +242,7 @@ public:
 	CB_GAMEOBJECT_INFO* m_pcbMappedObject = nullptr;
 
 	// Model BoundingBox 
-	BoundingBox MergedBoundingBox;
+	CAABBCollider m_pModelCollider; // Model Collider
 protected:
 	// Parent
 	std::weak_ptr<CGameObject> m_pParent;
