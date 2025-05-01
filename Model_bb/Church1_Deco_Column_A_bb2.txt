@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Church1_Deco_Column_A_bb2
+		<Transform>: 2.24 8.239033 -0.2000126 -2.504478E-06 0 0 1 1 1 -2.185569E-08 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 -4.371139E-08 0 0 4.371139E-08 1 0 2.24 8.239033 -0.2000126 1  
+		<BoxCollider>: 1 -2.151001 3.892328 -0.04388428 5.067871 4.687466 0.5025024  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

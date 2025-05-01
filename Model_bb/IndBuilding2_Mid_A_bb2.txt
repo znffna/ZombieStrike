@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 IndBuilding2_Mid_A_bb2
+		<Transform>: -11.44 3.05 3 90 0 0 1 1 1 0.7071068 0 0 0.7071068  
+		<TransformMatrix>: 1 0 0 0 0 -1.192093E-07 1 0 0 -1 -1.192093E-07 0 -11.44 3.05 3 1  
+		<BoxCollider>: 1 5.647455 0.009618639 -0.02886391 0.5574417 5.945127 6.022099  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

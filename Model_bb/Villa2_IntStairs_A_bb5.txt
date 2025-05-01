@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Villa2_IntStairs_A_bb5
+		<Transform>: 8.15 2.511717 1.620014 90 0 0 1 1 1 0.7071068 0 0 0.7071068  
+		<TransformMatrix>: 1 0 0 0 0 -1.192093E-07 1 0 0 -1 -1.192093E-07 0 8.15 2.511717 1.620014 1  
+		<BoxCollider>: 1 -4.042041 1.273417 0.7717832 0.4746008 0.4922957 3.427771  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

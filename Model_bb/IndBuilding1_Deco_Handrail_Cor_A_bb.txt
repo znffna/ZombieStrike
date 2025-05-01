@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 IndBuilding1_Deco_Handrail_Cor_A_bb
+		<Transform>: 0.406 -0.5149994 -1.548623 -2.504478E-06 0 0 1 1 1 -2.185569E-08 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 -4.371139E-08 0 0 4.371139E-08 1 0 0.406 -0.5149994 -1.548623 1  
+		<BoxCollider>: 1 -0.4046383 0 0.008430004 0.1907234 1 3.096252  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

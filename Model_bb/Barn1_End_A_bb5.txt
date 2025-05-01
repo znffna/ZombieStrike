@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Barn1_End_A_bb5
+		<Transform>: 1.48 6.46 4.26 0 0 90 1 1 1 0 0 0.7071068 0.7071068  
+		<TransformMatrix>: -1.192093E-07 1 0 0 -1 -1.192093E-07 0 0 0 0 1 0 1.48 6.46 4.26 1  
+		<BoxCollider>: 1 -2.340459 -2.18756 -0.4561081 8.125523 5.069779 0.4664787  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

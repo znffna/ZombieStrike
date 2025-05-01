@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Cabin2_End1_bb3
+		<Transform>: 3.6 3.61 7.331 0 90 90 1 1 1 0.5 0.5 0.5 0.5  
+		<TransformMatrix>: 0 1 0 0 0 0 1 0 1 0 0 0 3.6 3.61 7.331 1  
+		<BoxCollider>: 1 0.1867069 -7.339487 -3.357153 7.533764 0.2323036 0.2824211  
+		<Children>: 0
+	</Frame>
+</Hierarchy>

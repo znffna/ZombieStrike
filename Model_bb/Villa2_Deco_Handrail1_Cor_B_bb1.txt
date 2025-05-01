@@ -1,0 +1,8 @@
+<Hierarchy>:
+	<Frame>: 0 0 Villa2_Deco_Handrail1_Cor_B_bb1
+		<Transform>: 0.39 0.5500001 2.05 0 0 0 1 1 1 0 0 0 1  
+		<TransformMatrix>: 1 0 0 0 0 1 0 0 0 0 1 0 0.39 0.5500001 2.05 1  
+		<BoxCollider>: 1 -0.3978229 -1.192093E-07 -0.009041786 0.2043543 1.12658 4.074085  
+		<Children>: 0
+	</Frame>
+</Hierarchy>
