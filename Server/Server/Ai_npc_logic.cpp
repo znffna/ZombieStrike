@@ -17,8 +17,8 @@ constexpr int MAP_HEIGHT = 1024;
 // 플레이어, 좀비 시작 위치
 constexpr int ZOMBIE_START_X = 2;
 constexpr int ZOMBIE_START_Z = 2;
-constexpr int PLAYER_START_X = 610;
-constexpr int PLAYER_START_Z = 412;
+constexpr int PLAYER_START_X = 580;
+constexpr int PLAYER_START_Z = 545;
 // 추가 정보
 constexpr int NUM_ZOMBIES = 50;          // 추가: 생성할 좀비 수
 constexpr float CELL_SIZE = 1.0f;        // 노드당 크기
