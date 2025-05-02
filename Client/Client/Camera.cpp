@@ -229,9 +229,9 @@ void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 			m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Direction, fDistance);
 			SetLookAt(xmf3LookAt);
 
-			std::string DebugOutput = "Player Position : (" + std::to_string(xmf3LookAt.x) + ", " + std::to_string(xmf3LookAt.y) + ", " + std::to_string(xmf3LookAt.z) + ")\n";
-			DebugOutput = DebugOutput + "Camera Position : (" + std::to_string(m_xmf3Position.x) + ", " + std::to_string(m_xmf3Position.y) + ", " + std::to_string(m_xmf3Position.z) + ")\n";
-			OutputDebugStringA(DebugOutput.c_str());
+			//std::string DebugOutput = "Player Position : (" + std::to_string(xmf3LookAt.x) + ", " + std::to_string(xmf3LookAt.y) + ", " + std::to_string(xmf3LookAt.z) + ")\n";
+			//DebugOutput = DebugOutput + "Camera Position : (" + std::to_string(m_xmf3Position.x) + ", " + std::to_string(m_xmf3Position.y) + ", " + std::to_string(m_xmf3Position.z) + ")\n";
+			//OutputDebugStringA(DebugOutput.c_str());
 
 			RegenerateViewMatrix();
 		}
