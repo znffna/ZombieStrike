@@ -145,11 +145,15 @@ protected:
 	std::vector<std::shared_ptr<CMaterial>> m_ppMaterials; // Object CMaterial
 public:
 	// Transform
+	bool m_bPitchLock = false;
+	bool m_bYawLock = false;
+	bool m_bRollLock = false;
 	std::shared_ptr<CTransform> m_pTransform = std::make_shared<CTransform>(this);
 
 	// Component
 	std::vector<std::shared_ptr<CComponent>> m_pComponents;
 
+public:
 	// Shader Variables
 	ComPtr<ID3D12Resource> m_pd3dcbGameObject;
 	CB_GAMEOBJECT_INFO* m_pcbMappedObject = nullptr;
@@ -254,7 +258,8 @@ public:
 	void MoveUp(float fDistance = 1.0f) { m_pTransform->MoveUp(fDistance); };
 	void MoveForward(float fDistance = 1.0f) { m_pTransform->MoveForward(fDistance); };
 
-	void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f) { m_pTransform->Rotate(fPitch, fYaw, fRoll); }
+	void SetRotationAxisLock(bool bPitchLock, bool bYawLock, bool bRollLock);
+	void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f);
 	void Rotate(const XMFLOAT3& pxmf3Axis, float fAngle) { m_pTransform->Rotate(pxmf3Axis, fAngle); }
 	void Rotate(const XMFLOAT4& pxmf4Quaternion) { m_pTransform->Rotate(pxmf4Quaternion); }
 

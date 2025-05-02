@@ -154,6 +154,22 @@ void CGameObject::Move(DWORD dwDirection, float fDistance, float deltaTime)
 	}
 }
 
+void CGameObject::SetRotationAxisLock(bool bPitchLock, bool bYawLock, bool bRollLock)
+{
+	m_bPitchLock = bPitchLock;
+	m_bYawLock = bYawLock;
+	m_bRollLock = bRollLock;
+}
+
+void CGameObject::Rotate(float fPitch, float fYaw, float fRoll)
+{
+	if (m_bPitchLock) fPitch = 0.0f;
+	if (m_bYawLock) fYaw = 0.0f;
+	if (m_bRollLock) fRoll = 0.0f;
+
+	m_pTransform->Rotate(fPitch, fYaw, fRoll); 
+}
+
 void CGameObject::UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
 { 
 	m_pTransform->UpdateTransform(xmf4x4ParentMatrix); 
