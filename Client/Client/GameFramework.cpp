@@ -29,14 +29,14 @@ CGameFramework::CGameFramework()
 	m_pdxgiSwapChain = nullptr;
 
 	m_pd3dCommandQueue = nullptr;
-	m_pd3dCommandAllocator = nullptr;
-	m_pd3dCommandList = nullptr;
 
 	m_pd3dRtvDescriptorHeap = nullptr;
 	m_pd3dDsvDescriptorHeap = nullptr;
 	m_pd3dDepthStencilBuffer = nullptr;
 	for (int i = 0; i < m_nSwapChainBuffers; ++i) {
 		m_ppd3dSwapChainBackBuffers[i] = nullptr;
+		m_pd3dCommandAllocator[i] = nullptr;
+		m_pd3dCommandList[i] = nullptr;
 	}
 
 	m_pd3dFence = nullptr;
@@ -59,7 +59,8 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CreateRenderTargetView();
 	CreateDepthStencilView();
 
-	CoInitialize(nullptr);
+	CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+	//CoInitialize(nullptr);
 
 	// 씬들을 생성한다.
 	BuildObjects();
@@ -94,8 +95,11 @@ void CGameFramework::OnDestroy()
 	for (int i = 0; i < m_nSwapChainBuffers; ++i) {	if (m_ppd3dSwapChainBackBuffers[i])	m_ppd3dSwapChainBackBuffers[i].Reset();	}
 	if (m_pd3dRtvDescriptorHeap) m_pd3dRtvDescriptorHeap.Reset();
 
-	if (m_pd3dCommandList)	m_pd3dCommandList.Reset();
-	if (m_pd3dCommandAllocator)	m_pd3dCommandAllocator.Reset();
+	for (int i = 0; i < m_nSwapChainBuffers; ++i)
+	{
+		if (m_pd3dCommandList[i]) m_pd3dCommandList[i].Reset();
+		if (m_pd3dCommandAllocator[i])	m_pd3dCommandAllocator[i].Reset();
+	}
 	if (m_pd3dCommandQueue)	m_pd3dCommandQueue.Reset();
 
 	if (m_pd3dFence)	m_pd3dFence.Reset();
@@ -232,20 +236,36 @@ void CGameFramework::CreateCommandQueueAndList()
 
 	// Command Allocator 생성
 	for (int i = 0; i < m_nSwapChainBuffers; ++i) {
-		hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_pd3dCommandAllocator));
+		hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_pd3dCommandAllocator[i]));
 		if (FAILED(hResult)) {
 			OutputDebugString(L"Failed to create command allocator\n");
 		}
 	}
 
 	// Command List 생성
-	hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_pd3dCommandList));
-	if (FAILED(hResult)) {
-		OutputDebugString(L"Failed to create command list\n");
+	for (int i = 0; i < m_nSwapChainBuffers; ++i) {
+		hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dCommandAllocator[i].Get(), nullptr, IID_PPV_ARGS(&m_pd3dCommandList[i]));
+		if (FAILED(hResult)) {
+			OutputDebugString(L"Failed to create command list\n");
+		}
+		// Command List를 초기화
+		m_pd3dCommandList[i]->Close();
 	}
 
-	// Command List를 초기화
-	m_pd3dCommandList->Close();
+	// Scene 생성용 Command Allocator와 Command List 생성
+	{
+		hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_pd3dSceneMadeCommandAllocator));
+		if (FAILED(hResult)) {
+			OutputDebugString(L"Failed to create command allocator\n");
+		}
+
+		hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dSceneMadeCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_pd3dSceneMadeCommandList));
+		if (FAILED(hResult)) {
+			OutputDebugString(L"Failed to create command list\n");
+		}
+		m_pd3dSceneMadeCommandList->Close();
+	}
+
 }
 
 void CGameFramework::CreateRtvAndDsvDescriptorHeap()
@@ -365,34 +385,70 @@ void CGameFramework::CreateDepthStencilView()
 
 void CGameFramework::BuildObjects()
 {
-	m_pd3dCommandAllocator->Reset();
-	m_pd3dCommandList->Reset(m_pd3dCommandAllocator.Get(), nullptr);
+	m_pd3dCommandAllocator[m_nSwapChainBufferIndex]->Reset();
+	m_pd3dCommandList[m_nSwapChainBufferIndex]->Reset(m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get(), nullptr);
 
 	// 모든 씬이 공유할 요소 생성
-	CScene::InitStaticMembers(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
+	CScene::InitStaticMembers(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
+
+	// MainScene 생성
+	std::thread thread([this]() mutable {
+
+		std::unique_ptr<CScene> pMainScene = std::make_unique<CGameScene>();
+		//std::unique_ptr<CScene> pMainScene = std::make_unique<COnlineScene>();
+		m_pd3dSceneMadeCommandAllocator->Reset();
+		m_pd3dSceneMadeCommandList->Reset(m_pd3dSceneMadeCommandAllocator.Get(), nullptr);
+
+		CScene::GetResourceManager().Initialize(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get(), nullptr);
+
+		pMainScene->Init(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get());
+
+		m_pd3dSceneMadeCommandList->Close();
+
+		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dSceneMadeCommandList.Get() };
+		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+
+		WaitGpuWithoutPresent();
+
+		pMainScene->SetSceneState(SCENE_STATE_RUNNING);
+		m_Scenes.push_back(std::move(pMainScene));
+	});
+	thread.detach();
 
 	// Framework 정보 생성 (Shader에 전달할 정보)
 	CreateShaderVariables();
 
 	// LoadingScene 생성
 	std::unique_ptr<CScene> pLoadingScene = std::make_unique<CLoadingScene>();
-	pLoadingScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
+	pLoadingScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
+	pLoadingScene->SetSceneState(SCENE_STATE_RUNNING);
 	m_pLoadingScene = std::move(pLoadingScene);
 
-	// MainScene 생성
-	std::unique_ptr<CScene> pMainScene = std::make_unique<COnlineScene>();
-	pMainScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList.Get());
-	m_Scenes.push_back(std::move(pMainScene));
+	
 
 	// Command List에 대한 명령들을 종료
-	m_pd3dCommandList->Close();
+	m_pd3dCommandList[m_nSwapChainBufferIndex]->Close();
 
 	// Command Queue에 Command List를 추가
-	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList.Get() };
+	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList[m_nSwapChainBufferIndex].Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
 	// Command Queue의 명령들이 모두 실행될 때까지 대기
-	WaitForGpuComplete();
+	WaitGpuWithoutPresent();
+}
+
+void CGameFramework::WaitGpuWithoutPresent()
+{
+	const UINT64 nFenceValue = ++m_nFenceValueForSignal;
+
+	HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), nFenceValue);
+
+	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
+	{
+		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
+		HRESULT hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
+		::WaitForSingleObject(m_hFenceEvent, INFINITE);
+	}
 }
 
 void CGameFramework::AdvanceFrame()
@@ -407,16 +463,18 @@ void CGameFramework::AdvanceFrame()
 
 	int bRenderScene = 0;
 
+	WaitForGpuComplete();
+
 	// PreRendering [ Swap Chain Back Buffer를 렌더 타겟으로 사용하기 전 렌더링 단계 ]
 	// Shadow Map, Reflection Map, Refraction Map, Deferred Shading, G-buffer 등
 	// PreRendering 단계에서는 자체적으로 SetOM과 ExecuteCommandLists를 호출.
 	// 따라서 이미 Command List에 대한 명령들이 실행된 후, Close 상태여야 함.
 
 	// Command Allocator 재사용
-	m_pd3dCommandAllocator->Reset();
+	m_pd3dCommandAllocator[m_nSwapChainBufferIndex]->Reset();
 
 	// Command List 재사용
-	m_pd3dCommandList->Reset(m_pd3dCommandAllocator.Get(), nullptr);
+	m_pd3dCommandList[m_nSwapChainBufferIndex]->Reset(m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get(), nullptr);
 
 	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
 	OMSetBackBuffer();
@@ -433,11 +491,11 @@ void CGameFramework::AdvanceFrame()
 
 			if (scene->CheckWorkRendering())
 			{
-				scene->PrepareRender(m_pd3dCommandList.Get());
+				scene->PrepareRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 				// Framework 정보 업데이트
 				UpdateShaderVariables();
 
-				bRenderScene += scene->Render(m_pd3dCommandList.Get(), nullptr) ? 1 : 0;
+				bRenderScene += scene->Render(m_pd3dCommandList[m_nSwapChainBufferIndex].Get(), nullptr) ? 1 : 0;
 			}
 		}
 	}
@@ -446,14 +504,14 @@ void CGameFramework::AdvanceFrame()
 		if(m_pLoadingScene)
 		{
 			// Scene Root Signature를 사용
-			m_pLoadingScene->PrepareRender(m_pd3dCommandList.Get());
+			m_pLoadingScene->PrepareRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 
 			// Framework 정보 업데이트
 			UpdateShaderVariables();
 
 			// Scene 정보 업데이트 및 렌더링
 			m_pLoadingScene->Update(m_GameTimer.DeltaTime());
-			m_pLoadingScene->Render(m_pd3dCommandList.Get(), nullptr);
+			m_pLoadingScene->Render(m_pd3dCommandList[m_nSwapChainBufferIndex].Get(), nullptr);
 		}
 	}
 
@@ -466,22 +524,20 @@ void CGameFramework::AdvanceFrame()
 	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+	m_pd3dCommandList[m_nSwapChainBufferIndex]->ResourceBarrier(1, &d3dResourceBarrier);
 
-	m_pd3dCommandList->Close();
+	m_pd3dCommandList[m_nSwapChainBufferIndex]->Close();
 
 	// Command Queue에 Command List를 추가
-	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList.Get() };
+	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList[m_nSwapChainBufferIndex].Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
 	// Command Queue의 명령들이 모두 실행될 때까지 대기
-	WaitForGpuComplete();
 
 	// Swap Chain의 Back Buffer를 화면에 표시
 	m_pdxgiSwapChain->Present(0, 0);
 
-	// 다음 Frame으로 이동 (Fence Value를 각 Swap Chain Buffer Index마다 생성하였기에,
-	// 이전 스왑체인 버퍼의 Present이 끝나기를 기다린다.)
+	// 다음 Frame으로 이동
 	MoveToNextFrame();
 
 	// Time / FPS 출력
@@ -502,7 +558,7 @@ void CGameFramework::OMSetBackBuffer()
 	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
 	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	m_pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+	m_pd3dCommandList[m_nSwapChainBufferIndex]->ResourceBarrier(1, &d3dResourceBarrier);
 
 	// Get CPU Descriptor Handle of RTV
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
@@ -512,7 +568,7 @@ void CGameFramework::OMSetBackBuffer()
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
 	// Set Output Merge Render Targets
-	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
+	m_pd3dCommandList[m_nSwapChainBufferIndex]->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 }
 
 void CGameFramework::ClearRtvAndDsv()
@@ -524,49 +580,37 @@ void CGameFramework::ClearRtvAndDsv()
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	
 	// Clear Back Buffer
-	m_pd3dCommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, Colors::SteelBlue, 0, nullptr);
-	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	m_pd3dCommandList[m_nSwapChainBufferIndex]->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, Colors::SteelBlue, 0, nullptr);
+	m_pd3dCommandList[m_nSwapChainBufferIndex]->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 }
 
 void CGameFramework::WaitForGpuComplete()
 {
-	// 마지막 Fence Value에 1을 더한 값을 가져온다.
-	const UINT64 nFenceValue = ++m_nFenceValues[m_nSwapChainBufferIndex];
-
-	// Fence에 Signal -> Queue에서 GPU 작업이 끝나면 Fence의 값을 nFenceValue로 설정
-	HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), nFenceValue);
-
+	// 현재 GPU 작업이 끝났는지 확인
 	// Fence를 사용하여 GPU의 명령이 모두 완료될 때까지 대기
-	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
+	if (m_pd3dFence->GetCompletedValue() < m_nFenceValueForSignal)
 	{
-		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
+		HRESULT hResult = m_pd3dFence->SetEventOnCompletion(m_nFenceValueForSignal, m_hFenceEvent);
 		::WaitForSingleObject(m_hFenceEvent, INFINITE);
 	}
 }
 
 void CGameFramework::MoveToNextFrame()
 {
-	// 현재 Back Buffer의 Index를 가져온다.
-	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
-
 	// 마지막 Fence Value에 1을 더한 값을 가져온다.
-	UINT64 nFenceValue = ++m_nFenceValues[m_nSwapChainBufferIndex];
+	m_nFenceValues[m_nSwapChainBufferIndex] = ++m_nFenceValueForSignal;
 
 	// Fence에 Signal -> Queue에서 GPU 작업이 끝나면 Fence의 값을 nFenceValue로 설정
-	HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), nFenceValue);
+	HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), m_nFenceValues[m_nSwapChainBufferIndex]);
 
-	// Fence를 사용하여 GPU의 명령이 모두 완료될 때까지 대기
-	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
-	{
-		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
-		::WaitForSingleObject(m_hFenceEvent, INFINITE);
-	}
+	// 다음 BackBufferIndex로 이동
+	m_nSwapChainBufferIndex = (m_nSwapChainBufferIndex + 1) % m_nSwapChainBuffers;
 }
 
 void CGameFramework::CreateShaderVariables()
 {
 	UINT ncbElementBytes = ((sizeof(CB_FRAMEWORK_INFO) + 255) & ~255); //256의 배수
-	m_pd3dcbFrameworkInfo = ::CreateBufferResource(m_pd3dDevice.Get(), m_pd3dCommandList.Get(), NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
+	m_pd3dcbFrameworkInfo = ::CreateBufferResource(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get(), NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
 
 	m_pd3dcbFrameworkInfo->Map(0, NULL, (void**)&m_pcbMappedFrameworkInfo);
 	ZeroMemory(m_pcbMappedFrameworkInfo, sizeof(CB_FRAMEWORK_INFO));
@@ -579,7 +623,7 @@ void CGameFramework::UpdateShaderVariables()
 	m_pcbMappedFrameworkInfo->m_nRenderMode = 0;
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbFrameworkInfo->GetGPUVirtualAddress();
-	m_pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_FRAMEWORK, d3dGpuVirtualAddress);
+	m_pd3dCommandList[m_nSwapChainBufferIndex]->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_FRAMEWORK, d3dGpuVirtualAddress);
 }
 
 void CGameFramework::ReleaseShaderVariables()

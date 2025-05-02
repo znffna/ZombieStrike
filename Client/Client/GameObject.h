@@ -45,7 +45,7 @@ public:
 
 	std::shared_ptr<CAnimationSets> m_pAnimationSets;
 
-	BoundingBox m_ModelBoundingBox;
+	BoundingBox m_MeshBoundingBox;
 public:
 	void PrepareSkinning();;
 };
@@ -66,12 +66,11 @@ public:
 	virtual ~CGameObject();
 
 	void ClearMemberVariables();
-	void Init();
+	void Init(); 
+
 	// Object Initialization
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList) {};
-
 	virtual void GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs);;
-
 	static std::shared_ptr<CGameObject> CreateObject() { return std::make_shared<CGameObject>(); }
 
 	// Active Flag
@@ -87,58 +86,6 @@ public:
 	void SetName(const std::string& strName);
 	virtual std::string GetDefaultName() { return "CGameObject"; }
 
-	// Transform
-	const DirectX::XMFLOAT3 GetPosition() { return m_pTransform->GetPosition(); }
-	const DirectX::XMFLOAT3 GetRightVector() { return m_pTransform->GetRight(); }
-	const DirectX::XMFLOAT3 GetUpVector() { return m_pTransform->GetUp(); }
-	const DirectX::XMFLOAT3 GetLookVector() { return m_pTransform->GetLook(); }
-	const DirectX::XMFLOAT3 GetScale() { return m_pTransform->GetScale(); }
-
-	DirectX::XMFLOAT3 GetRotation() { return m_pTransform->GetRotation(); }
-	float GetPitch() { return m_pTransform->GetRotation().x; } // X 축을	기준으로 회전
-	float GetYaw() { return m_pTransform->GetRotation().y; } // Y 축을 기준으로 회전
-	float GetRoll() { return m_pTransform->GetRotation().z; } // Z 축을 기준으로 회전
-
-	DirectX::XMFLOAT4X4 GetLocalMatrix() { return m_pTransform->GetLocalMatrix(); }
-	DirectX::XMFLOAT4X4 GetWorldMatrix() { return m_pTransform->GetWorldMatrix(); }
-
-	DirectX::XMFLOAT3 GetLocalPosition() { return m_pTransform->GetLocalPosition(); };
-
-	//std::unique_ptr<CTransform> GetTransform() { return m_pTransform; }
-
-	void SetPosition(DirectX::XMFLOAT3 xmf3Position) { m_pTransform->SetPosition(xmf3Position); }
-	void SetPosition(float fx, float fy, float fz) {  m_pTransform->SetPosition(fx, fy, fz);  }
-	void SetScale(DirectX::XMFLOAT3 xmf3Scale) { m_pTransform->SetPosition(xmf3Scale); };
-	void SetScale(float fx, float fy, float fz) { m_pTransform->SetPosition(fx, fy, fz); };
-
-	void Move(DirectX::XMFLOAT3 xmf3Shift) { m_pTransform->Move(xmf3Shift); } ;
-	void Move(float x, float y, float z) { Move(DirectX::XMFLOAT3(x, y, z)); }
-
-	void Move(DWORD dwDirection, float fDistance, float deltaTime);
-
-	void MoveStrafe(float fDistance = 1.0f) { m_pTransform->MoveStrafe(fDistance); };
-	void MoveUp(float fDistance = 1.0f) { m_pTransform->MoveUp(fDistance); };
-	void MoveForward(float fDistance = 1.0f) { m_pTransform->MoveForward(fDistance); };
-
-	void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f) { m_pTransform->Rotate(fPitch, fYaw, fRoll); }
-	void Rotate(const XMFLOAT3& pxmf3Axis, float fAngle) { m_pTransform->Rotate(pxmf3Axis, fAngle); }
-	void Rotate(const XMFLOAT4& pxmf4Quaternion) { m_pTransform->Rotate(pxmf4Quaternion); }
-
-	void SetLocalMatrix(DirectX::XMFLOAT4X4 xmf4x4Local) { m_pTransform->SetLocalMatrix(xmf4x4Local); }
-	void SetLocalMatrix(DirectX::XMMATRIX xmf4x4Local) { m_pTransform->SetLocalMatrix(xmf4x4Local); }
-	void SetWorldMatrix(DirectX::XMFLOAT4X4 xmf4x4World) { m_pTransform->SetWorldMatrix(xmf4x4World); }
-	void SetWorldMatrix(DirectX::XMMATRIX xmf4x4World) { m_pTransform->SetWorldMatrix(xmf4x4World); }
-
-	void UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
-	void UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix);
-	void UpdateTransform(std::shared_ptr<CGameObject>& pGameobject)
-	{
-		m_pTransform->UpdateTransform(pGameobject); 
-
-		// Update Child
-		for (auto& pChild : m_pChilds) pChild->UpdateTransform(GetWorldMatrix());
-	}
-
 	// 상속 관계
 	std::shared_ptr<CGameObject> GetParent() { return m_pParent.lock(); }
 	std::vector<std::shared_ptr<CGameObject>> GetChilds() { return m_pChilds; }
@@ -146,7 +93,7 @@ public:
 
 	void SetParent(std::shared_ptr<CGameObject> pParent) { m_pParent = pParent; };
 	void SetChild(std::shared_ptr<CGameObject> pChild) { m_pChilds.push_back(pChild); pChild->SetParent(shared_from_this()); };
-	
+
 	// Object Update
 	virtual void Update(float fTimeElapsed);
 
@@ -154,46 +101,12 @@ public:
 	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 
-	// Component
-	template <typename T>
-	std::shared_ptr<T> AddComponent(std::shared_ptr<CGameObject> pOwner)
-	{
-		std::shared_ptr<T> pComponent = std::make_shared<T>(pOwner.get());
-		m_pComponents[COMPONENT_KEY(T)] = pComponent;
-		pComponent->Init(pOwner.get());
-		return pComponent;
-	};
-
-	template <typename T>
-	std::shared_ptr<T> GetComponent()
-	{
-		if constexpr (std::is_same_v<T, CTransform>) return m_pTransform;
-		
-		auto iter = m_pComponents.find(COMPONENT_KEY(T));
-		if (iter != m_pComponents.end()) return std::dynamic_pointer_cast<T>(iter->second);
-		return nullptr;
-	}
-
-	template <>
-	std::shared_ptr<CTransform> GetComponent<CTransform>()
-	{
-		return m_pTransform;
-	};
-
-	template <>
-	std::shared_ptr<CCollider> GetComponent<CCollider>()
-	{
-		if (GetComponent<CAABBCollider>()) return GetComponent<CAABBCollider>();
-		else if (GetComponent<COBBCollider>()) return GetComponent<COBBCollider>();
-		else if (GetComponent<CSphereCollider>()) return GetComponent<CSphereCollider>();
-		return nullptr;
-	}
-
 	// Object Collision
 	virtual bool IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth = 0);// Collision Check
 	virtual void OnCollision(std::shared_ptr<CGameObject>& pGameObject); // Collision Event
 
-	BoundingBox GetMergedBoundingBox(BoundingBox* pVolume = nullptr);
+	BoundingBox GetMergedMeshBound(BoundingBox* pVolume = nullptr);
+	void UpdateLocalBoundingBox(const XMFLOAT4X4& pParentTransform = Matrix4x4::Identity());
 
 	// Mesh
 	void SetMesh(std::shared_ptr<CMesh> pMesh);
@@ -232,15 +145,21 @@ protected:
 	std::vector<std::shared_ptr<CMaterial>> m_ppMaterials; // Object CMaterial
 public:
 	// Transform
+	bool m_bPitchLock = false;
+	bool m_bYawLock = false;
+	bool m_bRollLock = false;
 	std::shared_ptr<CTransform> m_pTransform = std::make_shared<CTransform>(this);
 
 	// Component
-	std::unordered_map<std::string, std::shared_ptr<CComponent>> m_pComponents;
+	std::vector<std::shared_ptr<CComponent>> m_pComponents;
 
+public:
 	// Shader Variables
 	ComPtr<ID3D12Resource> m_pd3dcbGameObject;
 	CB_GAMEOBJECT_INFO* m_pcbMappedObject = nullptr;
 
+	// Model BoundingBox 
+	CAABBCollider m_pModelCollider; // Model Collider
 protected:
 	// Parent
 	std::weak_ptr<CGameObject> m_pParent;
@@ -248,25 +167,116 @@ protected:
 	// Child
 	std::vector<std::shared_ptr<CGameObject>> m_pChilds; // Child Object
 public:
-
+	// Animation
 	std::shared_ptr<CAnimationController> m_pSkinnedAnimationController;
+
 	// Load Model
 	void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> pParent, std::ifstream& File, std::shared_ptr<CShader> pShader);
 	std::shared_ptr<CTexture> FindReplicatedTexture(const _TCHAR* pstrTextureName);
+	void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& ppSkinnedMeshes, int* pnSkinnedMesh);;
 	
-	void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& ppSkinnedMeshes, int* pnSkinnedMesh)
-	{
-		if (m_pMesh && (m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT)) ppSkinnedMeshes[(*pnSkinnedMesh)++] = std::dynamic_pointer_cast<CSkinnedMesh>(m_pMesh) ;
-		
-		for (auto& pChild : m_pChilds) pChild->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
-	};
-
 	static void LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<CLoadedModelInfo> pLoadedModel);
-	static bool CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject);
 	static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth = 0);
 	static std::shared_ptr<CLoadedModelInfo> LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* pstrFileName, std::shared_ptr<CShader> pShader);
-
+	
+	// Clone
+	static bool CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject);
+	static bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject);
+	bool CloneByModel(std::string& strModelName) { auto pThis = shared_from_this();  return CloneByModel(strModelName, pThis); };
+	bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel) { auto pThis = shared_from_this(); return CloneByModel(pLoadModel, pThis); };
+	
 	std::shared_ptr<CGameObject> FindFrame(std::string strFrameName);
+
+public:
+	// Component
+	template <typename T>
+	std::shared_ptr<T> CreateComponent(std::shared_ptr<CGameObject> pOwner)
+	{
+		std::shared_ptr<T> pComponent = std::make_shared<T>(pOwner.get());
+		m_pComponents.push_back(pComponent);
+		pComponent->Init(pOwner.get());
+		return pComponent;
+	};
+
+	template <typename T>
+	std::shared_ptr<T> GetComponent() const
+	{
+		for (auto& pComponent : m_pComponents)
+		{
+			if (auto p = std::dynamic_pointer_cast<T>(pComponent)) return p;
+		}
+		return nullptr;
+	}
+
+	template <>
+	std::shared_ptr<CTransform> GetComponent<CTransform>() const
+	{
+		return m_pTransform;
+	};
+
+	template <typename T>
+	std::vector<std::shared_ptr<T>> GetComponents() {
+		std::vector<std::shared_ptr<T>> result;
+		for (auto& pComponent : m_pComponents) {
+			if (auto casted = std::dynamic_pointer_cast<T>(pComponent)) {
+				result.push_back(casted);
+			}
+		}
+		return result;
+	}
+
+	// Transform
+	const DirectX::XMFLOAT3 GetPosition() { return m_pTransform->GetPosition(); }
+	const DirectX::XMFLOAT3 GetRightVector() { return m_pTransform->GetRight(); }
+	const DirectX::XMFLOAT3 GetUpVector() { return m_pTransform->GetUp(); }
+	const DirectX::XMFLOAT3 GetLookVector() { return m_pTransform->GetLook(); }
+	const DirectX::XMFLOAT3 GetScale() { return m_pTransform->GetScale(); }
+
+	DirectX::XMFLOAT3 GetRotation() { return m_pTransform->GetRotation(); }
+	float GetPitch() { return m_pTransform->GetRotation().x; } // X 축을	기준으로 회전
+	float GetYaw() { return m_pTransform->GetRotation().y; } // Y 축을 기준으로 회전
+	float GetRoll() { return m_pTransform->GetRotation().z; } // Z 축을 기준으로 회전
+
+	DirectX::XMFLOAT4X4 GetLocalMatrix() { return m_pTransform->GetLocalMatrix(); }
+	DirectX::XMFLOAT4X4 GetWorldMatrix() { return m_pTransform->GetWorldMatrix(); }
+
+	DirectX::XMFLOAT3 GetLocalPosition() { return m_pTransform->GetLocalPosition(); };
+
+	//std::unique_ptr<CTransform> GetTransform() { return m_pTransform; }
+
+	void SetPosition(DirectX::XMFLOAT3 xmf3Position) { m_pTransform->SetPosition(xmf3Position); }
+	void SetPosition(float fx, float fy, float fz) { m_pTransform->SetPosition(fx, fy, fz); }
+	void SetScale(DirectX::XMFLOAT3 xmf3Scale) { m_pTransform->SetPosition(xmf3Scale); };
+	void SetScale(float fx, float fy, float fz) { m_pTransform->SetPosition(fx, fy, fz); };
+
+	void Move(DirectX::XMFLOAT3 xmf3Shift) { m_pTransform->Move(xmf3Shift); };
+	void Move(float x, float y, float z) { Move(DirectX::XMFLOAT3(x, y, z)); }
+
+	void Move(DWORD dwDirection, float fDistance, float deltaTime);
+
+	void MoveStrafe(float fDistance = 1.0f) { m_pTransform->MoveStrafe(fDistance); };
+	void MoveUp(float fDistance = 1.0f) { m_pTransform->MoveUp(fDistance); };
+	void MoveForward(float fDistance = 1.0f) { m_pTransform->MoveForward(fDistance); };
+
+	void SetRotationAxisLock(bool bPitchLock, bool bYawLock, bool bRollLock);
+	virtual void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f);
+	virtual void Rotate(const XMFLOAT3& pxmf3Axis, float fAngle) { m_pTransform->Rotate(pxmf3Axis, fAngle); }
+	virtual void Rotate(const XMFLOAT4& pxmf4Quaternion) { m_pTransform->Rotate(pxmf4Quaternion); }
+
+	void SetLocalMatrix(DirectX::XMFLOAT4X4 xmf4x4Local) { m_pTransform->SetLocalMatrix(xmf4x4Local); }
+	void SetLocalMatrix(DirectX::XMMATRIX xmf4x4Local) { m_pTransform->SetLocalMatrix(xmf4x4Local); }
+	void SetWorldMatrix(DirectX::XMFLOAT4X4 xmf4x4World) { m_pTransform->SetWorldMatrix(xmf4x4World); }
+	void SetWorldMatrix(DirectX::XMMATRIX xmf4x4World) { m_pTransform->SetWorldMatrix(xmf4x4World); }
+
+	void UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
+	void UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix);
+	void UpdateTransform(std::shared_ptr<CGameObject>& pGameobject)
+	{
+		m_pTransform->UpdateTransform(pGameobject);
+
+		// Update Child
+		for (auto& pChild : m_pChilds) pChild->UpdateTransform(GetWorldMatrix());
+	}
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -414,4 +424,8 @@ private:
 	std::vector<CTerrainVertex> m_pVertices;
 	std::vector<UINT> m_pIndices;
 };
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 

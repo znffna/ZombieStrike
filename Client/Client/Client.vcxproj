@@ -144,6 +144,7 @@
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="OnlineScene.h" />
+    <ClInclude Include="Player.h" />
     <ClInclude Include="RenderConfig.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="RigidBody.h" />
@@ -173,6 +174,7 @@
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="OnlineScene.cpp" />
+    <ClCompile Include="Player.cpp" />
     <ClCompile Include="RenderConfig.cpp" />
     <ClCompile Include="RigidBody.cpp" />
     <ClCompile Include="Scene.cpp" />

@@ -70,13 +70,18 @@ void CTransform::Rotate(float fPitch, float fYaw, float fRoll)
 	m_xmf3Rotation.y += fYaw;
 	m_xmf3Rotation.z += fRoll;
 
-	XMMATRIX xmmtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(fPitch), XMConvertToRadians(fYaw), XMConvertToRadians(fRoll));
-	m_xmf4x4Local = Matrix4x4::Multiply(xmmtxRotate, m_xmf4x4Local);
-
+	Clamp(m_xmf3Rotation.x, 0.0f, 360.0f);
+	Clamp(m_xmf3Rotation.y, 0.0f, 360.0f);
+	Clamp(m_xmf3Rotation.z, 0.0f, 360.0f);
+	
 	{
 		std::string debugOutput = "Rotate : (" + std::to_string(m_xmf3Rotation.x) + "," + std::to_string(m_xmf3Rotation.y) + "," + std::to_string(m_xmf3Rotation.z) + ")\n";
 		OutputDebugStringA(debugOutput.c_str());
 	}
+
+
+	XMMATRIX xmmtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(fPitch), XMConvertToRadians(fYaw), XMConvertToRadians(fRoll));
+	m_xmf4x4Local = Matrix4x4::Multiply(xmmtxRotate, m_xmf4x4Local);
 
 	UpdateTransform(nullptr);
 }

@@ -66,7 +66,7 @@ void CScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	CreateFixedCamera(pd3dDevice, pd3dCommandList);
 
 	// Scene 생성 완료
-	m_SceneState = SCENE_STATE_RUNNING;
+	//m_SceneState = SCENE_STATE_RUNNING;
 }
 
 void CScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -160,7 +160,7 @@ void CScene::InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	CreateStaticShader(pd3dDevice);
 	CreateStaticMesh(pd3dDevice, pd3dCommandList);
 
-	GetResourceManager().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
+	//GetResourceManager().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 }
 
 void CScene::BuildDefaultLightsAndMaterials()
@@ -215,7 +215,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
 }
 
-void CScene::ProcessCollisions()
+void CScene::CollisionsCheck()
 {
 	for (auto& pObject : m_ppObjects)
 	{
@@ -321,10 +321,10 @@ void CScene::RemoveObject(std::shared_ptr<CGameObject> pObject)
 	}
 }
 
-void CScene::SetPlayer(std::shared_ptr<CGameObject> pPlayer)
+void CScene::SetPlayer(std::shared_ptr<CPlayer> pPlayer)
 { 
 	m_pPlayer = pPlayer; 
-	m_pCamera->SetTarget(m_pPlayer); 
+	//m_pCamera->SetTarget(m_pPlayer); 
 }
 
 void CScene::Update(float deltaTime)
@@ -346,7 +346,7 @@ void CScene::Update(float deltaTime)
 	}
 
 	// Check Collision	
-	ProcessCollisions();
+	CollisionsCheck();
 
 }
 
@@ -384,9 +384,9 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 	else {
 		// Set Default Viewport and Scissor
+		if(m_pCamera)
 		m_pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 		m_pCamera->UpdateShaderVariables(pd3dCommandList);
-
 		pCamera = m_pCamera.get();
 	}
 
@@ -862,4 +862,35 @@ void CScene::AddMesh(const std::string& name, std::shared_ptr<CMesh> mesh)
 std::shared_ptr<CMesh> CScene::GetMesh(const std::string& name)
 {
 	return GetResourceManager().GetMesh(name);
+}
+
+void CScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)
+{
+	std::shared_ptr<CLoadedModelInfo> pModel = GetModelInfo("FuzZombie");
+	if (!pModel)
+	{
+		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
+		StoreModelInfo("FuzZombie", pModel);
+	}
+
+	m_pZombiePool.reserve(nZombieCount);
+	for (int i = 0; i < nZombieCount; ++i)
+	{
+		std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
+		pZombie->SetActive(false);
+		m_pZombiePool.push_back(pZombie);
+	}
+}
+
+std::shared_ptr<CZombieObject> CScene::GetZombie(int nSkinType)
+{
+	for (auto& pZombie : m_pZombiePool)
+	{
+		if (false == pZombie->IsActive())
+		{
+			pZombie->SetSkinType(nSkinType);
+			pZombie->SetActive(true);
+			return pZombie;
+		}
+	}
 }

@@ -480,5 +480,9 @@ Villa2_Wall_Mid_B
 Villa2_Wall_Mid_C
 Villa2_Wall_Mid_D
 Villa2_Wall_Mid_E
+Yaku_J_Ignite
+Zombiegirl_W_Kurniawan
+Ch18_nonPBR
+Ch35_nonPBR
 Stage_1
 Map

@@ -80,11 +80,7 @@ CAnimationController::CAnimationController(ID3D12Device* pd3dDevice, ID3D12Graph
 	m_nAnimationTracks = nAnimationTracks;
 	m_pAnimationTracks.resize(nAnimationTracks);
 
-	m_pModelRootObject = pModel->m_pModelRootObject;
-	m_nSkinnedMeshes = pModel->m_nSkinnedMeshes;
-	m_ppSkinnedMeshes = pModel->m_ppSkinnedMeshes;
-
-	m_pAnimationSets = pModel->m_pAnimationSets;
+	SettingByModel(pModel);
 
 	m_ppd3dcbSkinningBoneTransforms.resize(m_nSkinnedMeshes);
 	m_ppcbxmf4x4MappedSkinningBoneTransforms.resize(m_nSkinnedMeshes);
@@ -105,6 +101,15 @@ CAnimationController::CAnimationController(ID3D12Device* pd3dDevice, ID3D12Graph
 		m_pAnimationTracks[i].SetCallbackKeys(0);
 		m_pAnimationTracks[i].SetAnimationCallbackHandler(NULL);
 	}
+}
+
+void CAnimationController::SettingByModel(std::shared_ptr<CLoadedModelInfo>& pModel)
+{
+	m_pModelRootObject = pModel->m_pModelRootObject;
+	m_nSkinnedMeshes = pModel->m_nSkinnedMeshes;
+	m_ppSkinnedMeshes = pModel->m_ppSkinnedMeshes;
+
+	m_pAnimationSets = pModel->m_pAnimationSets;
 }
 
 CAnimationController::~CAnimationController()

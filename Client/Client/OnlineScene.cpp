@@ -94,10 +94,8 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	{
 		pkt_sc_player_info* packet = reinterpret_cast<pkt_sc_player_info*>(recv_p);
 
-		std::shared_ptr<CGameObject> pZombie = m_pPlayer;
-		pZombie->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
-		m_mapGameObjects[packet->id] = pZombie;
-		SetPlayer(pZombie);
+		m_pPlayer->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
+		m_mapGameObjects[packet->id] = m_pPlayer;
 
 		if(g_bNetworkDebugMode){
 			std::string DebugOutput = "S_C_PLAYER_INFO 패킷 수신\n";
@@ -114,16 +112,16 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		case ObjectType::PLAYER:
 		{
 			// 플레이어 오브젝트 추가
-			std::shared_ptr<CGameObject> pZombie = GetZombie();
-			pZombie->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
-			m_mapGameObjects[packet->id] = pZombie;
+			std::shared_ptr<CGameObject> pPlayer = GetZombie();
+			pPlayer->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
+			m_mapGameObjects[packet->id] = pPlayer;
 			//AddObject(pZombie);
 			break;
 		}
 		case ObjectType::ZOMBIE:
 		{
 			// 좀비 오브젝트 추가
-			std::shared_ptr<CGameObject> pZombie = GetZombie();
+			std::shared_ptr<CGameObject> pZombie = GetZombie(packet->fixdata.skin_type);
 			pZombie->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
 			m_mapGameObjects[packet->id] = pZombie;
 			AddObject(pZombie);

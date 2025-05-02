@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "GameObject.h"
 #include "Zombie.h" 
+#include "Player.h"
 
 #include "Camera.h"
 #include "Shader.h"
@@ -238,11 +239,11 @@ public:
 	virtual void AddHierarchicalObject(const std::shared_ptr<CGameObject>& pHierarchicalObject);
 	virtual void RemoveObject(std::shared_ptr<CGameObject> pObject);
 
-	void SetPlayer(std::shared_ptr<CGameObject> pPlayer);
+	void SetPlayer(std::shared_ptr<CPlayer> pPlayer);
 
 	// Scene Method
 	virtual void Update(float deltaTime);
-	void ProcessCollisions();
+	void CollisionsCheck();
 
 	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
@@ -317,7 +318,7 @@ protected:
 	std::shared_ptr<CGameObject> m_pMap;
 
 	// Player
-	std::shared_ptr<CGameObject> m_pPlayer;
+	std::shared_ptr<CPlayer> m_pPlayer;
 
 	// Camera
 	std::shared_ptr<CCamera> m_pCamera;
@@ -342,33 +343,8 @@ public:
 	// ObjectPool
 	std::vector<std::shared_ptr<CZombieObject>> m_pZombiePool;
 
-	void StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)
-	{
-		std::shared_ptr<CLoadedModelInfo> pModel = GetModelInfo("FuzZombie");
-		if (!pModel)
-		{
-			pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
-			StoreModelInfo("FuzZombie", pModel);
-		}
-
-		for (int i = 0; i < nZombieCount; ++i)
-		{
-			std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
-			pZombie->SetActive(false);
-			m_pZombiePool.push_back(pZombie);
-		}
-	}
-	std::shared_ptr<CZombieObject> GetZombie()
-	{
-		for (auto& pZombie : m_pZombiePool)
-		{
-			if (false == pZombie->IsActive())
-			{
-				pZombie->SetActive(true); 
-				return pZombie;
-			}
-		}
-	};
+	void StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount);
+	std::shared_ptr<CZombieObject> GetZombie(int nSkinType = 0);;
 
 };
 

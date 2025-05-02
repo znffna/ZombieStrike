@@ -49,6 +49,9 @@ public:
 	void OMSetBackBuffer();
 	void ClearRtvAndDsv();
 
+	void WaitGpuWithoutPresent();
+
+	// MoveToNextFrame 이후 WaitForGpuComplete를 호출하는 순서.
 	void WaitForGpuComplete();
 	void MoveToNextFrame();
 
@@ -87,10 +90,14 @@ private:
 	ComPtr<ID3D12DescriptorHeap>							m_pd3dDsvDescriptorHeap;
 
 	ComPtr<ID3D12CommandQueue>								m_pd3dCommandQueue;
-	ComPtr<ID3D12CommandAllocator>							m_pd3dCommandAllocator;
-	ComPtr<ID3D12GraphicsCommandList>						m_pd3dCommandList;
+	std::array<ComPtr<ID3D12CommandAllocator>, m_nSwapChainBuffers>		m_pd3dCommandAllocator;
+	std::array<ComPtr<ID3D12GraphicsCommandList>, m_nSwapChainBuffers>	m_pd3dCommandList;
+
+	ComPtr<ID3D12CommandAllocator>							m_pd3dSceneMadeCommandAllocator;
+	ComPtr<ID3D12GraphicsCommandList>						m_pd3dSceneMadeCommandList;
 
 	ComPtr<ID3D12Fence>										m_pd3dFence;
+	UINT64													m_nFenceValueForSignal;
 	std::array<UINT64, m_nSwapChainBuffers>					m_nFenceValues;
 	HANDLE													m_hFenceEvent;
 

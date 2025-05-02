@@ -18,12 +18,14 @@
 
 UINT CGameObject::m_nObjectIDCounter = 0;
 
-CGameObject::CGameObject()
+CGameObject::CGameObject()	
+	: m_pModelCollider(this)
 {
 	Init();
 }
 
 CGameObject::CGameObject(const std::string& strName)
+	: m_pModelCollider(this)
 {
 	Init();
 	SetName(strName);
@@ -99,8 +101,8 @@ void CGameObject::GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs)
 	// Copy Components
 	for (auto& pComponent : rhs->m_pComponents)
 	{
-		auto pclone = pComponent.second->Clone();
-		m_pComponents[pComponent.first] = pclone;
+		auto pclone = pComponent->Clone();
+		m_pComponents.push_back(pclone);
 		pclone->Init(this);
 	}
 
@@ -152,6 +154,22 @@ void CGameObject::Move(DWORD dwDirection, float fDistance, float deltaTime)
 	}
 }
 
+void CGameObject::SetRotationAxisLock(bool bPitchLock, bool bYawLock, bool bRollLock)
+{
+	m_bPitchLock = bPitchLock;
+	m_bYawLock = bYawLock;
+	m_bRollLock = bRollLock;
+}
+
+void CGameObject::Rotate(float fPitch, float fYaw, float fRoll)
+{
+	if (m_bPitchLock) fPitch = 0.0f;
+	if (m_bYawLock) fYaw = 0.0f;
+	if (m_bRollLock) fRoll = 0.0f;
+
+	m_pTransform->Rotate(fPitch, fYaw, fRoll); 
+}
+
 void CGameObject::UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
 { 
 	m_pTransform->UpdateTransform(xmf4x4ParentMatrix); 
@@ -169,27 +187,51 @@ void CGameObject::Update(float fTimeElapsed)
 	// Component Update // 순서좀 생각해야 될 듯?
 	for (auto& pComponent : m_pComponents)
 	{
-		pComponent.second->Update(fTimeElapsed);
+		pComponent->Update(fTimeElapsed);
 	}
 
 	OnPrepareRender();
 
 	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 
+	// Model BoundingVolume Update
+	m_pModelCollider.UpdateCollider(m_pTransform->GetWorldMatrix());
+
 	for (auto& pChild : m_pChilds) pChild->Update(fTimeElapsed);
 }
 
 bool CGameObject::IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth)
 {
-	auto pCollider = GetComponent<CCollider>();
-	auto pOtherCollider = pGameObject->GetComponent<CCollider>();
-	if (pCollider && pOtherCollider)
-	{
-		bool isCollide = pCollider->IsCollided(pOtherCollider);
-		if (isCollide) {
-			std::string DebugOutput = "Collision Detected: " + GetName() + " <-> " + pGameObject->GetName() + "\n";
-			OutputDebugStringA(DebugOutput.c_str());
+	// 먼저 Child Collider를 포함한 Model Collider를 체크한다.
+	if (m_pParent.lock() == nullptr) {
+		if (false == m_pModelCollider.IsCollided(&pGameObject->m_pModelCollider))
+		{
+			// Model Collider와 충돌이 없으면 이후 과정은 진행하지 않는다.
+			return false;
 		}
+	}
+
+	// 실제 Collider끼리 충돌검사를 수행한다.
+	auto pColliders = GetComponents<CCollider>();
+	auto pOtherColliders = pGameObject->GetComponents<CCollider>();
+
+	// 만약	두 GameObject 모두 Collider가 존재한다면 충돌검사를 수행한다.
+	if (pColliders.size() && pOtherColliders.size())
+	{
+		bool isCollide{false};
+
+		for (auto& pCollider : pColliders)
+		{
+			for (auto& pOtherCollider : pOtherColliders)
+			{
+				isCollide = pCollider->IsCollided(pOtherCollider);
+				if (isCollide) {
+					std::string DebugOutput = "Collision Detected: " + GetName() + " <-> " + pGameObject->GetName() + "\n";
+					OutputDebugStringA(DebugOutput.c_str());
+				}
+			}
+		}
+		
 		return isCollide;
 	}
 
@@ -225,7 +267,7 @@ void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pGameObject)
 	
 }
 
-BoundingBox CGameObject::GetMergedBoundingBox(BoundingBox* pVolume)
+BoundingBox CGameObject::GetMergedMeshBound(BoundingBox* pVolume)
 {
 	if (nullptr == pVolume)
 	{
@@ -233,12 +275,12 @@ BoundingBox CGameObject::GetMergedBoundingBox(BoundingBox* pVolume)
 
 		if (m_pMesh)
 		{
-			BoundingBox::CreateMerged(boundingBox, boundingBox, m_pMesh->GetBoundingBox());
+			BoundingBox::CreateMerged(boundingBox, boundingBox, m_pMesh->GetBoundingBox(m_pTransform->GetWorldMatrix()));
 		}
 
 		for (auto& pChild : m_pChilds)
 		{
-			pChild->GetMergedBoundingBox(&boundingBox);
+			pChild->GetMergedMeshBound(&boundingBox);
 		}
 
 		return boundingBox;
@@ -246,15 +288,26 @@ BoundingBox CGameObject::GetMergedBoundingBox(BoundingBox* pVolume)
 	else {
 		if (m_pMesh)
 		{
-			BoundingBox::CreateMerged(*pVolume, *pVolume, m_pMesh->GetBoundingBox());
+			BoundingBox::CreateMerged(*pVolume, *pVolume, m_pMesh->GetBoundingBox(m_pTransform->GetWorldMatrix()));
 		}
 
 		for (auto& pChild : m_pChilds)
 		{
-			pChild->GetMergedBoundingBox(pVolume);
+			pChild->GetMergedMeshBound(pVolume);
 		}
 
 		return *pVolume;
+	}
+}
+
+void CGameObject::UpdateLocalBoundingBox(const XMFLOAT4X4& pParentTransform)
+{
+	// TODO : m_pModelCollider의 LocalBoundingBox를 업데이트
+	// 이때 업데이트는 부모의 Inverse를 WorldMatrix에 적용해 오직 현 Object space를 기준으로 한 local 좌표로 얻는다.
+
+	for (auto& pChild : m_pChilds)
+	{
+		pChild->UpdateLocalBoundingBox(Matrix4x4::Inverse(m_pTransform->GetWorldMatrix()));
 	}
 }
 
@@ -419,6 +472,13 @@ std::shared_ptr<CTexture> CGameObject::FindReplicatedTexture(const _TCHAR* pstrT
 	for (auto& pChild : m_pChilds) if (pTexture = pChild->FindReplicatedTexture(pstrTextureName)) return(pTexture);
 
 	return(NULL);
+}
+
+void CGameObject::FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& ppSkinnedMeshes, int* pnSkinnedMesh)
+{
+	if (m_pMesh && (m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT)) ppSkinnedMeshes[(*pnSkinnedMesh)++] = std::dynamic_pointer_cast<CSkinnedMesh>(m_pMesh);
+
+	for (auto& pChild : m_pChilds) pChild->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
 }
 
 void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> pParent, std::ifstream& File, std::shared_ptr<CShader> pShader)
@@ -635,10 +695,22 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 bool CGameObject::CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject)
 {
 	if (auto pModel = CScene::GetResourceManager().GetModelInfo(strModelName)) {
-		pGameObject->GetResourcesAndComponents(pModel->m_pModelRootObject);
-		auto pCollider = pGameObject->AddComponent<CAABBCollider>(pGameObject); // Collider 추가
-		pCollider->SetCollider(pModel->m_ModelBoundingBox); // Collider 설정
-		//pGameObject->SetChild(pModel->m_pModelRootObject);
+		return CloneByModel(pModel, pGameObject);
+	}
+	return false;
+}
+
+bool CGameObject::CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject)
+{
+	if (pLoadModel) {
+		pGameObject->GetResourcesAndComponents(pLoadModel->m_pModelRootObject);
+		// TODO : 여기서 생성하여 주는 Collider는 Model Collider이기에 Model Colldier를 변수로 추가해야 한다.
+		
+		pGameObject->m_pModelCollider.SetCollider(pLoadModel->m_MeshBoundingBox); // Mesh Bounding Box 설정
+		// auto pCollider = pGameObject->CreateComponent<CAABBCollider>(pGameObject); // Collider 추가
+		// pCollider->SetCollider(pLoadModel->m_MeshBoundingBox); // Collider 설정
+		
+		// /TODO
 		return true;
 	}
 	return false;
@@ -656,6 +728,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 
 	bool isGetModel = false;
 
+	XMFLOAT4 xmf4Rotation {0,0,0,1};
 	for (; ; )
 	{
 		::ReadStringFromFile(file, pstrToken);
@@ -677,8 +750,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		else if (!strcmp(pstrToken, "<Transform>:"))
 		{
 			XMFLOAT3 xmf3Position, xmf3Rotation, xmf3Scale;
-			XMFLOAT4 xmf4Rotation;
-			file.read((char*)&xmf3Position, sizeof(float) * 3); 
+			file.read((char*)&xmf3Position, sizeof(float) * 3);
 			file.read((char*)&xmf3Rotation, sizeof(float) * 3); //Euler Angle
 			file.read((char*)&xmf3Scale, sizeof(float) * 3);
 			file.read((char*)&xmf4Rotation, sizeof(float) * 4); //Quaternion
@@ -712,6 +784,22 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		{
 			pGameObject->LoadMaterialsFromFile(pd3dDevice, pd3dCommandList, pParent, file, pShader);
 		}
+		else if (!strcmp(pstrToken, "<Colliders>:"))
+		{
+			int nCollider = ::ReadIntegerFromFile(file);
+
+			XMFLOAT3 xmf3Center, xmf3Extents;
+			for (int i = 0; i < nCollider; i++)
+			{
+				file.read((char*)&xmf3Center, sizeof(float) * 3);
+				file.read((char*)&xmf3Extents, sizeof(float) * 3);
+				xmf3Extents = Vector3::ScalarProduct(xmf3Extents, 0.5f, false);
+
+				auto pCollider = pGameObject->CreateComponent<COBBCollider>(pGameObject);
+				BoundingOrientedBox OBB{ xmf3Center, xmf3Extents , xmf4Rotation };
+				pCollider->SetCollider(OBB);
+			}
+		}
 		else if (!strcmp(pstrToken, "<Children>:"))
 		{
 			int nChilds = ::ReadIntegerFromFile(file);
@@ -744,6 +832,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 			break;
 		}
 	}
+
 	return(pGameObject);
 }
 
@@ -774,7 +863,7 @@ std::shared_ptr<CLoadedModelInfo> CGameObject::LoadGeometryAndAnimationFromFile(
 				// Model BoundingVolume 계산
 				pLoadedModel->m_pModelRootObject->Update(0.0f);
 				pLoadedModel->m_pModelRootObject->UpdateTransform();
-				pLoadedModel->m_ModelBoundingBox = pLoadedModel->m_pModelRootObject->GetMergedBoundingBox();
+				pLoadedModel->m_MeshBoundingBox = pLoadedModel->m_pModelRootObject->GetMergedMeshBound();
 			}
 			else if (!strcmp(pstrToken, "<Animation>:"))
 			{

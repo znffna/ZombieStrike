@@ -23,5 +23,13 @@ public:
 	virtual std::shared_ptr<CComponent> Clone() const = 0;
 
 	virtual void Update(float fTimeElapsed) { }
+
+protected:
+	CGameObject* m_pObject; // Owner Object
+	bool m_bActive; // Active Flag
+
+public:
+	void SetActive(bool bActive) { m_bActive = bActive; }
+	bool IsActive() const { return m_bActive; }
 };
 

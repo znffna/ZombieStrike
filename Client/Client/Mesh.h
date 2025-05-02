@@ -168,7 +168,7 @@ protected:
 	UINT m_nStride;		// 한 정점의 크기
 	UINT m_nOffset;		// 시작 오프셋
 
-protected:
+public:
 	// Index 데이터의 갯수에 따라서 인덱스 버퍼를 생성하는 함수
 	void SetSubMeshCount(int nSubMeshes);
 
