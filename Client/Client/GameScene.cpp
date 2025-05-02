@@ -40,7 +40,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	auto pCamera = pPlayer->CreateComponent<CThirdPersonCamera>(pPlayer);
 	pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 	pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	pCamera->SetOffset(XMFLOAT3(0.0f, 2.2f, -5.0f));
+	pCamera->SetOffset(XMFLOAT3(0.0f, 0.0f, -5.0f));
 	pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
 	pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
 	pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);

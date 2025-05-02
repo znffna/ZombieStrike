@@ -125,14 +125,14 @@ void CCamera::GenerateProjectionMatrix(float aspectRatio, float fov, float nearZ
 
 void CCamera::Rotate(float x, float y, float z)
 {
-	fPitch += x;
-	Clamp(fPitch, -90.0f, 90.0f); // -90 ~ 90으로 제한
+	m_fPitch += x;
+	Clamp(m_fPitch, -89.0f, 89.0f); // -90 ~ 90으로 제한
 
-	fYaw += y;
-	Clamp(fYaw, -180.0f, 180.0f); // -180 ~ 180으로 제한
+	m_fYaw += y;
+	Clamp(m_fYaw, -180.0f, 180.0f); // -180 ~ 180으로 제한
 
-	fRoll += z;
-	Clamp(fRoll, -180.0f, 180.0f); // -180 ~ 180으로 제한
+	m_fRoll += z;
+	Clamp(m_fRoll, -180.0f, 180.0f); // -180 ~ 180으로 제한
 
 	XMVECTOR qX = XMQuaternionRotationAxis(XMLoadFloat3(&m_xmf3Right), XMConvertToRadians(x));
 	XMVECTOR qY = XMQuaternionRotationAxis(XMLoadFloat3(&m_xmf3Up), XMConvertToRadians(y));
@@ -168,10 +168,24 @@ void CCamera::Rotate(float x, float y, float z)
 CThirdPersonCamera::CThirdPersonCamera(CGameObject* pObject)
 	: CCamera(pObject)
 {
+
 }
 
 CThirdPersonCamera::~CThirdPersonCamera()
 {
+}
+
+void CThirdPersonCamera::Rotate(float x, float y, float z)
+{
+	m_fPitch += x;
+	if (m_fPitch > +89.0f) { x -= (m_fPitch - 89.0f); m_fPitch = +89.0f; }
+	if (m_fPitch < -89.0f) { x -= (m_fPitch + 89.0f); m_fPitch = -89.0f; }
+
+	m_fYaw += y;
+	Clamp(m_fYaw, -180.0f, 180.0f); // -180 ~ 180으로 제한
+
+	m_fRoll += z;
+	Clamp(m_fRoll, -180.0f, 180.0f); // -180 ~ 180으로 제한
 }
 
 void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
@@ -187,6 +201,12 @@ void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 		xmf4x4Rotate._11 = xmf3Right.x; xmf4x4Rotate._21 = xmf3Up.x; xmf4x4Rotate._31 = xmf3Look.x;
 		xmf4x4Rotate._12 = xmf3Right.y; xmf4x4Rotate._22 = xmf3Up.y; xmf4x4Rotate._32 = xmf3Look.y;
 		xmf4x4Rotate._13 = xmf3Right.z; xmf4x4Rotate._23 = xmf3Up.z; xmf4x4Rotate._33 = xmf3Look.z;
+
+		if (m_fPitch != 0.0f)
+		{
+			XMMATRIX xmmtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(m_fPitch), XMConvertToRadians(0.0f), XMConvertToRadians(0.0f));
+			xmf4x4Rotate = Matrix4x4::Multiply(xmmtxRotate, xmf4x4Rotate);
+		}
 
 		// 오브젝트 대비 상대적 위치 설정
 		XMFLOAT3 xmf3Offset = Vector3::TransformCoord(m_xmf3Offset, xmf4x4Rotate); // 상대적 위치에 회전 행렬 적용
