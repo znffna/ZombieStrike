@@ -101,8 +101,8 @@ void CGameObject::GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs)
 	// Copy Components
 	for (auto& pComponent : rhs->m_pComponents)
 	{
-		auto pclone = pComponent.second->Clone();
-		m_pComponents.insert({ pComponent.first, pclone });
+		auto pclone = pComponent->Clone();
+		m_pComponents.push_back(pclone);
 		pclone->Init(this);
 	}
 
@@ -171,7 +171,7 @@ void CGameObject::Update(float fTimeElapsed)
 	// Component Update // 순서좀 생각해야 될 듯?
 	for (auto& pComponent : m_pComponents)
 	{
-		pComponent.second->Update(fTimeElapsed);
+		pComponent->Update(fTimeElapsed);
 	}
 
 	OnPrepareRender();
@@ -691,7 +691,7 @@ bool CGameObject::CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, st
 		// TODO : 여기서 생성하여 주는 Collider는 Model Collider이기에 Model Colldier를 변수로 추가해야 한다.
 		
 		pGameObject->m_pModelCollider.SetCollider(pLoadModel->m_MeshBoundingBox); // Mesh Bounding Box 설정
-		// auto pCollider = pGameObject->AddComponent<CAABBCollider>(pGameObject); // Collider 추가
+		// auto pCollider = pGameObject->CreateComponent<CAABBCollider>(pGameObject); // Collider 추가
 		// pCollider->SetCollider(pLoadModel->m_MeshBoundingBox); // Collider 설정
 		
 		// /TODO
@@ -712,6 +712,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 
 	bool isGetModel = false;
 
+	XMFLOAT4 xmf4Rotation {0,0,0,1};
 	for (; ; )
 	{
 		::ReadStringFromFile(file, pstrToken);
@@ -733,8 +734,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		else if (!strcmp(pstrToken, "<Transform>:"))
 		{
 			XMFLOAT3 xmf3Position, xmf3Rotation, xmf3Scale;
-			XMFLOAT4 xmf4Rotation;
-			file.read((char*)&xmf3Position, sizeof(float) * 3); 
+			file.read((char*)&xmf3Position, sizeof(float) * 3);
 			file.read((char*)&xmf3Rotation, sizeof(float) * 3); //Euler Angle
 			file.read((char*)&xmf3Scale, sizeof(float) * 3);
 			file.read((char*)&xmf4Rotation, sizeof(float) * 4); //Quaternion
@@ -777,9 +777,11 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 			{
 				file.read((char*)&xmf3Center, sizeof(float) * 3);
 				file.read((char*)&xmf3Extents, sizeof(float) * 3);
+				xmf3Extents = Vector3::ScalarProduct(xmf3Extents, 0.5f, false);
 
-				auto pCollider = pGameObject->AddComponent<COBBCollider>(pGameObject);
-				pCollider->SetCollider(xmf3Center, xmf3Extents);
+				auto pCollider = pGameObject->CreateComponent<COBBCollider>(pGameObject);
+				BoundingOrientedBox OBB{ xmf3Center, xmf3Extents , xmf4Rotation };
+				pCollider->SetCollider(OBB);
 			}
 		}
 		else if (!strcmp(pstrToken, "<Children>:"))
@@ -814,6 +816,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 			break;
 		}
 	}
+
 	return(pGameObject);
 }
 

@@ -66,12 +66,11 @@ public:
 	virtual ~CGameObject();
 
 	void ClearMemberVariables();
-	void Init();
+	void Init(); 
+
 	// Object Initialization
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList) {};
-
 	virtual void GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs);;
-
 	static std::shared_ptr<CGameObject> CreateObject() { return std::make_shared<CGameObject>(); }
 
 	// Active Flag
@@ -86,6 +85,141 @@ public:
 	std::string GetName() { return m_strName; }
 	void SetName(const std::string& strName);
 	virtual std::string GetDefaultName() { return "CGameObject"; }
+
+	// 상속 관계
+	std::shared_ptr<CGameObject> GetParent() { return m_pParent.lock(); }
+	std::vector<std::shared_ptr<CGameObject>> GetChilds() { return m_pChilds; }
+	std::shared_ptr<CGameObject> GetChild(int nIndex) { return m_pChilds[nIndex]; }
+
+	void SetParent(std::shared_ptr<CGameObject> pParent) { m_pParent = pParent; };
+	void SetChild(std::shared_ptr<CGameObject> pChild) { m_pChilds.push_back(pChild); pChild->SetParent(shared_from_this()); };
+
+	// Object Update
+	virtual void Update(float fTimeElapsed);
+
+	// Object Render
+	virtual void OnPrepareRender();
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
+
+	// Object Collision
+	virtual bool IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth = 0);// Collision Check
+	virtual void OnCollision(std::shared_ptr<CGameObject>& pGameObject); // Collision Event
+
+	BoundingBox GetMergedMeshBound(BoundingBox* pVolume = nullptr);
+	void UpdateLocalBoundingBox(const XMFLOAT4X4& pParentTransform = Matrix4x4::Identity());
+
+	// Mesh
+	void SetMesh(std::shared_ptr<CMesh> pMesh);
+	UINT GetMeshType() { return((m_pMesh) ? m_pMesh->GetType() : 0x00); }
+
+	// Material
+	void MaterialResize(int nMaterials) { m_ppMaterials.resize(nMaterials); }
+	void AddMaterial(std::shared_ptr<CMaterial> pMaterial) { m_ppMaterials.push_back(pMaterial); }
+	void SetMaterial(int nIndex, std::shared_ptr<CMaterial> pMaterial) { if(m_ppMaterials.size() <= nIndex) m_ppMaterials.resize(nIndex + 1); m_ppMaterials[nIndex] = pMaterial; }
+
+	// Shader
+	void SetShader(std::shared_ptr<CShader> pShader, int nIndex = 0);
+
+	// Shader Variables
+	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	void ReleaseShaderVariables();
+
+protected:
+	bool m_bActive; // Active Flag
+
+#ifdef _DEBUG
+	int nLoadFrames = -1;
+#endif
+
+	// Object ID
+	static UINT m_nObjectIDCounter; // Object ID Counter
+
+	UINT m_nObjectID; // Object ID
+	std::string m_strName;  // Object Name
+
+	std::shared_ptr<CMesh> m_pMesh; // Object Mesh
+
+	// CMaterial
+	UINT m_nMaterials = 0;
+	std::vector<std::shared_ptr<CMaterial>> m_ppMaterials; // Object CMaterial
+public:
+	// Transform
+	std::shared_ptr<CTransform> m_pTransform = std::make_shared<CTransform>(this);
+
+	// Component
+	std::vector<std::shared_ptr<CComponent>> m_pComponents;
+
+	// Shader Variables
+	ComPtr<ID3D12Resource> m_pd3dcbGameObject;
+	CB_GAMEOBJECT_INFO* m_pcbMappedObject = nullptr;
+
+	// Model BoundingBox 
+	CAABBCollider m_pModelCollider; // Model Collider
+protected:
+	// Parent
+	std::weak_ptr<CGameObject> m_pParent;
+
+	// Child
+	std::vector<std::shared_ptr<CGameObject>> m_pChilds; // Child Object
+public:
+	// Animation
+	std::shared_ptr<CAnimationController> m_pSkinnedAnimationController;
+
+	// Load Model
+	void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> pParent, std::ifstream& File, std::shared_ptr<CShader> pShader);
+	std::shared_ptr<CTexture> FindReplicatedTexture(const _TCHAR* pstrTextureName);
+	void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& ppSkinnedMeshes, int* pnSkinnedMesh);;
+	
+	static void LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<CLoadedModelInfo> pLoadedModel);
+	static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth = 0);
+	static std::shared_ptr<CLoadedModelInfo> LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* pstrFileName, std::shared_ptr<CShader> pShader);
+	
+	// Clone
+	static bool CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject);
+	static bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject);
+	bool CloneByModel(std::string& strModelName) { auto pThis = shared_from_this();  return CloneByModel(strModelName, pThis); };
+	bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel) { auto pThis = shared_from_this(); return CloneByModel(pLoadModel, pThis); };
+	
+	std::shared_ptr<CGameObject> FindFrame(std::string strFrameName);
+
+public:
+	// Component
+	template <typename T>
+	std::shared_ptr<T> CreateComponent(std::shared_ptr<CGameObject> pOwner)
+	{
+		std::shared_ptr<T> pComponent = std::make_shared<T>(pOwner.get());
+		m_pComponents.push_back(pComponent);
+		pComponent->Init(pOwner.get());
+		return pComponent;
+	};
+
+	template <typename T>
+	std::shared_ptr<T> GetComponent() const
+	{
+		for (auto& pComponent : m_pComponents)
+		{
+			if (auto p = std::dynamic_pointer_cast<T>(pComponent)) return p;
+		}
+		return nullptr;
+	}
+
+	template <>
+	std::shared_ptr<CTransform> GetComponent<CTransform>() const
+	{
+		return m_pTransform;
+	};
+
+	template <typename T>
+	std::vector<std::shared_ptr<T>> GetComponents() {
+		std::vector<std::shared_ptr<T>> result;
+		for (auto& pComponent : m_pComponents) {
+			if (auto casted = std::dynamic_pointer_cast<T>(pComponent)) {
+				result.push_back(casted);
+			}
+		}
+		return result;
+	}
 
 	// Transform
 	const DirectX::XMFLOAT3 GetPosition() { return m_pTransform->GetPosition(); }
@@ -138,148 +272,6 @@ public:
 		// Update Child
 		for (auto& pChild : m_pChilds) pChild->UpdateTransform(GetWorldMatrix());
 	}
-
-	// 상속 관계
-	std::shared_ptr<CGameObject> GetParent() { return m_pParent.lock(); }
-	std::vector<std::shared_ptr<CGameObject>> GetChilds() { return m_pChilds; }
-	std::shared_ptr<CGameObject> GetChild(int nIndex) { return m_pChilds[nIndex]; }
-
-	void SetParent(std::shared_ptr<CGameObject> pParent) { m_pParent = pParent; };
-	void SetChild(std::shared_ptr<CGameObject> pChild) { m_pChilds.push_back(pChild); pChild->SetParent(shared_from_this()); };
-
-	// Object Update
-	virtual void Update(float fTimeElapsed);
-
-	// Object Render
-	virtual void OnPrepareRender();
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
-
-	// Component
-	template <typename T>
-	std::shared_ptr<T> AddComponent(std::shared_ptr<CGameObject> pOwner)
-	{
-		std::shared_ptr<T> pComponent = std::make_shared<T>(pOwner.get());
-		m_pComponents.insert({ COMPONENT_KEY(T), pComponent });
-		pComponent->Init(pOwner.get());
-		return pComponent;
-	};
-
-	template <typename T>
-	std::shared_ptr<T> GetComponent() const
-	{
-		auto iter = m_pComponents.find(COMPONENT_KEY(T));
-		if (iter != m_pComponents.end()) return std::dynamic_pointer_cast<T>(iter->second);
-		return nullptr;
-	}
-
-	template <>
-	std::shared_ptr<CTransform> GetComponent<CTransform>() const
-	{
-		return m_pTransform;
-	};
-
-	// TODO : Mesh Collider로 사용 예정
-	template <>
-	std::shared_ptr<CCollider> GetComponent<CCollider>() const 
-	{
-		if (auto p = GetComponent<CAABBCollider>()) return p;
-		else if (auto p = GetComponent<CSphereCollider>()) return p;
-		else if (auto p = GetComponent<COBBCollider>()) return p;
-		return nullptr;
-	}
-
-	template <typename T>
-	std::vector<std::shared_ptr<T>> GetComponents() {
-		std::vector<std::shared_ptr<T>> result;
-		auto range = m_pComponents.equal_range(COMPONENT_KEY(T));
-		for (auto it = range.first; it != range.second; ++it) {
-			if (auto casted = std::dynamic_pointer_cast<T>(it->second)) {
-				result.push_back(casted);
-			}
-		}
-		return result;
-	}
-
-	// Object Collision
-	virtual bool IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth = 0);// Collision Check
-	virtual void OnCollision(std::shared_ptr<CGameObject>& pGameObject); // Collision Event
-
-	BoundingBox GetMergedMeshBound(BoundingBox* pVolume = nullptr);
-	void UpdateLocalBoundingBox(const XMFLOAT4X4& pParentTransform = Matrix4x4::Identity());
-
-	// Mesh
-	void SetMesh(std::shared_ptr<CMesh> pMesh);
-	UINT GetMeshType() { return((m_pMesh) ? m_pMesh->GetType() : 0x00); }
-
-	// Material
-	void MaterialResize(int nMaterials) { m_ppMaterials.resize(nMaterials); }
-	void AddMaterial(std::shared_ptr<CMaterial> pMaterial) { m_ppMaterials.push_back(pMaterial); }
-	void SetMaterial(int nIndex, std::shared_ptr<CMaterial> pMaterial) { if(m_ppMaterials.size() <= nIndex) m_ppMaterials.resize(nIndex + 1); m_ppMaterials[nIndex] = pMaterial; }
-
-	// Shader
-	void SetShader(std::shared_ptr<CShader> pShader, int nIndex = 0);
-
-	// Shader Variables
-	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
-	void ReleaseShaderVariables();
-
-protected:
-	bool m_bActive; // Active Flag
-
-#ifdef _DEBUG
-	int nLoadFrames = -1;
-#endif
-
-	// Object ID
-	static UINT m_nObjectIDCounter; // Object ID Counter
-
-	UINT m_nObjectID; // Object ID
-	std::string m_strName;  // Object Name
-
-	std::shared_ptr<CMesh> m_pMesh; // Object Mesh
-
-	// CMaterial
-	UINT m_nMaterials = 0;
-	std::vector<std::shared_ptr<CMaterial>> m_ppMaterials; // Object CMaterial
-public:
-	// Transform
-	std::shared_ptr<CTransform> m_pTransform = std::make_shared<CTransform>(this);
-
-	// Component
-	std::unordered_multimap<std::string, std::shared_ptr<CComponent>> m_pComponents;
-
-	// Shader Variables
-	ComPtr<ID3D12Resource> m_pd3dcbGameObject;
-	CB_GAMEOBJECT_INFO* m_pcbMappedObject = nullptr;
-
-	// Model BoundingBox 
-	CAABBCollider m_pModelCollider; // Model Collider
-protected:
-	// Parent
-	std::weak_ptr<CGameObject> m_pParent;
-
-	// Child
-	std::vector<std::shared_ptr<CGameObject>> m_pChilds; // Child Object
-public:
-
-	std::shared_ptr<CAnimationController> m_pSkinnedAnimationController;
-	// Load Model
-	void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> pParent, std::ifstream& File, std::shared_ptr<CShader> pShader);
-	std::shared_ptr<CTexture> FindReplicatedTexture(const _TCHAR* pstrTextureName);
-	void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& ppSkinnedMeshes, int* pnSkinnedMesh);;
-	
-	static void LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<CLoadedModelInfo> pLoadedModel);
-	static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth = 0);
-	static std::shared_ptr<CLoadedModelInfo> LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* pstrFileName, std::shared_ptr<CShader> pShader);
-	
-	// Clone
-	static bool CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject);
-	static bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject);
-	bool CloneByModel(std::string& strModelName) { auto pThis = shared_from_this();  return CloneByModel(strModelName, pThis); };
-	bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel) { auto pThis = shared_from_this(); return CloneByModel(pLoadModel, pThis); };
-	
-	std::shared_ptr<CGameObject> FindFrame(std::string strFrameName);
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////
