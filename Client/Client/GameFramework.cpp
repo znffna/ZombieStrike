@@ -586,11 +586,11 @@ void CGameFramework::ClearRtvAndDsv()
 
 void CGameFramework::WaitForGpuComplete()
 {
-	// 현재 BackBuffer의 작업이 끝났는지를 확인하는 Method.
+	// 현재 GPU 작업이 끝났는지 확인
 	// Fence를 사용하여 GPU의 명령이 모두 완료될 때까지 대기
-	if (m_pd3dFence->GetCompletedValue() < m_nFenceValues[m_nSwapChainBufferIndex])
+	if (m_pd3dFence->GetCompletedValue() < m_nFenceValueForSignal)
 	{
-		HRESULT hResult = m_pd3dFence->SetEventOnCompletion(m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
+		HRESULT hResult = m_pd3dFence->SetEventOnCompletion(m_nFenceValueForSignal, m_hFenceEvent);
 		::WaitForSingleObject(m_hFenceEvent, INFINITE);
 	}
 }
