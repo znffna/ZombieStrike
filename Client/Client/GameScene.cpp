@@ -43,7 +43,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	pCamera->SetOffset(XMFLOAT3(0.0f, 0.0f, -5.0f));
 	pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
 	pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
-	pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	//pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	pCamera->SetActive(true);
 
 	m_ppHierarchicalObjects.push_back(pPlayer);
@@ -64,7 +64,12 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 void CGameScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	if(m_pPlayer)
+	SetSceneCamera();
+}
+
+void CGameScene::SetSceneCamera()
+{
+	if (m_pPlayer)
 	{
 		m_pCamera = m_pPlayer->GetComponent<CCamera>();
 	}

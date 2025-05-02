@@ -36,6 +36,12 @@ void CCamera::ReleaseShaderVariables()
 	m_pd3dcbCamera.Reset();
 }
 
+void CCamera::SetShaderVariables(ComPtr<ID3D12Resource>& pd3dcbCamera, CB_CAMERA_INFO* pcbMappedCamera)
+{
+	m_pd3dcbCamera = pd3dcbCamera;
+	m_pcbMappedCamera = pcbMappedCamera;
+}
+
 void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	// Update the Constant Buffer
