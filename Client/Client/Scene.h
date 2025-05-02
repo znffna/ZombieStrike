@@ -301,11 +301,6 @@ protected:
 	ComPtr<ID3D12Resource> m_pd3dcbLights;
 	CB_LIGHT_INFO* m_pcbMappedLights = nullptr;
 
-	// Camera Shader Variables
-	ComPtr<ID3D12Resource> m_pd3dcbCamera;
-	CB_CAMERA_INFO* m_pcbMappedCamera = NULL;
-
-public:
 	// Animation
 	float								m_fElapsedTime = 0.0f;
 

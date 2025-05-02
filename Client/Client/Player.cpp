@@ -48,7 +48,6 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	std::shared_ptr<CRigidBody> pRigidBody = CreateComponent<CRigidBody>(shared_from_this());
 	pRigidBody->SetVelocity(XMFLOAT3(0.0f, -9.0f, 0.0f));
 
-
 	// Collider »ý¼º
 	auto pCollider = CreateComponent<CAABBCollider>(shared_from_this());
 	pCollider->SetCollider(pPlayerModel->m_MeshBoundingBox.Center, pPlayerModel->m_MeshBoundingBox.Extents);

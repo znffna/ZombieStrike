@@ -377,14 +377,18 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 	// Set Viewport and Scissor & Update Camera Variables
-	if (nullptr == pCamera) {
+	if (pCamera)
+	{
+		pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+		pCamera->UpdateShaderVariables(pd3dCommandList);
+	}
+	else {
 		// Set Default Viewport and Scissor
-		if (nullptr == m_pCamera) return false;
+		if(m_pCamera)
+		m_pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+		m_pCamera->UpdateShaderVariables(pd3dCommandList);
 		pCamera = m_pCamera.get();
 	}
-	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-	pCamera->SetShaderVariables(m_pd3dcbCamera, m_pcbMappedCamera);
-	pCamera->UpdateShaderVariables(pd3dCommandList);
 
 	// Update Shader Variables
 	UpdateShaderVariables(pd3dCommandList);
@@ -795,12 +799,6 @@ void CScene::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	// Map Constant Buffer
 	m_pd3dcbLights->Map(0, nullptr, (void**)&m_pcbMappedLights);
 	ZeroMemory(m_pcbMappedLights, sizeof(CB_LIGHT_INFO));
-
-	// Camera Constant Buffer
-	// 해당 버퍼를 실제 렌더링하는 카메라가 참조하여 업데이트
-	ncbElementBytes = ((sizeof(CB_CAMERA_INFO) + 255) & ~255); //256의 배수
-	m_pd3dcbCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-	m_pd3dcbCamera->Map(0, NULL, (void**)&m_pcbMappedCamera);
 }
 
 void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
@@ -820,10 +818,6 @@ void CScene::ReleaseShaderVariables()
 	if (m_pd3dcbLights) m_pd3dcbLights->Unmap(0, nullptr);
 	m_pd3dcbLights.Reset();
 	m_pcbMappedLights = nullptr;
-
-	// Camera
-	if (m_pd3dcbCamera) m_pd3dcbCamera->Unmap(0, NULL);
-	m_pd3dcbCamera.Reset();
 }
 
 // ResourceManager 리소스 관리
