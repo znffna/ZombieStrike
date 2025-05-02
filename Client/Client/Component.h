@@ -25,6 +25,7 @@ public:
 	virtual void Update(float fTimeElapsed) { }
 
 protected:
+	CGameObject* m_pObject; // Owner Object
 	bool m_bActive; // Active Flag
 
 public:

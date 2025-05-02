@@ -149,6 +149,7 @@ inline float InverseSqrt(float fValue) { return 1.0f / sqrtf(fValue); }
 inline bool IsZero(float fValue, float fEpsilon) { return((fabsf(fValue) < fEpsilon)); }
 inline bool IsEqual(float fA, float fB, float fEpsilon) { return(::IsZero(fA - fB, fEpsilon)); }
 inline void Swap(float* pfS, float* pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT = fTemp; }
+inline void Clamp(float& fValue, float fMin, float fMax) { float fGap = fMax - fMin; while (fValue > fMax) fValue -= fGap;	while (fValue < fMin) fValue += fGap;};
 
 
 #define ANIMATION_TYPE_ONCE				0

@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "GameObject.h"
 #include "Zombie.h" 
+#include "Player.h"
 
 #include "Camera.h"
 #include "Shader.h"
@@ -238,7 +239,7 @@ public:
 	virtual void AddHierarchicalObject(const std::shared_ptr<CGameObject>& pHierarchicalObject);
 	virtual void RemoveObject(std::shared_ptr<CGameObject> pObject);
 
-	void SetPlayer(std::shared_ptr<CGameObject> pPlayer);
+	void SetPlayer(std::shared_ptr<CPlayer> pPlayer);
 
 	// Scene Method
 	virtual void Update(float deltaTime);
@@ -317,7 +318,7 @@ protected:
 	std::shared_ptr<CGameObject> m_pMap;
 
 	// Player
-	std::shared_ptr<CGameObject> m_pPlayer;
+	std::shared_ptr<CPlayer> m_pPlayer;
 
 	// Camera
 	std::shared_ptr<CCamera> m_pCamera;

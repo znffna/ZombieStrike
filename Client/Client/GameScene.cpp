@@ -35,17 +35,19 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_ppObjects.push_back(pGameObject);
 
 	// Zombie Object
-	std::shared_ptr<CLoadedModelInfo> pModel = resourceManager.GetModelInfo("FuzZombie");
-	if (!pModel)
-	{
-		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
-		resourceManager.SetSkinInfo("FuzZombie", pModel);
-	}
+	std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2);
+	pPlayer->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 0.0f));
+	auto pCamera = pPlayer->CreateComponent<CThirdPersonCamera>(pPlayer);
+	pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pCamera->SetOffset(XMFLOAT3(0.0f, 2.2f, -5.0f));
+	pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
+	pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	pCamera->SetActive(true);
 
-	std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
-	pZombie->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 0.0f));
-	m_ppHierarchicalObjects.push_back(pZombie);
-	m_pPlayer = pZombie;
+	m_ppHierarchicalObjects.push_back(pPlayer);
+	m_pPlayer = pPlayer;
 
 	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 1000);
 
@@ -56,22 +58,16 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pMap->Update(0.0f);
 
 	//// Default Camera 위치 수정
-	//m_pCamera->SetPosition(Vector3::Add(pZombie->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));
+	//m_pCamera->SetPosition(Vector3::Add(pPlayer->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));
 	//m_pCamera->RegenerateViewMatrix();
 }
 
 void CGameScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	CreateFixedCamera(pd3dDevice, pd3dCommandList);
 	if(m_pPlayer)
 	{
-		m_pCamera->SetPosition(Vector3::Add(m_pPlayer->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));
-		m_pCamera->RegenerateViewMatrix();
-
-		m_pCamera->SetTarget(m_pPlayer);
+		m_pCamera = m_pPlayer->GetComponent<CCamera>();
 	}
-
-	//m_SceneState = SCENE_STATE_RUNNING;
 }
 
 void CGameScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -97,12 +93,6 @@ void CGameScene::ReleaseUploadBuffers()
 void CGameScene::Update(float deltaTime)
 {
 	CScene::Update(deltaTime);
-
-	// Update Camera Position
-	if (m_pCamera)
-	{
-		m_pCamera->Update(m_pPlayer->GetPosition(), deltaTime);
-	}
 }
 
 bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)

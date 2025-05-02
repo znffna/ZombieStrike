@@ -18,7 +18,6 @@ public:
 	
 	virtual void CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
 
-
 	virtual void ReleaseObjects() override;
 	virtual void ReleaseUploadBuffers() override;
 

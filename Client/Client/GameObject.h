@@ -259,9 +259,9 @@ public:
 	void MoveForward(float fDistance = 1.0f) { m_pTransform->MoveForward(fDistance); };
 
 	void SetRotationAxisLock(bool bPitchLock, bool bYawLock, bool bRollLock);
-	void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f);
-	void Rotate(const XMFLOAT3& pxmf3Axis, float fAngle) { m_pTransform->Rotate(pxmf3Axis, fAngle); }
-	void Rotate(const XMFLOAT4& pxmf4Quaternion) { m_pTransform->Rotate(pxmf4Quaternion); }
+	virtual void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f);
+	virtual void Rotate(const XMFLOAT3& pxmf3Axis, float fAngle) { m_pTransform->Rotate(pxmf3Axis, fAngle); }
+	virtual void Rotate(const XMFLOAT4& pxmf4Quaternion) { m_pTransform->Rotate(pxmf4Quaternion); }
 
 	void SetLocalMatrix(DirectX::XMFLOAT4X4 xmf4x4Local) { m_pTransform->SetLocalMatrix(xmf4x4Local); }
 	void SetLocalMatrix(DirectX::XMMATRIX xmf4x4Local) { m_pTransform->SetLocalMatrix(xmf4x4Local); }
@@ -429,18 +429,3 @@ private:
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-//class CPlayer : public CGameObject
-//{
-//public:
-//	CPlayer();
-//	virtual ~CPlayer();
-//	// Object Initialization
-//	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-//	virtual std::string GetDefaultName() override { return "CPlayer"; }
-//	static std::shared_ptr<CPlayer> Create(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-//	// Object Update
-//	virtual void Update(float fTimeElapsed) override;
-//
-//private:
-//
-//};

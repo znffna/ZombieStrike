@@ -33,17 +33,17 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	SetRotationAxisLock(true, false, true);
 
 	// Model Info
-	std::shared_ptr<CLoadedModelInfo> pAngrybotModel = pModel;
-	//if (!pAngrybotModel) pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/PoliceZombie.bin", NULL);
-	SetChild(pAngrybotModel->m_pModelRootObject);
+	std::shared_ptr<CLoadedModelInfo> pZombieModel = pModel;
+	//if (!pZombieModel) pZombieModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/PoliceZombie.bin", NULL);
+	SetChild(pZombieModel->m_pModelRootObject);
 
 	Update(0.0f);
 	UpdateTransform();
 
 	auto pCollider = CreateComponent<CAABBCollider>(shared_from_this());
-	pCollider->SetCollider(pAngrybotModel->m_MeshBoundingBox.Center, pAngrybotModel->m_MeshBoundingBox.Extents);
+	pCollider->SetCollider(pZombieModel->m_MeshBoundingBox.Center, pZombieModel->m_MeshBoundingBox.Extents);
 
-	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pAngrybotModel);
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pZombieModel);
 
 	m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);

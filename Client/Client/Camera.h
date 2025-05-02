@@ -69,17 +69,12 @@ public:
 	float GetYaw() { return fYaw; }
 	float GetRoll() { return fRoll; }
 
-	void Rotate(float x, float y, float z);
+	virtual void Rotate(float x, float y, float z);
 	void Rotate(const XMFLOAT3& xmf3Shift) { Rotate(xmf3Shift.x, xmf3Shift.y, xmf3Shift.z); }
 
 	virtual void Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed) { }
 
-	// Follow Object
-	void SetTarget(std::shared_ptr<CGameObject> pTarget);
-
-protected:
-	std::shared_ptr<CTransform> m_pChaseTransform;
-	
+protected:	
 	// ViewPort and ScissorRect
 	D3D12_VIEWPORT m_d3dViewport;
 	D3D12_RECT m_d3dScissorRect;
@@ -125,6 +120,8 @@ class CThirdPersonCamera : public CCamera
 public:
 	CThirdPersonCamera(CGameObject* pObject = nullptr);
 	virtual ~CThirdPersonCamera();
+
+	virtual void Rotate(float x, float y, float z) override { };
 
 	virtual void Update(const XMFLOAT3 & xmf3LookAt, float fTimeElapsed) override;
 	virtual void SetLookAt(const XMFLOAT3 & vLookAt);

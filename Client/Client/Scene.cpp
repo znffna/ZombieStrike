@@ -321,10 +321,10 @@ void CScene::RemoveObject(std::shared_ptr<CGameObject> pObject)
 	}
 }
 
-void CScene::SetPlayer(std::shared_ptr<CGameObject> pPlayer)
+void CScene::SetPlayer(std::shared_ptr<CPlayer> pPlayer)
 { 
 	m_pPlayer = pPlayer; 
-	m_pCamera->SetTarget(m_pPlayer); 
+	//m_pCamera->SetTarget(m_pPlayer); 
 }
 
 void CScene::Update(float deltaTime)
@@ -384,9 +384,9 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 	else {
 		// Set Default Viewport and Scissor
+		if(m_pCamera)
 		m_pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 		m_pCamera->UpdateShaderVariables(pd3dCommandList);
-
 		pCamera = m_pCamera.get();
 	}
 
