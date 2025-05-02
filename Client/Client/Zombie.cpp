@@ -26,11 +26,11 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	CGameObject::Initialize(pd3dDevice, pd3dCommandList);
 
 	// Object Info
-	static UINT nGameObjectID = 0;
-	m_bActive = true;
-	m_nObjectID = nGameObjectID++;
+	Init();
 
 	m_strName = "Zombie_" + std::to_string(m_nObjectID);
+
+	SetRotationAxisLock(true, false, true);
 
 	// Model Info
 	std::shared_ptr<CLoadedModelInfo> pAngrybotModel = pModel;
