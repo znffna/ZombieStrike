@@ -34,21 +34,13 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 10.0f));
 	m_ppObjects.push_back(pGameObject);
 
-	// Zombie Object
+	// Player »ý¼º
 	std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2);
 	pPlayer->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 0.0f));
-	auto pCamera = pPlayer->CreateComponent<CThirdPersonCamera>(pPlayer);
-	pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	pCamera->SetOffset(XMFLOAT3(0.0f, 0.0f, -5.0f));
-	pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
-	pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
-	pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	pCamera->SetActive(true);
-
 	m_ppHierarchicalObjects.push_back(pPlayer);
 	m_pPlayer = pPlayer;
 
+	// Zombie Object
 	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 1000);
 
 	// Map Load

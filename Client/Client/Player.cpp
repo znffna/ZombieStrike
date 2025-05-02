@@ -44,13 +44,24 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 		m_pSkinnedAnimationController->SetTrackEnable(1, false);
 	}
 
-	// Component
+	// RigidBody 持失
 	std::shared_ptr<CRigidBody> pRigidBody = CreateComponent<CRigidBody>(shared_from_this());
 	pRigidBody->SetVelocity(XMFLOAT3(0.0f, -9.0f, 0.0f));
+
+	// Camera 持失
+	auto pCamera = CreateComponent<CThirdPersonCamera>(shared_from_this());
+	pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pCamera->SetOffset(XMFLOAT3(0.0f, 0.0f, -5.0f));
+	pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
+	pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	pCamera->SetActive(true);
 
 	// Collider 持失
 	auto pCollider = CreateComponent<CAABBCollider>(shared_from_this());
 	pCollider->SetCollider(pPlayerModel->m_MeshBoundingBox.Center, pPlayerModel->m_MeshBoundingBox.Extents);
+
 
 	Update(0.0f);
 	UpdateTransform();

@@ -377,18 +377,14 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 	// Set Viewport and Scissor & Update Camera Variables
-	if (pCamera)
+	if (nullptr == pCamera)
 	{
-		pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-		pCamera->UpdateShaderVariables(pd3dCommandList);
-	}
-	else {
 		// Set Default Viewport and Scissor
-		if(m_pCamera)
-		m_pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-		m_pCamera->UpdateShaderVariables(pd3dCommandList);
+		if (nullptr == m_pCamera) return false;
 		pCamera = m_pCamera.get();
 	}
+	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+	pCamera->UpdateShaderVariables(pd3dCommandList);
 
 	// Update Shader Variables
 	UpdateShaderVariables(pd3dCommandList);
