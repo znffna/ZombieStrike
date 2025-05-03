@@ -4,6 +4,9 @@
 #include "GameObject.h"
 #include "AnimationSet.h"
 
+#include "Camera.h"
+#include "Player.h"
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
@@ -166,6 +169,28 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 #endif
 				}
 				m_pAnimationTracks[k].HandleCallback();
+			}
+		}
+
+		// TODO : 아래와 같이 카메라의 Pitch를 이용하여 Spine을 회전시키는 코드를 구현할 방법을 생각해보자.
+		if (auto pCamera = pRootGameObject->GetComponent<CCamera>())
+		{
+			auto pitch = pCamera->GetPitch();
+			auto rotateMatrix = DirectX::XMMatrixRotationX(XMConvertToRadians(pitch / 3.0f));
+			if (auto pSpine = pRootGameObject->FindFrame("mixamorig:Spine")) {
+				auto pSpineTransform = pSpine->GetLocalMatrix();
+				pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
+				pSpine->SetLocalMatrix(pSpineTransform);
+			}
+			if (auto pSpine1 = pRootGameObject->FindFrame("mixamorig:Spine")) {
+				auto pSpineTransform = pSpine1->GetLocalMatrix();
+				pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
+				pSpine1->SetLocalMatrix(pSpineTransform);
+			}
+			if (auto pSpine2 = pRootGameObject->FindFrame("mixamorig:Spine")) {
+				auto pSpineTransform = pSpine2->GetLocalMatrix();
+				pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
+				pSpine2->SetLocalMatrix(pSpineTransform);
 			}
 		}
 
