@@ -16,7 +16,15 @@ public:
 
 	virtual void Rotate(float x = 0.0f, float y = 0.0f, float z = 0.0f) override;
 
+	virtual float GetPitch() override { return m_fPitch; }
+	virtual float GetYaw() override  { return m_fYaw; }
+	virtual float GetRoll() override { return m_fRoll; }
+
 private:
 	std::vector<std::string> m_ModelName{ "Ch18_nonPBR", "Ch35_nonPBR" };
+	
+	float m_fPitch = 0.0f;
+	float m_fYaw = 0.0f;
+	float m_fRoll = 0.0f;
 };
 

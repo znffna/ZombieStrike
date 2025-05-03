@@ -66,6 +66,9 @@ void CTransform::MoveForward(float fDistance)
 
 void CTransform::Rotate(float fPitch, float fYaw, float fRoll)
 {
+	// 의미없는 호출일 경우 로직처리를 하지 않는다.
+	if (fPitch == 0.0f && fYaw == 0.0f && fRoll == 0.0f) return;
+
 	m_xmf3Rotation.x += fPitch;
 	m_xmf3Rotation.y += fYaw;
 	m_xmf3Rotation.z += fRoll;

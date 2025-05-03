@@ -45,7 +45,7 @@ public:
 	void MoveUp(float fDistance = 1.0f);
 	void MoveForward(float fDistance = 1.0f);
 
-	void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
+	void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f);
 	void Rotate(const XMFLOAT3& pxmf3Axis, float fAngle);
 	void Rotate(const XMFLOAT4& pxmf4Quaternion);
 

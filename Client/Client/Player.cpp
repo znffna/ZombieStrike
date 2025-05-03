@@ -85,25 +85,23 @@ void CPlayer::Update(float fTimeElapsed)
 
 void CPlayer::Rotate(float x, float y, float z)
 {
-	float fPitch = GetPitch(), fYaw = GetYaw(), fRoll = GetRoll();
-
 	if (x != 0.0f)
 	{
-		fPitch += x;
-		if (fPitch > +89.0f) { x -= (fPitch - 89.0f); fPitch = +89.0f; }
-		if (fPitch < -89.0f) { x -= (fPitch + 89.0f); fPitch = -89.0f; }
+		m_fPitch += x;
+		if (m_fPitch > +89.0f) { x -= (m_fPitch - 89.0f); m_fPitch = +89.0f; }
+		if (m_fPitch < -89.0f) { x -= (m_fPitch + 89.0f); m_fPitch = -89.0f; }
 	}
 	if (y != 0.0f)
 	{
-		fYaw += y;
-		if (fYaw > 360.0f) fYaw -= 360.0f;
-		if (fYaw < 0.0f) fYaw += 360.0f;
+		m_fYaw += y;
+		if (m_fYaw > 360.0f) m_fYaw -= 360.0f;
+		if (m_fYaw < 0.0f) m_fYaw += 360.0f;
 	}
 	if (z != 0.0f)
 	{
-		fRoll += z;
-		if (fRoll > +20.0f) { z -= (fRoll - 20.0f); fRoll = +20.0f; }
-		if (fRoll < -20.0f) { z -= (fRoll + 20.0f); fRoll = -20.0f; }
+		m_fRoll += z;
+		if (m_fRoll > +20.0f) { z -= (m_fRoll - 20.0f); m_fRoll = +20.0f; }
+		if (m_fRoll < -20.0f) { z -= (m_fRoll + 20.0f); m_fRoll = -20.0f; }
 	}
 
 	if (auto pCamera = GetComponent<CCamera>())

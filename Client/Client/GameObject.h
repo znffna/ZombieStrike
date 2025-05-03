@@ -233,9 +233,9 @@ public:
 	const DirectX::XMFLOAT3 GetScale() { return m_pTransform->GetScale(); }
 
 	DirectX::XMFLOAT3 GetRotation() { return m_pTransform->GetRotation(); }
-	float GetPitch() { return m_pTransform->GetRotation().x; } // X 축을	기준으로 회전
-	float GetYaw() { return m_pTransform->GetRotation().y; } // Y 축을 기준으로 회전
-	float GetRoll() { return m_pTransform->GetRotation().z; } // Z 축을 기준으로 회전
+	virtual float GetPitch() { return m_pTransform->GetRotation().x; } // X 축을	기준으로 회전
+	virtual float GetYaw() { return m_pTransform->GetRotation().y; } // Y 축을 기준으로 회전
+	virtual float GetRoll() { return m_pTransform->GetRotation().z; } // Z 축을 기준으로 회전
 
 	DirectX::XMFLOAT4X4 GetLocalMatrix() { return m_pTransform->GetLocalMatrix(); }
 	DirectX::XMFLOAT4X4 GetWorldMatrix() { return m_pTransform->GetWorldMatrix(); }
