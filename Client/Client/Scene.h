@@ -39,9 +39,6 @@ public:
 	std::shared_ptr<CTexture> GetTexture(const std::string& name) {
 		if (TextureInfos.find(name) != TextureInfos.end()) {
 			// 이미 로드된 모델이 있는 경우
-			std::string filepath = name + "이 재사용됨";
-			OutputDebugStringA(filepath.c_str());
-			OutputDebugStringA("\n");
 
 			return TextureInfos[name];
 		}

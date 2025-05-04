@@ -4,6 +4,13 @@
 
 class CScene;
 
+struct CollisionInfo {
+	std::shared_ptr<CGameObject> pObjectA;
+	std::shared_ptr<CGameObject> pObjectB;
+	std::shared_ptr<CCollider> pColliderA;
+	std::shared_ptr<CCollider> pColliderB;
+};
+
 class CCollisionChecker : public CGameObject
 {
 public:

@@ -216,88 +216,23 @@ void CGameObject::Update(float fTimeElapsed)
 	for (auto& pChild : m_pChilds) pChild->Update(fTimeElapsed);
 }
 
-bool CGameObject::IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth)
-{
-	// 먼저 Child Collider를 포함한 Model Collider를 체크한다.
-	if (m_pParent.lock() == nullptr) {
-		if (false == m_pModelCollider.IsCollided(&pGameObject->m_pModelCollider))
-		{
-			// Model Collider와 충돌이 없으면 이후 과정은 진행하지 않는다.
-			return false;
-		}
-	}
-
-	// 실제 Collider끼리 충돌검사를 수행한다.
-	auto pColliders = GetComponents<CCollider>();
-	auto pOtherColliders = pGameObject->GetComponents<CCollider>();
-
-	// 만약	두 GameObject 모두 Collider가 존재한다면 충돌검사를 수행한다.
-	if (pColliders.size() && pOtherColliders.size())
-	{
-		bool isCollide{false};
-
-		for (auto& pCollider : pColliders)
-		{
-			for (auto& pOtherCollider : pOtherColliders)
-			{
-				isCollide = pCollider->IsCollided(pOtherCollider);
-				if (isCollide) {
-					std::string DebugOutput = "Collision Detected: " + GetName() + " <-> " + pGameObject->GetName() + "\n";
-					OutputDebugStringA(DebugOutput.c_str());
-				}
-			}
-		}
-		
-		return isCollide;
-	}
-
-	if (nDepth > 0) {
-		for (auto& pChild : m_pChilds) {
-			if (pChild->IsCollided(pGameObject, nDepth - 1)) return true;
-		}
-	}
-	return false;
-}
-
-void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pGameObject)
+void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::shared_ptr<CCollider>& pColliderA, std::shared_ptr<CCollider>& pColliderB)
 {
 	// Collision Event
-	std::shared_ptr<CCollider> collider = GetComponent<CCollider>();
-	std::shared_ptr<CRigidBody> rigidBody = GetComponent<CRigidBody>();
-
-	std::shared_ptr<CCollider> otherCollider = pGameObject->GetComponent<CCollider>();
-	std::shared_ptr<CRigidBody> otherRigidBody = pGameObject->GetComponent<CRigidBody>();
-
-	// 최소 거리 측정
-	XMFLOAT3 mtv = collider->GetCorrectionVector(otherCollider);
-
-	if (rigidBody && otherRigidBody)
-	{
-		XMFLOAT3 halfMTV = Vector3::ScalarProduct(mtv, 0.5f);
-		rigidBody->ApplyCorrection(halfMTV);
-	}
-	else if (rigidBody)
-	{
-		rigidBody->ApplyCorrection(mtv);
-	}
-	
-}
-
-void CGameObject::OnCollision(std::shared_ptr<CCollider>& pCollider)
-{
-	// Collision Event
-	std::shared_ptr<CCollider> collider = GetComponent<CCollider>();
+	std::shared_ptr<CCollider> collider = pColliderA;
 	if (nullptr == collider) return;
 
 	std::shared_ptr<CRigidBody> rigidBody = GetComponent<CRigidBody>();
-	std::shared_ptr<CRigidBody> pOtherRigidBody = pCollider->gameObject->GetComponent<CRigidBody>();
+	std::shared_ptr<CRigidBody> pOtherRigidBody = pObjectB->GetComponent<CRigidBody>();
 	
 	{
-		std::string DebugOutput = "Collision Detected: " + GetName() + " <-> " + pCollider->gameObject->GetName() + "\n";
+		std::string DebugOutput = "Collision Solve: " + GetName() + " <-> " + pObjectB->GetName() + "\n";
 		OutputDebugStringA(DebugOutput.c_str());
 	}
+
 	// 최소 거리 측정
-	XMFLOAT3 mtv = collider->GetCorrectionVector(pCollider);
+	// TODO : 의도대로 대도록 수정 필요
+	XMFLOAT3 mtv = collider->GetCorrectionVector(pColliderB);
 	if (rigidBody)
 	{
 		if (pOtherRigidBody)
@@ -309,7 +244,6 @@ void CGameObject::OnCollision(std::shared_ptr<CCollider>& pCollider)
 		else rigidBody->ApplyCorrection(mtv);
 	}
 }
-
 
 BoundingBox CGameObject::GetMergedMeshBound(BoundingBox* pVolume)
 {
@@ -1099,15 +1033,6 @@ void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 				pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(pd3dDevice, pd3dCommandList, xStart, zStart, nBlockWidth, nBlockLength, xmf3Scale, xmf4Color, m_pHeightMapImage.get());
 				pHeightMapGameObject->SetMesh(pHeightMapGridMesh);
 				SetChild(pHeightMapGameObject);
-
-				std::string debugoutput =
-					pHeightMapGameObject->GetName()
-					+ " " + std::to_string(xStart) 
-					+ ", " + std::to_string(zStart) 
-					+ ", cxBlocks = " + std::to_string(cxBlocks)
-					+ ", czBlocks = " + std::to_string(czBlocks)
-					+ "\n";
-				OutputDebugStringA(debugoutput.c_str());
 			}
 		}
 	}

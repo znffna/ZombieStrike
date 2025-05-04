@@ -162,6 +162,11 @@ inline void Normalize(float& fValue, float& delta, float fMin, float fMax) { fVa
 
 namespace Vector3
 {
+	inline XMFLOAT3 Zero()
+	{
+		return(XMFLOAT3{0.0f, 0.0f, 0.0f});
+	}
+
 	inline bool IsZero(const XMFLOAT3& xmf3Vector)
 	{
 		if (::IsZero(xmf3Vector.x) && ::IsZero(xmf3Vector.y) && ::IsZero(xmf3Vector.z)) return(true);

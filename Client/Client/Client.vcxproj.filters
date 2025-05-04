@@ -30,11 +30,14 @@
     <Filter Include="소스 파일\Network">
       <UniqueIdentifier>{bd8ca0a7-bd93-4e59-bf3d-f26e455ac2dc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Util">
+      <UniqueIdentifier>{9d846db7-e30a-4bc4-a3ce-f981935422e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Game\Framework">
+      <UniqueIdentifier>{7a21e7ff-6570-4fd6-a2f2-8e3515d7f794}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Component.h">
-      <Filter>소스 파일\Component</Filter>
-    </ClInclude>
     <ClInclude Include="Camera.h">
       <Filter>소스 파일\Component</Filter>
     </ClInclude>
@@ -59,9 +62,6 @@
     <ClInclude Include="Shader.h">
       <Filter>소스 파일\Resource</Filter>
     </ClInclude>
-    <ClInclude Include="Scene.h">
-      <Filter>소스 파일\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="RenderConfig.h">
       <Filter>소스 파일\Resource</Filter>
     </ClInclude>
@@ -83,16 +83,7 @@
     <ClInclude Include="AnimationSet.h">
       <Filter>소스 파일\Resource</Filter>
     </ClInclude>
-    <ClInclude Include="GameObject.h">
-      <Filter>소스 파일\GameObject</Filter>
-    </ClInclude>
     <ClInclude Include="Client.h">
-      <Filter>소스 파일\Game</Filter>
-    </ClInclude>
-    <ClInclude Include="GameFramework.h">
-      <Filter>소스 파일\Game</Filter>
-    </ClInclude>
-    <ClInclude Include="GameTimer.h">
       <Filter>소스 파일\Game</Filter>
     </ClInclude>
     <ClInclude Include="AnimationController.h">
@@ -119,11 +110,23 @@
     <ClInclude Include="CollisionChecker.h">
       <Filter>소스 파일\GameObject</Filter>
     </ClInclude>
+    <ClInclude Include="GameTimer.h">
+      <Filter>소스 파일\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="GameFramework.h">
+      <Filter>소스 파일\Game\Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="GameObject.h">
+      <Filter>소스 파일\Game\Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene.h">
+      <Filter>소스 파일\Game\Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="Component.h">
+      <Filter>소스 파일\Game\Framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Component.cpp">
-      <Filter>소스 파일\Component</Filter>
-    </ClCompile>
     <ClCompile Include="Camera.cpp">
       <Filter>소스 파일\Component</Filter>
     </ClCompile>
@@ -141,9 +144,6 @@
     </ClCompile>
     <ClCompile Include="Shader.cpp">
       <Filter>소스 파일\Resource</Filter>
-    </ClCompile>
-    <ClCompile Include="Scene.cpp">
-      <Filter>소스 파일\Scene</Filter>
     </ClCompile>
     <ClCompile Include="RenderConfig.cpp">
       <Filter>소스 파일\Resource</Filter>
@@ -166,16 +166,7 @@
     <ClCompile Include="AnimationSet.cpp">
       <Filter>소스 파일\Resource</Filter>
     </ClCompile>
-    <ClCompile Include="GameObject.cpp">
-      <Filter>소스 파일\GameObject</Filter>
-    </ClCompile>
     <ClCompile Include="Client.cpp">
-      <Filter>소스 파일\Game</Filter>
-    </ClCompile>
-    <ClCompile Include="GameFramework.cpp">
-      <Filter>소스 파일\Game</Filter>
-    </ClCompile>
-    <ClCompile Include="GameTimer.cpp">
       <Filter>소스 파일\Game</Filter>
     </ClCompile>
     <ClCompile Include="AnimationController.cpp">
@@ -201,6 +192,21 @@
     </ClCompile>
     <ClCompile Include="CollisionChecker.cpp">
       <Filter>소스 파일\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="GameTimer.cpp">
+      <Filter>소스 파일\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="GameFramework.cpp">
+      <Filter>소스 파일\Game\Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="GameObject.cpp">
+      <Filter>소스 파일\Game\Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene.cpp">
+      <Filter>소스 파일\Game\Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="Component.cpp">
+      <Filter>소스 파일\Game\Framework</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

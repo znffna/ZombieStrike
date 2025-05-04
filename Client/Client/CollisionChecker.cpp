@@ -31,8 +31,9 @@ void CCollisionChecker::Update(float fTimeElapsed)
 
 void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObject::Layer, CGameObject::Layer>>& ppObjectLayerPairs)
 {
-	auto& ppObjects = m_pScene->GetObjects();
-	std::vector<std::pair<std::shared_ptr<CGameObject>, std::shared_ptr<CCollider>>> ppCollidedPairs;
+	auto& ppObjects = m_pScene->GetObjects();	
+
+	std::vector<CollisionInfo> ppCollidedPairs;
 	for (auto& ppLayerPair : ppObjectLayerPairs) {
 		auto& pObjectsA = ppObjects[ppLayerPair.first];
 		auto& pObjectsB = ppObjects[ppLayerPair.second];
@@ -56,8 +57,7 @@ void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObjec
 				for (auto& pColliderA : pCollidersA) {
 					for (auto& pColliderB : pCollidersB) {
 						if (IsCollided(pColliderA, pColliderB)) {
-							ppCollidedPairs.push_back(std::make_pair(pObjectA, pColliderB));
-							ppCollidedPairs.push_back(std::make_pair(pObjectB, pColliderA));
+							ppCollidedPairs.emplace_back(pObjectA, pObjectB, pColliderA, pColliderB);
 							//pObjectA->OnCollision(pColliderB);
 							//pObjectB->OnCollision(pColliderA);
 						}
@@ -66,9 +66,9 @@ void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObjec
 			}
 		}
 	}
-	for (auto& ppCollidedPair : ppCollidedPairs)
+	for (auto& ppCollisionInfo : ppCollidedPairs)
 	{
-		ppCollidedPair.first->OnCollision(ppCollidedPair.second);
+		ppCollisionInfo.pObjectA->OnCollision(ppCollisionInfo.pObjectB, ppCollisionInfo.pColliderA, ppCollisionInfo.pColliderB);
 	}
 }
 
@@ -78,13 +78,7 @@ void CCollisionChecker::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 bool CCollisionChecker::IsCollided(std::shared_ptr<CCollider>& colliderA, std::shared_ptr<CCollider>& colliderB)
 {
-	bool result = colliderA->IsCollided(colliderB);
-	if(result)
-	{
-		std::string DebugOutput = "Collision Detected: " + colliderA->gameObject->GetName() + " <-> " + colliderB->gameObject->GetName() + "\n";
-		OutputDebugStringA(DebugOutput.c_str());
-	}
-	return result;
+	return colliderA->IsCollided(colliderB);
 }
 
 

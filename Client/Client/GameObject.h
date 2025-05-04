@@ -115,9 +115,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 
 	// Object Collision
-	virtual bool IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth = 0);// Collision Check
-	virtual void OnCollision(std::shared_ptr<CGameObject>& pGameObject); // Collision Event
-	virtual void OnCollision(std::shared_ptr<CCollider>& pCollider); // Collision Event
+	virtual void OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::shared_ptr<CCollider>& pColliderA, std::shared_ptr<CCollider>& pColliderB); // Collision Event
 
 	BoundingBox GetMeshBound() {
 		if (m_pMesh) return m_pMesh->GetBoundingBox();

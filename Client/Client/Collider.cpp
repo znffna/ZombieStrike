@@ -83,6 +83,29 @@ bool CSphereCollider::IsCollided(CCollider* pCollider)
 	return false;
 }
 
+XMFLOAT3 CSphereCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
+{
+	if (pCollider->GetColliderType() == ColliderType::OBB)
+	{
+		return CalculateSphere_MTV(
+			GetCenter(), GetExtends(), 
+			pCollider->GetCenter(), pCollider->GetExtends());
+	}
+	else if (pCollider->GetColliderType() == ColliderType::AABB)
+	{
+		return CalculateSphere_MTV(
+			GetCenter(), GetExtends(),
+			pCollider->GetCenter(), pCollider->GetExtends()
+		);
+	}
+	else {
+		return CalculateSphere_MTV(
+			GetCenter(), GetExtends(),
+			pCollider->GetCenter(), pCollider->GetExtends()
+		);
+	}
+}
+
 XMFLOAT4X4 CSphereCollider::GetColliderMatrix()
 {
 	XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
@@ -144,6 +167,28 @@ XMFLOAT4X4 CAABBCollider::GetColliderMatrix()
 	return xmf4x4box;
 }
 
+XMFLOAT3 CAABBCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
+{
+	if (pCollider->GetColliderType() == ColliderType::OBB)
+	{
+		return CalculateOBB_MTV(GetCenter(), GetExtends(), GetOrientation(),
+			pCollider->GetCenter(), pCollider->GetExtends(), pCollider->GetOrientation());
+	}
+	else if (pCollider->GetColliderType() == ColliderType::AABB)
+	{
+		return CalculateAABB_MTV(
+			GetCenter(), GetExtends(), 
+			pCollider->GetCenter(), pCollider->GetExtends()
+		);
+	}
+	else {
+		return CalculateSphere_MTV(
+			GetCenter(), GetExtends(),
+			pCollider->GetCenter(), pCollider->GetExtends()
+		);
+	}
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 
@@ -187,6 +232,29 @@ bool COBBCollider::IsCollided(CCollider* pCollider)
 	return false;
 }
 
+XMFLOAT3 COBBCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
+{
+	if (pCollider->GetColliderType() == ColliderType::OBB)
+	{
+		return CalculateOBB_MTV(m_xmWorldBoundingOrientedBox.Center, m_xmWorldBoundingOrientedBox.Extents, m_xmWorldBoundingOrientedBox.Orientation,
+			pCollider->GetCenter(), pCollider->GetExtends(), pCollider->GetOrientation());
+	}
+	else if (pCollider->GetColliderType() == ColliderType::AABB)
+	{
+		return CalculateAABB_MTV(
+			m_xmWorldBoundingOrientedBox.Center, m_xmWorldBoundingOrientedBox.Extents,
+			pCollider->GetCenter(), pCollider->GetExtends()
+		);
+	}
+	else {
+		return CalculateSphere_MTV(
+			m_xmWorldBoundingOrientedBox.Center, m_xmWorldBoundingOrientedBox.Extents,
+			pCollider->GetCenter(), pCollider->GetExtends()
+		);
+	}
+	return XMFLOAT3();
+}
+
 XMFLOAT4X4 COBBCollider::GetColliderMatrix()
 {
 	XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
@@ -197,8 +265,33 @@ XMFLOAT4X4 COBBCollider::GetColliderMatrix()
 	return xmf4x4box;
 }
 
+XMFLOAT3 CalculateSphere_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, const XMFLOAT3& centerB, const XMFLOAT3& extentB)
+{
+	XMVECTOR aCenter = XMLoadFloat3(&centerA);
+	XMVECTOR bCenter = XMLoadFloat3(&centerB);
+	XMVECTOR d = bCenter - aCenter;
+
+	float lengthA = XMVectorGetX(XMVector3Length(XMLoadFloat3(&extentA)));
+	float lengthB = XMVectorGetX(XMVector3Length(XMLoadFloat3(&extentB)));
+
+	float dist = XMVectorGetX(XMVector3Length(d));
+	float overlap = (lengthA + lengthB) - dist;
+
+	if (overlap <= 0.0f || dist == 0.0f) {
+		// 충돌하지 않거나 완전히 겹침 (위치 동일)
+		return XMFLOAT3(0, 0, 0);
+	}
+
+	XMVECTOR mtvDir = XMVector3Normalize(d);
+	XMVECTOR mtv = mtvDir * overlap;
+
+	XMFLOAT3 result;
+	XMStoreFloat3(&result, mtv);
+	return result;
+}
+
 // 반환값: MTV 벡터 (겹침 없으면 {0, 0, 0})
-XMFLOAT3 GetAABB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA,
+XMFLOAT3 CalculateAABB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA,
 	const XMFLOAT3& centerB, const XMFLOAT3& extentB)
 {
 	float dx = centerB.x - centerA.x;
@@ -228,13 +321,103 @@ XMFLOAT3 GetAABB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA,
 		return { 0.0f, 0.0f, dz < 0 ? pz : -pz };
 }
 
+XMFLOAT3 CalculateOBB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, const XMFLOAT4& orientationA, const XMFLOAT3& centerB, const XMFLOAT3& extentB, const XMFLOAT4& orientationB)
+{
+	float minOverlap = FLT_MAX;
+	XMVECTOR mtvAxis = XMVectorZero();
+
+	XMVECTOR aCenter = XMLoadFloat3(&centerA);
+	XMVECTOR bCenter = XMLoadFloat3(&centerB);
+	XMVECTOR d = bCenter - aCenter;
+
+	// 쿼터니언 → 축 변환
+	XMVECTOR qA = XMLoadFloat4(&orientationA);
+	XMVECTOR qB = XMLoadFloat4(&orientationB);
+
+	XMMATRIX rotA = XMMatrixRotationQuaternion(qA);
+	XMMATRIX rotB = XMMatrixRotationQuaternion(qB);
+
+	XMVECTOR aAxes[3] = {
+		XMVector3Normalize(rotA.r[0]), // X축
+		XMVector3Normalize(rotA.r[1]), // Y축
+		XMVector3Normalize(rotA.r[2])  // Z축
+	};
+	XMVECTOR bAxes[3] = {
+		XMVector3Normalize(rotB.r[0]),
+		XMVector3Normalize(rotB.r[1]),
+		XMVector3Normalize(rotB.r[2])
+	};
+
+	XMVECTOR axes[15];
+	int axisCount = 0;
+
+	// A의 3축
+	for (int i = 0; i < 3; ++i) axes[axisCount++] = aAxes[i];
+	// B의 3축
+	for (int i = 0; i < 3; ++i) axes[axisCount++] = bAxes[i];
+	// A x B 교차축 9개
+	for (int i = 0; i < 3; ++i) {
+		for (int j = 0; j < 3; ++j) {
+			XMVECTOR cross = XMVector3Cross(aAxes[i], bAxes[j]);
+			if (!XMVector3NearEqual(cross, XMVectorZero(), XMVectorReplicate(1e-6f))) {
+				axes[axisCount++] = XMVector3Normalize(cross);
+			}
+		}
+	}
+
+	// SAT 검사 시작
+	for (int i = 0; i < axisCount; ++i) {
+		XMVECTOR axis = axes[i];
+		if (XMVector3Equal(axis, XMVectorZero()))
+			continue;
+
+		// Projection lengths
+		float projA = 0.0f, projB = 0.0f;
+
+		projA += fabsf(extentA.x * XMVectorGetX(XMVector3Dot(axis, aAxes[0])));
+		projA += fabsf(extentA.y * XMVectorGetX(XMVector3Dot(axis, aAxes[1])));
+		projA += fabsf(extentA.z * XMVectorGetX(XMVector3Dot(axis, aAxes[2])));
+
+		projB += fabsf(extentB.x * XMVectorGetX(XMVector3Dot(axis, bAxes[0])));
+		projB += fabsf(extentB.y * XMVectorGetX(XMVector3Dot(axis, bAxes[1])));
+		projB += fabsf(extentB.z * XMVectorGetX(XMVector3Dot(axis, bAxes[2])));
+
+		float centerDist = fabsf(XMVectorGetX(XMVector3Dot(axis, d)));
+		float overlap = (projA + projB) - centerDist;
+
+		if (overlap <= 0.0f) {
+			// 축 하나라도 분리됨 → 충돌 아님
+			return XMFLOAT3(0, 0, 0);
+		}
+
+		if (overlap < minOverlap) {
+			minOverlap = overlap;
+			float sign = (XMVectorGetX(XMVector3Dot(axis, d)) < 0.0f) ? -1.0f : 1.0f;
+			mtvAxis = axis * sign;
+		}
+	}
+
+	// MTV 최종 계산
+	XMVECTOR mtv = XMVector3Normalize(mtvAxis) * minOverlap;
+	XMFLOAT3 result;
+	XMStoreFloat3(&result, mtv);
+
+	{
+		std::string debugStr = "MTV: " + std::to_string(result.x) + " " + std::to_string(result.y) + " " + std::to_string(result.z) + "\n";
+		OutputDebugStringA(debugStr.c_str());
+	}
+	return result;
+}
+
+
+
 XMFLOAT3 CCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
 {
 	XMFLOAT3 xmf3Center = GetCenter();
 	XMFLOAT3 xmf3OtherCenter = pCollider->GetCenter();
 
 	// 일단 거리기반으로 통일
-	return GetAABB_MTV(
+	return CalculateAABB_MTV(
 		xmf3Center, GetExtends(),
 		xmf3OtherCenter, pCollider->GetExtends()
 	);
