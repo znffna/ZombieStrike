@@ -537,6 +537,8 @@ void CGameFramework::AdvanceFrame()
 	// Swap Chain의 Back Buffer를 화면에 표시
 	m_pdxgiSwapChain->Present(0, 0);
 
+	++g_nFrameCount;
+
 	// 다음 Frame으로 이동
 	MoveToNextFrame();
 

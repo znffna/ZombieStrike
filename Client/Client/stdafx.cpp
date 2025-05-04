@@ -16,6 +16,8 @@ UINT gnCbvSrvDescriptorIncrementSize = 0;
 UINT gnRtvDescriptorIncrementSize = 0;
 UINT gnDsvDescriptorIncrementSize = 0;
 
+int g_nFrameCount;
+
 
 // Functions
 

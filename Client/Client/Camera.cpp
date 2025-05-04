@@ -125,25 +125,18 @@ void CCamera::GenerateProjectionMatrix(float aspectRatio, float fov, float nearZ
 
 void CCamera::Rotate(float x, float y, float z)
 {
-	m_fPitch += x;
-	Clamp(m_fPitch, -89.0f, 89.0f); // -90 ~ 90으로 제한
+	// 회전량 기록 및 제어
+	Clamp(m_fPitch, x, -89.0f, 89.0f); // -90 ~ 90으로 제한
+	Normalize(m_fYaw, y, -180.0f, 180.0f); // -180 ~ 180으로 조정
+	Normalize(m_fRoll, z, -180.0f, 180.0f); // -180 ~ 180으로 조정
 
-	m_fYaw += y;
-	Clamp(m_fYaw, -180.0f, 180.0f); // -180 ~ 180으로 제한
-
-	m_fRoll += z;
-	Clamp(m_fRoll, -180.0f, 180.0f); // -180 ~ 180으로 제한
-
-	XMVECTOR qX = XMQuaternionRotationAxis(XMLoadFloat3(&m_xmf3Right), XMConvertToRadians(x));
-	XMVECTOR qY = XMQuaternionRotationAxis(XMLoadFloat3(&m_xmf3Up), XMConvertToRadians(y));
-	XMVECTOR qZ = XMQuaternionRotationAxis(XMLoadFloat3(&m_xmf3Look), XMConvertToRadians(z));
-
-	XMFLOAT4 qIdentity = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	XMVECTOR qShift = XMLoadFloat4(&qIdentity);
-	qShift = XMQuaternionMultiply(qZ, qShift);
-	qShift = XMQuaternionMultiply(qY, qShift);
-	qShift = XMQuaternionMultiply(qX, qShift);
-	qShift = XMQuaternionNormalize(qShift); // 정규화
+	// 회전 적용
+	XMVECTOR qShift = XMQuaternionRotationRollPitchYaw(
+		XMConvertToRadians(x),
+		XMConvertToRadians(y),
+		XMConvertToRadians(z)
+	);
+	qShift = XMQuaternionNormalize(qShift);
 
 	XMVECTOR qCurrent = XMLoadFloat4(&m_xmf4Rotation);
 	qCurrent = XMQuaternionMultiply(qShift, qCurrent);
@@ -177,25 +170,21 @@ CThirdPersonCamera::~CThirdPersonCamera()
 
 void CThirdPersonCamera::Rotate(float x, float y, float z)
 {
-	m_fPitch += x;
-	if (m_fPitch > +89.0f) { x -= (m_fPitch - 89.0f); m_fPitch = +89.0f; }
-	if (m_fPitch < -89.0f) { x -= (m_fPitch + 89.0f); m_fPitch = -89.0f; }
-
-	m_fYaw += y;
-	Clamp(m_fYaw, -180.0f, 180.0f); // -180 ~ 180으로 제한
-
-	m_fRoll += z;
-	Clamp(m_fRoll, -180.0f, 180.0f); // -180 ~ 180으로 제한
+	Clamp(m_fPitch, x, -89.0f, 89.0f); // -90 ~ 90으로 제한
+	Normalize(m_fYaw, y, -180.0f, 180.0f); // -180 ~ 180으로 조정
+	Normalize(m_fRoll, z, -180.0f, 180.0f); // -180 ~ 180으로 조정
 }
 
 void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 {
-	if (m_pObject)
+	if (gameObject)
 	{
-		auto& pChaseTransform = m_pObject->m_pTransform;
+		auto& pChaseTransform = gameObject->m_pTransform;
+
 		// 카메라의 회전 행렬 계산
 		XMFLOAT4X4 xmf4x4Rotate = Matrix4x4::Identity();
-		XMFLOAT3 xmf3Right = pChaseTransform->GetRight();
+		XMStoreFloat4x4(&xmf4x4Rotate, XMMatrixRotationRollPitchYaw(XMConvertToRadians(m_fPitch), XMConvertToRadians(m_fYaw), XMConvertToRadians(m_fRoll))) ;
+		/*XMFLOAT3 xmf3Right = pChaseTransform->GetRight();
 		XMFLOAT3 xmf3Up = pChaseTransform->GetUp();
 		XMFLOAT3 xmf3Look = pChaseTransform->GetLook();
 		xmf4x4Rotate._11 = xmf3Right.x; xmf4x4Rotate._21 = xmf3Up.x; xmf4x4Rotate._31 = xmf3Look.x;
@@ -206,7 +195,7 @@ void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 		{
 			XMMATRIX xmmtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(m_fPitch), XMConvertToRadians(0.0f), XMConvertToRadians(0.0f));
 			xmf4x4Rotate = Matrix4x4::Multiply(xmmtxRotate, xmf4x4Rotate);
-		}
+		}*/
 
 		// 오브젝트 대비 상대적 위치 설정
 		XMFLOAT3 xmf3Offset = Vector3::TransformCoord(m_xmf3Offset, xmf4x4Rotate); // 상대적 위치에 회전 행렬 적용
@@ -237,7 +226,7 @@ void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 
 void CThirdPersonCamera::SetLookAt(const XMFLOAT3& vLookAt)
 {
-	XMFLOAT4X4 mtxLookAt = Matrix4x4::LookAtLH(m_xmf3Position, vLookAt, m_pObject? m_pObject->GetUpVector() : XMFLOAT3{0,1,0});
+	XMFLOAT4X4 mtxLookAt = Matrix4x4::LookAtLH(m_xmf3Position, vLookAt, gameObject? gameObject->GetUpVector() : XMFLOAT3{0,1,0});
 	m_xmf3Right = XMFLOAT3(mtxLookAt._11, mtxLookAt._21, mtxLookAt._31);
 	m_xmf3Up = XMFLOAT3(mtxLookAt._12, mtxLookAt._22, mtxLookAt._32);
 	m_xmf3Look = XMFLOAT3(mtxLookAt._13, mtxLookAt._23, mtxLookAt._33);

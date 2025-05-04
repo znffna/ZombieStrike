@@ -39,9 +39,6 @@ public:
 	std::shared_ptr<CTexture> GetTexture(const std::string& name) {
 		if (TextureInfos.find(name) != TextureInfos.end()) {
 			// 이미 로드된 모델이 있는 경우
-			std::string filepath = name + "이 재사용됨";
-			OutputDebugStringA(filepath.c_str());
-			OutputDebugStringA("\n");
 
 			return TextureInfos[name];
 		}
@@ -168,6 +165,12 @@ public:
 	{
 		m_d3dSrvCPUDescriptorStartHandle.ptr = NULL;
 		m_d3dSrvGPUDescriptorStartHandle.ptr = NULL;
+		m_d3dCbvCPUDescriptorStartHandle.ptr = NULL;
+		m_d3dCbvGPUDescriptorStartHandle.ptr = NULL;
+		m_d3dCbvCPUDescriptorNextHandle.ptr = NULL;
+		m_d3dCbvGPUDescriptorNextHandle.ptr = NULL;
+		m_d3dSrvCPUDescriptorNextHandle.ptr = NULL;
+		m_d3dSrvGPUDescriptorNextHandle.ptr = NULL;
 	};
 	virtual ~CDescirptorHeap()
 	{
@@ -236,14 +239,14 @@ public:
 
 	// Object Management
 	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
-	virtual void AddHierarchicalObject(const std::shared_ptr<CGameObject>& pHierarchicalObject);
-	virtual void RemoveObject(std::shared_ptr<CGameObject> pObject);
+	virtual void AddObjects(const std::vector<std::shared_ptr<CGameObject>>& pObjects);
+	virtual void RemoveObject(const std::shared_ptr<CGameObject>& pObject);
+	std::unordered_map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>>& GetObjects() { return m_ppGameObjects; }
 
 	void SetPlayer(std::shared_ptr<CPlayer> pPlayer);
 
 	// Scene Method
 	virtual void Update(float deltaTime);
-	void CollisionsCheck();
 
 	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
@@ -305,8 +308,7 @@ protected:
 	float								m_fElapsedTime = 0.0f;
 
 	// GameObjects
-	std::vector<std::shared_ptr<CGameObject>> m_ppObjects;
-	std::vector<std::shared_ptr<CGameObject>> m_ppHierarchicalObjects;
+	std::unordered_map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>> m_ppGameObjects;
 
 	// SkyBox
 	std::shared_ptr<CGameObject> m_pSkyBox;
@@ -342,7 +344,6 @@ public:
 
 	// ObjectPool
 	std::vector<std::shared_ptr<CZombieObject>> m_pZombiePool;
-
 	void StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount);
 	std::shared_ptr<CZombieObject> GetZombie(int nSkinType = 0);;
 
