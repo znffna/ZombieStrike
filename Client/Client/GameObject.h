@@ -61,6 +61,18 @@ struct CB_GAMEOBJECT_INFO
 class CGameObject : public std::enable_shared_from_this<CGameObject>
 {
 public:
+	enum Layer {
+		LAYER_DEFUALT = 0,
+		LAYER_ENEMY,
+		LAYER_PLAYER,
+		LAYER_BULLET,
+		LAYER_SKYBOX,
+		LAYER_TERRAIN,
+		LAYER_CONTROLLER,
+		LAYER_UI,
+	};
+	
+public:
 	CGameObject();
 	CGameObject(const std::string& strName);
 	virtual ~CGameObject();
@@ -69,7 +81,7 @@ public:
 	void Init(); 
 
 	// Object Initialization
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList) {};
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {};
 	virtual void GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs);;
 	static std::shared_ptr<CGameObject> CreateObject() { return std::make_shared<CGameObject>(); }
 
@@ -81,10 +93,11 @@ public:
 	UINT GetObjectID() { return m_nObjectID; }
 	void SetObjectID(UINT nObjectID) { m_nObjectID = nObjectID; }
 
-	// Object Name
 	std::string GetName() { return m_strName; }
 	void SetName(const std::string& strName);
 	virtual std::string GetDefaultName() { return "CGameObject"; }
+
+	virtual Layer GetLayer() { return LAYER_DEFUALT; }
 
 	// 상속 관계
 	std::shared_ptr<CGameObject> GetParent() { return m_pParent.lock(); }
@@ -289,7 +302,7 @@ public:
 	virtual ~CRotatingObject();
 
 	// Object Initialization
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList);
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandlist);
 	virtual std::string GetDefaultName() override { return "CRotatingObject"; } 
 
 	static std::shared_ptr<CRotatingObject> Create(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList);
