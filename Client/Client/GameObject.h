@@ -63,11 +63,11 @@ class CGameObject : public std::enable_shared_from_this<CGameObject>
 public:
 	enum Layer {
 		LAYER_DEFUALT = 0,
+		LAYER_SKYBOX,
+		LAYER_TERRAIN,
 		LAYER_ENEMY,
 		LAYER_PLAYER,
 		LAYER_BULLET,
-		LAYER_SKYBOX,
-		LAYER_TERRAIN,
 		LAYER_CONTROLLER,
 		LAYER_UI,
 	};
@@ -305,7 +305,7 @@ public:
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandlist);
 	virtual std::string GetDefaultName() override { return "CRotatingObject"; } 
 
-	static std::shared_ptr<CRotatingObject> Create(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList);
+	static std::shared_ptr<CRotatingObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	// Object Update
 	virtual void Update(float fTimeElapsed) override;

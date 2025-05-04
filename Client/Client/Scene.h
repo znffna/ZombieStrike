@@ -236,8 +236,7 @@ public:
 
 	// Object Management
 	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
-	virtual void AddHierarchicalObject(const std::shared_ptr<CGameObject>& pHierarchicalObject);
-	virtual void RemoveObject(std::shared_ptr<CGameObject> pObject);
+	virtual void RemoveObject(const std::shared_ptr<CGameObject>& pObject);
 
 	void SetPlayer(std::shared_ptr<CPlayer> pPlayer);
 
@@ -305,8 +304,7 @@ protected:
 	float								m_fElapsedTime = 0.0f;
 
 	// GameObjects
-	std::vector<std::shared_ptr<CGameObject>> m_ppObjects;
-	std::vector<std::shared_ptr<CGameObject>> m_ppHierarchicalObjects;
+	std::unordered_map<CGameObject::Layer, std::vector<std::shared_ptr<CGameObject>>> m_ppGameObjects;
 
 	// SkyBox
 	std::shared_ptr<CGameObject> m_pSkyBox;

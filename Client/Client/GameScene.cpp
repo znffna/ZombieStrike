@@ -20,11 +20,13 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	// Skybox
 	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
+	AddObject(m_pSkyBox);
 
 	// Terrain
 	XMFLOAT3 xmf3Scale(1.0f, 32.0f / 255.0f, 1.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
 	m_pTerrain = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.bin"), _T("Terrain/terrain.raw"), 1025, 1025, 65, 65, xmf3Scale, xmf4Color);
+	AddObject(m_pTerrain);
 	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 1025, 1025, 65, 65, xmf3Scale, xmf4Color);
 	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
 
@@ -32,12 +34,12 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	std::shared_ptr<CGameObject> pGameObject;
 	pGameObject = CCubeObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature);
 	pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 10.0f));
-	m_ppObjects.push_back(pGameObject);
+	AddObject(pGameObject);
 
 	// Player 생성
 	std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2);
 	pPlayer->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 0.0f));
-	m_ppHierarchicalObjects.push_back(pPlayer);
+	AddObject(pPlayer);
 	m_pPlayer = pPlayer;
 
 	// Zombie Object
@@ -48,6 +50,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	pMap->m_pModelRootObject->UpdateTransform();
 	m_pMap = pMap->m_pModelRootObject;
 	m_pMap->Update(0.0f);
+	AddObject(m_pMap);
 
 	//// Default Camera 위치 수정
 	//m_pCamera->SetPosition(Vector3::Add(pPlayer->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));

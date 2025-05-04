@@ -914,7 +914,7 @@ CRotatingObject::~CRotatingObject()
 {
 }
 
-void CRotatingObject::Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandlist)
+void CRotatingObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandlist)
 {
 	CGameObject::Initialize(pd3dDevice, pd3dCommandlist);
 
@@ -922,7 +922,7 @@ void CRotatingObject::Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd
 	m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);
 }
 
-std::shared_ptr<CRotatingObject> CRotatingObject::Create(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList)
+std::shared_ptr<CRotatingObject> CRotatingObject::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	std::shared_ptr<CRotatingObject> pRotatingObject = std::make_shared<CRotatingObject>();
 	pRotatingObject->Initialize(pd3dDevice, pd3dCommandList);
