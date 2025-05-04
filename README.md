@@ -20,12 +20,14 @@
 | 완료 | 맵 추출 및 Load 작성 | 4월 2주차 | 맵의 데이터에 Collider 정보 추출 필요
 | 완료 | Collider 작성 및 출력 | 4월 3주차 | Collider를 다루는 별도 Container 사용 여부 결정 필요
 | 완료 | Model의 meshBound 바탕 Collider Merge | 4월 4주차 | 해당 요소로 Shadow Map 생성 로직 필요
-| 진행중 | Network I/O to Client | 4월 5주차 |
+| 완료 | Network I/O to Client | 4월 5주차 |
+| 완료 | CollisionCheck 처리 구현 및 Player / Animation에 Pitch 회전 구현 | 5월 1주차 | 
+| 진행중 | Shadow 렌더링 작성 | 5월 2주차 |
 | 시작전 | 총 및 총알 작성 |  |
 | 시작전 | HP class 작성 및 적용 |  |
 | 시작전 | Scene Change |  |
-| 시작전 | Shadow 렌더링 작성 |  |
 | 시작전 | 사격 피드백 적용 |  |
+| 시작전 | Shadow 렌더링 작성 |  |
 
 
 ## Server
