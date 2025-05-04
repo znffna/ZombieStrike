@@ -24,10 +24,9 @@ public:
 
 	virtual void Update(float fTimeElapsed) { }
 
+	CGameObject* gameObject; // Owner Object
 protected:
-	CGameObject* m_pObject; // Owner Object
 	bool m_bActive; // Active Flag
-
 public:
 	void SetActive(bool bActive) { m_bActive = bActive; }
 	bool IsActive() const { return m_bActive; }

@@ -117,6 +117,7 @@ public:
 	// Object Collision
 	virtual bool IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth = 0);// Collision Check
 	virtual void OnCollision(std::shared_ptr<CGameObject>& pGameObject); // Collision Event
+	virtual void OnCollision(std::shared_ptr<CCollider>& pCollider); // Collision Event
 
 	BoundingBox GetMergedMeshBound(BoundingBox* pVolume = nullptr);
 	void UpdateLocalBoundingBox(const XMFLOAT4X4& pParentTransform = Matrix4x4::Identity());

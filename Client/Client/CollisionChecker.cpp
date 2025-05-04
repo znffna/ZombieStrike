@@ -37,16 +37,19 @@ void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObjec
 		auto& pObjectsB = ppObjects[ppLayerPair.second];
 		for (auto& pObjectA : pObjectsA) {
 			for (auto& pObjectB : pObjectsB) {
+				// 여기서의 Object는 RootObject임을 기억.
 				auto pCollidersA = pObjectA->GetComponents<CCollider>();
 				auto pCollidersB = pObjectB->GetComponents<CCollider>();
 				// TODO : 이떄 IsCollided를 CollisionChecker의 멤버함수로 작성
 				// TODO : 이때 로직 수행을 바로 하지 않고 따로 pair를 저장한 이후 batch 처리 생각할 것.
-				/*
-				if (pObjectA->IsCollided(pObjectB)) {
-					pObjectA->OnCollision(pObjectB);
-					pObjectB->OnCollision(pObjectA);
+				for (auto& pColliderA : pCollidersA) {
+					for (auto& pColliderB : pCollidersB) {
+						if (pColliderA->IsCollided(pColliderB)) {
+							pObjectA->OnCollision(pColliderB);
+							pObjectB->OnCollision(pColliderA);
+						}
+					}
 				}
-				*/
 			}
 		}
 	}

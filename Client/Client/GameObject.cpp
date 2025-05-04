@@ -184,7 +184,8 @@ void CGameObject::UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix)
 
 void CGameObject::Update(float fTimeElapsed)
 {
-	// Component Update // 순서좀 생각해야 될 듯?
+	// Component Update 
+	// TODO : 순서좀 생각해야 될 듯?
 	for (auto& pComponent : m_pComponents)
 	{
 		pComponent->Update(fTimeElapsed);
@@ -266,6 +267,28 @@ void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pGameObject)
 	}
 	
 }
+
+void CGameObject::OnCollision(std::shared_ptr<CCollider>& pCollider)
+{
+	// Collision Event
+	std::shared_ptr<CCollider> collider = GetComponent<CCollider>();
+	std::shared_ptr<CRigidBody> rigidBody = GetComponent<CRigidBody>();
+	std::shared_ptr<CRigidBody> pOtherRigidBody = pCollider->gameObject->GetComponent<CRigidBody>();
+	
+	// 최소 거리 측정
+	XMFLOAT3 mtv = collider->GetCorrectionVector(pCollider);
+	if (rigidBody)
+	{
+		if (pOtherRigidBody)
+		{
+			XMFLOAT3 halfMTV = Vector3::ScalarProduct(mtv, 0.5f);
+			rigidBody->ApplyCorrection(halfMTV);
+			pOtherRigidBody->ApplyCorrection(Vector3::ScalarProduct(mtv, -0.5f));
+		}
+		else rigidBody->ApplyCorrection(mtv);
+	}
+}
+
 
 BoundingBox CGameObject::GetMergedMeshBound(BoundingBox* pVolume)
 {
@@ -354,7 +377,9 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	}
 
 	if (g_bRenderCollider) {
-		if (auto pCollider = GetComponent<CCollider>())
+		auto pColliders = GetComponents<CCollider>();
+
+		for (auto pCollider : pColliders)
 		{
 			// Update Shader Variables
 			XMFLOAT4X4 xmf4x4World;
@@ -707,7 +732,7 @@ bool CGameObject::CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, st
 		// TODO : 여기서 생성하여 주는 Collider는 Model Collider이기에 Model Colldier를 변수로 추가해야 한다.
 		
 		pGameObject->m_pModelCollider.SetCollider(pLoadModel->m_MeshBoundingBox); // Mesh Bounding Box 설정
-		// auto pCollider = pGameObject->CreateComponent<CAABBCollider>(pGameObject); // Collider 추가
+		// auto pCollider = pCollider->CreateComponent<CAABBCollider>(pCollider); // Collider 추가
 		// pCollider->SetCollider(pLoadModel->m_MeshBoundingBox); // Collider 설정
 		
 		// /TODO
@@ -823,7 +848,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		{
 			std::string strModelName;
 			::ReadStringFromFile(file, strModelName);
-			//if (strModelName == pGameObject->m_strName) continue;
+			//if (strModelName == pCollider->m_strName) continue;
 			if (isGetModel) continue;
 			CloneByModel(strModelName, pGameObject);
 		}

@@ -177,9 +177,9 @@ void CThirdPersonCamera::Rotate(float x, float y, float z)
 
 void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 {
-	if (m_pObject)
+	if (gameObject)
 	{
-		auto& pChaseTransform = m_pObject->m_pTransform;
+		auto& pChaseTransform = gameObject->m_pTransform;
 
 		// 카메라의 회전 행렬 계산
 		XMFLOAT4X4 xmf4x4Rotate = Matrix4x4::Identity();
@@ -226,7 +226,7 @@ void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 
 void CThirdPersonCamera::SetLookAt(const XMFLOAT3& vLookAt)
 {
-	XMFLOAT4X4 mtxLookAt = Matrix4x4::LookAtLH(m_xmf3Position, vLookAt, m_pObject? m_pObject->GetUpVector() : XMFLOAT3{0,1,0});
+	XMFLOAT4X4 mtxLookAt = Matrix4x4::LookAtLH(m_xmf3Position, vLookAt, gameObject? gameObject->GetUpVector() : XMFLOAT3{0,1,0});
 	m_xmf3Right = XMFLOAT3(mtxLookAt._11, mtxLookAt._21, mtxLookAt._31);
 	m_xmf3Up = XMFLOAT3(mtxLookAt._12, mtxLookAt._22, mtxLookAt._32);
 	m_xmf3Look = XMFLOAT3(mtxLookAt._13, mtxLookAt._23, mtxLookAt._33);
