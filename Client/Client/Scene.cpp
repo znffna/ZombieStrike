@@ -214,84 +214,6 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
 }
 
-void CScene::CollisionsCheck()
-{
-	//for (auto& pObject : m_ppGameObjects)
-	//{
-	//	for (auto& pOtherObject : m_ppGameObjects)
-	//	{
-	//		if (pObject != pOtherObject)
-	//		{
-	//			if (pObject->IsCollided(pOtherObject)) {
-	//				pObject->OnCollision(pOtherObject);
-	//				pOtherObject->OnCollision(pObject);
-	//			}
-	//		}
-	//	}
-
-	//	for (auto& pOtherObject : m_ppHierarchicalObjects)
-	//	{
-	//		if (pObject != pOtherObject)
-	//		{
-	//			if (pObject->IsCollided(pOtherObject)) {
-	//				pObject->OnCollision(pOtherObject);
-	//				pOtherObject->OnCollision(pObject);
-	//			}
-	//		}
-	//	}
-
-	//	if (m_pMap)
-	//	{
-	//		// map은 root를 제외한 실제 맵 구성 Object들과 충돌처리를 해야한다.
-	//		auto mapObjects = m_pMap->GetChilds();
-	//		for (auto& pOtherObject : mapObjects)
-	//		{
-	//			if (pObject != pOtherObject)
-	//			{
-	//				if (pObject->IsCollided(pOtherObject)) {
-	//					pObject->OnCollision(pOtherObject);
-	//					pOtherObject->OnCollision(pObject);
-	//				}
-	//			}
-	//		}
-	//	}
-	//}
-
-	//for (auto& pObject : m_ppHierarchicalObjects)
-	//{
-	//	for (auto& pOtherObject : m_ppHierarchicalObjects)
-	//	{
-	//		if (pObject != pOtherObject)
-	//		{
-	//			if (pObject->IsCollided(pOtherObject)) {
-	//				pObject->OnCollision(pOtherObject);
-	//				pOtherObject->OnCollision(pObject);
-	//			}
-	//		}
-	//	}
-
-	//	if (m_pMap)
-	//	{
-	//		// map은 root를 제외한 실제 맵 구성 Object들과 충돌처리를 해야한다.
-	//		auto mapObjects = m_pMap->GetChilds(); 
-	//		for (auto& pOtherObject : mapObjects)
-	//		{
-	//			if (pObject != pOtherObject)
-	//			{
-	//				if (pObject->IsCollided(pOtherObject)) {
-	//					// 충돌처리
-	//					std::string DebugOutput = "Collision Detected: " + pObject->GetName() + " <-> " + pOtherObject->GetName() + "\n";
-	//					OutputDebugStringA(DebugOutput.c_str());
-
-	//					pObject->OnCollision(pOtherObject);
-	//					pOtherObject->OnCollision(pObject);
-	//				}
-	//			}
-	//		}
-	//	}
-	//}
-}
-
 void CScene::AddObject(const std::shared_ptr<CGameObject>& pObject)
 {
 	if (pObject)
@@ -333,15 +255,11 @@ void CScene::Update(float deltaTime)
 	// Update Matrix
 	for (auto& pvecObjects : m_ppGameObjects) for (auto& pObject : pvecObjects.second)  pObject->UpdateTransform();
 
-	if (m_pPlayer)
-	{
-		m_pPlayer->Update(deltaTime);
-		if (!m_pPlayer->m_pSkinnedAnimationController) m_pPlayer->UpdateTransform(nullptr);
-	}
-
-	// Check Collision	
-	CollisionsCheck();
-
+	//if (m_pPlayer)
+	//{
+	//	m_pPlayer->Update(deltaTime);
+	//	if (!m_pPlayer->m_pSkinnedAnimationController) m_pPlayer->UpdateTransform(nullptr);
+	//}
 }
 
 bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)

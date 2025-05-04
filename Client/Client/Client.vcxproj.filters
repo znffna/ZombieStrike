@@ -116,6 +116,9 @@
     <ClInclude Include="Player.h">
       <Filter>소스 파일\GameObject</Filter>
     </ClInclude>
+    <ClInclude Include="CollisionChecker.h">
+      <Filter>소스 파일\GameObject</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Component.cpp">
@@ -194,6 +197,9 @@
       <Filter>소스 파일\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Player.cpp">
+      <Filter>소스 파일\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="CollisionChecker.cpp">
       <Filter>소스 파일\GameObject</Filter>
     </ClCompile>
   </ItemGroup>

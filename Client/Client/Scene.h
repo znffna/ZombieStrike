@@ -237,12 +237,12 @@ public:
 	// Object Management
 	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
 	virtual void RemoveObject(const std::shared_ptr<CGameObject>& pObject);
+	std::unordered_map<CGameObject::Layer, std::vector<std::shared_ptr<CGameObject>>>& GetObjects() { return m_ppGameObjects; }
 
 	void SetPlayer(std::shared_ptr<CPlayer> pPlayer);
 
 	// Scene Method
 	virtual void Update(float deltaTime);
-	void CollisionsCheck();
 
 	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
@@ -340,7 +340,6 @@ public:
 
 	// ObjectPool
 	std::vector<std::shared_ptr<CZombieObject>> m_pZombiePool;
-
 	void StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount);
 	std::shared_ptr<CZombieObject> GetZombie(int nSkinType = 0);;
 
