@@ -239,6 +239,19 @@ public:
 		return result;
 	}
 
+	template <typename T>
+	void GetComponentsInChildren(std::vector<std::shared_ptr<T>>& pVec) const {
+		for (auto& pComponent : m_pComponents) {
+			if (auto casted = std::dynamic_pointer_cast<T>(pComponent)) {
+				pVec.push_back(casted);
+			}
+		}
+
+		for (auto& pChild : m_pChilds) {
+			pChild->GetComponentsInChildren<T>(pVec);
+		}
+	}
+
 	// Transform
 	const DirectX::XMFLOAT3 GetPosition() { return m_pTransform->GetPosition(); }
 	const DirectX::XMFLOAT3 GetRightVector() { return m_pTransform->GetRight(); }
@@ -284,13 +297,7 @@ public:
 
 	void UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
 	void UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix);
-	void UpdateTransform(std::shared_ptr<CGameObject>& pGameobject)
-	{
-		m_pTransform->UpdateTransform(pGameobject);
-
-		// Update Child
-		for (auto& pChild : m_pChilds) pChild->UpdateTransform(GetWorldMatrix());
-	}
+	void UpdateTransform(std::shared_ptr<CGameObject>& pGameobject);
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////

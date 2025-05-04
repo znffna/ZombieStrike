@@ -174,12 +174,27 @@ void CGameObject::UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
 { 
 	m_pTransform->UpdateTransform(xmf4x4ParentMatrix); 
 
+	auto pColliders = GetComponents<CCollider>();
+	if (pColliders.size())
+	{
+		XMFLOAT4X4 xmf4x4WorldMatrix = m_pTransform->GetWorldMatrix();
+		for (auto& pCollider : pColliders)
+		{
+			pCollider->UpdateCollider(xmf4x4WorldMatrix);
+		}
+	}
+
 	for (auto& pChild : m_pChilds) pChild->UpdateTransform(GetWorldMatrix());
 }
 
 void CGameObject::UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix)
 {
 	UpdateTransform(&xmf4x4ParentMatrix);
+}
+
+void CGameObject::UpdateTransform(std::shared_ptr<CGameObject>& pGameobject)
+{
+	UpdateTransform(pGameobject->GetWorldMatrix());
 }
 
 void CGameObject::Update(float fTimeElapsed)
@@ -275,6 +290,11 @@ void CGameObject::OnCollision(std::shared_ptr<CCollider>& pCollider)
 	std::shared_ptr<CRigidBody> rigidBody = GetComponent<CRigidBody>();
 	std::shared_ptr<CRigidBody> pOtherRigidBody = pCollider->gameObject->GetComponent<CRigidBody>();
 	
+	{
+		std::string DebugOutput = "Collision Detected: " + GetName() + " <-> " + pCollider->gameObject->GetName() + "\n";
+		OutputDebugStringA(DebugOutput.c_str());
+	}
+	if (nullptr == collider) return;
 	// 최소 거리 측정
 	XMFLOAT3 mtv = collider->GetCorrectionVector(pCollider);
 	if (rigidBody)
@@ -821,8 +841,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 				xmf3Extents = Vector3::ScalarProduct(xmf3Extents, 0.5f, false);
 
 				auto pCollider = pGameObject->CreateComponent<COBBCollider>(pGameObject);
-				BoundingOrientedBox OBB{ xmf3Center, xmf3Extents , xmf4Rotation };
-				pCollider->SetCollider(OBB);
+				pCollider->SetCollider(xmf3Center, xmf3Extents, xmf4Rotation);
 			}
 		}
 		else if (!strcmp(pstrToken, "<Children>:"))

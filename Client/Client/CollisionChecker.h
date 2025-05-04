@@ -7,7 +7,7 @@ class CScene;
 class CCollisionChecker : public CGameObject
 {
 public:
-	CCollisionChecker(std::shared_ptr<CScene>& pScene);
+	CCollisionChecker(CScene* pScene);
 	virtual ~CCollisionChecker();
 
 	virtual Layer GetLayer() { return LAYER_CONTROLLER; }
@@ -20,7 +20,7 @@ public:
 	// Object Render
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr) override;
 	// Object Collision
-	virtual bool IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth = 0) override;
+	virtual bool IsCollided(std::shared_ptr<CCollider>& colliderA, std::shared_ptr<CCollider>& colliderB);
 
 private:
 	CScene* m_pScene;

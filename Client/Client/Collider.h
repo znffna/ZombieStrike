@@ -43,17 +43,16 @@ public:
 
 	// setters  
 	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) = 0;  
-	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends) = 0;  
-	virtual void SetCollider(BoundingBox boundingBox) = 0;  
+	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends, const XMFLOAT4 & xmf4Orientation = XMFLOAT4{0,0,0,1}) = 0;
+	void SetCollider(const BoundingOrientedBox& boundingOrientedBox);
+	void SetCollider(const BoundingBox& boundingOrientedBox);
+
 
 	// methods  
 	virtual void Update(float fTimeElapsed) override;
 	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) = 0;
 	virtual bool IsCollided(CCollider* pCollider) = 0;  
 	virtual bool IsCollided(std::shared_ptr<CCollider> pCollider) { return IsCollided(pCollider.get()); };  
-
-	// reference members  
-	std::shared_ptr<const CTransform> m_pTransform;  
 };  
 
 //////////////////////////////////////////////////////////////////////////  
@@ -77,10 +76,10 @@ public:
 	const BoundingSphere GetBoundingVolume() { return m_xmWorldBoundingSphere; }  
 
 	// Setters  
-	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;  
-	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends) override;  
+	using CCollider::SetCollider;
+	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
+	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends, const XMFLOAT4 & xmf4Orientation = XMFLOAT4{ 0,0,0,1 }) override;
 	void SetCollider(const XMFLOAT3& xmf3Center, float fRadius);  
-	void SetCollider(BoundingBox boundingBox) override;  
 
 	// Methods  
 	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) override;;  
@@ -94,8 +93,9 @@ private:
 class CAABBCollider : public CCollider    
 {    
 public:    
-	CAABBCollider(CGameObject* pObject) : CCollider(pObject) {}    
-	virtual ~CAABBCollider() {}    
+
+	CAABBCollider(CGameObject* pObject) : CCollider(pObject) {}
+	virtual ~CAABBCollider() {}
 
 	// Clone    
 	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CAABBCollider>(*this); };    
@@ -107,9 +107,9 @@ public:
 	int GetColliderType() override { return ColliderType::AABB; }    
 
 	// Setters    
-	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;    
-	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents) override;    
-	void SetCollider(BoundingBox boundingBox) override;    
+	using CCollider::SetCollider;
+	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
+	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents, const XMFLOAT4 & xmf4Orientation = XMFLOAT4{ 0,0,0,1 }) override;
 
 	// Methods    
 	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) override;    
@@ -139,10 +139,10 @@ public:
 	int GetColliderType() override { return ColliderType::OBB; }    
 
 	// Setters    
-	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;    
-	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents) override;    
-	void SetCollider(const BoundingOrientedBox& OBB) { m_xmBoundingOrientedBox = OBB; };    
-	void SetCollider(BoundingBox boundingBox) override;    
+	using CCollider::SetCollider;
+	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
+	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents, const XMFLOAT4 & xmf4Orientation) override;    
+	//void SetCollider(const BoundingOrientedBox& OBB) { m_xmBoundingOrientedBox = OBB; };    
 
 	// Methods    
 	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) override;    

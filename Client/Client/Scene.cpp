@@ -223,6 +223,19 @@ void CScene::AddObject(const std::shared_ptr<CGameObject>& pObject)
 	}
 }
 
+void CScene::AddObjects(const std::vector<std::shared_ptr<CGameObject>>& pObjects)
+{
+	if (pObjects.empty()) return;
+	for (const auto& pObject : pObjects)
+	{
+		if (pObject)
+		{
+			m_ppGameObjects[pObject->GetLayer()].push_back(pObject);
+			pObject->SetActive(true);
+		}
+	}
+}
+
 void CScene::RemoveObject(const std::shared_ptr<CGameObject>& pObject)
 {
 	if (pObject)

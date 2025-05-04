@@ -13,16 +13,25 @@
 
 void CCollider::Init(CGameObject* pObject)
 {
-	m_pTransform = pObject->GetComponent<CTransform>();
 }
 
 
+void CCollider::SetCollider(const BoundingOrientedBox& boundingOrientedBox)
+{
+	SetCollider(boundingOrientedBox.Center, boundingOrientedBox.Extents, boundingOrientedBox.Orientation);
+}
+
+void CCollider::SetCollider(const BoundingBox& boundingOrientedBox)
+{
+	SetCollider(boundingOrientedBox.Center, boundingOrientedBox.Extents, XMFLOAT4{ 0, 0, 0, 1 });
+}
+
 void CCollider::Update(float fTimeElapsed)
 {
-	if (m_pTransform)
+	/*if (m_pTransform)
 	{
 		UpdateCollider(m_pTransform->GetWorldMatrix());
-	}
+	}*/
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -33,7 +42,7 @@ void CSphereCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
 	m_xmBoundingSphere = pMesh->GetBoundingSphere();
 }
 
-void CSphereCollider::SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends)
+void CSphereCollider::SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends, const XMFLOAT4& xmf4Orientation)
 {
 	m_xmBoundingSphere.Center = xmf3Center;
 	m_xmBoundingSphere.Radius = Vector3::Length(Extends);
@@ -84,11 +93,6 @@ XMFLOAT4X4 CSphereCollider::GetColliderMatrix()
 	return xmf4x4box;
 }
 
-void CSphereCollider::SetCollider(BoundingBox boundingBox)
-{
-	SetCollider(boundingBox.Center, boundingBox.Extents);
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 //
 
@@ -97,7 +101,7 @@ void CAABBCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
 	m_xmBoundingBox = pMesh->GetBoundingBox();
 }
 
-void CAABBCollider::SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents)
+void CAABBCollider::SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents, const XMFLOAT4 & xmf4Orientation)
 {
 	m_xmBoundingBox.Center = xmf3Center;
 	m_xmBoundingBox.Extents = xmf3Extents;
@@ -140,11 +144,6 @@ XMFLOAT4X4 CAABBCollider::GetColliderMatrix()
 	return xmf4x4box;
 }
 
-void CAABBCollider::SetCollider(BoundingBox boundingBox)
-{
-	SetCollider(boundingBox.Center, boundingBox.Extents);
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 //
 
@@ -153,10 +152,11 @@ void COBBCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
 	m_xmBoundingOrientedBox = pMesh->GetBoundingOrientedBox(XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 }
 
-void COBBCollider::SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents)
+void COBBCollider::SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents, const XMFLOAT4 & xmf4Orientation)
 {
 	m_xmBoundingOrientedBox.Center = xmf3Center;
 	m_xmBoundingOrientedBox.Extents = xmf3Extents;
+	m_xmBoundingOrientedBox.Orientation = xmf4Orientation;
 }
 
 void COBBCollider::UpdateCollider(const XMFLOAT4X4& xmf4x4World)
@@ -195,11 +195,6 @@ XMFLOAT4X4 COBBCollider::GetColliderMatrix()
 		m_xmWorldBoundingOrientedBox.Center
 	);
 	return xmf4x4box;
-}
-
-void COBBCollider::SetCollider(BoundingBox boundingBox)
-{
-	SetCollider(boundingBox.Center, boundingBox.Extents);
 }
 
 // ¹ÝÈ¯°ª: MTV º¤ÅÍ (°ãÄ§ ¾øÀ¸¸é {0, 0, 0})

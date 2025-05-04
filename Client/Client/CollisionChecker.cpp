@@ -1,8 +1,8 @@
 #include "CollisionChecker.h"
 #include "Scene.h"
 
-CCollisionChecker::CCollisionChecker(std::shared_ptr<CScene>& pScene)
-	: CGameObject(), m_pScene(pScene.get())
+CCollisionChecker::CCollisionChecker(CScene* pScene)
+	:CGameObject(), m_pScene(pScene)
 {
 }
 
@@ -38,13 +38,23 @@ void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObjec
 		for (auto& pObjectA : pObjectsA) {
 			for (auto& pObjectB : pObjectsB) {
 				// 여기서의 Object는 RootObject임을 기억.
-				auto pCollidersA = pObjectA->GetComponents<CCollider>();
-				auto pCollidersB = pObjectB->GetComponents<CCollider>();
+
+				// 먼저 model Bound AABB로 체크
+				auto pMergedA = pObjectA->GetMergedMeshBound();
+				auto pMergedB = pObjectB->GetMergedMeshBound();
+				if (!pMergedA.Intersects(pMergedB)) continue;
+
+				// 그 이후, Collider 를 가져와 체크
+				std::vector<std::shared_ptr<CCollider>> pCollidersA;
+				std::vector<std::shared_ptr<CCollider>> pCollidersB;
+
+				pObjectA->GetComponentsInChildren<CCollider>(pCollidersA);
+				pObjectB->GetComponentsInChildren<CCollider>(pCollidersB);
 				// TODO : 이떄 IsCollided를 CollisionChecker의 멤버함수로 작성
 				// TODO : 이때 로직 수행을 바로 하지 않고 따로 pair를 저장한 이후 batch 처리 생각할 것.
 				for (auto& pColliderA : pCollidersA) {
 					for (auto& pColliderB : pCollidersB) {
-						if (pColliderA->IsCollided(pColliderB)) {
+						if (IsCollided(pColliderA, pColliderB)) {
 							pObjectA->OnCollision(pColliderB);
 							pObjectB->OnCollision(pColliderA);
 						}
@@ -59,7 +69,15 @@ void CCollisionChecker::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 {
 }
 
-bool CCollisionChecker::IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth)
+bool CCollisionChecker::IsCollided(std::shared_ptr<CCollider>& colliderA, std::shared_ptr<CCollider>& colliderB)
 {
-	return false;
+	bool result = colliderA->IsCollided(colliderB);
+	if(result)
+	{
+		std::string DebugOutput = "Collision Detected: " + colliderA->gameObject->GetName() + " <-> " + colliderB->gameObject->GetName() + "\n";
+		OutputDebugStringA(DebugOutput.c_str());
+	}
+	return result;
 }
+
+

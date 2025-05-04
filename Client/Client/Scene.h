@@ -168,6 +168,12 @@ public:
 	{
 		m_d3dSrvCPUDescriptorStartHandle.ptr = NULL;
 		m_d3dSrvGPUDescriptorStartHandle.ptr = NULL;
+		m_d3dCbvCPUDescriptorStartHandle.ptr = NULL;
+		m_d3dCbvGPUDescriptorStartHandle.ptr = NULL;
+		m_d3dCbvCPUDescriptorNextHandle.ptr = NULL;
+		m_d3dCbvGPUDescriptorNextHandle.ptr = NULL;
+		m_d3dSrvCPUDescriptorNextHandle.ptr = NULL;
+		m_d3dSrvGPUDescriptorNextHandle.ptr = NULL;
 	};
 	virtual ~CDescirptorHeap()
 	{
@@ -236,6 +242,7 @@ public:
 
 	// Object Management
 	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
+	virtual void AddObjects(const std::vector<std::shared_ptr<CGameObject>>& pObjects);
 	virtual void RemoveObject(const std::shared_ptr<CGameObject>& pObject);
 	std::unordered_map<CGameObject::Layer, std::vector<std::shared_ptr<CGameObject>>>& GetObjects() { return m_ppGameObjects; }
 

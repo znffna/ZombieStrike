@@ -4,6 +4,7 @@
 // Version : 0.1
 ///////////////////////////////////////////////////////////////////////////////
 #include "GameScene.h"
+#include "CollisionChecker.h"
 
 CGameScene::CGameScene()
 {
@@ -50,11 +51,13 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	pMap->m_pModelRootObject->UpdateTransform();
 	m_pMap = pMap->m_pModelRootObject;
 	m_pMap->Update(0.0f);
-	AddObject(m_pMap);
+	AddObjects(m_pMap->GetChilds());
+	//AddObject(m_pMap);
 
-	//// Default Camera 위치 수정
-	//m_pCamera->SetPosition(Vector3::Add(pPlayer->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));
-	//m_pCamera->RegenerateViewMatrix();
+	// Collision Checker
+	auto pCollisionChecker = std::make_shared<CCollisionChecker>(this);
+	pCollisionChecker->Initialize(pd3dDevice, pd3dCommandList);
+	AddObject(pCollisionChecker);
 }
 
 void CGameScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
