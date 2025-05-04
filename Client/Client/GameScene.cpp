@@ -4,6 +4,7 @@
 // Version : 0.1
 ///////////////////////////////////////////////////////////////////////////////
 #include "GameScene.h"
+#include "CollisionChecker.h"
 
 CGameScene::CGameScene()
 {
@@ -20,11 +21,13 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	// Skybox
 	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
+	AddObject(m_pSkyBox);
 
 	// Terrain
 	XMFLOAT3 xmf3Scale(1.0f, 32.0f / 255.0f, 1.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
 	m_pTerrain = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.bin"), _T("Terrain/terrain.raw"), 1025, 1025, 65, 65, xmf3Scale, xmf4Color);
+	AddObject(m_pTerrain);
 	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 1025, 1025, 65, 65, xmf3Scale, xmf4Color);
 	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
 
@@ -32,23 +35,15 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	std::shared_ptr<CGameObject> pGameObject;
 	pGameObject = CCubeObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature);
 	pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 10.0f));
-	m_ppObjects.push_back(pGameObject);
+	AddObject(pGameObject);
 
-	// Zombie Object
-	std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2);
+	// Player 생성
+	std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, 0);
 	pPlayer->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 0.0f));
-	auto pCamera = pPlayer->CreateComponent<CThirdPersonCamera>(pPlayer);
-	pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	pCamera->SetOffset(XMFLOAT3(0.0f, 0.0f, -5.0f));
-	pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
-	pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
-	pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	pCamera->SetActive(true);
-
-	m_ppHierarchicalObjects.push_back(pPlayer);
+	AddObject(pPlayer);
 	m_pPlayer = pPlayer;
 
+	// Zombie Object
 	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 1000);
 
 	// Map Load
@@ -56,10 +51,13 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	pMap->m_pModelRootObject->UpdateTransform();
 	m_pMap = pMap->m_pModelRootObject;
 	m_pMap->Update(0.0f);
+	AddObjects(m_pMap->GetChilds());
+	//AddObject(m_pMap);
 
-	//// Default Camera 위치 수정
-	//m_pCamera->SetPosition(Vector3::Add(pPlayer->GetPosition(), XMFLOAT3(0.0f, 0.0f, -10.0f)));
-	//m_pCamera->RegenerateViewMatrix();
+	// Collision Checker
+	auto pCollisionChecker = std::make_shared<CCollisionChecker>(this);
+	pCollisionChecker->Initialize(pd3dDevice, pd3dCommandList);
+	AddObject(pCollisionChecker);
 }
 
 void CGameScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)

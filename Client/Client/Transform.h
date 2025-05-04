@@ -16,7 +16,7 @@ public:
 	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared< CTransform>(*this); };
 
 	// Transform Getter
-	DirectX::XMFLOAT3 GetPosition() const { return m_xmf3Position; }
+	DirectX::XMFLOAT3 GetPosition() const { return XMFLOAT3{m_xmf4x4World._41, m_xmf4x4World._42, m_xmf4x4World._43}; }
 	DirectX::XMFLOAT3 GetRight() const { return Vector3::Normalize(XMFLOAT3(m_xmf4x4World._11, m_xmf4x4World._12, m_xmf4x4World._13)); }
 	DirectX::XMFLOAT3 GetUp() const { return (Vector3::Normalize(XMFLOAT3(m_xmf4x4World._21, m_xmf4x4World._22, m_xmf4x4World._23))); }
 	DirectX::XMFLOAT3 GetLook() const { return (Vector3::Normalize(XMFLOAT3(m_xmf4x4World._31, m_xmf4x4World._32, m_xmf4x4World._33))); }
@@ -45,7 +45,7 @@ public:
 	void MoveUp(float fDistance = 1.0f);
 	void MoveForward(float fDistance = 1.0f);
 
-	void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
+	void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f);
 	void Rotate(const XMFLOAT3& pxmf3Axis, float fAngle);
 	void Rotate(const XMFLOAT4& pxmf4Quaternion);
 

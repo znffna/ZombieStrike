@@ -44,21 +44,32 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 		m_pSkinnedAnimationController->SetTrackEnable(1, false);
 	}
 
-	// Component
+	// RigidBody 持失
 	std::shared_ptr<CRigidBody> pRigidBody = CreateComponent<CRigidBody>(shared_from_this());
 	pRigidBody->SetVelocity(XMFLOAT3(0.0f, -9.0f, 0.0f));
 
+	// Camera 持失
+	auto pCamera = CreateComponent<CThirdPersonCamera>(shared_from_this());
+	pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pCamera->SetOffset(XMFLOAT3(0.0f, 0.0f, -5.0f));
+	pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
+	pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	pCamera->SetActive(true);
+
 	// Collider 持失
-	auto pCollider = CreateComponent<CAABBCollider>(shared_from_this());
-	pCollider->SetCollider(pPlayerModel->m_MeshBoundingBox.Center, pPlayerModel->m_MeshBoundingBox.Extents);
+	auto pCollider = CreateComponent<COBBCollider>(shared_from_this());
+	pCollider->SetCollider(FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound());
 
 	Update(0.0f);
 	UpdateTransform();
 }
 
-std::shared_ptr<CPlayer> CPlayer::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks)
+std::shared_ptr<CPlayer> CPlayer::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks, int nSkinType)
 {
 	std::shared_ptr<CPlayer> pPlayer = std::make_shared<CPlayer>();
+	pPlayer->SetSkinType(nSkinType);
 	pPlayer->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pModel, nAnimationTracks);
 	pPlayer->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(pTerrain.get());
 
@@ -74,25 +85,23 @@ void CPlayer::Update(float fTimeElapsed)
 
 void CPlayer::Rotate(float x, float y, float z)
 {
-	float fPitch = GetPitch(), fYaw = GetYaw(), fRoll = GetRoll();
-
 	if (x != 0.0f)
 	{
-		fPitch += x;
-		if (fPitch > +89.0f) { x -= (fPitch - 89.0f); fPitch = +89.0f; }
-		if (fPitch < -89.0f) { x -= (fPitch + 89.0f); fPitch = -89.0f; }
+		m_fPitch += x;
+		if (m_fPitch > +89.0f) { x -= (m_fPitch - 89.0f); m_fPitch = +89.0f; }
+		if (m_fPitch < -89.0f) { x -= (m_fPitch + 89.0f); m_fPitch = -89.0f; }
 	}
 	if (y != 0.0f)
 	{
-		fYaw += y;
-		if (fYaw > 360.0f) fYaw -= 360.0f;
-		if (fYaw < 0.0f) fYaw += 360.0f;
+		m_fYaw += y;
+		if (m_fYaw > 360.0f) m_fYaw -= 360.0f;
+		if (m_fYaw < 0.0f) m_fYaw += 360.0f;
 	}
 	if (z != 0.0f)
 	{
-		fRoll += z;
-		if (fRoll > +20.0f) { z -= (fRoll - 20.0f); fRoll = +20.0f; }
-		if (fRoll < -20.0f) { z -= (fRoll + 20.0f); fRoll = -20.0f; }
+		m_fRoll += z;
+		if (m_fRoll > +20.0f) { z -= (m_fRoll - 20.0f); m_fRoll = +20.0f; }
+		if (m_fRoll < -20.0f) { z -= (m_fRoll + 20.0f); m_fRoll = -20.0f; }
 	}
 
 	if (auto pCamera = GetComponent<CCamera>())

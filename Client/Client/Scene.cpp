@@ -133,8 +133,7 @@ void CScene::CreateStaticMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 void CScene::ReleaseObjects()
 {
 	// Release GameObjects
-	m_ppObjects.clear();
-	m_ppHierarchicalObjects.clear();
+	m_ppGameObjects.clear();
 
 	// Release Terrain
 	m_pTerrain.reset();
@@ -171,7 +170,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_xmf4GlobalAmbient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
 
 	// Light
-	m_pLights[0].m_bEnable = true;
+	m_pLights[0].m_bEnable = false;
 	m_pLights[0].m_nType = POINT_LIGHT;
 	m_pLights[0].m_fRange = 1000.0f;
 	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.1f, 0.0f, 0.0f, 1.0f);
@@ -215,109 +214,39 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
 }
 
-void CScene::CollisionsCheck()
-{
-	for (auto& pObject : m_ppObjects)
-	{
-		for (auto& pOtherObject : m_ppObjects)
-		{
-			if (pObject != pOtherObject)
-			{
-				if (pObject->IsCollided(pOtherObject)) {
-					pObject->OnCollision(pOtherObject);
-					pOtherObject->OnCollision(pObject);
-				}
-			}
-		}
-
-		for (auto& pOtherObject : m_ppHierarchicalObjects)
-		{
-			if (pObject != pOtherObject)
-			{
-				if (pObject->IsCollided(pOtherObject)) {
-					pObject->OnCollision(pOtherObject);
-					pOtherObject->OnCollision(pObject);
-				}
-			}
-		}
-
-		if (m_pMap)
-		{
-			// map은 root를 제외한 실제 맵 구성 Object들과 충돌처리를 해야한다.
-			auto mapObjects = m_pMap->GetChilds();
-			for (auto& pOtherObject : mapObjects)
-			{
-				if (pObject != pOtherObject)
-				{
-					if (pObject->IsCollided(pOtherObject)) {
-						pObject->OnCollision(pOtherObject);
-						pOtherObject->OnCollision(pObject);
-					}
-				}
-			}
-		}
-	}
-
-	for (auto& pObject : m_ppHierarchicalObjects)
-	{
-		for (auto& pOtherObject : m_ppHierarchicalObjects)
-		{
-			if (pObject != pOtherObject)
-			{
-				if (pObject->IsCollided(pOtherObject)) {
-					pObject->OnCollision(pOtherObject);
-					pOtherObject->OnCollision(pObject);
-				}
-			}
-		}
-
-		if (m_pMap)
-		{
-			// map은 root를 제외한 실제 맵 구성 Object들과 충돌처리를 해야한다.
-			auto mapObjects = m_pMap->GetChilds(); 
-			for (auto& pOtherObject : mapObjects)
-			{
-				if (pObject != pOtherObject)
-				{
-					if (pObject->IsCollided(pOtherObject)) {
-						// 충돌처리
-						std::string DebugOutput = "Collision Detected: " + pObject->GetName() + " <-> " + pOtherObject->GetName() + "\n";
-						OutputDebugStringA(DebugOutput.c_str());
-
-						pObject->OnCollision(pOtherObject);
-						pOtherObject->OnCollision(pObject);
-					}
-				}
-			}
-		}
-	}
-}
-
 void CScene::AddObject(const std::shared_ptr<CGameObject>& pObject)
 {
 	if (pObject)
 	{
-		m_ppObjects.push_back(pObject);
+		m_ppGameObjects[pObject->GetLayer()].push_back(pObject);
+		pObject->SetActive(true);
 	}
 }
 
-void CScene::AddHierarchicalObject(const std::shared_ptr<CGameObject>& pHierarchicalObject)
+void CScene::AddObjects(const std::vector<std::shared_ptr<CGameObject>>& pObjects)
 {
-	if (pHierarchicalObject)
+	if (pObjects.empty()) return;
+	for (const auto& pObject : pObjects)
 	{
-		m_ppHierarchicalObjects.push_back(pHierarchicalObject);
+		if (pObject)
+		{
+			m_ppGameObjects[pObject->GetLayer()].push_back(pObject);
+			pObject->SetActive(true);
+		}
 	}
 }
 
-void CScene::RemoveObject(std::shared_ptr<CGameObject> pObject)
+void CScene::RemoveObject(const std::shared_ptr<CGameObject>& pObject)
 {
 	if (pObject)
 	{
-		auto it = std::find(m_ppObjects.begin(), m_ppObjects.end(), pObject);
-		if (it != m_ppObjects.end())
+		auto Layer = pObject->GetLayer();
+		auto it = std::find(m_ppGameObjects[Layer].begin(), m_ppGameObjects[Layer].end(), pObject);
+		if (it != m_ppGameObjects[Layer].end())
 		{
-			m_ppObjects.erase(it); // 순회중 삭제 수정해야함.
+			m_ppGameObjects[Layer].erase(it); // 순회중 삭제 수정해야함.
 		}
+		pObject->SetActive(false);
 	}
 }
 
@@ -334,20 +263,16 @@ void CScene::Update(float deltaTime)
 	m_fElapsedTime = deltaTime;
 
 	// Update GameObjects
-	for (auto& pObject : m_ppObjects) pObject->Update(deltaTime);
+	for (auto& pvecObjects : m_ppGameObjects) for(auto& pObject : pvecObjects.second) pObject->Update(deltaTime);
 
 	// Update Matrix
-	for (auto& pObject : m_ppObjects) pObject->UpdateTransform(nullptr);
+	for (auto& pvecObjects : m_ppGameObjects) for (auto& pObject : pvecObjects.second)  pObject->UpdateTransform();
 
-	if (m_pPlayer)
-	{
-		m_pPlayer->Update(deltaTime);
-		if (!m_pPlayer->m_pSkinnedAnimationController) m_pPlayer->UpdateTransform(nullptr);
-	}
-
-	// Check Collision	
-	CollisionsCheck();
-
+	//if (m_pPlayer)
+	//{
+	//	m_pPlayer->Update(deltaTime);
+	//	if (!m_pPlayer->m_pSkinnedAnimationController) m_pPlayer->UpdateTransform(nullptr);
+	//}
 }
 
 bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
@@ -377,53 +302,36 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 	// Set Viewport and Scissor & Update Camera Variables
-	if (pCamera)
+	if (nullptr == pCamera)
 	{
-		pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-		pCamera->UpdateShaderVariables(pd3dCommandList);
-	}
-	else {
 		// Set Default Viewport and Scissor
-		if(m_pCamera)
-		m_pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-		m_pCamera->UpdateShaderVariables(pd3dCommandList);
+		if (nullptr == m_pCamera) return false;
 		pCamera = m_pCamera.get();
 	}
+	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+	pCamera->UpdateShaderVariables(pd3dCommandList);
 
 	// Update Shader Variables
 	UpdateShaderVariables(pd3dCommandList);
 
-	// Render Terrain
-	if (m_pTerrain)
-	{
-		m_pTerrain->Render(pd3dCommandList, pCamera);
-	}
-
-	// Render Map
-	if (m_pMap)
-	{
-		m_pMap->Render(pd3dCommandList, pCamera);
-	}
-
 	// Render GameObjects 
-	for (auto& pObject : m_ppObjects)
+	for (auto& pvecObjects : m_ppGameObjects)
 	{
-		pObject->Render(pd3dCommandList, pCamera);
+		if (pvecObjects.first == CGameObject::GAMEOBJECT_LAYER::LAYER_PLAYER)
+			int a = 0; // UI는 제외
+		for (auto& pObject : pvecObjects.second)
+		{
+			//pObject->Update(0.0f);
+			pObject->Render(pd3dCommandList, pCamera);
+		}
 	}
 
-	for (auto& pObject : m_ppHierarchicalObjects)
-	{
-		pObject->Update(m_fElapsedTime);
-		if (!pObject->m_pSkinnedAnimationController) pObject->UpdateTransform(NULL);
-		pObject->Render(pd3dCommandList, pCamera);
-	}
-
-	if (m_pPlayer)
+	/*if (m_pPlayer)
 	{
 		m_pPlayer->Update(m_fElapsedTime);
 		if (!m_pPlayer->m_pSkinnedAnimationController) m_pPlayer->UpdateTransform(NULL);
 		m_pPlayer->Render(pd3dCommandList, pCamera);
-	}
+	}*/
 
 	// Render SkyBox
 	if (m_pSkyBox)

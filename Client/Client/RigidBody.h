@@ -62,6 +62,7 @@ public:
 	
 	virtual void Update(float fTimeElapsed) override
 	{
+		if (fTimeElapsed <= 0.0f) return;
 		UpdateRigidBody(fTimeElapsed);
 	}
 

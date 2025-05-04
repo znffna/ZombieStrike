@@ -61,6 +61,18 @@ struct CB_GAMEOBJECT_INFO
 class CGameObject : public std::enable_shared_from_this<CGameObject>
 {
 public:
+	enum GAMEOBJECT_LAYER {
+		LAYER_DEFUALT = 0,
+		LAYER_SKYBOX,
+		LAYER_TERRAIN,
+		LAYER_ENEMY,
+		LAYER_PLAYER,
+		LAYER_BULLET,
+		LAYER_CONTROLLER,
+		LAYER_UI,
+	};
+	
+public:
 	CGameObject();
 	CGameObject(const std::string& strName);
 	virtual ~CGameObject();
@@ -69,7 +81,7 @@ public:
 	void Init(); 
 
 	// Object Initialization
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList) {};
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {};
 	virtual void GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs);;
 	static std::shared_ptr<CGameObject> CreateObject() { return std::make_shared<CGameObject>(); }
 
@@ -81,10 +93,11 @@ public:
 	UINT GetObjectID() { return m_nObjectID; }
 	void SetObjectID(UINT nObjectID) { m_nObjectID = nObjectID; }
 
-	// Object Name
 	std::string GetName() { return m_strName; }
 	void SetName(const std::string& strName);
 	virtual std::string GetDefaultName() { return "CGameObject"; }
+
+	virtual GAMEOBJECT_LAYER GetLayer() { return LAYER_DEFUALT; }
 
 	// 상속 관계
 	std::shared_ptr<CGameObject> GetParent() { return m_pParent.lock(); }
@@ -102,8 +115,13 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 
 	// Object Collision
-	virtual bool IsCollided(std::shared_ptr<CGameObject>& pGameObject, UINT nDepth = 0);// Collision Check
-	virtual void OnCollision(std::shared_ptr<CGameObject>& pGameObject); // Collision Event
+	virtual void OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::shared_ptr<CCollider>& pColliderA, std::shared_ptr<CCollider>& pColliderB); // Collision Event
+	CAABBCollider GetMergedCollider();
+
+	BoundingBox GetMeshBound() {
+		if (m_pMesh) return m_pMesh->GetBoundingBox();
+		else return BoundingBox();
+	}
 
 	BoundingBox GetMergedMeshBound(BoundingBox* pVolume = nullptr);
 	void UpdateLocalBoundingBox(const XMFLOAT4X4& pParentTransform = Matrix4x4::Identity());
@@ -225,6 +243,19 @@ public:
 		return result;
 	}
 
+	template <typename T>
+	void GetComponentsInChildren(std::vector<std::shared_ptr<T>>& pVec) const {
+		for (auto& pComponent : m_pComponents) {
+			if (auto casted = std::dynamic_pointer_cast<T>(pComponent)) {
+				pVec.push_back(casted);
+			}
+		}
+
+		for (auto& pChild : m_pChilds) {
+			pChild->GetComponentsInChildren<T>(pVec);
+		}
+	}
+
 	// Transform
 	const DirectX::XMFLOAT3 GetPosition() { return m_pTransform->GetPosition(); }
 	const DirectX::XMFLOAT3 GetRightVector() { return m_pTransform->GetRight(); }
@@ -233,9 +264,9 @@ public:
 	const DirectX::XMFLOAT3 GetScale() { return m_pTransform->GetScale(); }
 
 	DirectX::XMFLOAT3 GetRotation() { return m_pTransform->GetRotation(); }
-	float GetPitch() { return m_pTransform->GetRotation().x; } // X 축을	기준으로 회전
-	float GetYaw() { return m_pTransform->GetRotation().y; } // Y 축을 기준으로 회전
-	float GetRoll() { return m_pTransform->GetRotation().z; } // Z 축을 기준으로 회전
+	virtual float GetPitch() { return m_pTransform->GetRotation().x; } // X 축을	기준으로 회전
+	virtual float GetYaw() { return m_pTransform->GetRotation().y; } // Y 축을 기준으로 회전
+	virtual float GetRoll() { return m_pTransform->GetRotation().z; } // Z 축을 기준으로 회전
 
 	DirectX::XMFLOAT4X4 GetLocalMatrix() { return m_pTransform->GetLocalMatrix(); }
 	DirectX::XMFLOAT4X4 GetWorldMatrix() { return m_pTransform->GetWorldMatrix(); }
@@ -270,13 +301,7 @@ public:
 
 	void UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
 	void UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix);
-	void UpdateTransform(std::shared_ptr<CGameObject>& pGameobject)
-	{
-		m_pTransform->UpdateTransform(pGameobject);
-
-		// Update Child
-		for (auto& pChild : m_pChilds) pChild->UpdateTransform(GetWorldMatrix());
-	}
+	void UpdateTransform(std::shared_ptr<CGameObject>& pGameobject);
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -289,10 +314,10 @@ public:
 	virtual ~CRotatingObject();
 
 	// Object Initialization
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList);
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandlist);
 	virtual std::string GetDefaultName() override { return "CRotatingObject"; } 
 
-	static std::shared_ptr<CRotatingObject> Create(ID3D12Device* pd3dDevice, ID3D12CommandList* pd3dCommandList);
+	static std::shared_ptr<CRotatingObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	// Object Update
 	virtual void Update(float fTimeElapsed) override;

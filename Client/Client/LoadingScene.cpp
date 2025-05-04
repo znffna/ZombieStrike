@@ -33,7 +33,7 @@ void CLoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	pRotateGameObject->SetRotationSpeed(50.0f);
 	pRotateGameObject->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	m_ppObjects.push_back(pRotateGameObject);
+	AddObject(pRotateGameObject);
 }
 
 void CLoadingScene::ReleaseObjects()
