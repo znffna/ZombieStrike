@@ -33,9 +33,6 @@
     <Filter Include="소스 파일\Util">
       <UniqueIdentifier>{9d846db7-e30a-4bc4-a3ce-f981935422e2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="소스 파일\Game\Framework">
-      <UniqueIdentifier>{7a21e7ff-6570-4fd6-a2f2-8e3515d7f794}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h">
@@ -113,17 +110,17 @@
     <ClInclude Include="GameTimer.h">
       <Filter>소스 파일\Util</Filter>
     </ClInclude>
-    <ClInclude Include="GameFramework.h">
-      <Filter>소스 파일\Game\Framework</Filter>
-    </ClInclude>
-    <ClInclude Include="GameObject.h">
-      <Filter>소스 파일\Game\Framework</Filter>
+    <ClInclude Include="Component.h">
+      <Filter>소스 파일\Component</Filter>
     </ClInclude>
     <ClInclude Include="Scene.h">
-      <Filter>소스 파일\Game\Framework</Filter>
+      <Filter>소스 파일\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Component.h">
-      <Filter>소스 파일\Game\Framework</Filter>
+    <ClInclude Include="GameObject.h">
+      <Filter>소스 파일\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="GameFramework.h">
+      <Filter>소스 파일\Game</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -196,17 +193,17 @@
     <ClCompile Include="GameTimer.cpp">
       <Filter>소스 파일\Util</Filter>
     </ClCompile>
-    <ClCompile Include="GameFramework.cpp">
-      <Filter>소스 파일\Game\Framework</Filter>
-    </ClCompile>
-    <ClCompile Include="GameObject.cpp">
-      <Filter>소스 파일\Game\Framework</Filter>
+    <ClCompile Include="Component.cpp">
+      <Filter>소스 파일\Component</Filter>
     </ClCompile>
     <ClCompile Include="Scene.cpp">
-      <Filter>소스 파일\Game\Framework</Filter>
+      <Filter>소스 파일\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Component.cpp">
-      <Filter>소스 파일\Game\Framework</Filter>
+    <ClCompile Include="GameObject.cpp">
+      <Filter>소스 파일\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="GameFramework.cpp">
+      <Filter>소스 파일\Game</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
