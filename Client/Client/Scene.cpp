@@ -321,17 +321,17 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			int a = 0; // UI´Â Á¦¿Ü
 		for (auto& pObject : pvecObjects.second)
 		{
-			pObject->Update(0.0f);
+			//pObject->Update(0.0f);
 			pObject->Render(pd3dCommandList, pCamera);
 		}
 	}
 
-	if (m_pPlayer)
+	/*if (m_pPlayer)
 	{
 		m_pPlayer->Update(m_fElapsedTime);
 		if (!m_pPlayer->m_pSkinnedAnimationController) m_pPlayer->UpdateTransform(NULL);
 		m_pPlayer->Render(pd3dCommandList, pCamera);
-	}
+	}*/
 
 	// Render SkyBox
 	if (m_pSkyBox)
