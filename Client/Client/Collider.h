@@ -50,7 +50,7 @@ public:
 	virtual XMFLOAT4X4 GetColliderMatrix() = 0;  
 	virtual BoundingBox GetBoundingBox() { return BoundingBox(GetCenter(), GetExtends()); }  
 
-	virtual XMFLOAT3 GetCorrectionVector(std::shared_ptr<CCollider>& pCollider);
+	virtual XMFLOAT3 GetCorrectionVector(std::shared_ptr<CCollider>& pCollider) = 0;
 	virtual XMFLOAT3 GetCorrectionVector(CCollider* pCollider) = 0;
 
 	// setters  

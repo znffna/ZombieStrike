@@ -343,7 +343,8 @@ XMFLOAT3 CalculateAABB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA,
 		return { 0.0f, 0.0f, dz < 0 ? pz : -pz };
 }
 
-XMFLOAT3 CalculateOBB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, const XMFLOAT4& orientationA, const XMFLOAT3& centerB, const XMFLOAT3& extentB, const XMFLOAT4& orientationB)
+XMFLOAT3 CalculateOBB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, const XMFLOAT4& orientationA,
+	const XMFLOAT3& centerB, const XMFLOAT3& extentB, const XMFLOAT4& orientationB)
 {
 	float minOverlap = FLT_MAX;
 	XMVECTOR mtvAxis = XMVectorZero();
@@ -360,9 +361,9 @@ XMFLOAT3 CalculateOBB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, cons
 	XMMATRIX rotB = XMMatrixRotationQuaternion(qB);
 
 	XMVECTOR aAxes[3] = {
-		XMVector3Normalize(rotA.r[0]), // X축
-		XMVector3Normalize(rotA.r[1]), // Y축
-		XMVector3Normalize(rotA.r[2])  // Z축
+		XMVector3Normalize(rotA.r[0]),
+		XMVector3Normalize(rotA.r[1]),
+		XMVector3Normalize(rotA.r[2])
 	};
 	XMVECTOR bAxes[3] = {
 		XMVector3Normalize(rotB.r[0]),
@@ -377,11 +378,11 @@ XMFLOAT3 CalculateOBB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, cons
 	for (int i = 0; i < 3; ++i) axes[axisCount++] = aAxes[i];
 	// B의 3축
 	for (int i = 0; i < 3; ++i) axes[axisCount++] = bAxes[i];
-	// A x B 교차축 9개
+	// A x B 교차축 9개 (너무 작은 벡터 제거)
 	for (int i = 0; i < 3; ++i) {
 		for (int j = 0; j < 3; ++j) {
 			XMVECTOR cross = XMVector3Cross(aAxes[i], bAxes[j]);
-			if (!XMVector3NearEqual(cross, XMVectorZero(), XMVectorReplicate(EPSILON))) {
+			if (XMVectorGetX(XMVector3LengthSq(cross)) > EPSILON) { // 너무 작은 벡터 필터링
 				axes[axisCount++] = XMVector3Normalize(cross);
 			}
 		}
@@ -395,7 +396,6 @@ XMFLOAT3 CalculateOBB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, cons
 
 		// Projection lengths
 		float projA = 0.0f, projB = 0.0f;
-
 		projA += fabsf(extentA.x * XMVectorGetX(XMVector3Dot(axis, aAxes[0])));
 		projA += fabsf(extentA.y * XMVectorGetX(XMVector3Dot(axis, aAxes[1])));
 		projA += fabsf(extentA.z * XMVectorGetX(XMVector3Dot(axis, aAxes[2])));
@@ -408,44 +408,29 @@ XMFLOAT3 CalculateOBB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, cons
 		float overlap = (projA + projB) - centerDist;
 
 		if (overlap <= 0.0f) {
-			// 축 하나라도 분리됨 → 충돌 아님
-			{
-				std::string debugStr = "No Collision: " + std::to_string(overlap) + "\n";
-				OutputDebugStringA(debugStr.c_str());
-			}
+			OutputDebugStringA(("No Collision: " + std::to_string(overlap) + "\n").c_str());
 			return XMFLOAT3(0, 0, 0);
 		}
 
 		if (overlap < minOverlap) {
 			minOverlap = overlap;
-			float sign = (XMVectorGetX(XMVector3Dot(axis, d)) < 0.0f) ? -1.0f : 1.0f;
-			mtvAxis = axis * sign;
+			mtvAxis = XMVector3Normalize(axis) * ((XMVectorGetX(XMVector3Dot(axis, d)) < 0.0f) ? 1.0f : -1.0f);
 		}
 	}
 
-	// MTV 최종 계산
-	XMVECTOR mtv = XMVector3Normalize(mtvAxis) * minOverlap;
-	XMFLOAT3 result;
-	XMStoreFloat3(&result, mtv);
-
-	{
-		std::string debugStr = "MTV: " + std::to_string(result.x) + " " + std::to_string(result.y) + " " + std::to_string(result.z) + "\n";
-		OutputDebugStringA(debugStr.c_str());
+	// MTV 최종 계산 (NaN 방지)
+	if (XMVectorGetX(XMVector3LengthSq(mtvAxis)) > EPSILON) {
+		XMVECTOR mtv = XMVector3Normalize(mtvAxis) * minOverlap;
+		XMFLOAT3 result;
+		XMStoreFloat3(&result, mtv);
+		OutputDebugStringA(("MTV: " + std::to_string(result.x) + " " + std::to_string(result.y) + " " + std::to_string(result.z) + "\n").c_str());
+		return result;
 	}
-	return result;
+
+	return XMFLOAT3(0, 0, 0);
 }
 
-XMFLOAT3 CCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
-{
-	XMFLOAT3 xmf3Center = GetCenter();
-	XMFLOAT3 xmf3OtherCenter = pCollider->GetCenter();
 
-	// 일단 거리기반으로 통일
-	return CalculateAABB_MTV(
-		xmf3Center, GetExtends(),
-		xmf3OtherCenter, pCollider->GetExtends()
-	);
-}
 
 
 
