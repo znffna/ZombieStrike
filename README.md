@@ -44,8 +44,8 @@
 | 완료 | Collider 병합 및 충돌 정리 문서 작성 | 4월 3주차 | Model Bound 기반 충돌 처리 설계
 | 완료 |  불필요한 IOCP 제거 및 서버 구조 리팩토링 | 4월 4주차 | TCP 기반으로 재정비 완료
 | 완료  |  A* 기반 좀비 경로 탐색 구조  | 4월 5주차 | 5월 1주차의 맵 구조와 연동 필요 
-| 진행중 |  Network I/O to Client 구조 개선, 맵 구조 추출 | 5월 1주차 | Broadcast 성능 개선 및 Dirty Flag 적용 예정
-| 시작전 |  ThreadPool + A* 병렬 처리 구조 설계 | 5월 2주차 | 최대 1000마리 좀비 동시 처리
+| 완료 |  Network I/O to Client 구조 개선, 맵 구조 추출 | 5월 1주차 | Broadcast 성능 개선 및 Dirty Flag 적용 예정
+| 진행중 |  ThreadPool + A* 병렬 처리 구조 설계 | 5월 2주차 | 최대 1000마리 좀비 동시 처리
 | 시작전 | FSM 기반 좀비 AI 설계 (Idle, Move, Chase) | 5월 3주차 | 상태 전이 조건 정리 필요
 | 시작전 |  좀비 갯수 증가에 대한 최적화 대응 | 5월 4주차 | Object 풀링 및 동적 갱신 처리
 | 시작전 |  총기 피격 처리 및 사망 패킷 처리 | 6월 1주차 | Ray-Sphere 기반 판정 또는 Hitbox 설계

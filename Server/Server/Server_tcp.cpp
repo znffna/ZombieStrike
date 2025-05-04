@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <queue>
 #include "../../protocol.h"
+#include "ZombieAI.h" 
 #include <print>
 
 #pragma comment(lib, "ws2_32.lib")
@@ -147,7 +148,6 @@ public:
         // ----- 패킷 조립 시작 -----
         SIZE2* p = _recv_over._buffer;
         SIZE3 total = _remained + num_bytes;
-
         SIZE3 offset = 0;
 
         while (offset < total) {
