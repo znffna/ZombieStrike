@@ -287,6 +287,8 @@ void CGameObject::OnCollision(std::shared_ptr<CCollider>& pCollider)
 {
 	// Collision Event
 	std::shared_ptr<CCollider> collider = GetComponent<CCollider>();
+	if (nullptr == collider) return;
+
 	std::shared_ptr<CRigidBody> rigidBody = GetComponent<CRigidBody>();
 	std::shared_ptr<CRigidBody> pOtherRigidBody = pCollider->gameObject->GetComponent<CRigidBody>();
 	
@@ -294,7 +296,6 @@ void CGameObject::OnCollision(std::shared_ptr<CCollider>& pCollider)
 		std::string DebugOutput = "Collision Detected: " + GetName() + " <-> " + pCollider->gameObject->GetName() + "\n";
 		OutputDebugStringA(DebugOutput.c_str());
 	}
-	if (nullptr == collider) return;
 	// 최소 거리 측정
 	XMFLOAT3 mtv = collider->GetCorrectionVector(pCollider);
 	if (rigidBody)

@@ -119,6 +119,11 @@ public:
 	virtual void OnCollision(std::shared_ptr<CGameObject>& pGameObject); // Collision Event
 	virtual void OnCollision(std::shared_ptr<CCollider>& pCollider); // Collision Event
 
+	BoundingBox GetMeshBound() {
+		if (m_pMesh) return m_pMesh->GetBoundingBox();
+		else return BoundingBox();
+	}
+
 	BoundingBox GetMergedMeshBound(BoundingBox* pVolume = nullptr);
 	void UpdateLocalBoundingBox(const XMFLOAT4X4& pParentTransform = Matrix4x4::Identity());
 

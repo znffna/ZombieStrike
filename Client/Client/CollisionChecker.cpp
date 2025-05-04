@@ -32,6 +32,7 @@ void CCollisionChecker::Update(float fTimeElapsed)
 void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObject::Layer, CGameObject::Layer>>& ppObjectLayerPairs)
 {
 	auto& ppObjects = m_pScene->GetObjects();
+	std::vector<std::pair<std::shared_ptr<CGameObject>, std::shared_ptr<CCollider>>> ppCollidedPairs;
 	for (auto& ppLayerPair : ppObjectLayerPairs) {
 		auto& pObjectsA = ppObjects[ppLayerPair.first];
 		auto& pObjectsB = ppObjects[ppLayerPair.second];
@@ -55,13 +56,19 @@ void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObjec
 				for (auto& pColliderA : pCollidersA) {
 					for (auto& pColliderB : pCollidersB) {
 						if (IsCollided(pColliderA, pColliderB)) {
-							pObjectA->OnCollision(pColliderB);
-							pObjectB->OnCollision(pColliderA);
+							ppCollidedPairs.push_back(std::make_pair(pObjectA, pColliderB));
+							ppCollidedPairs.push_back(std::make_pair(pObjectB, pColliderA));
+							//pObjectA->OnCollision(pColliderB);
+							//pObjectB->OnCollision(pColliderA);
 						}
 					}
 				}
 			}
 		}
+	}
+	for (auto& ppCollidedPair : ppCollidedPairs)
+	{
+		ppCollidedPair.first->OnCollision(ppCollidedPair.second);
 	}
 }
 

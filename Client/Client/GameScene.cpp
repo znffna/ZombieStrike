@@ -38,7 +38,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	AddObject(pGameObject);
 
 	// Player »ý¼º
-	std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2);
+	std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, 0);
 	pPlayer->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 0.0f));
 	AddObject(pPlayer);
 	m_pPlayer = pPlayer;

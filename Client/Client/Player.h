@@ -7,7 +7,7 @@ public:
 	CPlayer();
 	virtual ~CPlayer();
 	// Object Initialization
-	static std::shared_ptr<CPlayer> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks);
+	static std::shared_ptr<CPlayer> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks, int nSkinType = 0);
 	
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks);
 	
@@ -22,11 +22,18 @@ public:
 	// Object Update
 	virtual void Update(float fTimeElapsed) override;
 
+	// Skin State
+	void SetSkinType(int nSkinType) { m_nSkinType = nSkinType; }
+	int GetSkinType() const { return m_nSkinType; }
+
 private:
 	std::vector<std::string> m_ModelName{ "Ch18_nonPBR", "Ch35_nonPBR" };
+	std::vector<std::string> m_MeshBoneName{ "Ch18", "Ch35" };
 	
 	float m_fPitch = 0.0f;
 	float m_fYaw = 0.0f;
 	float m_fRoll = 0.0f;
+
+	int m_nSkinType = 0;
 };
 

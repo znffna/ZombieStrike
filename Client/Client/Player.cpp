@@ -59,16 +59,17 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	pCamera->SetActive(true);
 
 	// Collider »ý¼º
-	auto pCollider = CreateComponent<CAABBCollider>(shared_from_this());
-	pCollider->SetCollider(pPlayerModel->m_MeshBoundingBox.Center, pPlayerModel->m_MeshBoundingBox.Extents);
+	auto pCollider = CreateComponent<COBBCollider>(shared_from_this());
+	pCollider->SetCollider(FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound());
 
 	Update(0.0f);
 	UpdateTransform();
 }
 
-std::shared_ptr<CPlayer> CPlayer::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks)
+std::shared_ptr<CPlayer> CPlayer::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks, int nSkinType)
 {
 	std::shared_ptr<CPlayer> pPlayer = std::make_shared<CPlayer>();
+	pPlayer->SetSkinType(nSkinType);
 	pPlayer->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pModel, nAnimationTracks);
 	pPlayer->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(pTerrain.get());
 
