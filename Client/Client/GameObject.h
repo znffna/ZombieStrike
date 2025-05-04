@@ -61,7 +61,7 @@ struct CB_GAMEOBJECT_INFO
 class CGameObject : public std::enable_shared_from_this<CGameObject>
 {
 public:
-	enum Layer {
+	enum GAMEOBJECT_LAYER {
 		LAYER_DEFUALT = 0,
 		LAYER_SKYBOX,
 		LAYER_TERRAIN,
@@ -97,7 +97,7 @@ public:
 	void SetName(const std::string& strName);
 	virtual std::string GetDefaultName() { return "CGameObject"; }
 
-	virtual Layer GetLayer() { return LAYER_DEFUALT; }
+	virtual GAMEOBJECT_LAYER GetLayer() { return LAYER_DEFUALT; }
 
 	// 상속 관계
 	std::shared_ptr<CGameObject> GetParent() { return m_pParent.lock(); }
