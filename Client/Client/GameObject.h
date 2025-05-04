@@ -116,6 +116,7 @@ public:
 
 	// Object Collision
 	virtual void OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::shared_ptr<CCollider>& pColliderA, std::shared_ptr<CCollider>& pColliderB); // Collision Event
+	CAABBCollider GetMergedCollider();
 
 	BoundingBox GetMeshBound() {
 		if (m_pMesh) return m_pMesh->GetBoundingBox();

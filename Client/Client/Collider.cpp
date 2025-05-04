@@ -56,9 +56,7 @@ void CSphereCollider::SetCollider(const XMFLOAT3& xmf3Center, float fRadius)
 
 void CSphereCollider::UpdateCollider(const XMFLOAT4X4& xmf4x4World)
 {
-	m_xmWorldBoundingSphere.Center = Vector3::TransformCoord(m_xmBoundingSphere.Center, xmf4x4World);
-	m_xmWorldBoundingSphere.Radius = m_xmBoundingSphere.Radius;
-
+	m_xmBoundingSphere.Transform(m_xmWorldBoundingSphere, XMLoadFloat4x4(&xmf4x4World));
 }
 bool CSphereCollider::IsCollided(CCollider* pCollider)
 {
@@ -85,10 +83,15 @@ bool CSphereCollider::IsCollided(CCollider* pCollider)
 
 XMFLOAT3 CSphereCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
 {
+	return GetCorrectionVector(pCollider.get());
+}
+
+XMFLOAT3 CSphereCollider::GetCorrectionVector(CCollider* pCollider)
+{
 	if (pCollider->GetColliderType() == ColliderType::OBB)
 	{
 		return CalculateSphere_MTV(
-			GetCenter(), GetExtends(), 
+			GetCenter(), GetExtends(),
 			pCollider->GetCenter(), pCollider->GetExtends());
 	}
 	else if (pCollider->GetColliderType() == ColliderType::AABB)
@@ -167,7 +170,22 @@ XMFLOAT4X4 CAABBCollider::GetColliderMatrix()
 	return xmf4x4box;
 }
 
+BoundingBox CAABBCollider::MergeColliders(std::vector<std::shared_ptr<CCollider>>& pColliders)
+{ 
+	BoundingBox boundingBox{};
+	for (auto pCollider : pColliders)
+	{
+		BoundingBox::CreateMerged(boundingBox, boundingBox, pCollider->GetBoundingBox());
+	}
+	return boundingBox;
+}
+
 XMFLOAT3 CAABBCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
+{
+	return GetCorrectionVector(pCollider.get());
+}
+
+XMFLOAT3 CAABBCollider::GetCorrectionVector(CCollider* pCollider)
 {
 	if (pCollider->GetColliderType() == ColliderType::OBB)
 	{
@@ -177,7 +195,7 @@ XMFLOAT3 CAABBCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollide
 	else if (pCollider->GetColliderType() == ColliderType::AABB)
 	{
 		return CalculateAABB_MTV(
-			GetCenter(), GetExtends(), 
+			GetCenter(), GetExtends(),
 			pCollider->GetCenter(), pCollider->GetExtends()
 		);
 	}
@@ -234,25 +252,29 @@ bool COBBCollider::IsCollided(CCollider* pCollider)
 
 XMFLOAT3 COBBCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
 {
+	return GetCorrectionVector(pCollider.get());
+}
+
+XMFLOAT3 COBBCollider::GetCorrectionVector(CCollider* pCollider)
+{
 	if (pCollider->GetColliderType() == ColliderType::OBB)
 	{
-		return CalculateOBB_MTV(m_xmWorldBoundingOrientedBox.Center, m_xmWorldBoundingOrientedBox.Extents, m_xmWorldBoundingOrientedBox.Orientation,
+		return CalculateOBB_MTV(GetCenter(), GetExtends(), GetOrientation(),
 			pCollider->GetCenter(), pCollider->GetExtends(), pCollider->GetOrientation());
 	}
 	else if (pCollider->GetColliderType() == ColliderType::AABB)
 	{
 		return CalculateAABB_MTV(
-			m_xmWorldBoundingOrientedBox.Center, m_xmWorldBoundingOrientedBox.Extents,
+			GetCenter(), GetExtends(),
 			pCollider->GetCenter(), pCollider->GetExtends()
 		);
 	}
 	else {
 		return CalculateSphere_MTV(
-			m_xmWorldBoundingOrientedBox.Center, m_xmWorldBoundingOrientedBox.Extents,
+			GetCenter(), GetExtends(),
 			pCollider->GetCenter(), pCollider->GetExtends()
 		);
 	}
-	return XMFLOAT3();
 }
 
 XMFLOAT4X4 COBBCollider::GetColliderMatrix()
@@ -359,7 +381,7 @@ XMFLOAT3 CalculateOBB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, cons
 	for (int i = 0; i < 3; ++i) {
 		for (int j = 0; j < 3; ++j) {
 			XMVECTOR cross = XMVector3Cross(aAxes[i], bAxes[j]);
-			if (!XMVector3NearEqual(cross, XMVectorZero(), XMVectorReplicate(1e-6f))) {
+			if (!XMVector3NearEqual(cross, XMVectorZero(), XMVectorReplicate(EPSILON))) {
 				axes[axisCount++] = XMVector3Normalize(cross);
 			}
 		}
@@ -387,6 +409,10 @@ XMFLOAT3 CalculateOBB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, cons
 
 		if (overlap <= 0.0f) {
 			// 축 하나라도 분리됨 → 충돌 아님
+			{
+				std::string debugStr = "No Collision: " + std::to_string(overlap) + "\n";
+				OutputDebugStringA(debugStr.c_str());
+			}
 			return XMFLOAT3(0, 0, 0);
 		}
 
@@ -422,4 +448,6 @@ XMFLOAT3 CCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
 		xmf3OtherCenter, pCollider->GetExtends()
 	);
 }
+
+
 

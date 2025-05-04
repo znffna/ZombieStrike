@@ -51,6 +51,7 @@ public:
 	virtual BoundingBox GetBoundingBox() { return BoundingBox(GetCenter(), GetExtends()); }  
 
 	virtual XMFLOAT3 GetCorrectionVector(std::shared_ptr<CCollider>& pCollider);
+	virtual XMFLOAT3 GetCorrectionVector(CCollider* pCollider) = 0;
 
 	// setters  
 	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) = 0;  
@@ -98,6 +99,7 @@ public:
 	virtual bool IsCollided(CCollider* pCollider) override;;  
 
 	virtual XMFLOAT3 GetCorrectionVector(std::shared_ptr<CCollider>& pCollider) override;
+	virtual XMFLOAT3 GetCorrectionVector(CCollider* pCollider) override;
 
 private:  
 	BoundingSphere m_xmBoundingSphere;  
@@ -131,7 +133,10 @@ public:
 	virtual bool IsCollided(CCollider* pCollider) override;    
 	XMFLOAT4X4 GetColliderMatrix() override;    
 
+	static BoundingBox MergeColliders(std::vector<std::shared_ptr<CCollider>>& pColliders);
+
 	virtual XMFLOAT3 GetCorrectionVector(std::shared_ptr<CCollider>& pCollider) override;
+	virtual XMFLOAT3 GetCorrectionVector(CCollider* pCollider) override;
 
 private:    
 	BoundingBox m_xmBoundingBox;    
@@ -167,6 +172,7 @@ public:
 	virtual bool IsCollided(CCollider* pCollider) override;    
 
 	virtual XMFLOAT3 GetCorrectionVector(std::shared_ptr<CCollider>& pCollider) override;
+	virtual XMFLOAT3 GetCorrectionVector(CCollider* pCollider) override;
 
 private:    
 	BoundingOrientedBox m_xmBoundingOrientedBox;    

@@ -12,7 +12,7 @@ public:
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks);
 	
 	virtual std::string GetDefaultName() override { return "CPlayer"; }
-	virtual Layer GetLayer() { return LAYER_PLAYER; }
+	virtual GAMEOBJECT_LAYER GetLayer() { return LAYER_PLAYER; }
 
 	virtual void Rotate(float x = 0.0f, float y = 0.0f, float z = 0.0f) override;
 	virtual float GetPitch() override { return m_fPitch; }

@@ -24,7 +24,7 @@ public:
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks);
 	
 	virtual std::string GetDefaultName() override { return "CZombieObject"; }
-	virtual Layer GetLayer() { return LAYER_ENEMY; }
+	virtual GAMEOBJECT_LAYER GetLayer() { return LAYER_ENEMY; }
 
 	// Skin State
 	void SetSkinType(int nSkinType);

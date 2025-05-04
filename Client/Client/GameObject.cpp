@@ -219,20 +219,23 @@ void CGameObject::Update(float fTimeElapsed)
 void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::shared_ptr<CCollider>& pColliderA, std::shared_ptr<CCollider>& pColliderB)
 {
 	// Collision Event
-	std::shared_ptr<CCollider> collider = pColliderA;
-	if (nullptr == collider) return;
+	if (nullptr == pColliderA) return;
 
 	std::shared_ptr<CRigidBody> rigidBody = GetComponent<CRigidBody>();
 	std::shared_ptr<CRigidBody> pOtherRigidBody = pObjectB->GetComponent<CRigidBody>();
 	
-	{
-		std::string DebugOutput = "Collision Solve: " + GetName() + " <-> " + pObjectB->GetName() + "\n";
-		OutputDebugStringA(DebugOutput.c_str());
-	}
+	auto MergedA = GetMergedCollider();
+	auto MergedB = pObjectB->GetMergedCollider();
 
 	// 최소 거리 측정
 	// TODO : 의도대로 대도록 수정 필요
-	XMFLOAT3 mtv = collider->GetCorrectionVector(pColliderB);
+	XMFLOAT3 mtv = MergedA.GetCorrectionVector(&MergedB);
+
+	{
+		std::string DebugOutput = "MTV : " + std::to_string(mtv.x) + ", " + std::to_string(mtv.y) + ", " + std::to_string(mtv.z) + "\n";
+		OutputDebugStringA(DebugOutput.c_str());
+	}
+
 	if (rigidBody)
 	{
 		if (pOtherRigidBody)
@@ -243,6 +246,17 @@ void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::share
 		}
 		else rigidBody->ApplyCorrection(mtv);
 	}
+}
+
+CAABBCollider CGameObject::GetMergedCollider()
+{
+	std::vector<std::shared_ptr<CCollider>> pColliders;
+	GetComponentsInChildren<CCollider>(pColliders);
+
+	CAABBCollider mergedBoundingBox{ this };
+	mergedBoundingBox.SetCollider(CAABBCollider::MergeColliders(pColliders));
+
+	return mergedBoundingBox;
 }
 
 BoundingBox CGameObject::GetMergedMeshBound(BoundingBox* pVolume)

@@ -241,7 +241,7 @@ public:
 	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
 	virtual void AddObjects(const std::vector<std::shared_ptr<CGameObject>>& pObjects);
 	virtual void RemoveObject(const std::shared_ptr<CGameObject>& pObject);
-	std::unordered_map<CGameObject::Layer, std::vector<std::shared_ptr<CGameObject>>>& GetObjects() { return m_ppGameObjects; }
+	std::unordered_map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>>& GetObjects() { return m_ppGameObjects; }
 
 	void SetPlayer(std::shared_ptr<CPlayer> pPlayer);
 
@@ -308,7 +308,7 @@ protected:
 	float								m_fElapsedTime = 0.0f;
 
 	// GameObjects
-	std::unordered_map<CGameObject::Layer, std::vector<std::shared_ptr<CGameObject>>> m_ppGameObjects;
+	std::unordered_map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>> m_ppGameObjects;
 
 	// SkyBox
 	std::shared_ptr<CGameObject> m_pSkyBox;

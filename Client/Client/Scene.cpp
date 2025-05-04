@@ -317,7 +317,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// Render GameObjects 
 	for (auto& pvecObjects : m_ppGameObjects)
 	{
-		if (pvecObjects.first == CGameObject::Layer::LAYER_PLAYER)
+		if (pvecObjects.first == CGameObject::GAMEOBJECT_LAYER::LAYER_PLAYER)
 			int a = 0; // UI´Â Á¦¿Ü
 		for (auto& pObject : pvecObjects.second)
 		{
