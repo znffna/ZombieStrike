@@ -43,19 +43,21 @@ struct Zombie {
     SIZE1 act_type;             
 };
 
-std::vector<Zombie*> zombie_st;
+std::vector<ZombieAI*> g_zombies; // ZombieAI 객체를 서버가 관리
+std::vector<std::vector<int>> g_map; // 맵 데이터
 std::mutex zombiesMutex;
 
 bool serverRunning = true;
-
 short IN_g_player_n= 0;
+
+class SESSION;
+std::unordered_map<SIZEID, SESSION> g_users;
 
 void CALLBACK g_recv_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
 void CALLBACK g_send_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
 
 
 enum IO_OP { OP_RECV, OP_SEND };
-
 class OVER_EXP {
 public:
 
@@ -71,10 +73,6 @@ public:
     SIZE2           _buffer[1024];
     WSABUF          _wsabuf[1];
 };
-
-class SESSION;
-
-std::unordered_map<SIZEID, SESSION> g_users;
 
 class SESSION {
 public:
@@ -348,6 +346,51 @@ void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
 
 }
 
+
+void ZombieAIThread() {
+    while (serverRunning) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        std::vector<Vec3> playerPositions;
+        for (auto& [id, session] : g_users) {
+            if (session._obj_type == ObjectType::PLAYER)
+                playerPositions.push_back(session._position);
+        }
+
+        for (auto& zombie : g_zombies) {
+            zombie->Update(playerPositions, g_zombies);
+        }
+    }
+}
+
+void SpawnZombies(int count) {
+    for (int i = 0; i < count; ++i) {
+        auto [x, z] = GetRandomPosition(g_map);
+        ZombieAI* zombie = new ZombieAI(g_map, 10000 + i); // 10000 이상은 좀비 ID 예약
+        zombie->SetPosition((float)x, (float)z);
+        g_zombies.push_back(zombie);
+        std::cout << "[SPAWN] Zombie ID: " << (10000 + i) << " at (" << x << ", " << z << ")\n";
+    }
+
+    // 좀비 정보를 모든 플레이어에게 전송
+    pkt_sc_object_add packet;
+    for (auto zombie : g_zombies) {
+        packet.header.size = sizeof(packet);
+        packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+        packet.id = zombie->GetID();
+        packet.fixdata.obj_type = ObjectType::ZOMBIE;
+        packet.fixdata.skin_type = 0;
+        strcpy_s(packet.fixdata.name, "Zombie");
+        packet.fixdata.startposition = zombie->GetPosition();
+        packet.fixdata.starthp = zombie->GetHP();
+
+        for (auto& [id, session] : g_users) {
+            session.do_send(&packet);
+        }
+    }
+
+}
+
 void serverControl() {
     while (true) {
         char cmd;
@@ -362,19 +405,21 @@ void serverControl() {
 
 int main() {
 
-    std::wcout.imbue(std::locale("korean"));
+    std::wcout.imbue(std::locale("korean")); 
+
+    g_map = LoadMapBin("../../Map/Node/obstacle_mask.bin");
 
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
         error_display("WSAStartup failed", WSAGetLastError());
     else
-        std::cout << "WSAStartup 성공\n";
+        std::cout << "WSAStartup Success\n";
 
     SOCKET s_socket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, WSA_FLAG_OVERLAPPED);
     if (s_socket == INVALID_SOCKET)
         error_display("Socket creation failed", WSAGetLastError()); \
     else
-        std::cout << "Socket creation 성공\n";
+        std::cout << "Socket creation Success\n";
 
     SOCKADDR_IN serverAddr;
     serverAddr.sin_family = AF_INET;
@@ -383,19 +428,21 @@ int main() {
 
     if (bind (s_socket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(SOCKADDR_IN)) == SOCKET_ERROR)
         error_display("Bind failed", WSAGetLastError());
-    else { std::cout << "Bind 성공\n"; }
+    else { std::cout << "Bind Success\n"; }
 
     if (listen (s_socket, SOMAXCONN) == SOCKET_ERROR)
         error_display("Listen failed", WSAGetLastError());
-    else { std::cout << "Listen 성공\n"; }
+    else { std::cout << "Listen Success\n"; }
 
-    INT serverAddr_size = sizeof(SOCKADDR_IN);
 
     std::cout << "Zombie Strike 3D Server running on port: " << PORT_NUM << "\n";
 
     std::thread(serverControl).detach();
+    std::thread(ZombieAIThread).detach();
+    SpawnZombies(MAX_ZOMBIE_COUNT);
 
     SIZEID clientId = 0;
+    INT serverAddr_size = sizeof(SOCKADDR_IN);
 
     while (serverRunning) {
         auto c_socket = WSAAccept(s_socket,reinterpret_cast<sockaddr*>(&serverAddr), &serverAddr_size, NULL, NULL);
@@ -403,7 +450,6 @@ int main() {
             std::cout << "Accept failed\n";
             continue;
         }
-        serverControl;
 
         g_users.try_emplace(clientId, clientId, c_socket);
         clientId++;

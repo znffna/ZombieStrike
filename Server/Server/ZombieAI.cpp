@@ -20,6 +20,7 @@ constexpr int NUM_ZOMBIES = 50;          // 추가: 생성할 좀비 수
 constexpr float my_gCost = 1.0f;         // 이동 비용
 constexpr float CELL_SIZE = 1.0f;        // 노드당 크기
 constexpr float ZOMBIE_HALF_SIZE = 0.4f; // 좀비 AABB 반 사이즈
+constexpr float ZOMBIE_HP = 500;         // 좀비 초기 체력
 
 
 // -------------------- A* 내부 클래스 -----------------------
@@ -110,36 +111,8 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
 
 // ------------------- ZombieAI 구현 -----------------------
 
-std::vector<std::vector<int>> LoadMapBin(const std::string& filename)
-{
-    const int MAP_SIZE = 1024; // obstacle_mask.bin은 1024 x 1024
-    std::vector<std::vector<int>> map(MAP_SIZE, std::vector<int>(MAP_SIZE, 0));
-
-    std::ifstream file(filename, std::ios::binary);
-    if (!file.is_open()) {
-        std::cout << "[ERROR] obstacle_mask.bin 열기 실패!\n";
-        exit(1);
-    }
-
-    for (int y = 0; y < MAP_SIZE; ++y) {
-        for (int x = 0; x < MAP_SIZE; ++x) {
-            char value;
-            file.read(&value, 1);
-            if (file.eof()) {
-                std::cerr << "[ERROR] 파일 끝에 도달했습니다. 크기가 너무 작습니다.\n";
-                exit(1);
-            }
-            map[y][x] = (value == 1) ? 1 : 0; // 1 = 장애물, 0 = 길
-        }
-    }
-
-    file.close();
-    std::cout << "[OK] obstacle_mask.bin 로드 완료\n";
-    return map;
-}
-
 ZombieAI::ZombieAI(const std::vector<std::vector<int>>& map, int id)
-    : m_id(id), m_x(0), m_z(0), m_playerX(0), m_playerZ(0), m_pathIndex(0)
+    : m_astar(nullptr), m_id(id), m_x(0), m_z(0), m_playerX(0), m_playerZ(0), m_pathIndex(0), m_hp(ZOMBIE_HP)
 {
     m_astar = new AStar(map);
 }
@@ -157,41 +130,6 @@ void ZombieAI::FindPath() {
 std::vector<std::pair<int, int>> ZombieAI::FindPathToPlayer() {
     return m_astar->FindPath((int)m_x, (int)m_z, (int)m_playerX, (int)m_playerZ);
 }
-void ZombieAI::Update(std::vector<ZombieAI*>& allZombies)
-{
-    if (m_path.empty() || m_pathIndex >= m_path.size()) return;
-
-    auto& targetNode = m_path[m_pathIndex];
-    Vec3 targetPos = GetNodeCenter(targetNode.first, targetNode.second);
-    Vec3 currentPos(m_x, 0, m_z);
-    Vec3 toTarget = targetPos - currentPos;
-    float distance = toTarget.Length();
-
-    if (distance < 0.1f) {
-        m_pathIndex++;
-        return;
-    }
-
-    toTarget = toTarget.Normalize();
-    Vec3 avoidance(0, 0, 0);
-
-    for (auto& other : allZombies)
-    {
-        if (other == this) continue;
-        float dx = std::abs(m_x - other->GetX());
-        float dz = std::abs(m_z - other->GetZ());
-        if (dx < ZOMBIE_HALF_SIZE * 2 && dz < ZOMBIE_HALF_SIZE * 2) {
-            Vec3 push(m_x - other->GetX(), 0, m_z - other->GetZ());
-            if (push.Length() > 0.001f)
-                avoidance += push.Normalize() * 0.1f;
-        }
-    }
-
-    Vec3 moveDir = (toTarget + avoidance).Normalize();
-    float moveSpeed = 0.1f;
-    m_x += moveDir.x * moveSpeed;
-    m_z += moveDir.z * moveSpeed;
-}
 
 int ZombieAI::GetID() const { return m_id; }
 float ZombieAI::GetX() const { return m_x; }
@@ -203,6 +141,79 @@ const std::vector<std::pair<int, int>>& ZombieAI::GetPath() const { return m_pat
 Vec3 ZombieAI::GetNodeCenter(int x, int z) const {
     return Vec3(x * CELL_SIZE + 0.5f, 0, z * CELL_SIZE + 0.5f);
 }
+
+void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies)
+{
+    if (playerPositions.empty()) return;
+
+    // 1. 가장 가까운 플레이어 위치 계산
+    float minDist = FLT_MAX;
+    Vec3 closest;
+
+    for (const auto& pos : playerPositions)
+    {
+        Vec3 myPos(m_x, 0, m_z);
+        float dist = (pos - myPos).LengthSquared();
+        if (dist < minDist)
+        {
+            minDist = dist;
+            closest = pos;
+        }
+    }
+
+    // 2. 타겟 위치 설정 및 경로 재계산
+    SetPlayerPosition(closest.x, closest.z); 
+    FindPath();
+
+    // 3. 이동 처리 (경로 따라 이동)
+    if (m_path.empty() || m_pathIndex >= m_path.size())
+        return;
+
+    auto& targetNode = m_path[m_pathIndex];
+    Vec3 targetPos = GetNodeCenter(targetNode.first, targetNode.second);
+
+    Vec3 currentPos(m_x, 0, m_z);
+    Vec3 toTarget = targetPos - currentPos;
+    float distance = toTarget.Length();
+
+    if (distance < 0.1f) {
+        m_pathIndex++;
+        return;
+    }
+
+    toTarget = toTarget.Normalize();
+
+    // 단순 방향 이동 (충돌 회피 없음)
+    //Vec3 moveDir = toTarget;
+    //float moveSpeed = 0.1f;
+
+    // 4. 충돌 회피 처리
+    Vec3 avoidance(0, 0, 0);
+    for (auto* other : allZombies)
+    {
+        if (other->GetID() == m_id)
+            continue;
+
+        float dx = std::abs(m_x - other->GetX());
+        float dz = std::abs(m_z - other->GetZ());
+
+        if (dx < ZOMBIE_HALF_SIZE * 2 && dz < ZOMBIE_HALF_SIZE * 2)
+        {
+            Vec3 push(m_x - other->GetX(), 0, m_z - other->GetZ());
+            if (push.Length() > 0.001f)
+                avoidance += push.Normalize() * 0.1f;
+        }
+    }
+
+    Vec3 moveDir = (toTarget + avoidance).Normalize();
+    float moveSpeed = 0.1f;
+
+    m_x += moveDir.x * moveSpeed;
+    m_z += moveDir.z * moveSpeed;
+}
+
+
+
 
 
 // ------------------- 맵 로딩 & 랜덤 위치 -----------------------
@@ -224,6 +235,33 @@ std::vector<std::vector<int>> LoadMapBin(const std::string& filename)
     std::cout << "[OK] obstacle_mask.bin 로드 완료\n";
     return map;
 }
+//std::vector<std::vector<int>> LoadMapBin(const std::string& filename)
+//{
+//    const int MAP_SIZE = 1024; // obstacle_mask.bin은 1024 x 1024
+//    std::vector<std::vector<int>> map(MAP_SIZE, std::vector<int>(MAP_SIZE, 0));
+//
+//    std::ifstream file(filename, std::ios::binary);
+//    if (!file.is_open()) {
+//        std::cout << "[ERROR] obstacle_mask.bin 열기 실패!\n";
+//        exit(1);
+//    }
+//
+//    for (int y = 0; y < MAP_SIZE; ++y) {
+//        for (int x = 0; x < MAP_SIZE; ++x) {
+//            char value;
+//            file.read(&value, 1);
+//            if (file.eof()) {
+//                std::cerr << "[ERROR] 파일 끝에 도달했습니다. 크기가 너무 작습니다.\n";
+//                exit(1);
+//            }
+//            map[y][x] = (value == 1) ? 1 : 0; // 1 = 장애물, 0 = 길
+//        }
+//    }
+//
+//    file.close();
+//    std::cout << "[OK] obstacle_mask.bin 로드 완료\n";
+//    return map;
+//}
 
 std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map)
 {
