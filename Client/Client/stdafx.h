@@ -160,6 +160,8 @@ inline void Normalize(float& fValue, float& delta, float fMin, float fMax) { fVa
 
 #define ANIMATION_CALLBACK_EPSILON		0.00165f
 
+extern int g_nFrameCount;
+
 namespace Vector3
 {
 	inline XMFLOAT3 Zero()
