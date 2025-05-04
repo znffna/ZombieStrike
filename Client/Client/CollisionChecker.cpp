@@ -70,8 +70,8 @@ void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObjec
 	}
 	for (auto& ppCollisionInfo : ppCollidedPairs)
 	{
-		//ppCollisionInfo.pObjectA->UpdateTransform();
-		//ppCollisionInfo.pObjectB->UpdateTransform();
+		ppCollisionInfo.pObjectA->UpdateTransform();
+		ppCollisionInfo.pObjectB->UpdateTransform();
 
 		ppCollisionInfo.pObjectA->OnCollision(ppCollisionInfo.pObjectB, ppCollisionInfo.pColliderA, ppCollisionInfo.pColliderB);
 	}

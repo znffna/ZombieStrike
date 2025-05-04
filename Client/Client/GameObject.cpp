@@ -224,12 +224,9 @@ void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::share
 	std::shared_ptr<CRigidBody> rigidBody = GetComponent<CRigidBody>();
 	std::shared_ptr<CRigidBody> pOtherRigidBody = pObjectB->GetComponent<CRigidBody>();
 	
-	auto MergedA = GetMergedCollider();
-	auto MergedB = pObjectB->GetMergedCollider();
-
 	// 최소 거리 측정
 	// TODO : 의도대로 대도록 수정 필요
-	XMFLOAT3 mtv = MergedA.GetCorrectionVector(&MergedB);
+	XMFLOAT3 mtv = pColliderA->GetCorrectionVector(pColliderB);
 
 	{
 		std::string DebugOutput = "MTV : " + std::to_string(mtv.x) + ", " + std::to_string(mtv.y) + ", " + std::to_string(mtv.z) + "\n";
@@ -243,8 +240,10 @@ void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::share
 			XMFLOAT3 halfMTV = Vector3::ScalarProduct(mtv, 0.5f);
 			rigidBody->ApplyCorrection(halfMTV);
 			pOtherRigidBody->ApplyCorrection(Vector3::ScalarProduct(mtv, -0.5f));
+		}	
+		else {
+			rigidBody->ApplyCorrection(mtv);
 		}
-		else rigidBody->ApplyCorrection(mtv);
 	}
 }
 

@@ -435,8 +435,6 @@ XMFLOAT3 CalculateOBB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, cons
 	return result;
 }
 
-
-
 XMFLOAT3 CCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
 {
 	XMFLOAT3 xmf3Center = GetCenter();
