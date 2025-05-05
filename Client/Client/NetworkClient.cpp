@@ -30,29 +30,37 @@ void NetworkingClient::Connect()
         sizeof(serverAddr), NULL, NULL, NULL, NULL) == SOCKET_ERROR)
         error_display("서버 연결 실패", WSAGetLastError());
 
-    std::cout << "서버 연결 성공\n";
+	std::string DebugOutput = "서버 연결 성공\n";
+	OutputDebugStringA(DebugOutput.c_str());
 
     // 연결 시 flag 초기화
     is_running = true;
-
-    // 수신 루프 등록
-    is_recvLoopDone = false;
-    recv_packet();
-
     // 사실상 아래 코드는 Network를 사용하는 Scene에서 호출해야함.
 	// 예시 클라이언트 이름 (나중에 입력받도록 수정 가능)
     std::string name{ "Client" };
 
     // 1. 로그인 패킷 전송
     SendLoginPacket(name);
+
+    // 수신 루프 등록
+    is_recvLoopDone = false;
+    recv_packet();
 }
 
 void NetworkingClient::Logout()
 {
+    {
+        std::string DebugOutput = "서버와의 연결 종료\n";
+        OutputDebugStringA(DebugOutput.c_str());
+    }
+	
 	is_running = false;
 	while (false == is_recvLoopDone) {
         SleepEx(0, TRUE); // 네트워크 I/O 콜백 처리
 	}
+
+    while (SleepEx(0, TRUE)) {}; // 혹시라도 recv가 끝나도 send가 남아있을 수 있으니 Queue를 비움.
+
     closesocket(c_socket);
     WSACleanup();
 }
@@ -91,8 +99,11 @@ void NetworkingClient::error_display(const char* msg, int err_no)
     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
         NULL, err_no, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         (LPTSTR)&lpMsgBuf, 0, NULL);
-    std::cout << msg;
-    std::wcout << L" 에러 " << lpMsgBuf << std::endl;
+    //std::cout << msg;
+	std::string DebugOutput = msg;
+	DebugOutput += "Error : " + DebugOutput +  "\n";
+    OutputDebugStringA(DebugOutput.c_str());
+
     LocalFree(lpMsgBuf);
     exit(1);
 }
@@ -100,6 +111,11 @@ void NetworkingClient::error_display(const char* msg, int err_no)
 void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
 {
     NetworkingClient* client = reinterpret_cast<NetworkingClient*>(p_over);
+
+	{
+		std::string DebugOutput = "NetworkingClient :: recv_callback\n";
+		OutputDebugStringA(DebugOutput.c_str());
+	}
 
 	// 수신된 바이트 수가 0이거나 에러가 발생한 경우 통신을 종료한다.
     if (err != 0 || num_bytes == 0) {
@@ -113,7 +129,7 @@ void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
 
     while (offset < remain_bytes) {
 		PacketHeader* packet_header = (PacketHeader*)recv_p;
-        if (remain_bytes - offset < sizeof(packet_header->size)) {
+        if (remain_bytes - offset < packet_header->size) {
 			// 잔여 데이터가 패킷 길이 버퍼보다 작을 경우
             break;
         }
@@ -127,7 +143,9 @@ void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
 
         client->ProcessPacket(packet_header);
 
+        // 사이즈 갱신
         offset += size;
+        // 실제 패킷 위치 갱신
         recv_p += size;
     }
 
@@ -154,6 +172,12 @@ void NetworkingClient::send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
 void NetworkingClient::ProcessPacket(PacketHeader* recv_p)
 {  
 	if (is_running == false) return; // 종료된 경우 패킷 처리하지 않음
+
+    {
+        std::string DebugOutput = "NetworkingClient :: ProcessPacket\n";
+        OutputDebugStringA(DebugOutput.c_str());
+    }
+
     if (m_pScene) m_pScene->ProcessPacket(recv_p); // Scene이 nullptr인 경우 처리하지 않음  
 }
 
@@ -162,15 +186,46 @@ void NetworkingClient::recv_packet()
     ZeroMemory(&recv_over, sizeof(recv_over));
     recv_wsabuf.buf = recv_buffer + remain_bytes;
     recv_wsabuf.len = sizeof(recv_buffer) - remain_bytes;
+
     DWORD recv_flag = 0;
-    WSARecv(c_socket, &recv_wsabuf, 1, NULL, &recv_flag, &recv_over, recv_callback);
+    int ret = WSARecv(c_socket, &recv_wsabuf, 1, 0, &recv_flag, &recv_over, g_recv_callback);
+
+    if (ret == 0) {
+        // 즉시 수신 완료
+		DWORD num_bytes = 0;
+		GetOverlappedResult(socket, &recv_over, &num_bytes, FALSE);
+		recv_callback(0, num_bytes, &recv_over, recv_flag);
+    }
+    else if(ret == SOCKET_ERROR && WSAGetLastError() == WSA_IO_PENDING) {
+		// 비동기 수신 대기 중
+        std::string debug = "비동기 수신 대기상태로 진입\n";
+		OutputDebugStringA(debug.c_str());
+    }
+    else if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+		// 오류 발생
+        error_display("WSARecv 실패 결과는?\n Answer : ", WSAGetLastError());
+        Logout();
+    }
 }
 
 void NetworkingClient::send_packet(char* packet) {
     SendOverlapped* send_over = new SendOverlapped{ packet };
-    int ret = WSASend(c_socket, &send_over->wsabuf, 1, 0, 0, &send_over->overlapped, send_callback);
+    int ret = WSASend(c_socket, &send_over->wsabuf, 1, 0, 0, &send_over->overlapped, g_send_callback);
     
     if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+        OutputDebugStringA("WSASend 실패\n");
         error_display("WSASend 실패", WSAGetLastError());
     }
+}
+
+void g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
+{
+	NetworkingClient* client = reinterpret_cast<NetworkingClient*>(p_over);
+	client->recv_callback(err, num_bytes, p_over, flag);
+}
+
+void g_send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
+{
+	SendOverlapped* p_over = reinterpret_cast<SendOverlapped*>(p_over);
+	delete p_over;
 }

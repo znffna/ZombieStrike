@@ -16,9 +16,14 @@ constexpr const char* LOOPBACK_IP = "127.0.0.1";
 class SendOverlapped {
 public:
 	WSAOVERLAPPED overlapped; // overlapped의 주소가 곧 SendOverlapped의 주소
-    SOCKET c_socket;
     char send_buffer[1024];
 	WSABUF wsabuf;
+
+	SendOverlapped() {
+		ZeroMemory(&overlapped, sizeof(overlapped));
+		ZeroMemory(send_buffer, sizeof(send_buffer));
+		ZeroMemory(&wsabuf, sizeof(wsabuf));
+	}
 
 	SendOverlapped(char* packet) {
 		ZeroMemory(&overlapped, sizeof(overlapped));
@@ -29,6 +34,10 @@ public:
 };
 
 class COnlineScene;
+
+void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
+void CALLBACK g_send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
+
 
 class NetworkingClient {
 public:
@@ -50,8 +59,8 @@ public:
     void Logout(); // Scene의 종료시 호출하도록 구현할 것
     void error_display(const char* msg, int err_no);
 
-    static void CALLBACK recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
-    static void CALLBACK send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
+    void CALLBACK recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
+    void CALLBACK send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
     
     void ProcessPacket(PacketHeader* recv_p);
     void recv_packet();
