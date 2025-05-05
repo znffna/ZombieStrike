@@ -13,23 +13,23 @@ constexpr const char* LOOPBACK_IP = "127.0.0.1";
 // 소켓을 사용하여 서버와 통신하는 기능을 포함
 // MultiSCene에서 생성되어 WSARecv와 WSASend를 이용한 callback을 통한 로직 구현.
 
-class SendOverlapped {
+class ExtentOverlapped {
 public:
-	WSAOVERLAPPED overlapped; // overlapped의 주소가 곧 SendOverlapped의 주소
-    char send_buffer[1024];
-	WSABUF wsabuf;
+	WSAOVERLAPPED _overlapped; // overlapped의 주소가 곧 SendOverlapped의 주소
+    char _buffer[1024];
+	WSABUF _wsabuf;
 
-	SendOverlapped() {
-		ZeroMemory(&overlapped, sizeof(overlapped));
-		ZeroMemory(send_buffer, sizeof(send_buffer));
-		ZeroMemory(&wsabuf, sizeof(wsabuf));
+	ExtentOverlapped() {
+		ZeroMemory(&_overlapped, sizeof(_overlapped));
+		ZeroMemory(_buffer, sizeof(_buffer));
+		ZeroMemory(&_wsabuf, sizeof(_wsabuf));
 	}
 
-	SendOverlapped(char* packet) {
-		ZeroMemory(&overlapped, sizeof(overlapped));
-		wsabuf.buf = send_buffer;
-        wsabuf.len = *(reinterpret_cast<SIZE2*>(packet));
-		memcpy(send_buffer, packet, wsabuf.len);
+	ExtentOverlapped(char* packet) {
+		ZeroMemory(&_overlapped, sizeof(_overlapped));
+		_wsabuf.buf = _buffer;
+        _wsabuf.len = *(reinterpret_cast<SIZE2*>(packet));
+		memcpy(_buffer, packet, _wsabuf.len);
 	}
 };
 
@@ -41,15 +41,16 @@ void CALLBACK g_send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
 
 class NetworkingClient {
 public:
-    WSAOVERLAPPED recv_over;
+    ExtentOverlapped recv_over;
+    //WSAOVERLAPPED recv_over;
     SOCKET c_socket;
-    char recv_buffer[1024];
-    WSABUF recv_wsabuf;
+    //char recv_buffer[1024];
+    //WSABUF recv_wsabuf;
 
 	DWORD remain_bytes = 0;
 
-    bool is_running = true; // 종료 여부
-	bool is_recvLoopDone = false; // recv loop 종료 여부
+    bool is_running = false; // 종료 여부
+	bool is_recvLoopWorking = false; // recv loop이 수행중인지 확인
 
     COnlineScene* m_pScene; // Scene 포인터
 public:
@@ -65,6 +66,8 @@ public:
     void ProcessPacket(PacketHeader* recv_p);
     void recv_packet();
     void send_packet(char* packet);
+
+	void startRecvLoop();
 
     // SendPacket (테스트로 구현)
     void SendLoginPacket(std::string& name);
