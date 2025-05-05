@@ -59,8 +59,8 @@ public:
     void Logout(); // Scene의 종료시 호출하도록 구현할 것
     void error_display(const char* msg, int err_no);
 
-    void CALLBACK recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
-    void CALLBACK send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
+    void recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
+    void send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
     
     void ProcessPacket(PacketHeader* recv_p);
     void recv_packet();

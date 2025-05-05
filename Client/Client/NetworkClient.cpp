@@ -128,6 +128,12 @@ void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
     DWORD remain_bytes = client->remain_bytes + num_bytes;
 
     while (offset < remain_bytes) {
+        if (remain_bytes - offset < sizeof(PacketHeader))
+        {
+			// 패킷의 길이 저장 데이터(packet.size)보다 잔여 데이터가 작을 경우
+            // 패킷의 길이를 모르기에 바로 종료
+            break;
+        }
 		PacketHeader* packet_header = (PacketHeader*)recv_p;
         if (remain_bytes - offset < packet_header->size) {
 			// 잔여 데이터가 패킷 길이 버퍼보다 작을 경우
@@ -187,31 +193,37 @@ void NetworkingClient::recv_packet()
     recv_wsabuf.buf = recv_buffer + remain_bytes;
     recv_wsabuf.len = sizeof(recv_buffer) - remain_bytes;
 
-    DWORD recv_flag = 0;
-    int ret = WSARecv(c_socket, &recv_wsabuf, 1, 0, &recv_flag, &recv_over, g_recv_callback);
+	DWORD recv_flag = 0;
+    int ret = WSARecv(c_socket, &recv_wsabuf, 1, nullptr, &recv_flag, &recv_over, g_recv_callback);
 
     if (ret == 0) {
         // 즉시 수신 완료
 		DWORD num_bytes = 0;
-		GetOverlappedResult(socket, &recv_over, &num_bytes, FALSE);
-		recv_callback(0, num_bytes, &recv_over, recv_flag);
+		GetOverlappedResult((HANDLE)c_socket, &recv_over, &num_bytes, FALSE);
+		recv_callback(ret, num_bytes, &recv_over, recv_flag);
     }
-    else if(ret == SOCKET_ERROR && WSAGetLastError() == WSA_IO_PENDING) {
-		// 비동기 수신 대기 중
-        std::string debug = "비동기 수신 대기상태로 진입\n";
-		OutputDebugStringA(debug.c_str());
-    }
-    else if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-		// 오류 발생
-        error_display("WSARecv 실패 결과는?\n Answer : ", WSAGetLastError());
-        Logout();
+    else if (ret == SOCKET_ERROR) {
+        if (WSAGetLastError() == WSA_IO_PENDING) {
+            // 비동기 수신 대기 중
+            std::string debug = "비동기 수신 대기상태로 진입\n";
+            OutputDebugStringA(debug.c_str());
+        }
+        else {
+            // 오류 발생
+            error_display("WSARecv 실패 결과는?\n Answer : ", WSAGetLastError());
+            Logout();
+        
+        }
     }
 }
 
 void NetworkingClient::send_packet(char* packet) {
     SendOverlapped* send_over = new SendOverlapped{ packet };
     int ret = WSASend(c_socket, &send_over->wsabuf, 1, 0, 0, &send_over->overlapped, g_send_callback);
-    
+    if (ret == 0) {
+        // 즉시 전송 완료
+        delete send_over;
+    }
     if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
         OutputDebugStringA("WSASend 실패\n");
         error_display("WSASend 실패", WSAGetLastError());
@@ -220,12 +232,24 @@ void NetworkingClient::send_packet(char* packet) {
 
 void g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
 {
+    static int count = 0;
+    {
+        std::string DebugOutput = "NetworkingClient :: g_recv_callback-" + std::to_string(++count) + "\n";
+        OutputDebugStringA(DebugOutput.c_str());
+    }
+
 	NetworkingClient* client = reinterpret_cast<NetworkingClient*>(p_over);
 	client->recv_callback(err, num_bytes, p_over, flag);
 }
 
 void g_send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
 {
-	SendOverlapped* p_over = reinterpret_cast<SendOverlapped*>(p_over);
-	delete p_over;
+	static int count = 0;
+    {
+		std::string DebugOutput = "NetworkingClient :: g_send_callback-" + std::to_string(++count) + "\n";
+		OutputDebugStringA(DebugOutput.c_str());
+    }
+
+	SendOverlapped* p_sendover = reinterpret_cast<SendOverlapped*>(p_over);
+	delete p_sendover;
 }
