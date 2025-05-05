@@ -228,11 +228,6 @@ void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::share
 	// TODO : 의도대로 대도록 수정 필요
 	XMFLOAT3 mtv = pColliderA->GetCorrectionVector(pColliderB);
 
-	{
-		std::string DebugOutput = "MTV : " + std::to_string(mtv.x) + ", " + std::to_string(mtv.y) + ", " + std::to_string(mtv.z) + "\n";
-		OutputDebugStringA(DebugOutput.c_str());
-	}
-
 	if (rigidBody)
 	{
 		if (pOtherRigidBody)
@@ -732,11 +727,6 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 
 			::ReadStringFromFile(file, pGameObject->m_strName);
 
-#ifdef _DEBUG
-			pGameObject->nLoadFrames = nFrame;
-			std::string debugoutput = pGameObject->m_strName + " " + std::to_string(nFrame)+ ", Stack Depth = " + std::to_string(nDepth) + "\n";
-			OutputDebugStringA(debugoutput.c_str());
-#endif
 			// Test용
 			isGetModel = CloneByModel(pGameObject->m_strName, pGameObject);
 		}

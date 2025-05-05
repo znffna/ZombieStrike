@@ -136,7 +136,7 @@ void CGameTimer::Tick(float fLockFPS)
 			::QueryPerformanceCounter((LARGE_INTEGER*)&currTime);
 			m_nCurrTime = currTime;
 			m_fDeltaTime = float((m_nCurrTime - m_nPrevTime) * m_fSecondsPerCount);
-			SleepEx(0, TRUE); // 남는 시간 네트워크 I/O 콜백 처리
+			//SleepEx(0, TRUE); // 남는 시간 네트워크 I/O 콜백 처리
 		}
 	}
 	recordTimeDifference(m_fDeltaTime);
