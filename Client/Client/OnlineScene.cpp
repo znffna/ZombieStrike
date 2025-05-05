@@ -6,13 +6,21 @@ COnlineScene::COnlineScene()
 {	
 	if(g_bNetworkDebugMode)
 	{
-		std::string debugOutput = "OnlineScene »ý¼ºµÊ";
+		std::string debugOutput = "\nOnlineScene »ý¼ºµÊ";
 		debugOutput += "m_NetworkClient Address : ";
 		debugOutput += std::to_string(reinterpret_cast<uintptr_t>(&m_NetworkClient));
 		debugOutput += "\n";
 		debugOutput += "m_NetworkClient.Overlapped Address : ";
-		debugOutput += std::to_string(reinterpret_cast<uintptr_t>(&m_NetworkClient.recv_over));
+		debugOutput += std::to_string(reinterpret_cast<uintptr_t>(&m_NetworkClient.recv_over)) + "\n";
 		OutputDebugStringA(debugOutput.c_str());
+
+		if (reinterpret_cast<uintptr_t>(&m_NetworkClient) == reinterpret_cast<uintptr_t>(&m_NetworkClient.recv_over)) {
+			OutputDebugStringA("m_NetworkClient°ú m_NetworkClient.recv_overÀÇ ÁÖ¼Ò°¡ °°½À´Ï´Ù.\n");
+		}
+		else
+		{
+			OutputDebugStringA("m_NetworkClient°ú m_NetworkClient.recv_overÀÇ ÁÖ¼Ò°¡ ´Ù¸¨´Ï´Ù.\n");
+		}
 	}
 }
 
@@ -41,12 +49,20 @@ void COnlineScene::Update(float deltaTime)
 {
 	#define MAX_PACKET_PER_FRAME 10
 
+	// ¾ó¸¸Å­ ¹Ýº¹ÇÏ³ª Âï¾îº¸ÀÚ.
+	int count{ 0 };
 	for (int i = 0; i < MAX_PACKET_PER_FRAME; i++)
 	{
-		// SleepEx(0, TRUE) : ï¿½ï¿½Æ®ï¿½ï¿½Å© I/O ï¿½Ý¹ï¿½ Ã³ï¿½ï¿½
+		++count;
+		// SleepEx(0, TRUE) : ³×Æ®¿öÅ© I/O ÄÝ¹é Ã³¸®
 		DWORD ret = SleepEx(0, TRUE);
-		if (ret == WAIT_IO_COMPLETION) // ï¿½ñµ¿±ï¿½ ï¿½Û¾ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ù¸ï¿½ ï¿½ï¿½ï¿½ ï¿½ß´ï¿½
+		if (ret != WAIT_IO_COMPLETION) // ºñµ¿±â ÀÛ¾÷ÀÌ ¾ø´Ù¸é Áï½Ã Áß´Ü
 			break;
+	}
+	if (g_bNetworkDebugMode)
+	{
+		std::string debugOutput = "COnlineScene::Update() - SleepEx() È£Ãâ È½¼ö : " + std::to_string(count) + "\n";
+		OutputDebugStringA(debugOutput.c_str());
 	}
 
 	CGameScene::Update(deltaTime);
@@ -55,7 +71,8 @@ void COnlineScene::Update(float deltaTime)
 	if (m_NetworkClient.is_running)
 	{
 		// Network Client Update
-		SendPlayerState();
+		// Áï Å¬¶óÃ³¸® °á°ú¸¦ ¼­¹ö¿¡ º¸°í
+		// SendPlayerState();
 	}
 }
 
@@ -135,6 +152,12 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			pZombie->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
 			m_mapGameObjects[packet->id] = pZombie;
 			AddObject(pZombie);
+			{
+				std::string DebugOutput = "S_C_OBJECT_ADD ÆÐÅ¶ ¼ö½Å => Zombie »ý¼º\n";
+				DebugOutput += "position : (" + std::to_string(packet->fixdata.startposition.x) + ", " + std::to_string(packet->fixdata.startposition.y) + ", " + std::to_string(packet->fixdata.startposition.z) + ")\n";
+				OutputDebugStringA(DebugOutput.c_str());
+			}
+
 			break;
 		}
 		case ObjectType::BULLET:
