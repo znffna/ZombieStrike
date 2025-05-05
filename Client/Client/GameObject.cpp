@@ -727,11 +727,6 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 
 			::ReadStringFromFile(file, pGameObject->m_strName);
 
-#ifdef _DEBUG
-			pGameObject->nLoadFrames = nFrame;
-			std::string debugoutput = pGameObject->m_strName + " " + std::to_string(nFrame)+ ", Stack Depth = " + std::to_string(nDepth) + "\n";
-			OutputDebugStringA(debugoutput.c_str());
-#endif
 			// Test¿ë
 			isGetModel = CloneByModel(pGameObject->m_strName, pGameObject);
 		}
