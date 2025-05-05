@@ -39,6 +39,16 @@ void COnlineScene::ReleaseUploadBuffers()
 
 void COnlineScene::Update(float deltaTime)
 {
+	#define MAX_PACKET_PER_FRAME 10
+
+	for (int i = 0; i < MAX_PACKET_PER_FRAME; i++)
+	{
+		// SleepEx(0, TRUE) : ��Ʈ��ũ I/O �ݹ� ó��
+		DWORD ret = SleepEx(0, TRUE);
+		if (ret == WAIT_IO_COMPLETION) // �񵿱� �۾��� ���ٸ� ��� �ߴ�
+			break;
+	}
+
 	CGameScene::Update(deltaTime);
 
 	// Network Client Update
