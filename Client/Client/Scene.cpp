@@ -218,7 +218,8 @@ void CScene::AddObject(const std::shared_ptr<CGameObject>& pObject)
 {
 	if (pObject)
 	{
-		m_ppGameObjects[pObject->GetLayer()].push_back(pObject);
+		// Add Object to Scene
+		m_pAddGameObjectList.push_back(pObject);	
 		pObject->SetActive(true);
 	}
 }
@@ -228,11 +229,7 @@ void CScene::AddObjects(const std::vector<std::shared_ptr<CGameObject>>& pObject
 	if (pObjects.empty()) return;
 	for (const auto& pObject : pObjects)
 	{
-		if (pObject)
-		{
-			m_ppGameObjects[pObject->GetLayer()].push_back(pObject);
-			pObject->SetActive(true);
-		}
+		AddObject(pObject);
 	}
 }
 
@@ -240,14 +237,34 @@ void CScene::RemoveObject(const std::shared_ptr<CGameObject>& pObject)
 {
 	if (pObject)
 	{
+		m_pRemoveGameObjectList.push_back(pObject);
+		pObject->SetActive(false);
+	}
+}
+
+void CScene::LateUpdate()
+{
+	// Add GameObjects
+	for (auto& pObject : m_pAddGameObjectList)
+	{
+		if (pObject)
+		{
+			m_ppGameObjects[pObject->GetLayer()].push_back(pObject);
+		}
+	}
+	m_pAddGameObjectList.clear();
+
+	// Remove GameObjects
+	for (auto& pObject : m_pRemoveGameObjectList)
+	{
 		auto Layer = pObject->GetLayer();
 		auto it = std::find(m_ppGameObjects[Layer].begin(), m_ppGameObjects[Layer].end(), pObject);
 		if (it != m_ppGameObjects[Layer].end())
 		{
-			m_ppGameObjects[Layer].erase(it); // 순회중 삭제 수정해야함.
+			m_ppGameObjects[Layer].erase(it); 
 		}
-		pObject->SetActive(false);
 	}
+	m_pRemoveGameObjectList.clear();
 }
 
 void CScene::SetPlayer(std::shared_ptr<CPlayer> pPlayer)
@@ -268,11 +285,7 @@ void CScene::Update(float deltaTime)
 	// Update Matrix
 	for (auto& pvecObjects : m_ppGameObjects) for (auto& pObject : pvecObjects.second)  pObject->UpdateTransform();
 
-	//if (m_pPlayer)
-	//{
-	//	m_pPlayer->Update(deltaTime);
-	//	if (!m_pPlayer->m_pSkinnedAnimationController) m_pPlayer->UpdateTransform(nullptr);
-	//}
+	LateUpdate();
 }
 
 bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
@@ -321,7 +334,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			int a = 0; // UI는 제외
 		for (auto& pObject : pvecObjects.second)
 		{
-			//pObject->Update(0.0f);
+			pObject->Update(0.0f);
 			pObject->Render(pd3dCommandList, pCamera);
 		}
 	}
