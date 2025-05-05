@@ -43,15 +43,15 @@ enum PKT_TYPE : SIZE1 {
 
     //S_C_LOGIN_OK = 14,
     //S_C_LOGIN_FAIL = 15,
-    S_C_PLAYER_INFO = 16,
-    S_C_HIT_RESULT = 10,
+    S_C_PLAYER_INFO,
+    //S_C_HIT_RESULT,
 
     // 오브젝트 패킷 공통 처리용
-    S_C_OBJECT_ADD = 30,
-    S_C_OBJECT_UPDATE ,
-    S_C_OBJECT_REMOVE ,
+    S_C_OBJECT_ADD,
+    S_C_OBJECT_UPDATE,
+    S_C_OBJECT_REMOVE,
 
-    S_C_STAGE_INFO = 40,
+    S_C_STAGE_INFO,
     S_C_SCORE_INFO,
     // ...
 };
@@ -259,13 +259,13 @@ struct pkt_sc_player_info {
 };
 
 
-struct pkt_sc_hit_result {
-    PacketHeader header{sizeof(*this), PKT_TYPE::S_C_HIT_RESULT };
-    SIZEID shooterId;               // 누가 쐈는지
-    SIZEID zombieId;
-    SIZE2 zombieHp;
-    //uint8_t damage;               // 얼마나 깎였는지
-};
+//struct pkt_sc_hit_result {
+//    PacketHeader header{sizeof(*this), PKT_TYPE::S_C_HIT_RESULT };
+//    SIZEID shooterId;               // 누가 쐈는지
+//    SIZEID zombieId;
+//    SIZE2 zombieHp;
+//    //uint8_t damage;               // 얼마나 깎였는지
+//};
 struct ZombieHit {
     SIZEID zombieId;
     SIZE2 hp;

@@ -56,7 +56,7 @@ public:
 public:
 	NetworkingClient(COnlineScene* pScene);
 
-	void Connect();   // 소켓 초기화 및 서버 연결
+	bool Connect();   // 소켓 초기화 및 서버 연결
     void Logout(); // Scene의 종료시 호출하도록 구현할 것
     void error_display(const char* msg, int err_no);
 

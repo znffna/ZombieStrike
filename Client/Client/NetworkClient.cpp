@@ -10,7 +10,7 @@ NetworkingClient::NetworkingClient(COnlineScene* pScene) : m_pScene(pScene) {
     //ZeroMemory(&recv_wsabuf, sizeof(recv_wsabuf));
 }
 
-void NetworkingClient::Connect()
+bool NetworkingClient::Connect()
 {
     WSADATA wsaData;
     auto ret = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -28,7 +28,12 @@ void NetworkingClient::Connect()
 
     if (WSAConnect(c_socket, reinterpret_cast<sockaddr*>(&serverAddr),
         sizeof(serverAddr), NULL, NULL, NULL, NULL) == SOCKET_ERROR)
+    {
         error_display("서버 연결 실패", WSAGetLastError());
+        // TODO : 오류가 발생하면 OnlineScene을 제외시키고 다시 Title로 가는 등의 로직 필요. 
+		// TODO : 즉, OnlineScene의 Initialize가 연결 이후로 가야함.
+        return false;
+    }
 
 	std::string DebugOutput = "서버 연결 성공\n";
 	OutputDebugStringA(DebugOutput.c_str());
@@ -42,7 +47,7 @@ void NetworkingClient::Connect()
     // 1. 로그인 패킷 전송
     SendLoginPacket(name);
 
-
+    return true;
 }
 
 void NetworkingClient::Logout()
@@ -56,8 +61,6 @@ void NetworkingClient::Logout()
 	while (true == is_recvLoopWorking) {
         SleepEx(0, TRUE); // 네트워크 I/O 콜백 처리
 	}
-
-    while (SleepEx(0, TRUE)) {}; // 혹시라도 recv가 끝나도 send가 남아있을 수 있으니 Queue를 비움.
 
     closesocket(c_socket);
     WSACleanup();
@@ -103,7 +106,7 @@ void NetworkingClient::error_display(const char* msg, int err_no)
     OutputDebugStringA(DebugOutput.c_str());
 
     LocalFree(lpMsgBuf);
-    exit(1);
+    //exit(1);
 }
 
 void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
@@ -113,7 +116,7 @@ void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
 	// 수신된 바이트 수가 0이거나 에러가 발생한 경우 통신을 종료한다.
     if (err != 0 || num_bytes == 0) {
 
-		std::string DebugOutput = "recv_callback 에러 발생\n";
+		std::string DebugOutput = "recv_callback 에러 발생 :  if (err != 0 || num_bytes == 0)\n";
 		DebugOutput += "Error : " + std::to_string(err) + "\n";
 		DebugOutput += "num_bytes : " + std::to_string(num_bytes) + "\n";
 		OutputDebugStringA(DebugOutput.c_str());
@@ -134,11 +137,6 @@ void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
             break;
         }
 		PacketHeader* packet_header = (PacketHeader*)recv_p;
-        if (remain_bytes - offset < packet_header->size) {
-			// 잔여 데이터가 패킷 길이 버퍼보다 작을 경우
-            break;
-        }
-
         SIZE2 size = packet_header->size;     // 패킷 길이
 
 		if (remain_bytes - offset < size) {
@@ -156,12 +154,15 @@ void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
 
 	// 패킷 처리 후 남은 바이트 수
     client->remain_bytes = remain_bytes - offset;
-    memcpy(client->recv_over._buffer, recv_p, client->remain_bytes);
+    if(client->remain_bytes > 0) memcpy(client->recv_over._buffer, recv_p, client->remain_bytes);
 
-    {
-		std::string DebugOutput = "recv_callback 남은 바이트 수 : " + std::to_string(client->remain_bytes) + "\n";
+    /*{
+		std::string DebugOutput = "recv_callback() - 남은 바이트 수 : " + std::to_string(client->remain_bytes) + "\n";
+		DebugOutput += "recv_callback() - 수신된 바이트 수 : " + std::to_string(num_bytes) + "\n";
+		DebugOutput += "recv_callback() - offset : " + std::to_string(offset) + "\n";
+		DebugOutput += "recv_callback() - remain_bytes : " + std::to_string(remain_bytes) + "\n";
 		OutputDebugStringA(DebugOutput.c_str());
-    }
+    }*/
 
     // 루프 종료 판단
     if (false == client->is_running) {
@@ -182,17 +183,16 @@ void NetworkingClient::send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
 void NetworkingClient::ProcessPacket(PacketHeader* recv_p)
 {  
 	if (is_running == false) return; // 종료된 경우 패킷 처리하지 않음
-
-    {
-        std::string DebugOutput = "NetworkingClient :: ProcessPacket\n";
-        OutputDebugStringA(DebugOutput.c_str());
-    }
-
     if (m_pScene) m_pScene->ProcessPacket(recv_p); // Scene이 nullptr인 경우 처리하지 않음  
 }
 
 void NetworkingClient::recv_packet()
 {
+	static int call_count = 0;
+    {
+		std::string DebugOutput = "recv_packet() - 호출 횟수 : " + std::to_string(++call_count) + "\n";
+		OutputDebugStringA(DebugOutput.c_str());
+    }
     ZeroMemory(&recv_over, sizeof(recv_over));
     recv_over._wsabuf.buf = recv_over._buffer + remain_bytes;
     recv_over._wsabuf.len = sizeof(recv_over._buffer) - remain_bytes;
@@ -221,6 +221,13 @@ void NetworkingClient::recv_packet()
 }
 
 void NetworkingClient::send_packet(char* packet) {
+    {
+		std::string debugOutput = "send_packet() - 호출됨\n";
+		debugOutput += "send_packet() - packet size : " + std::to_string(*(reinterpret_cast<SIZE2*>(packet))) + "\n";
+		debugOutput += "send_packet() - packet type : " + std::to_string(*(reinterpret_cast<PKT_TYPE*>(packet))) + "\n";
+		OutputDebugStringA(debugOutput.c_str());
+    }
+
     ExtentOverlapped* send_over = new ExtentOverlapped{ packet };
     int ret = WSASend(c_socket, &send_over->_wsabuf, 1, 0, 0, &send_over->_overlapped, g_send_callback);
     if (ret == 0) {
@@ -234,10 +241,18 @@ void NetworkingClient::send_packet(char* packet) {
 }
 
 void NetworkingClient::startRecvLoop() {
+	static int call_count = 0;
     // 수신 루프 등록
     if(is_running)
     {
         if (is_recvLoopWorking) return; // 이미 루프가 등록된 경우
+
+        {
+            ++call_count;
+            std::string DebugOutput = "NetworkingClient :: startRecvLoop() - call count : " + std::to_string(call_count) + "\n";
+            OutputDebugStringA(DebugOutput.c_str());
+        }
+
         is_recvLoopWorking = true;
         recv_packet();
     }
@@ -251,12 +266,6 @@ void g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD f
 
 void g_send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
 {
-	static int count = 0;
-    {
-		std::string DebugOutput = "NetworkingClient :: g_send_callback-" + std::to_string(++count) + "\n";
-		OutputDebugStringA(DebugOutput.c_str());
-    }
-
 	ExtentOverlapped* p_sendover = reinterpret_cast<ExtentOverlapped*>(p_over);
 	delete p_sendover;
 }
