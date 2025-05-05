@@ -13,24 +13,43 @@ constexpr const char* LOOPBACK_IP = "127.0.0.1";
 // 소켓을 사용하여 서버와 통신하는 기능을 포함
 // MultiSCene에서 생성되어 WSARecv와 WSASend를 이용한 callback을 통한 로직 구현.
 
+class NetworkingClient;
+
 class ExtentOverlapped {
 public:
 	WSAOVERLAPPED _overlapped; // overlapped의 주소가 곧 SendOverlapped의 주소
     char _buffer[1024];
 	WSABUF _wsabuf;
+    NetworkingClient* _owner;
+    DWORD _debug_magic = 0xDEADBEEF; //디버그용
 
+    ~ExtentOverlapped() {
+        _debug_magic = 0xBAADF00D; // 해제 
+
+    }
 	ExtentOverlapped() {
 		ZeroMemory(&_overlapped, sizeof(_overlapped));
 		ZeroMemory(_buffer, sizeof(_buffer));
 		ZeroMemory(&_wsabuf, sizeof(_wsabuf));
+        _owner = nullptr;
 	}
 
-	ExtentOverlapped(char* packet) {
-		ZeroMemory(&_overlapped, sizeof(_overlapped));
-		_wsabuf.buf = _buffer;
+    // recv용 생성자
+    ExtentOverlapped(NetworkingClient* owner) {
+        ZeroMemory(&_overlapped, sizeof(_overlapped));
+        _wsabuf.buf = _buffer;
+        _wsabuf.len = sizeof(_buffer);
+        _owner = owner;
+    }
+
+    // send용 생성자
+    ExtentOverlapped(char* packet, NetworkingClient* owner = nullptr) {
+        ZeroMemory(&_overlapped, sizeof(_overlapped));
+        _wsabuf.buf = _buffer;
         _wsabuf.len = *(reinterpret_cast<SIZE2*>(packet));
-		memcpy(_buffer, packet, _wsabuf.len);
-	}
+        memcpy(_buffer, packet, _wsabuf.len);
+        _owner = owner;
+    }
 };
 
 class COnlineScene;
