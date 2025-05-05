@@ -29,7 +29,7 @@ public:
 
 	void SendPlayerState();
 
-
+	NetworkingClient* GetClient() { return &m_NetworkClient; }//
 private:
 	NetworkingClient m_NetworkClient{ this };
 	std::unordered_map<int, std::shared_ptr<CGameObject>> m_mapGameObjects;
