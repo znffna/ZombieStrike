@@ -74,42 +74,8 @@ private:
 
 	std::vector<CResource> m_ppd3dcbSkinningBoneTransforms;
 public:
-	void CreateSkinnedTransformBuffer() {	
+	void CreateSkinnedTransformBuffer();
 
-		{
-			std::string debugName = "CreateSkinnedTransformBuffer() is called \n";
-			OutputDebugStringA(debugName.c_str());
-		}
-
-		m_ppd3dcbSkinningBoneTransforms.resize(SKINNED_TRANSFORM_GPU_BUFFER);
-		UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256의 배수
-
-		for (int i = 0; i < SKINNED_TRANSFORM_GPU_BUFFER; i++)
-		{
-			m_ppd3dcbSkinningBoneTransforms[i].resource = ::CreateBufferResource(m_d3dDevice, m_d3dGraphicsCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-		}
-	}
-
-	CResource& GetSkinningBoneTransforms() {
-		for (int i = 0; i < m_ppd3dcbSkinningBoneTransforms.size(); ++i) {
-			if (false == m_ppd3dcbSkinningBoneTransforms[i].isUsed) {
-				{
-					std::string debugName = "GetSkinningBoneTransforms() - Skinning Bone Transforms [" + std::to_string(i) + "] is return \n";
-					OutputDebugStringA(debugName.c_str());
-				}
-				m_ppd3dcbSkinningBoneTransforms[i].isUsed = true;
-				return m_ppd3dcbSkinningBoneTransforms[i];
-			}
-		}
-		{
-			CResource resource;
-			resource.isUsed = true;
-			resource.index = m_ppd3dcbSkinningBoneTransforms.size();
-			UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256의 배수
-			resource.resource = ::CreateBufferResource(m_d3dDevice, m_d3dGraphicsCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-			m_ppd3dcbSkinningBoneTransforms.push_back(resource);
-			return m_ppd3dcbSkinningBoneTransforms.back();
-		}
-	}
+	CResource& GetSkinningBoneTransforms();
 
 };
