@@ -1,5 +1,23 @@
 #include "ResourceManager.h"
 
+
+inline CResource& CResource::Use() {
+	isUsed = true;
+	return *this;
+}
+
+// 리소스 해제
+void CResource::Release() {
+	if (resource) {
+		resource->Unmap(0, NULL);
+		isUsed = false;
+		CResourceManager::GetInstance().ReleaseSkinningBoneTransform(*this);
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
 void CResourceManager::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, ID3D12RootSignature* rootsignature) {
 	m_d3dDevice = device;
 
@@ -94,6 +112,8 @@ void CResourceManager::CreateSkinnedTransformBuffer() {
 
 	for (int i = 0; i < SKINNED_TRANSFORM_GPU_BUFFER; i++)
 	{
+		m_ppd3dcbSkinningBoneTransforms[i].index = i;
+		m_ppd3dcbSkinningBoneTransforms[i].isUsed = false;
 		m_ppd3dcbSkinningBoneTransforms[i].resource = ::CreateBufferResource(m_d3dDevice, m_d3dGraphicsCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 	}
 }
@@ -101,11 +121,13 @@ void CResourceManager::CreateSkinnedTransformBuffer() {
 CResource& CResourceManager::GetSkinningBoneTransforms() {
 	for (int i = 0; i < m_ppd3dcbSkinningBoneTransforms.size(); ++i) {
 		if (false == m_ppd3dcbSkinningBoneTransforms[i].isUsed) {
+			
+			m_ppd3dcbSkinningBoneTransforms[i].isUsed = true;
+			++m_nSkinningBoneTransformsCount;
 			{
-				std::string debugName = "GetSkinningBoneTransforms() - Skinning Bone Transforms [" + std::to_string(i) + "] is return \n";
+				std::string debugName = "GetSkinningBoneTransforms() - Skinning Bone Transforms [" + std::to_string(i) + "] is return, now SKinningBoneTransforms Uses : " + std::to_string(m_nSkinningBoneTransformsCount) + "\n";
 				OutputDebugStringA(debugName.c_str());
 			}
-			m_ppd3dcbSkinningBoneTransforms[i].isUsed = true;
 			return m_ppd3dcbSkinningBoneTransforms[i];
 		}
 	}
@@ -123,3 +145,13 @@ CResource& CResourceManager::GetSkinningBoneTransforms() {
 		return m_ppd3dcbSkinningBoneTransforms.back();
 	}
 }
+
+void CResourceManager::ReleaseSkinningBoneTransform(const CResource& cResource) {
+	// count를 위해 만든 Method.
+	--m_nSkinningBoneTransformsCount;
+	{
+		std::string debugName = "ReleaseSkinningBoneTransform() - Skinning Bone Transforms [" + std::to_string(cResource.index) + "] is return, now SKinningBoneTransforms Uses : " + std::to_string(m_nSkinningBoneTransformsCount) + "\n";
+		OutputDebugStringA(debugName.c_str());
+	}
+}
+

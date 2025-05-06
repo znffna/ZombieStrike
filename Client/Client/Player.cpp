@@ -37,7 +37,8 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	// Animation Controller
 	if(pPlayerModel != nullptr)
 	{
-		m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pPlayerModel);
+		m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
+		m_pSkinnedAnimationController->SettingByModel(pPlayerModel, nAnimationTracks);
 
 		m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 		m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);

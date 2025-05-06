@@ -159,7 +159,7 @@ void CScene::InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	CreateStaticShader(pd3dDevice);
 	CreateStaticMesh(pd3dDevice, pd3dCommandList);
 
-	//GetResourceManager().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
+	//CResourceManager::GetInstance().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 }
 
 void CScene::BuildDefaultLightsAndMaterials()
@@ -747,7 +747,7 @@ void CScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	if (!pModel)
 	{
 		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
-		CResourceManager::GetInstance().	SetSkinInfo("FuzZombie", pModel);
+		CResourceManager::GetInstance().SetSkinInfo("FuzZombie", pModel);
 	}
 
 	m_pZombiePool.reserve(nZombieCount);

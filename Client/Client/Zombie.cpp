@@ -1,8 +1,8 @@
 #include "Zombie.h"
 #include "Scene.h"
 
-CZombieCAnimationController::CZombieCAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, std::shared_ptr<CLoadedModelInfo> pModel)
-	: CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pModel)
+CZombieCAnimationController::CZombieCAnimationController()
+	: CAnimationController()
 {
 }
 
@@ -43,7 +43,8 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	auto pCollider = CreateComponent<CAABBCollider>(shared_from_this());
 	pCollider->SetCollider(pZombieModel->m_MeshBoundingBox.Center, pZombieModel->m_MeshBoundingBox.Extents);
 
-	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pZombieModel);
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
+	m_pSkinnedAnimationController->SettingByModel(pZombieModel, nAnimationTracks);
 
 	m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
 	m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);
@@ -72,7 +73,7 @@ void CZombieObject::SetSkinType(int nSkinType)
 	m_nSkinType = nSkinType; 
 
 	auto pModel = CResourceManager::GetInstance().GetModelInfo(ModelName[m_nSkinType]);
-	CloneByModel(pModel);
+	SetChild(pModel->m_pModelRootObject);
 	m_pSkinnedAnimationController->SettingByModel(pModel);
 }
 

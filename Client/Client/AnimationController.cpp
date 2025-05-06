@@ -80,13 +80,33 @@ void CAnimationTrack::HandleCallback()
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-CAnimationController::CAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, std::shared_ptr<CLoadedModelInfo> pModel)
+CAnimationController::CAnimationController()
 {
-	SettingByModel(pModel, nAnimationTracks);
+}
+
+void CAnimationController::Clear()
+{
+	m_fTime = 0.0f;
+	for (int i = 0; i < m_nSkinnedMeshes; i++)
+	{
+		if (m_ppd3dcbSkinningBoneTransforms[i].resource) {
+			m_ppd3dcbSkinningBoneTransforms[i].Release();
+		}
+		if (m_ppcbxmf4x4MappedSkinningBoneTransforms[i]) m_ppcbxmf4x4MappedSkinningBoneTransforms[i] = NULL;
+	}
+
+	m_pModelRootObject = NULL;
+	m_nSkinnedMeshes = 0;
+	m_ppSkinnedMeshes.clear();
+	m_pAnimationSets = NULL;
+	m_nAnimationTracks = 0;
+	m_pAnimationTracks.clear();
 }
 
 void CAnimationController::SettingByModel(std::shared_ptr<CLoadedModelInfo>& pModel, int nAnimationTracks)
 {
+	Clear();
+
 	m_pModelRootObject = pModel->m_pModelRootObject;
 	m_nSkinnedMeshes = pModel->m_nSkinnedMeshes;
 	m_ppSkinnedMeshes = pModel->m_ppSkinnedMeshes;
@@ -121,13 +141,7 @@ void CAnimationController::SettingByModel(std::shared_ptr<CLoadedModelInfo>& pMo
 
 CAnimationController::~CAnimationController()
 {
-	for (int i = 0; i < m_nSkinnedMeshes; i++)
-	{
-		if (m_ppd3dcbSkinningBoneTransforms[i].resource) {
-			m_ppd3dcbSkinningBoneTransforms[i].Release();
-		}
-		if (m_ppcbxmf4x4MappedSkinningBoneTransforms[i]) m_ppcbxmf4x4MappedSkinningBoneTransforms[i] = NULL;
-	}
+	Clear();
 }
 
 void CAnimationController::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)

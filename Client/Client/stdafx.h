@@ -81,7 +81,7 @@ using Microsoft::WRL::ComPtr;
 //#include <DDSTextureLoader.h>
 
 // Global Variables
-#define SKINNED_TRANSFORM_GPU_BUFFER 1000
+#define SKINNED_TRANSFORM_GPU_BUFFER 3000
 
 // Root Signature Paramater Index
 #define ROOT_PARAMETER_OBJECT 0

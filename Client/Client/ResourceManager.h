@@ -7,24 +7,18 @@ class CGameObject;
 class CTexture;
 class CShader;
 
+class CResourceManager;
+
 class CResource {
 public:
 	bool isUsed{ false };
 	int index{ -1 };
 	ComPtr<ID3D12Resource> resource;
 
-	CResource& Use() {
-		isUsed = true;
-		return *this;
-	}
+	CResource& Use();
 
 	// 리소스 해제
-	void Release() {
-		if (resource) {
-			resource->Unmap(0, NULL);
-			isUsed = false;
-		}
-	}
+	void Release();
 };
 
 class CResourceManager
@@ -72,10 +66,12 @@ private:
 	std::unordered_map<std::string, std::shared_ptr<CTexture>> TextureInfos;
 	std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshInfos;
 
+	int m_nSkinningBoneTransformsCount{};
 	std::vector<CResource> m_ppd3dcbSkinningBoneTransforms;
 public:
 	void CreateSkinnedTransformBuffer();
 
 	CResource& GetSkinningBoneTransforms();
+	void ReleaseSkinningBoneTransform(const CResource& cResource);
 
 };
