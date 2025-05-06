@@ -15,7 +15,16 @@
 
 class ResourceManager
 {
+private:
+	ResourceManager() {}
+	~ResourceManager() {}
+
 public:
+	static ResourceManager& GetInstance() {
+		static ResourceManager instance;
+		return instance;
+	}
+
 	void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, ID3D12RootSignature* rootsignature) {
 		m_d3dDevice = device;
 		m_d3dGraphicsCommandList = commandList;
@@ -26,7 +35,6 @@ public:
 
 	// 모든 리소스 해제
 	void ReleaseResources() {
-
 		ModelInfos.clear();
 	}
 
@@ -39,10 +47,8 @@ public:
 	std::shared_ptr<CTexture> GetTexture(const std::string& name) {
 		if (TextureInfos.find(name) != TextureInfos.end()) {
 			// 이미 로드된 모델이 있는 경우
-
 			return TextureInfos[name];
 		}
-
 		return nullptr;
 	}
 	
@@ -329,27 +335,10 @@ protected:
 	std::shared_ptr<CCamera> m_pCamera;
 
 public:
-	// ResourceManager 리소스 관리
-	static ResourceManager& GetResourceManager();
-	static void ReleaseResources();;
-
-	// Model Set/Get
-	static void StoreModelInfo(const std::string& filename, std::shared_ptr<CLoadedModelInfo> pSkinInfo);;
-	static std::shared_ptr<CLoadedModelInfo> GetModelInfo(const std::string& objectname);;
-
-	// Texture Set/Get
-	static void StoreTexture(const std::string& name, std::shared_ptr<CTexture> texture);;
-	static std::shared_ptr<CTexture> GetTexture(const std::string& name);;
-
-	// Mesh Set/Get
-	static void AddMesh(const std::string& name, std::shared_ptr<CMesh> mesh);;
-	static std::shared_ptr<CMesh> GetMesh(const std::string& name);;
-
 	// ObjectPool
 	std::vector<std::shared_ptr<CZombieObject>> m_pZombiePool;
 	void StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount);
 	std::shared_ptr<CZombieObject> GetZombie(int nSkinType = 0);;
-
 };
 
 

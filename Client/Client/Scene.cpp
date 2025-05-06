@@ -126,8 +126,8 @@ void CScene::CreateStaticShader(ID3D12Device* pd3dDevice)
 
 void CScene::CreateStaticMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	AddMesh("CCubeMesh", std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f));
-	AddMesh("SphereMesh", std::make_shared<CSphereMesh>(pd3dDevice, pd3dCommandList));
+	ResourceManager::GetInstance().SetMesh("CCubeMesh", std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f));
+	ResourceManager::GetInstance().SetMesh("SphereMesh", std::make_shared<CSphereMesh>(pd3dDevice, pd3dCommandList));
 }
 
 void CScene::ReleaseObjects()
@@ -741,57 +741,13 @@ void CScene::ReleaseShaderVariables()
 	m_pcbMappedLights = nullptr;
 }
 
-// ResourceManager 府家胶 包府
-ResourceManager& CScene::GetResourceManager() {
-	static ResourceManager instance; // 沥利 瘤开 函荐
-	return instance;
-}
-
-void CScene::ReleaseResources()
-{
-	GetResourceManager().ReleaseResources();
-}
-
-// Model Set/Get
-void CScene::StoreModelInfo(const std::string& filename, std::shared_ptr<CLoadedModelInfo> pSkinInfo)
-{
-	GetResourceManager().SetSkinInfo(filename, pSkinInfo);
-}
-
-std::shared_ptr<CLoadedModelInfo> CScene::GetModelInfo(const std::string& objectname)
-{
-	return GetResourceManager().GetModelInfo(objectname);
-}
-
-// Texture Set/Get
-void CScene::StoreTexture(const std::string& name, std::shared_ptr<CTexture> texture)
-{
-	GetResourceManager().SetTexture(name, texture);
-}
-
-std::shared_ptr<CTexture> CScene::GetTexture(const std::string& name)
-{
-	return GetResourceManager().GetTexture(name);
-}
-
-// Mesh Set/Get
-void CScene::AddMesh(const std::string& name, std::shared_ptr<CMesh> mesh)
-{
-	GetResourceManager().SetMesh(name, mesh);
-}
-
-std::shared_ptr<CMesh> CScene::GetMesh(const std::string& name)
-{
-	return GetResourceManager().GetMesh(name);
-}
-
 void CScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)
 {
-	std::shared_ptr<CLoadedModelInfo> pModel = GetModelInfo("FuzZombie");
+	std::shared_ptr<CLoadedModelInfo> pModel = ResourceManager::GetInstance().GetModelInfo("FuzZombie");
 	if (!pModel)
 	{
 		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
-		StoreModelInfo("FuzZombie", pModel);
+		ResourceManager::GetInstance().	SetSkinInfo("FuzZombie", pModel);
 	}
 
 	m_pZombiePool.reserve(nZombieCount);

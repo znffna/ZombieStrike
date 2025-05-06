@@ -71,7 +71,7 @@ void CZombieObject::SetSkinType(int nSkinType)
 	}
 	m_nSkinType = nSkinType; 
 
-	auto pModel = CScene::GetModelInfo(ModelName[m_nSkinType]);
+	auto pModel = ResourceManager::GetInstance().GetModelInfo(ModelName[m_nSkinType]);
 	CloneByModel(pModel);
 	m_pSkinnedAnimationController->SettingByModel(pModel);
 }

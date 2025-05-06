@@ -17,7 +17,7 @@ CGameScene::~CGameScene()
 void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
 	// Create Objects
-	ResourceManager& resourceManager = GetResourceManager();
+	ResourceManager& resourceManager = ResourceManager::GetInstance();
 
 	// Skybox
 	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
