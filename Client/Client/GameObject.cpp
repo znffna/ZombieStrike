@@ -355,7 +355,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			// Use Collider Shader
 			CMaterial::m_pColliderShader->OnPrepareRender(pd3dCommandList, 0);
 			
-			ResourceManager::GetInstance().GetMesh("CCubeMesh")->Render(pd3dCommandList);
+			CResourceManager::GetInstance().GetMesh("CCubeMesh")->Render(pd3dCommandList);
 		}
 	}
 
@@ -682,7 +682,7 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 
 bool CGameObject::CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject)
 {
-	if (auto pModel = ResourceManager::GetInstance().GetModelInfo(strModelName)) {
+	if (auto pModel = CResourceManager::GetInstance().GetModelInfo(strModelName)) {
 		return CloneByModel(pModel, pGameObject);
 	}
 	return false;
@@ -1188,11 +1188,11 @@ CCubeObject::~CCubeObject()
 void CCubeObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	// Mesh
-	auto pCubeMesh = ResourceManager::GetInstance().GetMesh("CCubeMesh");
+	auto pCubeMesh = CResourceManager::GetInstance().GetMesh("CCubeMesh");
 	if (nullptr == pCubeMesh)
 	{
 		pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
-		ResourceManager::GetInstance().SetMesh("CCubeMesh", pCubeMesh);
+		CResourceManager::GetInstance().SetMesh("CCubeMesh", pCubeMesh);
 	}
 	SetMesh(pCubeMesh);
 

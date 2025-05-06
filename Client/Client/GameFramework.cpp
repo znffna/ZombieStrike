@@ -405,7 +405,7 @@ void CGameFramework::BuildObjects()
 		m_pd3dSceneMadeCommandAllocator->Reset();
 		m_pd3dSceneMadeCommandList->Reset(m_pd3dSceneMadeCommandAllocator.Get(), nullptr);
 
-		ResourceManager::GetInstance().Initialize(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get(), nullptr);
+		CResourceManager::GetInstance().Initialize(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get(), nullptr);
 
 		pMainScene->Init(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get());
 

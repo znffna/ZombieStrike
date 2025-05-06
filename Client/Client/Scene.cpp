@@ -126,8 +126,8 @@ void CScene::CreateStaticShader(ID3D12Device* pd3dDevice)
 
 void CScene::CreateStaticMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	ResourceManager::GetInstance().SetMesh("CCubeMesh", std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f));
-	ResourceManager::GetInstance().SetMesh("SphereMesh", std::make_shared<CSphereMesh>(pd3dDevice, pd3dCommandList));
+	CResourceManager::GetInstance().SetMesh("CCubeMesh", std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f));
+	CResourceManager::GetInstance().SetMesh("SphereMesh", std::make_shared<CSphereMesh>(pd3dDevice, pd3dCommandList));
 }
 
 void CScene::ReleaseObjects()
@@ -743,11 +743,11 @@ void CScene::ReleaseShaderVariables()
 
 void CScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)
 {
-	std::shared_ptr<CLoadedModelInfo> pModel = ResourceManager::GetInstance().GetModelInfo("FuzZombie");
+	std::shared_ptr<CLoadedModelInfo> pModel = CResourceManager::GetInstance().GetModelInfo("FuzZombie");
 	if (!pModel)
 	{
 		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
-		ResourceManager::GetInstance().	SetSkinInfo("FuzZombie", pModel);
+		CResourceManager::GetInstance().	SetSkinInfo("FuzZombie", pModel);
 	}
 
 	m_pZombiePool.reserve(nZombieCount);

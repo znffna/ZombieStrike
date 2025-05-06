@@ -7,15 +7,15 @@ class CGameObject;
 class CTexture;
 class CShader;
 
-class ResourceManager
+class CResourceManager
 {
 private:
-	ResourceManager() {}
-	~ResourceManager() {}
+	CResourceManager() {}
+	~CResourceManager() {}
 
 public:
-	static ResourceManager& GetInstance() {
-		static ResourceManager instance;
+	static CResourceManager& GetInstance() {
+		static CResourceManager instance;
 		return instance;
 	}
 

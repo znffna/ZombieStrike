@@ -28,7 +28,7 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 		SetChild(pPlayerModel->m_pModelRootObject);
 	}
 	else {
-		pPlayerModel = ResourceManager::GetInstance().GetModelInfo(m_ModelName[0]);
+		pPlayerModel = CResourceManager::GetInstance().GetModelInfo(m_ModelName[0]);
 		SetChild(pPlayerModel->m_pModelRootObject);
 		//pPlayerModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Ch35_nonPBR.bin", NULL);
 		//SetChild(pPlayerModel->m_pModelRootObject);

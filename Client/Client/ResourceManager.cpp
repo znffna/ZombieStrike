@@ -1,6 +1,6 @@
 #include "ResourceManager.h"
 
-void ResourceManager::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, ID3D12RootSignature* rootsignature) {
+void CResourceManager::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, ID3D12RootSignature* rootsignature) {
 	m_d3dDevice = device;
 
 	m_d3dGraphicsCommandList = commandList;
@@ -10,18 +10,18 @@ void ResourceManager::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList
 }
 
 // 모든 리소스 해제
-void ResourceManager::ReleaseResources() {
+void CResourceManager::ReleaseResources() {
 	ModelInfos.clear();
 }
 
 ////////////////////////////////////////////
 // 텍스쳐 정보를 저장
-void ResourceManager::SetTexture(const std::string& name, std::shared_ptr<CTexture> texture) {
+void CResourceManager::SetTexture(const std::string& name, std::shared_ptr<CTexture> texture) {
 	if (texture == nullptr) return;
 	TextureInfos[name] = texture;
 }
 
-std::shared_ptr<CTexture> ResourceManager::GetTexture(const std::string& name) {
+std::shared_ptr<CTexture> CResourceManager::GetTexture(const std::string& name) {
 	if (TextureInfos.find(name) != TextureInfos.end()) {
 		// 이미 로드된 모델이 있는 경우
 		return TextureInfos[name];
@@ -29,7 +29,7 @@ std::shared_ptr<CTexture> ResourceManager::GetTexture(const std::string& name) {
 	return nullptr;
 }
 
-void ResourceManager::LoadModelList(std::string filepath) {
+void CResourceManager::LoadModelList(std::string filepath) {
 	std::ifstream file(filepath);
 	std::string modelname;
 	while (file >> modelname) {
@@ -37,11 +37,11 @@ void ResourceManager::LoadModelList(std::string filepath) {
 	}
 }
 
-void ResourceManager::SetSkinInfo(const std::string& name, std::shared_ptr<CLoadedModelInfo> modelInfo) {
+void CResourceManager::SetSkinInfo(const std::string& name, std::shared_ptr<CLoadedModelInfo> modelInfo) {
 	ModelInfos[name] = modelInfo;
 }
 
-inline std::shared_ptr<CLoadedModelInfo> ResourceManager::GetModelInfo(const std::string& name) {
+inline std::shared_ptr<CLoadedModelInfo> CResourceManager::GetModelInfo(const std::string& name) {
 	if (ModelInfos.find(name) != ModelInfos.end()) {
 		// 이미 로드된 모델이 있는 경우
 		if (ModelInfos[name]) return ModelInfos[name];
@@ -70,11 +70,11 @@ inline std::shared_ptr<CLoadedModelInfo> ResourceManager::GetModelInfo(const std
 }
 
 // 메쉬 정보를 저장
-void ResourceManager::SetMesh(const std::string& name, std::shared_ptr<CMesh> pMesh) {
+void CResourceManager::SetMesh(const std::string& name, std::shared_ptr<CMesh> pMesh) {
 	MeshInfos[name] = pMesh;
 }
 
-std::shared_ptr<CMesh> ResourceManager::GetMesh(const std::string& name) {
+std::shared_ptr<CMesh> CResourceManager::GetMesh(const std::string& name) {
 	if (MeshInfos.find(name) != MeshInfos.end()) {
 		return MeshInfos[name];
 	}
