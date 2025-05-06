@@ -6,12 +6,19 @@ void CResourceManager::Initialize(ID3D12Device* device, ID3D12GraphicsCommandLis
 	m_d3dGraphicsCommandList = commandList;
 	m_d3dGraphicRootSignature = rootsignature;
 
+	CreateSkinnedTransformBuffer();
 	LoadModelList();
 }
 
 // 葛电 府家胶 秦力
 void CResourceManager::ReleaseResources() {
 	ModelInfos.clear();
+	TextureInfos.clear();
+	MeshInfos.clear();
+	for (auto& resource : m_ppd3dcbSkinningBoneTransforms) {
+		resource.Release();
+		resource.resource.Reset();
+	}
 }
 
 ////////////////////////////////////////////

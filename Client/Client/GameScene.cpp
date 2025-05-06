@@ -44,7 +44,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pPlayer = pPlayer;
 
 	// Zombie Object
-	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 1000);
+	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 300);
 
 	// Map Load
 	auto pMap = resourceManager.GetModelInfo("Map");

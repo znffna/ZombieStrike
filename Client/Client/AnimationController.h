@@ -13,6 +13,8 @@ class CGameObject;
 class CLoadedModelInfo;
 class CSkinnedMesh;
 
+class CResource;
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 struct CALLBACKKEY
@@ -81,7 +83,7 @@ public:
 	CAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, std::shared_ptr<CLoadedModelInfo> pModel);
 	~CAnimationController();
 
-	void SettingByModel(std::shared_ptr<CLoadedModelInfo>& pModel);
+	void SettingByModel(std::shared_ptr<CLoadedModelInfo>& pModel, int nAnimationTracks = -1);
 public:
 	float 							m_fTime = 0.0f;
 
@@ -93,7 +95,7 @@ public:
 	int m_nSkinnedMeshes = 0;
 	std::vector<std::shared_ptr<CSkinnedMesh>> m_ppSkinnedMeshes; //[SkinnedMeshes], Skinned Mesh Cache
 
-	std::vector<ComPtr<ID3D12Resource>> m_ppd3dcbSkinningBoneTransforms; //[SkinnedMeshes]
+	std::vector<CResource> m_ppd3dcbSkinningBoneTransforms; //[SkinnedMeshes]
 	std::vector<XMFLOAT4X4*> m_ppcbxmf4x4MappedSkinningBoneTransforms; //[SkinnedMeshes]
 
 public:
