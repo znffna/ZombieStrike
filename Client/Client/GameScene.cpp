@@ -68,6 +68,8 @@ void CGameScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	{
 		m_pCamera = m_pPlayer->GetComponent<CCamera>();
 	}
+
+	SetSceneState(SCENE_STATE_READY_TO_START);
 }
 
 void CGameScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)

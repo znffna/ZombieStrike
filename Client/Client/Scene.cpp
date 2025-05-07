@@ -67,6 +67,7 @@ void CScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	// Scene 생성 완료
 	//m_SceneState = SCENE_STATE_RUNNING;
+	m_SceneState = SCENE_STATE_READY_TO_START;
 }
 
 void CScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)

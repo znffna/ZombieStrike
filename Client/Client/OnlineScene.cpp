@@ -38,7 +38,6 @@ void COnlineScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		return;
 	}
 	CGameScene::InitializeObjects(pd3dDevice, pd3dCommandList, pd3dRootSignature);
-
 }
 
 void COnlineScene::ReleaseObjects()
@@ -53,33 +52,24 @@ void COnlineScene::ReleaseUploadBuffers()
 
 void COnlineScene::Update(float deltaTime)
 {
-	m_NetworkClient.startRecvLoop();
-
 	#define MAX_PACKET_PER_FRAME 3
 
 	// 얼만큼 반복하나 찍어보자.
-	//int count{ 0 };
-	//for (int i = 0; i < MAX_PACKET_PER_FRAME; ++i)
-	//{
-	//	// SleepEx(0, TRUE) : 네트워크 I/O 콜백 처리
-	//	DWORD ret = SleepEx(0, TRUE);
-	//	if (ret != WAIT_IO_COMPLETION) // 비동기 작업이 없다면 즉시 중단
-	//		break;
-	//	++count;
-	//}
-
-	/*if (g_bNetworkDebugMode)
+	int count{ 0 };
+	for (int i = 0; i < MAX_PACKET_PER_FRAME; ++i)
 	{
-		std::string debugOutput = "COnlineScene::Update() - SleepEx() 을 통한 I/O 횟수 : " + std::to_string(count) + "\n";
-		OutputDebugStringA(debugOutput.c_str());
-	}*/
-
-	SleepEx(0, TRUE); // 네트워크 I/O 콜백 처리
+		// SleepEx(0, TRUE) : 네트워크 I/O 콜백 처리
+		DWORD ret = SleepEx(0, TRUE);
+		if (ret != WAIT_IO_COMPLETION) // 비동기 작업이 없다면 즉시 중단
+			break;
+		++count;
+	}
+	//SleepEx(0, TRUE); // 네트워크 I/O 콜백 처리
 
 	CGameScene::Update(deltaTime);
 
 	// Network Client Update
-	if (m_NetworkClient.is_running)
+	if (m_NetworkClient.is_connect)
 	{
 		// Network Client Update
 		// 즉 클라처리 결과를 서버에 보고

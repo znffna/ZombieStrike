@@ -17,6 +17,8 @@ public:
 	virtual void ReleaseObjects() override;
 	virtual void ReleaseUploadBuffers() override;
 
+	virtual void StartScene() { m_NetworkClient.StartRecvLoop(); CScene::SetSceneState(SCENE_STATE_RUNNING); }
+
 	virtual void Update(float deltaTime) override;
 
 	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
