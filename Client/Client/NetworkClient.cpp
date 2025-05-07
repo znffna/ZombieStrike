@@ -101,9 +101,9 @@ void NetworkingClient::error_display(const char* msg, int err_no)
         NULL, err_no, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         (LPTSTR)&lpMsgBuf, 0, NULL);
     //std::cout << msg;
-	std::string DebugOutput = msg;
-	DebugOutput += "Error : " + DebugOutput +  "\n";
-    OutputDebugStringA(DebugOutput.c_str());
+	std::wstring DebugOutput = lpMsgBuf;
+	DebugOutput += L"Error : " + DebugOutput +  L"\n";
+    OutputDebugString(DebugOutput.c_str());
 
     LocalFree(lpMsgBuf);
     //exit(1);
