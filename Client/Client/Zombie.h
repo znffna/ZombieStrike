@@ -8,7 +8,7 @@
 class CZombieCAnimationController : public CAnimationController
 {
 public:
-	CZombieCAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, std::shared_ptr<CLoadedModelInfo> pModel);
+	CZombieCAnimationController();
 	~CZombieCAnimationController();
 };
 

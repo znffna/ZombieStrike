@@ -17,7 +17,7 @@ CGameScene::~CGameScene()
 void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
 	// Create Objects
-	ResourceManager& resourceManager = GetResourceManager();
+	CResourceManager& resourceManager = CResourceManager::GetInstance();
 
 	// Skybox
 	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
@@ -44,7 +44,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pPlayer = pPlayer;
 
 	// Zombie Object
-	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 1000);
+	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 300);
 
 	// Map Load
 	auto pMap = resourceManager.GetModelInfo("Map");
