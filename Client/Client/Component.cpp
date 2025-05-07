@@ -7,9 +7,9 @@
 #include "Component.h"
 
 CComponent::CComponent(CGameObject* pObject)
-	: gameObject(pObject), m_bActive(true)
+	: m_bActive(true)
 {
-	if (gameObject) Init(gameObject);
+	if (nullptr == gameObject) Init(gameObject);
 }
 
 CComponent::~CComponent()

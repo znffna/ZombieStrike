@@ -83,7 +83,7 @@ public:
 
 	// Object Initialization
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {};
-	virtual void GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs);;
+	virtual void DeepCopyFromGameObject(std::shared_ptr<CGameObject> rhs);;
 	static std::shared_ptr<CGameObject> CreateObject() { return std::make_shared<CGameObject>(); }
 
 	// Active Flag
@@ -199,10 +199,10 @@ public:
 	static std::shared_ptr<CLoadedModelInfo> LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* pstrFileName, std::shared_ptr<CShader> pShader);
 	
 	// Clone
-	static bool CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject);
-	static bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject);
-	bool CloneByModel(std::string& strModelName) { auto pThis = shared_from_this();  return CloneByModel(strModelName, pThis); };
-	bool CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel) { auto pThis = shared_from_this(); return CloneByModel(pLoadModel, pThis); };
+	static bool DeepCopyFromModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject);
+	static bool DeepCopyFromModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject);
+	bool DeepCopyFromModel(std::string& strModelName) { auto pThis = shared_from_this();  return DeepCopyFromModel(strModelName, pThis); };
+	bool DeepCopyFromModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel) { auto pThis = shared_from_this(); return DeepCopyFromModel(pLoadModel, pThis); };
 	
 	std::shared_ptr<CGameObject> FindFrame(std::string strFrameName);
 

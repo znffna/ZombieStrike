@@ -13,6 +13,7 @@
 
 void CCollider::Init(CGameObject* pObject)
 {
+	CComponent::Init(pObject);
 }
 
 
