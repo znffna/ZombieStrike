@@ -38,7 +38,9 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	AddObject(pGameObject);
 
 	// Player »ý¼º
-	std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, 0);
+	StorePlayer(pd3dDevice, pd3dCommandList, pd3dRootSignature, 2);
+	std::shared_ptr<CPlayer> pPlayer = GetPlayer();
+	//std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, 0);
 	pPlayer->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 0.0f));
 	AddObject(pPlayer);
 	m_pPlayer = pPlayer;
@@ -111,6 +113,15 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
 			m_pPlayer->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
 		}
+	}
+
+	if (pBuffer.pKeysBuffer['1'] & 0x80)
+	{
+		if (m_pPlayer) m_pPlayer->SetSkin(0);
+	}
+	if (pBuffer.pKeysBuffer['2'] & 0x80)
+	{
+		if (m_pPlayer) m_pPlayer->SetSkin(1);
 	}
 
 	return true;
@@ -200,3 +211,57 @@ void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 	}
 }
 
+void CGameScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)
+{
+	std::shared_ptr<CLoadedModelInfo> pModel = CResourceManager::GetInstance().GetModelInfo("FuzZombie");
+	if (!pModel)
+	{
+		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
+		CResourceManager::GetInstance().SetSkinInfo("FuzZombie", pModel);
+	}
+
+	m_pZombiePool.reserve(nZombieCount);
+	for (int i = 0; i < nZombieCount; ++i)
+	{
+		std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
+		pZombie->SetActive(false);
+		m_pZombiePool.push_back(pZombie);
+	}
+}
+
+std::shared_ptr<CZombieObject> CGameScene::GetZombie(int nSkinType)
+{
+	for (auto& pZombie : m_pZombiePool)
+	{
+		if (false == pZombie->IsActive())
+		{
+			pZombie->SetSkinType(nSkinType);
+			pZombie->SetActive(true);
+			return pZombie;
+		}
+	}
+}
+
+void CGameScene::StorePlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nPlayerCount)
+{
+	m_pPlayerObjects.reserve(nPlayerCount);
+	for (int i = 0; i < nPlayerCount; ++i)
+	{
+		std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, i);
+		pPlayer->SetActive(false);
+		m_pPlayerObjects.push_back(pPlayer);
+	}
+}
+
+std::shared_ptr<CPlayer> CGameScene::GetPlayer(int nSkinType)
+{
+	for (auto& pPlayer : m_pPlayerObjects)
+	{
+		if (false == pPlayer->IsActive())
+		{
+			//pPlayer->SetSkinType(nSkinType);
+			pPlayer->SetActive(true);
+			return pPlayer;
+		}
+	}
+}

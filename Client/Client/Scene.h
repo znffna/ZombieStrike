@@ -229,11 +229,7 @@ protected:
 	// Camera
 	std::shared_ptr<CCamera> m_pCamera;
 
-public:
-	// ObjectPool
-	std::vector<std::shared_ptr<CZombieObject>> m_pZombiePool;
-	void StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount);
-	std::shared_ptr<CZombieObject> GetZombie(int nSkinType = 0);;
+
 };
 
 
