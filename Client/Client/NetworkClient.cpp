@@ -152,6 +152,13 @@ void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
             break;
 		}
 
+        {
+			std::string DebugOutput = "[recv_callback] 패킷 처리\n";
+			DebugOutput += "recv_callback() - 패킷 타입 : " + std::to_string((int)packet_header->type) + "\n";
+			DebugOutput += "recv_callback() - 패킷 사이즈 : " + std::to_string(packet_header->size) + "\n";
+			DebugOutput += "recv_callback() - 남은 바이트 수 : " + std::to_string(remain_bytes - offset) + "\n";
+        }
+
         client->ProcessPacket(packet_header);
         OutputDebugStringA("[recv_callback] ProcessPacket() 이후 통과\n");
 

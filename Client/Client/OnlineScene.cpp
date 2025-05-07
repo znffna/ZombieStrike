@@ -155,9 +155,13 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		case ObjectType::PLAYER:
 		{
 			// 플레이어 오브젝트 추가
-			std::shared_ptr<CGameObject> pPlayer = GetZombie(); // GetPlayer(skin_type)로 바꿔야 함
+			std::shared_ptr<CGameObject> pPlayer = GetPlayer(); // GetPlayer(skin_type)로 바꿔야 함
 			pPlayer->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
 			m_mapGameObjects[packet->id] = pPlayer;
+			{
+				std::string DebugOutput = "ObjectType::PLAYER 생성 완료\n";
+				OutputDebugStringA(DebugOutput.c_str());
+			}
 			AddObject(pPlayer);
 			break;
 		}
@@ -187,6 +191,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		pkt_sc_object_update* updatePkt = reinterpret_cast<pkt_sc_object_update*>(recv_p);
 		Vec3 position = updatePkt->obj.meta.position;
 		m_mapGameObjects[updatePkt->id]->SetPosition(position.x, position.y, position.z);
+
 		if (g_bNetworkDebugMode) {
 			std::string DebugOutput = "S_C_OBJECT_UPDATE[" + std::to_string(updatePkt->id) + "] ";
 			DebugOutput += "position : (" + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + ")\n";

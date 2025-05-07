@@ -9,7 +9,7 @@
 
 constexpr const char* SERVER_IP = "192.168.149.233";
 constexpr const char* LOOPBACK_IP = "127.0.0.1";
-#define USSING_IP SERVER_IP
+#define USSING_IP LOOPBACK_IP
 
 // 클라이언트 네트워크 클래스
 // 소켓을 사용하여 서버와 통신하는 기능을 포함
