@@ -19,7 +19,7 @@ bool NetworkingClient::Connect()
     if (c_socket == INVALID_SOCKET) error_display("家南 积己 角菩", WSAGetLastError());
 
     sockaddr_in serverAddr{};
-    std::string serverIP = LOOPBACK_IP;
+    std::string serverIP = USSING_IP;
 
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(PORT_NUM);
