@@ -67,6 +67,7 @@ void CScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	// Scene 생성 완료
 	//m_SceneState = SCENE_STATE_RUNNING;
+	m_SceneState = SCENE_STATE_READY_TO_START;
 }
 
 void CScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -741,33 +742,3 @@ void CScene::ReleaseShaderVariables()
 	m_pcbMappedLights = nullptr;
 }
 
-void CScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)
-{
-	std::shared_ptr<CLoadedModelInfo> pModel = CResourceManager::GetInstance().GetModelInfo("FuzZombie");
-	if (!pModel)
-	{
-		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
-		CResourceManager::GetInstance().SetSkinInfo("FuzZombie", pModel);
-	}
-
-	m_pZombiePool.reserve(nZombieCount);
-	for (int i = 0; i < nZombieCount; ++i)
-	{
-		std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
-		pZombie->SetActive(false);
-		m_pZombiePool.push_back(pZombie);
-	}
-}
-
-std::shared_ptr<CZombieObject> CScene::GetZombie(int nSkinType)
-{
-	for (auto& pZombie : m_pZombiePool)
-	{
-		if (false == pZombie->IsActive())
-		{
-			pZombie->SetSkinType(nSkinType);
-			pZombie->SetActive(true);
-			return pZombie;
-		}
-	}
-}

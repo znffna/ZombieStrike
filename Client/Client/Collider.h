@@ -164,7 +164,7 @@ public:
 	// Setters    
 	using CCollider::SetCollider;
 	virtual void SetCollider(std::shared_ptr<CMesh> pMesh) override;
-	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents, const XMFLOAT4 & xmf4Orientation) override;    
+	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents, const XMFLOAT4 & xmf4Orientation = XMFLOAT4{0,0,0,1}) override;
 	//void SetCollider(const BoundingOrientedBox& OBB) { m_xmBoundingOrientedBox = OBB; };    
 
 	// Methods    

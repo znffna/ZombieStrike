@@ -28,7 +28,7 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 		SetChild(pPlayerModel->m_pModelRootObject);
 	}
 	else {
-		pPlayerModel = CResourceManager::GetInstance().GetModelInfo(m_ModelName[0]);
+		pPlayerModel = CResourceManager::GetInstance().GetModelInfo(m_ModelName[m_nSkinType]);
 		SetChild(pPlayerModel->m_pModelRootObject);
 		//pPlayerModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Ch35_nonPBR.bin", NULL);
 		//SetChild(pPlayerModel->m_pModelRootObject);
@@ -82,6 +82,29 @@ void CPlayer::Update(float fTimeElapsed)
 	CGameObject::Update(fTimeElapsed);
 
 	if(auto pCamera = GetComponent<CCamera>()) pCamera->Update(GetPosition(), fTimeElapsed);
+}
+
+void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	CGameObject::Render(pd3dCommandList, pCamera);
+}
+
+void CPlayer::SetSkin(int nSkinType)
+{
+	SetSkinType(nSkinType);
+
+	m_pChilds.clear();
+
+	auto pPlayerModel = CResourceManager::GetInstance().GetModelInfo(m_ModelName[m_nSkinType]);
+	SetChild(pPlayerModel->m_pModelRootObject);
+	m_pSkinnedAnimationController->SettingByModel(pPlayerModel);
+
+	m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
+	m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);
+	m_pSkinnedAnimationController->SetTrackEnable(1, false);
+
+	Update(0.0f);
+	UpdateTransform();
 }
 
 void CPlayer::Rotate(float x, float y, float z)

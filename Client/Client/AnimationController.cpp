@@ -116,10 +116,11 @@ void CAnimationController::SettingByModel(std::shared_ptr<CLoadedModelInfo>& pMo
 	m_ppd3dcbSkinningBoneTransforms.resize(m_nSkinnedMeshes);
 	m_ppcbxmf4x4MappedSkinningBoneTransforms.resize(m_nSkinnedMeshes);
 
-	if (nAnimationTracks == -1) m_nAnimationTracks = m_pAnimationSets->m_nAnimationSets;
+	if (nAnimationTracks == -1) 
+		m_nAnimationTracks = m_pAnimationSets->m_nAnimationSets;
 	else m_nAnimationTracks = nAnimationTracks;
 
-	m_pAnimationTracks.resize(nAnimationTracks);
+	m_pAnimationTracks.resize(m_nAnimationTracks);
 
 	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256ÀÇ ¹è¼ö
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
