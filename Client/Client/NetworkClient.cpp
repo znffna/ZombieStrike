@@ -4,13 +4,35 @@
 
 //constexpr const char* LOOPBACK_IP = "127.0.0.1";
 
-size_t network_memory_address = 0x0000000000000000; // 네트워크 메모리 주소 (디버그용)
-
+bool g_bNetworkDebugMode = true;
 
 NetworkingClient::NetworkingClient(COnlineScene* pScene) : recv_over(this), m_pScene(pScene) { // recv_over(this)
 	// ZeroMemory(&recv_over, sizeof(recv_over));
     //ZeroMemory(recv_buffer, sizeof(recv_buffer));
     //ZeroMemory(&recv_wsabuf, sizeof(recv_wsabuf));
+}
+
+void NetworkingClient::CheckSocket()
+{
+    int err{};
+    socklen_t len = sizeof(err);
+    int ret = getsockopt(c_socket, SOL_SOCKET, SO_ERROR, (char*) & err, &len);
+    if (ret == 0) {
+        if (err != 0) {
+			// 소켓에 오류가 발생한 경우
+			std::string DebugOutput = "Socket error: " + std::to_string(err) + "\n";
+			OutputDebugStringA(DebugOutput.c_str());
+        }
+        else {
+            std::string DebugOutput = "Socket is still OK \n";
+            OutputDebugStringA(DebugOutput.c_str());
+        }
+    }
+    else {
+        std::string DebugOutput = "getsockopt failed with error: ";
+        OutputDebugStringA(DebugOutput.c_str());
+        error_display(DebugOutput.c_str(), WSAGetLastError());
+    }
 }
 
 bool NetworkingClient::Connect()
@@ -41,10 +63,10 @@ bool NetworkingClient::Connect()
 	std::string DebugOutput = "서버 연결 성공\n";
 	OutputDebugStringA(DebugOutput.c_str());
 
-	network_memory_address = reinterpret_cast<size_t>(this); // 네트워크 메모리 주소 저장
+    CheckSocket();
 
     // 연결 시 flag 초기화
-    is_connect = true;
+    SetConnect(true);
     // 사실상 아래 코드는 Network를 사용하는 Scene에서 호출해야함.
 	// 예시 클라이언트 이름 (나중에 입력받도록 수정 가능)
     std::string name{ "Client" };
@@ -57,7 +79,7 @@ bool NetworkingClient::Connect()
 bool NetworkingClient::StartRecvLoop()
 {
 	// 1. 연결 여부 확인
-    if (false == is_connect) return false;
+    if (false == IsConnect()) return false;
 	// 2. recv loop이 이미 수행중인지 확인
 	if (is_running) {
 		std::string DebugOutput = "recv loop이 이미 수행중입니다.\n";
@@ -79,8 +101,8 @@ void NetworkingClient::Logout()
         OutputDebugStringA(DebugOutput.c_str());
     }
 	
-	is_connect = false;
-	while (true == is_running) {
+    SetConnect(false);
+	while (true == IsRunning()) {
         SleepEx(0, TRUE); // 네트워크 I/O 콜백 처리
 	}
 
@@ -134,6 +156,7 @@ void NetworkingClient::error_display(const char* msg, int err_no)
 void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
 {
     ExtentOverlapped* over = reinterpret_cast<ExtentOverlapped*>(p_over);
+
 	// 수신된 바이트 수가 0이거나 에러가 발생한 경우 통신을 종료한다.
     if (err != 0 || num_bytes == 0) {
 
@@ -141,24 +164,25 @@ void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
 		DebugOutput += "Error : " + std::to_string(err) + "\n";
 		DebugOutput += "num_bytes : " + std::to_string(num_bytes) + "\n";
 		OutputDebugStringA(DebugOutput.c_str());
-
         Logout();
+        return;
     }
 
     // 패킷 조립
     char* recv_p = recv_over._buffer;
 
     DWORD offset = 0;
-    DWORD beforeProcessBytes = remain_bytes;
-    DWORD remain_bytes = beforeProcessBytes + num_bytes;
+    DWORD remain_bytes = this->remain_bytes + num_bytes;
 
     while (offset < remain_bytes) {
         if (remain_bytes - offset < sizeof(PacketHeader))
         {
 			// 패킷의 길이 저장 데이터(packet.size)보다 잔여 데이터가 작을 경우
             // 패킷의 길이를 모르기에 바로 종료
-            std::string DebugOutput = "recv_callback() - 남은 바이트 수 : " + std::to_string(remain_bytes - offset) + "즉, 패킷 크기 확인 불가. 루프 종료\n";
-            OutputDebugStringA(DebugOutput.c_str());
+            if( g_bNetworkDebugMode ){
+                std::string DebugOutput = "recv_callback() - 남은 바이트 수 : " + std::to_string(remain_bytes - offset) + "즉, 패킷 크기 확인 불가. 루프 종료\n";
+                OutputDebugStringA(DebugOutput.c_str());
+            }
             break;
         }
 		PacketHeader* packet_header = (PacketHeader*)recv_p;
@@ -166,8 +190,10 @@ void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
 
 		if (remain_bytes - offset < size) {
             // 수신된 패킷이 완전하지 않은 경우
-            std::string DebugOutput = "recv_callback() - 남은 바이트 수 : " + std::to_string(remain_bytes - offset) + " < 패킷의 크기(" + std::to_string(size) + ")/ 즉, 패킷 크기 부족. 루프 종료\n";
-            OutputDebugStringA(DebugOutput.c_str());
+            if ( g_bNetworkDebugMode ) {
+                std::string DebugOutput = "recv_callback() - 남은 바이트 수 : " + std::to_string(remain_bytes - offset) + " < 패킷의 크기(" + std::to_string(size) + ")/ 즉, 패킷 크기 부족. 루프 종료\n";
+                OutputDebugStringA(DebugOutput.c_str());
+            }
             break;
 		}
 
@@ -180,11 +206,22 @@ void NetworkingClient::recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
     }
 
 	// 패킷 처리 후 남은 바이트 수
-    remain_bytes = remain_bytes - offset;
-    if (remain_bytes > 0) memcpy(recv_over._buffer, recv_p, remain_bytes);
+    this->remain_bytes = remain_bytes - offset;
+    // 받은 버퍼에 남은 바이트를 이동 및 초기화
+    if (remain_bytes > 0) memcpy(recv_over._buffer, recv_p, this->remain_bytes);
+
+    if (g_bNetworkDebugMode) {
+        std::string DebugOutput = "패킷 처리후 남은 바이트 : "+ std::to_string(this->remain_bytes) + "\n";
+        OutputDebugStringA(DebugOutput.c_str());
+    }
 
     // 루프 종료 판단
-    if (false == is_connect) {
+    if (false == IsConnect()) {
+        if (g_bNetworkDebugMode) {
+            std::string DebugOutput = "conneect가 종료되어 Loop를 탈출함.\n";
+            OutputDebugStringA(DebugOutput.c_str());
+        }
+
         // 루프 종료됬음을 전달.
         is_running = false;
         return;
@@ -204,17 +241,16 @@ void NetworkingClient::ProcessPacket(PacketHeader* recv_p)
 	//if (is_connect == false) return; // 종료된 경우 패킷 처리하지 않음
  //   if (m_pScene) m_pScene->ProcessPacket(recv_p); // Scene이 nullptr인 경우 처리하지 않음  
 
-    if (is_connect == false) return;
+    if (IsConnect() == false) return;
 
-    std::string debug = "[클라] ProcessPacket() 호출됨\n";
-    debug += "  Packet Type: " + std::to_string((int)recv_p->type) + "\n";
-    debug += "  Packet Size: " + std::to_string((int)recv_p->size) + "\n";
-    OutputDebugStringA(debug.c_str());
-
-    if (m_pScene)
-        m_pScene->ProcessPacket(recv_p);
-    else
-        OutputDebugStringA("[클라] m_pScene == nullptr !!!\n");
+    if (g_bNetworkDebugMode) {
+        std::string debug = "[클라] ProcessPacket() 호출됨\n";
+        debug += "  Packet Type: " + GetPacketName(recv_p->type) + "\n";
+        debug += "  Packet Size: " + std::to_string((int)recv_p->size) + "\n";
+        OutputDebugStringA(debug.c_str());
+    }
+    
+    m_pScene->ProcessPacket(recv_p);
 }
 
 void NetworkingClient::recv_packet()
@@ -222,21 +258,38 @@ void NetworkingClient::recv_packet()
     ZeroMemory(&recv_over._overlapped, sizeof(recv_over._overlapped));
     recv_over._wsabuf.buf = recv_over._buffer + remain_bytes;
     recv_over._wsabuf.len = sizeof(recv_over._buffer) - remain_bytes;
-
+    
+  
 	DWORD recv_flag = 0;
     int ret = WSARecv(c_socket, &recv_over._wsabuf, 1, nullptr, &recv_flag, &recv_over._overlapped, g_recv_callback);
+
+    if (g_bNetworkDebugMode)
+    {
+        static int count = 0;
+        {
+            ++count;
+            std::string DebugOutput = std::to_string(count) + " / recv_packet() - recv_over._overlapped : " + std::to_string(reinterpret_cast<uintptr_t>(&recv_over._overlapped)) + "\n";
+            DebugOutput += "recv_packet() - recv_over._wsabuf.buf : " + std::to_string(reinterpret_cast<uintptr_t>(recv_over._wsabuf.buf)) + "\n";
+            DebugOutput += "recv_packet() - recv_over._wsabuf.len : " + std::to_string(recv_over._wsabuf.len) + "\n";
+            OutputDebugStringA(DebugOutput.c_str());
+        }
+    }
 
     if (ret == 0) {
         // 즉시 수신 완료
 		DWORD num_bytes = 0;
-		GetOverlappedResult((HANDLE)c_socket, &recv_over._overlapped, &num_bytes, FALSE);
-		recv_callback(ret, num_bytes, &recv_over._overlapped, recv_flag);
+        if (g_bNetworkDebugMode) {
+            std::string debug = "즉시 수신 \n";
+            OutputDebugStringA(debug.c_str());
+        }
     }
     else if (ret == SOCKET_ERROR) {
         if (WSAGetLastError() == WSA_IO_PENDING) {
             // 비동기 수신 대기 중
-            std::string debug = "비동기 수신 대기상태로 진입\n";
-            OutputDebugStringA(debug.c_str());
+            if (g_bNetworkDebugMode) {
+                std::string debug = "비동기 수신 대기상태로 진입\n";
+                OutputDebugStringA(debug.c_str());
+            }
         }
         else {
             // 오류 발생
@@ -247,13 +300,6 @@ void NetworkingClient::recv_packet()
 }
 
 void NetworkingClient::send_packet(char* packet) {
-    {
-		std::string debugOutput = "send_packet() - 호출됨\n";
-		debugOutput += "send_packet() - packet size : " + std::to_string(*(reinterpret_cast<SIZE2*>(packet))) + "\n";
-		debugOutput += "send_packet() - packet type : " + std::to_string(*(reinterpret_cast<PKT_TYPE*>(packet))) + "\n";
-		OutputDebugStringA(debugOutput.c_str());
-    }
-
     ExtentOverlapped* send_over = new ExtentOverlapped{ packet, this };
     int ret = WSASend(c_socket, &send_over->_wsabuf, 1, 0, 0, &send_over->_overlapped, g_send_callback);
     if (ret == 0) {
@@ -266,12 +312,29 @@ void NetworkingClient::send_packet(char* packet) {
     }
 }
 
+std::string GetPacketName(PKT_TYPE packetType) {
+    const std::unordered_map<PKT_TYPE, std::string> packetNames = {
+        { C_S_LOGIN, "C_S_LOGIN" },
+        { C_S_UPDATE, "C_S_UPDATE" },
+        { C_S_SHOOT, "C_S_SHOOT" },
+        { C_S_HIT, "C_S_HIT" },
+        { S_C_PLAYER_INFO, "S_C_PLAYER_INFO" },
+        { S_C_OBJECT_ADD, "S_C_OBJECT_ADD" },
+        { S_C_OBJECT_UPDATE, "S_C_OBJECT_UPDATE" },
+        { S_C_OBJECT_REMOVE, "S_C_OBJECT_REMOVE" },
+        { S_C_STAGE_INFO, "S_C_STAGE_INFO" },
+        { S_C_SCORE_INFO, "S_C_SCORE_INFO" }
+    };
+
+    return packetNames.at(packetType);
+}
+
 void g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
 {
     ExtentOverlapped* over = reinterpret_cast<ExtentOverlapped*>(p_over);
-    //NetworkingClient* client = over->_owner;
+    NetworkingClient* client = over->_owner;
 	//client->recv_callback(err, num_bytes, p_over, flag);
-    NetworkingClient* client = reinterpret_cast<NetworkingClient*>(p_over);
+    //NetworkingClient* client = reinterpret_cast<NetworkingClient*>(p_over);
     client->recv_callback(err, num_bytes, p_over, flag);
 }
 

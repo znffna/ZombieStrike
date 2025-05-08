@@ -124,10 +124,10 @@ CResource& CResourceManager::GetSkinningBoneTransforms() {
 			
 			m_ppd3dcbSkinningBoneTransforms[i].isUsed = true;
 			++m_nSkinningBoneTransformsCount;
-			{
+			/*{
 				std::string debugName = "GetSkinningBoneTransforms() - Skinning Bone Transforms [" + std::to_string(i) + "] is return, now SKinningBoneTransforms Uses : " + std::to_string(m_nSkinningBoneTransformsCount) + "\n";
 				OutputDebugStringA(debugName.c_str());
-			}
+			}*/
 			return m_ppd3dcbSkinningBoneTransforms[i];
 		}
 	}
@@ -149,9 +149,9 @@ CResource& CResourceManager::GetSkinningBoneTransforms() {
 void CResourceManager::ReleaseSkinningBoneTransform(const CResource& cResource) {
 	// count를 위해 만든 Method.
 	--m_nSkinningBoneTransformsCount;
-	{
+	/*{
 		std::string debugName = "ReleaseSkinningBoneTransform() - Skinning Bone Transforms [" + std::to_string(cResource.index) + "] is return, now SKinningBoneTransforms Uses : " + std::to_string(m_nSkinningBoneTransformsCount) + "\n";
 		OutputDebugStringA(debugName.c_str());
-	}
+	}*/
 }
 

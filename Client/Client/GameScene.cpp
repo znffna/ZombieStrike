@@ -19,10 +19,12 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	// Create Objects
 	CResourceManager& resourceManager = CResourceManager::GetInstance();
 
+	// <Environment>
+
 	// Skybox
 	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 	AddObject(m_pSkyBox);
-
+	
 	// Terrain
 	XMFLOAT3 xmf3Scale(1.0f, 32.0f / 255.0f, 1.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
@@ -31,6 +33,12 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 1025, 1025, 65, 65, xmf3Scale, xmf4Color);
 	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
 
+	// <Store GameObjects>
+	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 300);
+	StorePlayer(pd3dDevice, pd3dCommandList, pd3dRootSignature, 2);
+
+	// <Initialize GameObjects>
+
 	// Cube
 	std::shared_ptr<CGameObject> pGameObject;
 	pGameObject = CCubeObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature);
@@ -38,16 +46,18 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	AddObject(pGameObject);
 
 	// Player 持失
-	StorePlayer(pd3dDevice, pd3dCommandList, pd3dRootSignature, 2);
 	std::shared_ptr<CPlayer> pPlayer = GetPlayer();
 	//std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, 0);
 	pPlayer->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 0.0f));
 	AddObject(pPlayer);
 	m_pPlayer = pPlayer;
 
-	// Zombie Object
-	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 300);
+	// Zombie 持失
+	/*std::shared_ptr<CZombieObject> pZombie = GetZombie();
+	pZombie->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 5.0f));
+	AddObject(pZombie);*/
 
+	
 	// Map Load
 	auto pMap = resourceManager.GetModelInfo("Map");
 	pMap->m_pModelRootObject->UpdateTransform();
@@ -115,15 +125,6 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
 			m_pPlayer->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
 		}
-	}
-
-	if (pBuffer.pKeysBuffer['1'] & 0x80)
-	{
-		if (m_pPlayer) m_pPlayer->SetSkin(0);
-	}
-	if (pBuffer.pKeysBuffer['2'] & 0x80)
-	{
-		if (m_pPlayer) m_pPlayer->SetSkin(1);
 	}
 
 	return true;
@@ -215,17 +216,11 @@ void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 
 void CGameScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)
 {
-	std::shared_ptr<CLoadedModelInfo> pModel = CResourceManager::GetInstance().GetModelInfo("FuzZombie");
-	if (!pModel)
-	{
-		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
-		CResourceManager::GetInstance().SetSkinInfo("FuzZombie", pModel);
-	}
-
 	m_pZombiePool.reserve(nZombieCount);
 	for (int i = 0; i < nZombieCount; ++i)
 	{
-		std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
+		std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, i);
+		pZombie->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
 		pZombie->SetActive(false);
 		m_pZombiePool.push_back(pZombie);
 	}
@@ -237,7 +232,7 @@ std::shared_ptr<CZombieObject> CGameScene::GetZombie(int nSkinType)
 	{
 		if (false == pZombie->IsActive())
 		{
-			pZombie->SetSkinType(nSkinType);
+			pZombie->SetSkin(nSkinType);
 			pZombie->SetActive(true);
 			return pZombie;
 		}
@@ -250,6 +245,7 @@ void CGameScene::StorePlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	for (int i = 0; i < nPlayerCount; ++i)
 	{
 		std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, i);
+		pPlayer->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
 		pPlayer->SetActive(false);
 		m_pPlayerObjects.push_back(pPlayer);
 	}
@@ -261,7 +257,7 @@ std::shared_ptr<CPlayer> CGameScene::GetPlayer(int nSkinType)
 	{
 		if (false == pPlayer->IsActive())
 		{
-			//pPlayer->SetSkinType(nSkinType);
+			pPlayer->SetSkin(nSkinType);	
 			pPlayer->SetActive(true);
 			return pPlayer;
 		}

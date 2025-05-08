@@ -38,6 +38,8 @@ public:
 	CLoadedModelInfo() { };
 	~CLoadedModelInfo()	{ };
 
+	std::string m_strFileName{};
+
 	std::shared_ptr<CGameObject> m_pModelRootObject;
 
 	int m_nSkinnedMeshes = 0;

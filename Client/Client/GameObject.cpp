@@ -628,11 +628,13 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 		else if (!strcmp(pstrToken, "<FrameNames>:"))
 		{
 			pLoadedModel->m_pAnimationSets->m_nBoneFrames = ::ReadIntegerFromFile(pInFile);
+			pLoadedModel->m_pAnimationSets->m_ppBoneFrameName.resize(pLoadedModel->m_pAnimationSets->m_nBoneFrames);
 			pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches.resize(pLoadedModel->m_pAnimationSets->m_nBoneFrames);
 
 			for (int j = 0; j < pLoadedModel->m_pAnimationSets->m_nBoneFrames; j++)
 			{
 				::ReadStringFromFile(pInFile, pstrToken);
+				pLoadedModel->m_pAnimationSets->m_ppBoneFrameName[j] = pstrToken;
 				pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches[j] = pLoadedModel->m_pModelRootObject->FindFrame(pstrToken);
 
 #ifdef _WITH_DEBUG_SKINNING_BONE
@@ -841,6 +843,7 @@ std::shared_ptr<CLoadedModelInfo> CGameObject::LoadGeometryAndAnimationFromFile(
 	//::rewind(pInFile);
 
 	std::shared_ptr<CLoadedModelInfo> pLoadedModel = std::make_shared<CLoadedModelInfo>();
+	pLoadedModel->m_strFileName = pstrFileName;
 
 	char pstrToken[500] = { '\0' };
 

@@ -416,7 +416,7 @@ void CGameFramework::BuildObjects()
 
 		WaitGpuWithoutPresent();
 
-		pMainScene->SetSceneState(SCENE_STATE_RUNNING);
+		pMainScene->SetSceneState(SCENE_STATE_READY_TO_START);
 		m_Scenes.push_back(std::move(pMainScene));
 	});
 	thread.detach();

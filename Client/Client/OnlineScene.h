@@ -4,7 +4,6 @@
 #include "NetworkClient.h"
 #include "GameScene.h"
 
-extern bool g_bNetworkDebugMode;
 
 class COnlineScene : public CGameScene
 {
@@ -17,7 +16,7 @@ public:
 	virtual void ReleaseObjects() override;
 	virtual void ReleaseUploadBuffers() override;
 
-	virtual void StartScene() { m_NetworkClient.StartRecvLoop(); CScene::SetSceneState(SCENE_STATE_RUNNING); }
+	virtual void StartScene();
 
 	virtual void Update(float deltaTime) override;
 
