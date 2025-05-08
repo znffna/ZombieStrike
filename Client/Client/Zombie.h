@@ -21,7 +21,7 @@ public:
 	// Object Initialization
 	static std::shared_ptr<CZombieObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks);
 	
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks);
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nSkinType);
 	
 	virtual std::string GetDefaultName() override { return "CZombieObject"; }
 	virtual GAMEOBJECT_LAYER GetLayer() { return LAYER_ENEMY; }
@@ -29,7 +29,9 @@ public:
 	// Skin State
 	void SetSkinType(int nSkinType);
 	int GetSkinType() const;
+	void SetSkin(int nSkinType);
 private:
-	std::vector<std::string> ModelName{ "FuzZombie", "Yaku_J_Ignite", "Zombiegirl_W_Kurniawan"};
+	std::vector<std::string> m_strModelName{ "PoliceZombie", "Yaku_J_Ignite", "Zombiegirl_W_Kurniawan"};
+	std::vector<std::string> m_strMeshBoneName{ "FuzZombie", "Yaku_zombie", "ZombieGirl_Body"};
 	int m_nSkinType = 0;
 };

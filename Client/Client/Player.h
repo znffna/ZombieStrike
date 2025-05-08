@@ -9,7 +9,7 @@ public:
 	// Object Initialization
 	static std::shared_ptr<CPlayer> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks, int nSkinType = 0);
 	
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks);
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nSkinType);
 	
 	virtual std::string GetDefaultName() override { return "CPlayer"; }
 	virtual GAMEOBJECT_LAYER GetLayer() { return LAYER_PLAYER; }
@@ -27,7 +27,7 @@ public:
 
 	// Skin State
 	// Skin State
-	void SetSkinType(int nSkinType)	{ m_nSkinType = nSkinType;}
+	void SetSkinType(int nSkinType)	{ m_nSkinType = nSkinType % m_ModelName.size();}
 	int GetSkinType() const { return m_nSkinType; }
 	void SetSkin(int nSkinType);
 

@@ -21,7 +21,7 @@ CZombieObject::~CZombieObject()
 {
 }
 
-void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks)
+void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nSkinType)
 {
 	CGameObject::Initialize(pd3dDevice, pd3dCommandList);
 
@@ -32,49 +32,53 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	SetRotationAxisLock(true, false, true);
 
+	// <Components>
+	auto pCollider = CreateComponent<COBBCollider>(shared_from_this());
+
+	std::shared_ptr<CRigidBody> pRigidBody = CreateComponent<CRigidBody>(shared_from_this());
+	pRigidBody->SetGravity(XMFLOAT3(0.0f, -9.0f, 0.0f));
+
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
+
 	// Model Info
-	std::shared_ptr<CLoadedModelInfo> pZombieModel = pModel;
-	//if (!pZombieModel) pZombieModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/PoliceZombie.bin", NULL);
-	SetChild(pZombieModel->m_pModelRootObject);
+	SetSkinType(nSkinType);
+	SetSkin(m_nSkinType);
 
 	Update(0.0f);
 	UpdateTransform();
-
-	auto pCollider = CreateComponent<CAABBCollider>(shared_from_this());
-	pCollider->SetCollider(pZombieModel->m_MeshBoundingBox.Center, pZombieModel->m_MeshBoundingBox.Extents);
-
-	m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
-	m_pSkinnedAnimationController->SettingByModel(pZombieModel, nAnimationTracks);
-
-	m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);
-	m_pSkinnedAnimationController->SetTrackEnable(1, false);
-
-	// Component
-	std::shared_ptr<CRigidBody> pRigidBody = CreateComponent<CRigidBody>(shared_from_this());
-	pRigidBody->SetVelocity(XMFLOAT3(0.0f, -9.0f, 0.0f));
 }
 
-std::shared_ptr<CZombieObject> CZombieObject::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks)
+std::shared_ptr<CZombieObject> CZombieObject::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nSkinType)
 {
 	std::shared_ptr<CZombieObject> pZombie = std::make_shared<CZombieObject>();
-	pZombie->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pModel, nAnimationTracks);
-	pZombie->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(pTerrain.get());
-
+	pZombie->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pModel, nSkinType);
 	return pZombie;
 }
 
 // Skin State
 void CZombieObject::SetSkinType(int nSkinType)
 {
-	if (m_nSkinType != nSkinType) {
-		m_pChilds.clear();
-	}
-	m_nSkinType = nSkinType; 
-
-	auto pModel = CResourceManager::GetInstance().GetModelInfo(ModelName[m_nSkinType]);
-	SetChild(pModel->m_pModelRootObject);
-	m_pSkinnedAnimationController->SettingByModel(pModel);
+	m_nSkinType = nSkinType % m_strModelName.size(); 
 }
 
 int CZombieObject::GetSkinType() const { return m_nSkinType; }
+
+void CZombieObject::SetSkin(int nSkinType)
+{
+	SetSkinType(nSkinType);
+
+	m_pChilds.clear();
+
+	auto pZombieModel = CResourceManager::GetInstance().GetModelInfo(m_strModelName[m_nSkinType]);
+	SetChild(pZombieModel->m_pModelRootObject);
+	m_pSkinnedAnimationController->SettingByModel(pZombieModel);
+
+	for (int i = 0; i < m_pSkinnedAnimationController->m_nAnimationTracks; i++)
+	{
+		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+		if (i != 0) m_pSkinnedAnimationController->SetTrackEnable(i, false);
+	}
+
+	auto pCollider = GetComponent<COBBCollider>();
+	pCollider->SetCollider(FindFrame(m_strMeshBoneName[m_nSkinType])->GetMeshBound());
+}
