@@ -129,10 +129,18 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 
 	if (pBuffer.pKeysBuffer['1'] & 0x80)
 	{
+		{
+			std::string debug = "Press 0\n";
+			OutputDebugStringA(debug.c_str());
+		}
 		if (m_pPlayer) m_pPlayer->SetSkin(0);
 	}
 	if (pBuffer.pKeysBuffer['2'] & 0x80)
 	{
+		{
+			std::string debug = "Press 1\n";
+			OutputDebugStringA(debug.c_str());
+		}
 		if (m_pPlayer) m_pPlayer->SetSkin(1);
 	}
 
