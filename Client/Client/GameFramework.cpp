@@ -394,8 +394,8 @@ void CGameFramework::BuildObjects()
 	// MainScene 생성
 	std::thread thread([this]() mutable {
 
-		std::unique_ptr<CScene> pMainScene = std::make_unique<CGameScene>();
-		//std::unique_ptr<CScene> pMainScene = std::make_unique<COnlineScene>();
+		//std::unique_ptr<CScene> pMainScene = std::make_unique<CGameScene>();
+		std::unique_ptr<CScene> pMainScene = std::make_unique<COnlineScene>();
 
 		// 디버그
 		//NetworkingClient* net = static_cast<COnlineScene*>(pMainScene.get())->GetClient();
@@ -416,7 +416,7 @@ void CGameFramework::BuildObjects()
 
 		WaitGpuWithoutPresent();
 
-		pMainScene->SetSceneState(SCENE_STATE_RUNNING);
+		pMainScene->SetSceneState(SCENE_STATE_READY_TO_START);
 		m_Scenes.push_back(std::move(pMainScene));
 	});
 	thread.detach();

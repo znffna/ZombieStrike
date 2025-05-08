@@ -1,6 +1,5 @@
 #include "OnlineScene.h"
 
-bool g_bNetworkDebugMode = true;
 
 COnlineScene::COnlineScene()
 {	
@@ -50,6 +49,17 @@ void COnlineScene::ReleaseUploadBuffers()
 {
 }
 
+void COnlineScene::StartScene()
+{ 
+	{
+		std::string debugOutput = "COnlineScene::StartScene() - StartRecvLoop() 호출됨\n";
+		OutputDebugStringA(debugOutput.c_str());
+	}
+	m_NetworkClient.StartRecvLoop();
+
+	CScene::StartScene();
+}
+
 void COnlineScene::Update(float deltaTime)
 {
 	#define MAX_PACKET_PER_FRAME 3
@@ -69,7 +79,7 @@ void COnlineScene::Update(float deltaTime)
 	CGameScene::Update(deltaTime);
 
 	// Network Client Update
-	if (m_NetworkClient.is_connect)
+	if (m_NetworkClient.IsConnect())
 	{
 		// Network Client Update
 		// 즉 클라처리 결과를 서버에 보고
@@ -117,6 +127,12 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 {	
 	PKT_TYPE type = recv_p->type; // 패킷 타입  
 
+	//if (g_bNetworkDebugMode) 
+	{
+		std::string DebugOutput = "COnlineScene::ProcessPacket() - Packet Type : " + std::to_string(type) + "\n";
+		OutputDebugStringA(DebugOutput.c_str());
+	}
+
 	switch (type) {
 	case S_C_PLAYER_INFO:
 	{
@@ -134,9 +150,11 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	case S_C_OBJECT_ADD:
 	{
 		pkt_sc_object_add* packet = reinterpret_cast<pkt_sc_object_add*>(recv_p);
-		if (g_bNetworkDebugMode) {
+		//if (g_bNetworkDebugMode)
+		{
 			std::string DebugOutput = "S_C_OBJECT_ADD 패킷 수신\n";
 			DebugOutput += "position : (" + std::to_string(packet->fixdata.startposition.x) + ", " + std::to_string(packet->fixdata.startposition.y) + ", " + std::to_string(packet->fixdata.startposition.z) + ")\n";
+			DebugOutput += "ObjectType : " + std::to_string(packet->fixdata.obj_type) + "\n";
 			OutputDebugStringA(DebugOutput.c_str());
 		}
 
@@ -202,7 +220,6 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	case S_C_SCORE_INFO:
 	{
 		break;
-
 	}
 	default:
 		break;

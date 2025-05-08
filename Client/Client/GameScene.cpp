@@ -53,9 +53,9 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pPlayer = pPlayer;
 
 	// Zombie »ý¼º
-	std::shared_ptr<CZombieObject> pZombie = GetZombie();
+	/*std::shared_ptr<CZombieObject> pZombie = GetZombie();
 	pZombie->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 5.0f));
-	AddObject(pZombie);
+	AddObject(pZombie);*/
 
 	
 	// Map Load
@@ -125,23 +125,6 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
 			m_pPlayer->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
 		}
-	}
-
-	if (pBuffer.pKeysBuffer['1'] & 0x80)
-	{
-		{
-			std::string debug = "Press 0\n";
-			OutputDebugStringA(debug.c_str());
-		}
-		if (m_pPlayer) m_pPlayer->SetSkin(0);
-	}
-	if (pBuffer.pKeysBuffer['2'] & 0x80)
-	{
-		{
-			std::string debug = "Press 1\n";
-			OutputDebugStringA(debug.c_str());
-		}
-		if (m_pPlayer) m_pPlayer->SetSkin(1);
 	}
 
 	return true;
