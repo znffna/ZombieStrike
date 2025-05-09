@@ -298,6 +298,24 @@ public:
 					do_send(&p_Add_P);
 				}
 			}
+
+            // 좀비 정보를 모든 플레이어에게 전송
+            pkt_sc_object_add packet;
+            for (auto zombie : g_zombies) {
+                packet.header.size = sizeof(packet);
+                packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+                packet.id = zombie->GetID();
+                packet.fixdata.obj_type = ObjectType::ZOMBIE;
+                packet.fixdata.skin_type = 0;
+                strcpy_s(packet.fixdata.name, "Zombie");
+                packet.fixdata.startposition = zombie->GetPosition();
+                packet.fixdata.starthp = zombie->GetHP();
+
+                for (auto& [id, session] : g_users) {
+                    session.do_send(&packet);
+                }
+            }
+
             break;
         }
         case PKT_TYPE::C_S_UPDATE:
@@ -322,7 +340,8 @@ public:
 			u_move_p.obj.damage = _damage;
 			u_move_p.obj.act_type = _act_type;
 			for (auto& u : g_users) {
-				u.second.do_send(&u_move_p); // 나포함 모두에게 알림 좌표의 이동을
+				if (u.first != _id) // 나를 제외한 상대방에게 알리고
+				    u.second.do_send(&u_move_p); // 나포함 모두에게 알림 좌표의 이동을
 			}
             std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
             std::cout << "[process_packet][RECV][" << (int)_id << "] position: (" << _position.x << ", " << _position.y << ", " << _position.z << ") " << "\n";

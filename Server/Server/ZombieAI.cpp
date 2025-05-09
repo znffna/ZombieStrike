@@ -267,8 +267,8 @@ std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map)
 {
     static std::random_device rd;
     static std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distX(412, 611);
-    std::uniform_int_distribution<> distZ(412, 611);
+    std::uniform_int_distribution<> distX(30, 50);
+    std::uniform_int_distribution<> distZ(30, 50);
 
     while (true) {
         int x = distX(gen), z = distZ(gen);

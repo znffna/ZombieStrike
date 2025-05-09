@@ -4,7 +4,7 @@
 
 //constexpr const char* LOOPBACK_IP = "127.0.0.1";
 
-bool g_bNetworkDebugMode = true;
+bool g_bNetworkDebugMode = false;
 
 NetworkingClient::NetworkingClient(COnlineScene* pScene) : recv_over(this), m_pScene(pScene) { // recv_over(this)
 	// ZeroMemory(&recv_over, sizeof(recv_over));
