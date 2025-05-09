@@ -67,6 +67,7 @@ void CScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	// Scene 생성 완료
 	//m_SceneState = SCENE_STATE_RUNNING;
+	m_SceneState = SCENE_STATE_READY_TO_START;
 }
 
 void CScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -331,7 +332,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	for (auto& pvecObjects : m_ppGameObjects)
 	{
 		if (pvecObjects.first == CGameObject::GAMEOBJECT_LAYER::LAYER_PLAYER)
-			int a = 0; // UI는 제외
+			std::cout << 1; // UI는 제외
 		for (auto& pObject : pvecObjects.second)
 		{
 			pObject->Update(0.0f);

@@ -9,6 +9,7 @@
 #include "GameObject.h"
 #include "Zombie.h" 
 #include "Player.h"
+#include "Gun.h"
 
 #include "Camera.h"
 #include "Shader.h"
@@ -103,6 +104,7 @@ enum SCENE_STATE
 {
 	SCENE_STATE_NONE = 0x00, // 초기화되지 않은 상태 [ None ]
 	SCENE_STATE_ALLOCING, // 할당 중 [ ALLOC ]
+	SCENE_STATE_READY_TO_START, // 시작 준비 중 [ PreInitialize ]
 	SCENE_STATE_RUNNING,  // 실행 중 [ Update / Render ]
 	SCENE_STATE_PAUSING,  // 일시 중지 중 [ Render ]
 	SCENE_STATE_ENDING    // 종료 중 [ Release ]
@@ -134,7 +136,13 @@ public:
 	
 	// Scene Management
 	bool CheckWorkRendering() { return (m_SceneState == SCENE_STATE_RUNNING) || (m_SceneState == SCENE_STATE_PAUSING); }
-	bool CheckWorkUpdating() { return (m_SceneState == SCENE_STATE_RUNNING); }
+	bool CheckWorkUpdating()
+	{
+		if (m_SceneState == SCENE_STATE_READY_TO_START)
+			StartScene(); 
+		return (m_SceneState == SCENE_STATE_RUNNING); 
+	}
+	virtual void StartScene() { SetSceneState(SCENE_STATE_RUNNING); }
 	SCENE_STATE GetSceneState() { return m_SceneState; }
 	void SetSceneState(SCENE_STATE SceneState) { m_SceneState = SceneState; }
 

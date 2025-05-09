@@ -42,7 +42,7 @@ cbuffer cbFrameworkInfo : register(b3)
 #include "Light.hlsl"
 
 // Render Config
-#include "RenderConfig.h"
+#define _WITH_STANDARD_TEXTURE_MULTIPLE_PARAMETERS
 
 ////////////////////////////////////////////////////////////////////////////////
 //

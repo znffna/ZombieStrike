@@ -20,30 +20,9 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	SetRotationAxisLock(true, false, true);
 
-	// Model Info
-	std::shared_ptr<CLoadedModelInfo> pPlayerModel;
-	if (pModel) {
-		pPlayerModel = pModel;
-		//if (!pPlayerModel) pPlayerModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/PoliceZombie.bin", NULL);
-		SetChild(pPlayerModel->m_pModelRootObject);
-	}
-	else {
-		pPlayerModel = CResourceManager::GetInstance().GetModelInfo(m_ModelName[m_nSkinType]);
-		SetChild(pPlayerModel->m_pModelRootObject);
-		//pPlayerModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Ch35_nonPBR.bin", NULL);
-		//SetChild(pPlayerModel->m_pModelRootObject);
-	}
-	
+	// <Components>
 	// Animation Controller
-	if(pPlayerModel != nullptr)
-	{
-		m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
-		m_pSkinnedAnimationController->SettingByModel(pPlayerModel, nAnimationTracks);
-
-		m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-		m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);
-		m_pSkinnedAnimationController->SetTrackEnable(1, false);
-	}
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
 
 	// RigidBody »ý¼º
 	std::shared_ptr<CRigidBody> pRigidBody = CreateComponent<CRigidBody>(shared_from_this());
@@ -61,7 +40,9 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	// Collider »ý¼º
 	auto pCollider = CreateComponent<COBBCollider>(shared_from_this());
-	pCollider->SetCollider(FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound());
+
+	// Model Info
+	SetSkin(m_nSkinType);
 
 	Update(0.0f);
 	UpdateTransform();
@@ -72,7 +53,6 @@ std::shared_ptr<CPlayer> CPlayer::Create(ID3D12Device* pd3dDevice, ID3D12Graphic
 	std::shared_ptr<CPlayer> pPlayer = std::make_shared<CPlayer>();
 	pPlayer->SetSkinType(nSkinType);
 	pPlayer->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pModel, nAnimationTracks);
-	pPlayer->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(pTerrain.get());
 
 	return pPlayer;
 }
@@ -82,11 +62,20 @@ void CPlayer::Update(float fTimeElapsed)
 	CGameObject::Update(fTimeElapsed);
 
 	if(auto pCamera = GetComponent<CCamera>()) pCamera->Update(GetPosition(), fTimeElapsed);
+
+	if (m_pGun) {
+		m_pGun->Update(fTimeElapsed);
+		m_pGun->UpdateTransform(FindFrame("mixamorig:RightHand")->GetWorldMatrix());
+	}
 }
 
 void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	CGameObject::Render(pd3dCommandList, pCamera);
+
+	if (m_pGun)	{
+		m_pGun->Render(pd3dCommandList, pCamera);
+	}
 }
 
 void CPlayer::SetSkin(int nSkinType)
@@ -99,9 +88,23 @@ void CPlayer::SetSkin(int nSkinType)
 	SetChild(pPlayerModel->m_pModelRootObject);
 	m_pSkinnedAnimationController->SettingByModel(pPlayerModel);
 
-	m_pSkinnedAnimationController->SetTrackAnimationSet(0, 0);
-	m_pSkinnedAnimationController->SetTrackAnimationSet(1, 1);
-	m_pSkinnedAnimationController->SetTrackEnable(1, false);
+	for (int i = 0; i < m_pSkinnedAnimationController->m_nAnimationTracks; i++)
+	{
+		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+		if(i != 0) m_pSkinnedAnimationController->SetTrackEnable(i, false);
+	}
+
+	// ¹Ù²ï Model¿¡ ¸ÂÃç Component º¯°æ
+	for (auto& pComponent : m_pComponents)
+	{
+		pComponent->Init(this);
+	}
+
+	auto pCollider = GetComponent<COBBCollider>();
+	pCollider->SetCollider(FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound());
+
+	// ¹Ù²ï Model¿¡ ¸ÂÃç PrepareSkinning
+	m_pRightHandFrame = FindFrame("mixamorig:RightHand");
 
 	Update(0.0f);
 	UpdateTransform();

@@ -54,6 +54,7 @@ public:
 	std::vector<std::shared_ptr<CAnimationSet>> m_pAnimationSets;
 
 	int	m_nBoneFrames = 0;
+	std::vector<std::string> m_ppBoneFrameName; //[m_nBoneFrames]
 	std::vector<std::shared_ptr<CGameObject>> m_ppBoneFrameCaches; //[m_nBoneFrames]
 
 };

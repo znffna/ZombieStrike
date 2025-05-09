@@ -4,7 +4,6 @@
 #include "NetworkClient.h"
 #include "GameScene.h"
 
-extern bool g_bNetworkDebugMode;
 
 class COnlineScene : public CGameScene
 {
@@ -16,6 +15,8 @@ public:
 	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
 	virtual void ReleaseObjects() override;
 	virtual void ReleaseUploadBuffers() override;
+
+	virtual void StartScene();
 
 	virtual void Update(float deltaTime) override;
 

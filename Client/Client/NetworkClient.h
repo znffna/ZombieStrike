@@ -11,9 +11,13 @@ constexpr const char* SERVER_IP = "192.168.149.233";
 constexpr const char* LOOPBACK_IP = "127.0.0.1";
 #define USSING_IP LOOPBACK_IP
 
+extern bool g_bNetworkDebugMode;
+
 // 클라이언트 네트워크 클래스
 // 소켓을 사용하여 서버와 통신하는 기능을 포함
 // MultiSCene에서 생성되어 WSARecv와 WSASend를 이용한 callback을 통한 로직 구현.
+
+extern std::string GetPacketName(PKT_TYPE packetType);
 
 class NetworkingClient;
 
@@ -23,13 +27,8 @@ public:
     char _buffer[1024];
 	WSABUF _wsabuf;
     NetworkingClient* _owner;
-    DWORD _debug_magic = 0xDEADBEEF; //디버그용
 
-    ~ExtentOverlapped() {
-        _debug_magic = 0xBAADF00D; // 해제 
-
-    }
-	ExtentOverlapped() {
+    ExtentOverlapped() {
 		ZeroMemory(&_overlapped, sizeof(_overlapped));
 		ZeroMemory(_buffer, sizeof(_buffer));
 		ZeroMemory(&_wsabuf, sizeof(_wsabuf));
@@ -59,6 +58,7 @@ class COnlineScene;
 void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
 void CALLBACK g_send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
 
+extern std::string GetPacketName(PKT_TYPE packetType);
 
 class NetworkingClient {
 public:
@@ -67,17 +67,28 @@ public:
     SOCKET c_socket;
     //char recv_buffer[1024];
     //WSABUF recv_wsabuf;
-
 	DWORD remain_bytes = 0;
 
-    bool is_running = false; // 종료 여부
-	bool is_recvLoopWorking = false; // recv loop이 수행중인지 확인
+    bool is_connect = false; // 종료 여부
+	bool is_running = false; // recv loop이 수행중인지 확인
 
     COnlineScene* m_pScene; // Scene 포인터
 public:
 	NetworkingClient(COnlineScene* pScene);
 
+	// setter / getter
+    void SetConnect(bool connect) { { std::string debugOutput = "Connect = "; debugOutput += connect ? "True" : "False"; debugOutput += "\n"; OutputDebugStringA(debugOutput.c_str()); } is_connect = connect; }
+	bool IsConnect() { return is_connect; }
+
+	void SetRunning(bool running) { is_running = running; }
+	bool IsRunning() { return is_running; }
+
+	void CheckSocket(); // 소켓 상태 확인
+
+	// 소켓 초기화 및 서버 연결
+
 	bool Connect();   // 소켓 초기화 및 서버 연결
+	bool StartRecvLoop(); // recv loop 시작
     void Logout(); // Scene의 종료시 호출하도록 구현할 것
     void error_display(const char* msg, int err_no);
 
@@ -87,8 +98,6 @@ public:
     void ProcessPacket(PacketHeader* recv_p);
     void recv_packet();
     void send_packet(char* packet);
-
-	void startRecvLoop();
 
     // SendPacket (테스트로 구현)
     void SendLoginPacket(std::string& name);
