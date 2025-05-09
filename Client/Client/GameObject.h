@@ -65,6 +65,7 @@ public:
 		LAYER_DEFUALT = 0,
 		LAYER_SKYBOX,
 		LAYER_TERRAIN,
+		LAYER_ENVIRONMENT,
 		LAYER_ENEMY,
 		LAYER_PLAYER,
 		LAYER_GUN,
@@ -98,7 +99,8 @@ public:
 	void SetName(const std::string& strName);
 	virtual std::string GetDefaultName() { return "CGameObject"; }
 
-	virtual GAMEOBJECT_LAYER GetLayer() { return LAYER_DEFUALT; }
+	virtual void SetLayer(GAMEOBJECT_LAYER layer) { m_nLayer = layer; }
+	virtual GAMEOBJECT_LAYER GetLayer() { return m_nLayer; }
 
 	// 상속 관계
 	std::shared_ptr<CGameObject> GetParent() { return m_pParent.lock(); }
@@ -146,6 +148,8 @@ public:
 
 protected:
 	bool m_bActive; // Active Flag
+
+	GAMEOBJECT_LAYER m_nLayer; // Object Layer
 
 #ifdef _DEBUG
 	int nLoadFrames = -1;
@@ -451,4 +455,3 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-

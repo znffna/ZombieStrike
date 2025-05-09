@@ -12,7 +12,7 @@ public:
 	static std::shared_ptr<CGun> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nWeaponType);
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nWeaponType);
 
-	virtual GAMEOBJECT_LAYER GetLayer() override { return LAYER_GUN; }
+	virtual GAMEOBJECT_LAYER GetLayer() override { return m_nLayer = LAYER_GUN; }
 
 	// Object Update
 	virtual void Update(float fTimeElapsed) override;

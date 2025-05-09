@@ -29,6 +29,7 @@ COnlineScene::~COnlineScene()
 
 void COnlineScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
+
 	bool isComplelte = m_NetworkClient.Connect();
 	if (!isComplelte)
 	{
@@ -36,7 +37,18 @@ void COnlineScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		OutputDebugStringA(debugOutput.c_str());
 		return;
 	}
+
 	CGameScene::InitializeObjects(pd3dDevice, pd3dCommandList, pd3dRootSignature);
+}
+
+void COnlineScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
+{
+	if (false == m_NetworkClient.IsConnect())
+	{
+		SetSceneState(SCENE_STATE_ENDING);
+		return;
+	}
+	SetSceneState(SCENE_STATE_READY_TO_START);
 }
 
 void COnlineScene::ReleaseObjects()

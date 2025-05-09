@@ -416,7 +416,7 @@ void CGameFramework::BuildObjects()
 
 		WaitGpuWithoutPresent();
 
-		pMainScene->SetSceneState(SCENE_STATE_READY_TO_START);
+		pMainScene->PostInitializeObjects(nullptr, nullptr, nullptr);
 		m_Scenes.push_back(std::move(pMainScene));
 	});
 	thread.detach();
@@ -488,8 +488,22 @@ void CGameFramework::AdvanceFrame()
 	ClearRtvAndDsv();
 
 	// Scene 업데이트
+	for (auto it = m_Scenes.begin(); it != m_Scenes.end(); ) {
+		if (it->get()->GetSceneState() == SCENE_STATE_ENDING) {
+			{
+				std::string debug = typeid(*it).name();
+				debug += "[AdvanceFrame] Scene Ending\n";
+				OutputDebugStringA(debug.c_str());
+			}
+			it = m_Scenes.erase(it);  // erase는 다음 유효 반복자를 반환
+		}
+		else {
+			++it;
+		}
+	}
+
 	for (auto& scene : m_Scenes)
-	{
+	{		
 		if (scene->CheckWorkUpdating())
 		{
 			// Scene 정보 업데이트

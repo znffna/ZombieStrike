@@ -11,6 +11,15 @@ std::shared_ptr<CDescirptorHeap> CScene::m_pDescriptorHeap;
 ComPtr<ID3D12RootSignature> CScene::m_pd3dGraphicsRootSignature;
 ComPtr<ID3D12RootSignature> CScene::m_pd3dComputeRootSignature;
 
+std::vector<std::string> g_vecSceneStateNames{
+	"None",
+	"Allocing",
+	"ReadyToStart",
+	"Running",
+	"Pausing",
+	"Ending"
+}; 
+
 CScene::CScene()
 {
 	ZeroMemory(m_pLights.data(), sizeof(Light) * MAX_LIGHTS);
@@ -25,11 +34,11 @@ CScene::~CScene()
 	ReleaseShaderVariables();
 
 	// Release Root Signature
-	m_pd3dGraphicsRootSignature.Reset();
-	m_pd3dComputeRootSignature.Reset();
+	//m_pd3dGraphicsRootSignature.Reset();
+	//m_pd3dComputeRootSignature.Reset();
 
 	// Scene 종료
-	m_SceneState = SCENE_STATE_ENDING;
+	SetSceneState(SCENE_STATE_ENDING);
 }
 
 void CScene::Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
@@ -42,7 +51,7 @@ void CScene::Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dComma
 
 void CScene::PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	m_SceneState = SCENE_STATE_ALLOCING;
+	SetSceneState(SCENE_STATE_ALLOCING);
 
 	// Create Default Lights and Materials
 	BuildDefaultLightsAndMaterials();
@@ -67,7 +76,7 @@ void CScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	// Scene 생성 완료
 	//m_SceneState = SCENE_STATE_RUNNING;
-	m_SceneState = SCENE_STATE_READY_TO_START;
+	SetSceneState(SCENE_STATE_READY_TO_START);
 }
 
 void CScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)

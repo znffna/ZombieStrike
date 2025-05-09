@@ -222,7 +222,7 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 
 
 //«»ºø ºŒ¿Ã¥ı∏¶ ¡§¿««—¥Ÿ.
-float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
+float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET 
 {
     float4 baseColor = input.color;
     
@@ -237,7 +237,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     float4 cIllumination = Lighting(input.positionW, input.normalW);
     //float4 cColor = texColor * 0.5f + cIllumination * 0.5f;
     float4 cColor = (texColor * 0.8f + detailTexColor * 0.2f);
-    return lerp(cColor, cIllumination, 0.7f);
+    return lerp(cColor, cIllumination, 0.5f);
     
 	
     //return (baseColor);

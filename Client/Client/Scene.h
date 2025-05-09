@@ -99,6 +99,8 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUSrvDescriptorStartHandle() { return(m_d3dSrvGPUDescriptorStartHandle); }
 };
 
+extern std::vector<std::string> g_vecSceneStateNames;
+
 enum SCENE_STATE
 {
 	SCENE_STATE_NONE = 0x00, // 초기화되지 않은 상태 [ None ]
@@ -137,13 +139,21 @@ public:
 	bool CheckWorkRendering() { return (m_SceneState == SCENE_STATE_RUNNING) || (m_SceneState == SCENE_STATE_PAUSING); }
 	bool CheckWorkUpdating()
 	{
-		if (m_SceneState == SCENE_STATE_READY_TO_START)
+		if (GetSceneState() == SCENE_STATE_READY_TO_START)
 			StartScene(); 
-		return (m_SceneState == SCENE_STATE_RUNNING); 
+		return (GetSceneState() == SCENE_STATE_RUNNING);
 	}
 	virtual void StartScene() { SetSceneState(SCENE_STATE_RUNNING); }
 	SCENE_STATE GetSceneState() { return m_SceneState; }
-	void SetSceneState(SCENE_STATE SceneState) { m_SceneState = SceneState; }
+	void SetSceneState(SCENE_STATE SceneState)
+	{ 
+		{
+			std::string debug = typeid(*this).name();
+			debug += " / [CScene::SetSceneState] SceneState = " + g_vecSceneStateNames[SceneState] + "\n";
+			OutputDebugStringA(debug.c_str());
+		}
+		m_SceneState = SceneState; 
+	}
 
 	// Object Management
 	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
