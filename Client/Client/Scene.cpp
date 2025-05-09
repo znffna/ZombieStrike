@@ -332,7 +332,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	for (auto& pvecObjects : m_ppGameObjects)
 	{
 		if (pvecObjects.first == CGameObject::GAMEOBJECT_LAYER::LAYER_PLAYER)
-			int a = 0; // UI는 제외
+			std::cout << 1; // UI는 제외
 		for (auto& pObject : pvecObjects.second)
 		{
 			pObject->Update(0.0f);

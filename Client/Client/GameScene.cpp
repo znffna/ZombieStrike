@@ -52,6 +52,14 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	AddObject(pPlayer);
 	m_pPlayer = pPlayer;
 
+	// Gun 持失
+	std::shared_ptr<CGun> pGun = CGun::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
+	m_pPlayer->SetGun(pGun);
+
+	pGun = CGun::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
+	pGun->SetPosition(DirectX::XMFLOAT3(0.0f, 15.0f, 0.0f));
+	AddObject(pGun);
+
 	// Zombie 持失
 	/*std::shared_ptr<CZombieObject> pZombie = GetZombie();
 	pZombie->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 5.0f));

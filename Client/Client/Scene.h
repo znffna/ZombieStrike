@@ -9,6 +9,7 @@
 #include "GameObject.h"
 #include "Zombie.h" 
 #include "Player.h"
+#include "Gun.h"
 
 #include "Camera.h"
 #include "Shader.h"

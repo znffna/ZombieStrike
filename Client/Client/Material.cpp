@@ -121,17 +121,22 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	{
 		SetMaterialType(nType);
 
-		char pstrFilePath[64] = { '\0' };
-		strcpy_s(pstrFilePath, 64, "Model/Textures/");
+		constexpr int nFilePathLength = 128; // 최종 버퍼 크기
+		std::string strTextureDirectory = {"Model/Textures/"}; // 텍스쳐 폴더 경로
+		int pstrDirectoryPath = strTextureDirectory.size(); 
+
+		char pstrFilePath[nFilePathLength] = { '\0' };
+		strcpy_s(pstrFilePath, nFilePathLength, "Model/Textures/");
+		//strcpy_s(pstrFilePath, nFilePathLength, "Model/Textures/");
 
 		bDuplicated = (pstrTextureName[0] == '@');
-		strcpy_s(pstrFilePath + 15, 64 - 15, (bDuplicated) ? (pstrTextureName + 1) : pstrTextureName);
-		strcpy_s(pstrFilePath + 15 + ((bDuplicated) ? (nStrLength - 1) : nStrLength), 64 - 15 - ((bDuplicated) ? (nStrLength - 1) : nStrLength), ".dds");
+		strcpy_s(pstrFilePath + pstrDirectoryPath, nFilePathLength - pstrDirectoryPath, (bDuplicated) ? (pstrTextureName + 1) : pstrTextureName);
+		strcpy_s(pstrFilePath + pstrDirectoryPath + ((bDuplicated) ? (nStrLength - 1) : nStrLength), nFilePathLength - pstrDirectoryPath - ((bDuplicated) ? (nStrLength - 1) : nStrLength), ".dds");
 
 		size_t nConverted = 0;
 
-		wchar_t pwstrName[64] = { '\0' };
-		mbstowcs_s(&nConverted, pwstrName, 64, pstrFilePath, _TRUNCATE);
+		wchar_t pwstrName[nFilePathLength] = { '\0' };
+		mbstowcs_s(&nConverted, pwstrName, nFilePathLength, pstrFilePath, _TRUNCATE);
 		pwstrTextureName = pwstrName;
 		//#define _WITH_DISPLAY_TEXTURE_NAME
 

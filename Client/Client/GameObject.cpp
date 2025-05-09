@@ -19,13 +19,11 @@
 UINT CGameObject::m_nObjectIDCounter = 0;
 
 CGameObject::CGameObject()	
-	: m_pModelCollider(this)
 {
 	Init();
 }
 
 CGameObject::CGameObject(const std::string& strName)
-	: m_pModelCollider(this)
 {
 	Init();
 	SetName(strName);
@@ -213,9 +211,6 @@ void CGameObject::Update(float fTimeElapsed)
 	OnPrepareRender();
 
 	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
-
-	// Model BoundingVolume Update
-	m_pModelCollider.UpdateCollider(m_pTransform->GetWorldMatrix());
 
 	for (auto& pChild : m_pChilds) pChild->Update(fTimeElapsed);
 }
@@ -692,7 +687,7 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 	}
 }
 
-bool CGameObject::DeepCopyFromModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject)
+bool CGameObject::DeepCopyFromModel(const std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject)
 {
 	if (auto pModel = CResourceManager::GetInstance().GetModelInfo(strModelName)) {
 		return DeepCopyFromModel(pModel, pGameObject);
@@ -700,7 +695,7 @@ bool CGameObject::DeepCopyFromModel(std::string& strModelName, std::shared_ptr<C
 	return false;
 }
 
-bool CGameObject::DeepCopyFromModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject)
+bool CGameObject::DeepCopyFromModel(const std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject)
 {
 	if (pLoadModel) {
 		pGameObject->DeepCopyFromGameObject(pLoadModel->m_pModelRootObject);
@@ -714,6 +709,12 @@ bool CGameObject::DeepCopyFromModel(std::shared_ptr<CLoadedModelInfo>& pLoadMode
 		return true;
 	}
 	return false;
+}
+
+bool CGameObject::DeepCopyFromModel(const std::string& strModelName)
+{
+	auto pThis = shared_from_this(); 
+	return DeepCopyFromModel(strModelName, pThis); 
 }
 
 std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth)

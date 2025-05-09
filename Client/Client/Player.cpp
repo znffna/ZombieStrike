@@ -62,11 +62,20 @@ void CPlayer::Update(float fTimeElapsed)
 	CGameObject::Update(fTimeElapsed);
 
 	if(auto pCamera = GetComponent<CCamera>()) pCamera->Update(GetPosition(), fTimeElapsed);
+
+	if (m_pGun) {
+		m_pGun->Update(fTimeElapsed);
+		m_pGun->UpdateTransform(FindFrame("mixamorig:RightHand")->GetWorldMatrix());
+	}
 }
 
 void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	CGameObject::Render(pd3dCommandList, pCamera);
+
+	if (m_pGun)	{
+		m_pGun->Render(pd3dCommandList, pCamera);
+	}
 }
 
 void CPlayer::SetSkin(int nSkinType)
@@ -85,8 +94,17 @@ void CPlayer::SetSkin(int nSkinType)
 		if(i != 0) m_pSkinnedAnimationController->SetTrackEnable(i, false);
 	}
 
+	// ¹Ù²ï Model¿¡ ¸ÂÃç Component º¯°æ
+	for (auto& pComponent : m_pComponents)
+	{
+		pComponent->Init(this);
+	}
+
 	auto pCollider = GetComponent<COBBCollider>();
 	pCollider->SetCollider(FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound());
+
+	// ¹Ù²ï Model¿¡ ¸ÂÃç PrepareSkinning
+	m_pRightHandFrame = FindFrame("mixamorig:RightHand");
 
 	Update(0.0f);
 	UpdateTransform();

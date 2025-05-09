@@ -331,10 +331,10 @@ std::string GetPacketName(PKT_TYPE packetType) {
 
 void g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
 {
-    ExtentOverlapped* over = reinterpret_cast<ExtentOverlapped*>(p_over);
-    NetworkingClient* client = over->_owner;
+    //ExtentOverlapped* over = reinterpret_cast<ExtentOverlapped*>(p_over);
+    //NetworkingClient* client = over->_owner;
 	//client->recv_callback(err, num_bytes, p_over, flag);
-    //NetworkingClient* client = reinterpret_cast<NetworkingClient*>(p_over);
+    NetworkingClient* client = reinterpret_cast<NetworkingClient*>(p_over);
     client->recv_callback(err, num_bytes, p_over, flag);
 }
 
