@@ -5,7 +5,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "stdafx.h"
 #include "GameObject.h"
 #include "Zombie.h" 
 #include "Player.h"

@@ -5,16 +5,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-// Library
-#include "stdafx.h"
-
 // Component
 #include "Component.h"
 #include "Transform.h"
 #include "Rigidbody.h"
 #include "Collider.h"
-
 #include "AnimationController.h"
+
 #include "ResourceManager.h"
 
 // Resource

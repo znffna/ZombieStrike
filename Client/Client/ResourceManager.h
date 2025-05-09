@@ -73,5 +73,4 @@ public:
 
 	CResource& GetSkinningBoneTransforms();
 	void ReleaseSkinningBoneTransform(const CResource& cResource);
-
 };
