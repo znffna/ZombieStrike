@@ -163,9 +163,14 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		case ObjectType::PLAYER:
 		{
 			// 플레이어 오브젝트 추가
-			std::shared_ptr<CGameObject> pPlayer = GetPlayer(); // GetPlayer(skin_type)로 바꿔야 함
+			std::shared_ptr<CPlayer> pPlayer = GetPlayer(); // GetPlayer(skin_type)로 바꿔야 함
 			pPlayer->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
 			m_mapGameObjects[packet->id] = pPlayer;
+
+			int gun_type = packet->fixdata.gun_type;
+			std::shared_ptr<CGameObject> pGun = CGun::Create(nullptr, nullptr, nullptr, gun_type);
+			pPlayer->SetGun(pGun);
+
 			{
 				std::string DebugOutput = "ObjectType::PLAYER 생성 완료\n";
 				OutputDebugStringA(DebugOutput.c_str());

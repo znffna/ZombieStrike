@@ -37,7 +37,7 @@ private:
 	std::vector<std::string> m_ModelName{ "Ch18_nonPBR", "Ch35_nonPBR" };
 	std::vector<std::string> m_MeshBoneName{ "Ch18", "Ch35" };
 
-	std::shared_ptr<CGameObject> m_pRightHandFrame;
+	std::shared_ptr<CGameObject> m_pGunSlot;
 	std::shared_ptr<CGameObject> m_pGun;
 	
 	float m_fPitch = 0.0f;

@@ -65,7 +65,7 @@ void CPlayer::Update(float fTimeElapsed)
 
 	if (m_pGun) {
 		m_pGun->Update(fTimeElapsed);
-		m_pGun->UpdateTransform(FindFrame("mixamorig:RightHand")->GetWorldMatrix());
+		m_pGun->UpdateTransform(m_pGunSlot->GetWorldMatrix());
 	}
 }
 
@@ -104,7 +104,7 @@ void CPlayer::SetSkin(int nSkinType)
 	pCollider->SetCollider(FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound());
 
 	// ¹Ù²ï Model¿¡ ¸ÂÃç PrepareSkinning
-	m_pRightHandFrame = FindFrame("mixamorig:RightHand");
+	m_pGunSlot = FindFrame("GunSlot");
 
 	Update(0.0f);
 	UpdateTransform();
