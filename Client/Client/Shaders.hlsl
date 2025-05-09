@@ -236,7 +236,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     
     float4 cIllumination = Lighting(input.positionW, input.normalW);
     //float4 cColor = texColor * 0.5f + cIllumination * 0.5f;
-    float4 cColor = (baseColor * 0.4f + texColor * 0.4f + detailTexColor * 0.2f);
+    float4 cColor = (texColor * 0.8f + detailTexColor * 0.2f);
     return lerp(cColor, cIllumination, 0.7f);
     
 	
