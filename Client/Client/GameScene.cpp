@@ -67,7 +67,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	
 	// Map Load
-	auto pMap = resourceManager.GetModelInfo("Map");
+	auto pMap = resourceManager.GetModelInfo("Stage_1");
 	pMap->m_pModelRootObject->UpdateTransform();
 	m_pMap = pMap->m_pModelRootObject;
 	m_pMap->Update(0.0f);
@@ -119,12 +119,12 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 {
 	// 키보드 입력의 정보 압축
 	DWORD dwDirection = 0;
-	if (pBuffer.pKeysBuffer[VK_UP] & 0xF0)dwDirection |= DIR_FORWARD;
-	if (pBuffer.pKeysBuffer[VK_DOWN] & 0xF0)dwDirection |= DIR_BACKWARD;
-	if (pBuffer.pKeysBuffer[VK_LEFT] & 0xF0)dwDirection |= DIR_LEFT;
-	if (pBuffer.pKeysBuffer[VK_RIGHT] & 0xF0)dwDirection |= DIR_RIGHT;
-	if (pBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
-	if (pBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
+	if (pBuffer.pKeysBuffer['W'] & 0xF0)dwDirection |= DIR_FORWARD;
+	if (pBuffer.pKeysBuffer['S'] & 0xF0)dwDirection |= DIR_BACKWARD;
+	if (pBuffer.pKeysBuffer['A'] & 0xF0)dwDirection |= DIR_LEFT;
+	if (pBuffer.pKeysBuffer['D'] & 0xF0)dwDirection |= DIR_RIGHT;
+	//if (pBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
+	//if (pBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
 
 	if (dwDirection || pBuffer.cxDelta != 0.0f || pBuffer.cyDelta != 0.0f)
 	{
@@ -141,85 +141,18 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 void CGameScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 }
-
 void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	switch (nMessageID) {
-	case WM_KEYDOWN: {
+	/*switch (nMessageID) {
+	case WM_KEYDOWN:
+	{
 		switch (wParam)
 		{
-			//case VK_LEFT:
-			//{
-			//	//m_pCamera->Move(-1.0f,0.0f,0.0f);
-			//	m_pCamera->Rotate(0.0f, -10.0f, 0.0f);
-			//	m_pCamera->RegenerateViewMatrix();
-			//	break;
-			//}
-			//case VK_RIGHT:
-			//{
-			//	//m_pCamera->Move(1.0f, 0.0f, 0.0f);
-			//	m_pCamera->Rotate(0.0f, 10.0f, 0.0f);
-			//	m_pCamera->RegenerateViewMatrix();
-			//	break;
-			//}
-			//case VK_UP:
-			//{
-			//	//m_pCamera->Move(0.0f, 0.0f, 1.0f);
-			//	m_pCamera->Rotate(-10.0f, 0.0f, 0.0f);
-			//	m_pCamera->RegenerateViewMatrix();
-			//	break;
-			//}
-			//case VK_DOWN:
-			//{
-			//	//m_pCamera->Move(0.0f, 0.0f, -1.0f);
-			//	m_pCamera->Rotate(10.0f, 0.0f, 0.0f);
-			//	m_pCamera->RegenerateViewMatrix();
-			//	break;
-			//}
-			/*
-			case VK_SPACE:
-			{
-				m_pCamera->Move(0.0f, 10.0f, 0.0f);
-				m_pCamera->RegenerateViewMatrix();
-				break;
-			}
-			case VK_SHIFT:
-			{
-				m_pCamera->Move(0.0f, -10.0f, 0.0f);
-				m_pCamera->RegenerateViewMatrix();
-				break;
-			}
-			*/
-			/*
-			case 'W': case 'w':
-			{
-				m_ppHierarchicalObjects[0]->Move(0.0f, 0.0f, 1.0f);
-				break;
-			}
-			case 'S': case 's':
-			{
-				m_ppHierarchicalObjects[0]->Move(0.0f, 0.0f, -1.0f);
-				break;
-			}
-			case 'A': case 'a':
-			{
-				m_ppHierarchicalObjects[0]->Move(-1.0f, 0.0f, 0.0f);
-				break;
-			}
-			case 'D': case 'd':
-			{
-				m_ppHierarchicalObjects[0]->Move(1.0f, 0.0f, 0.0f);
-				break;
-			}
-			}
-			break;
-			}
-			*/
 		default:
 			break;
 		}
 	}
-	}
+	}*/
 }
 
 void CGameScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)
@@ -245,6 +178,7 @@ std::shared_ptr<CZombieObject> CGameScene::GetZombie(int nSkinType)
 			return pZombie;
 		}
 	}
+	return nullptr;
 }
 
 void CGameScene::StorePlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nPlayerCount)
@@ -270,4 +204,5 @@ std::shared_ptr<CPlayer> CGameScene::GetPlayer(int nSkinType)
 			return pPlayer;
 		}
 	}
+	return nullptr;
 }
