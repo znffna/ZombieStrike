@@ -26,14 +26,19 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
 
 	// Skin State
-	// Skin State
 	void SetSkinType(int nSkinType)	{ m_nSkinType = nSkinType % m_ModelName.size();}
 	int GetSkinType() const { return m_nSkinType; }
 	void SetSkin(int nSkinType);
 
+	// Gun
+	void SetGun(std::shared_ptr<CGameObject> pGun) { m_pGun = pGun; }
+
 private:
 	std::vector<std::string> m_ModelName{ "Ch18_nonPBR", "Ch35_nonPBR" };
 	std::vector<std::string> m_MeshBoneName{ "Ch18", "Ch35" };
+
+	std::shared_ptr<CGameObject> m_pRightHandFrame;
+	std::shared_ptr<CGameObject> m_pGun;
 	
 	float m_fPitch = 0.0f;
 	float m_fYaw = 0.0f;

@@ -13,7 +13,7 @@ constexpr int MAX_USER = 5000;
 // 최대 플레이어 수
 constexpr short MAX_PLAYER_COUNT = 3;
 // 최대 좀비 수
-constexpr short MAX_ZOMBIE_COUNT = 1000;
+constexpr short MAX_ZOMBIE_COUNT = 10;
 
 // 맵의 크기 정의
 constexpr int W_WIDTH = 500;
@@ -97,6 +97,10 @@ struct Vec3 {
     float Length() const {
         return sqrtf(x * x + y * y + z * z);
     }
+
+    float LengthSquared() const {
+        return x * x + y * y + z * z;
+    }
 };
 
 
@@ -163,13 +167,13 @@ struct Objectfixdata {          // 고정정보
     ObjectType obj_type;
     SIZE1 skin_type;
     char name[MAX_NAME_SIZE];
-    Vec3 startposition;      // 초기 위치
+    Vec3 startposition;         // 초기 위치
     SIZE2 starthp;              // 체력
 };
 
 struct ObjectMeta {             // 필수정보
-    Vec3 position;           // 위치
-    Vec3 direction;          // 방향
+    Vec3 position;              // 위치
+    Vec3 direction;             // 방향
     float speed;                // 이동 속도 (단위: m/s 또는 유닛/s)
     SIZE2 hp;                   // 체력
 };

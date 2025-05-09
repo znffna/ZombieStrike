@@ -52,9 +52,6 @@
 
 #include "d3dx12.h"
 
-// Render Config
-#include "RenderConfig.h"
-
 #ifdef _DEBUG
 #include <dxgidebug.h>
 //#define _WITH_DEBUG_FRAME_HIERARCHY  // 프레임 계층 구조 디버깅
@@ -63,6 +60,7 @@
 //#define _WITH_DEBUG_TRANSFORM_UPDATE // 트랜스폼 업데이트 디버깅
 //#define _WITH_OBJECT_TRANSFORM	   // 오브젝트 트랜스폼 자체를 포함할 경우.(사용 안할시 class CTransform을 사용)
 #endif
+
 
 
 
@@ -81,6 +79,7 @@ using Microsoft::WRL::ComPtr;
 //#include <DDSTextureLoader.h>
 
 // Global Variables
+#define _WITH_STANDARD_TEXTURE_MULTIPLE_PARAMETERS
 #define SKINNED_TRANSFORM_GPU_BUFFER 3000
 
 // Root Signature Paramater Index

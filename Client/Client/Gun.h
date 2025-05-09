@@ -9,7 +9,8 @@ public:
 	virtual ~CGun();
 
 	// GameObject Override
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature);
+	static std::shared_ptr<CGun> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nWeaponType);
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nWeaponType);
 
 	virtual GAMEOBJECT_LAYER GetLayer() override { return LAYER_GUN; }
 
@@ -20,13 +21,15 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr) override;
 
 	// Getters and Setters
-	void SetGunType(int type) { m_nGunType = type; }
+	void SetGunType(int type);
 	int GetGunType() { return m_nGunType; }
 
 	// Methods
 	void Fire(XMFLOAT3 xmf3Direction);
 
 private:
+	const std::vector<std::string> m_strGunName{ "M16" }; // ÃÑ ÀÌ¸§
+
 	int m_nGunType = 0; // 0: Pistol, 1: Shotgun, 2: Rifle
 
 	float m_fFireRate = 0.5f; // ÃÊ´ç ¹ß»ç È½¼ö

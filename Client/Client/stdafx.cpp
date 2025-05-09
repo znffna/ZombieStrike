@@ -164,6 +164,16 @@ ComPtr<ID3D12Resource> CreateTextureResourceFromDDSFile(ID3D12Device* pd3dDevice
 
 	HRESULT hResult = DirectX::LoadDDSTextureFromFileEx(pd3dDevice, pszFileName, 0, D3D12_RESOURCE_FLAG_NONE, DDS_LOADER_DEFAULT, &pd3dTexture, ddsData, vSubresources, &ddsAlphaMode, &bIsCubeMap);
 
+	if (hResult != S_OK)
+	{
+		// Handle error
+		std::wstring debug = pszFileName;
+		int pathLength = debug.length();
+		debug = L"[CreateTextureResourceFromDDSFile] LoadDDSTextureFromFileEx failed / Texture Name :" + debug + L", Length :" + std::to_wstring(pathLength) + L"\n";
+		OutputDebugString(debug.c_str());
+		return nullptr;
+	}
+
 	D3D12_HEAP_PROPERTIES d3dHeapPropertiesDesc;
 	::ZeroMemory(&d3dHeapPropertiesDesc, sizeof(D3D12_HEAP_PROPERTIES));
 	d3dHeapPropertiesDesc.Type = D3D12_HEAP_TYPE_UPLOAD;
