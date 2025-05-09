@@ -394,12 +394,18 @@ void CGameFramework::BuildObjects()
 	// MainScene 생성
 	std::thread thread([this]() mutable {
 
-		std::unique_ptr<CScene> pMainScene = std::make_unique<CGameScene>();
-		//std::unique_ptr<CScene> pMainScene = std::make_unique<COnlineScene>();
+		//std::unique_ptr<CScene> pMainScene = std::make_unique<CGameScene>();
+		std::unique_ptr<CScene> pMainScene = std::make_unique<COnlineScene>();
+
+		// 디버그
+		//NetworkingClient* net = static_cast<COnlineScene*>(pMainScene.get())->GetClient();
+		//std::string debug = "[BuildObjects] NetworkingClient this = " + std::to_string((uintptr_t)net) + "\n";
+		//OutputDebugStringA(debug.c_str());
+
 		m_pd3dSceneMadeCommandAllocator->Reset();
 		m_pd3dSceneMadeCommandList->Reset(m_pd3dSceneMadeCommandAllocator.Get(), nullptr);
 
-		CScene::GetResourceManager().Initialize(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get(), nullptr);
+		CResourceManager::GetInstance().Initialize(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get(), nullptr);
 
 		pMainScene->Init(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get());
 

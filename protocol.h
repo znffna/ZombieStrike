@@ -43,15 +43,15 @@ enum PKT_TYPE : SIZE1 {
 
     //S_C_LOGIN_OK = 14,
     //S_C_LOGIN_FAIL = 15,
-    S_C_PLAYER_INFO = 16,
-    S_C_HIT_RESULT = 10,
+    S_C_PLAYER_INFO,
+    //S_C_HIT_RESULT,
 
     // 오브젝트 패킷 공통 처리용
-    S_C_OBJECT_ADD = 30,
-    S_C_OBJECT_UPDATE ,
-    S_C_OBJECT_REMOVE ,
+    S_C_OBJECT_ADD,
+    S_C_OBJECT_UPDATE,
+    S_C_OBJECT_REMOVE,
 
-    S_C_STAGE_INFO = 40,
+    S_C_STAGE_INFO,
     S_C_SCORE_INFO,
     // ...
 };
@@ -221,20 +221,20 @@ struct PacketHeader {
 // --------------------------
 // 로그인 패킷
 struct pkt_cs_login {
-    PacketHeader header{0, PKT_TYPE::C_S_LOGIN };
+    PacketHeader header{sizeof(*this), PKT_TYPE::C_S_LOGIN };
     SIZE1 skin_type;
     char name[MAX_NAME_SIZE];
 };
 
 // 플레이어 업데이트 패킷
 struct pkt_cs_update {
-    PacketHeader header{0, PKT_TYPE::C_S_UPDATE };
+    PacketHeader header{sizeof(*this), PKT_TYPE::C_S_UPDATE };
     ObjectDynamicInfo obj;          // 플레이어 정보
 };
 
 // 총알 발사 패킷
 struct pkt_cs_shoot {
-    PacketHeader header{0, PKT_TYPE::C_S_SHOOT };
+    PacketHeader header{sizeof(*this), PKT_TYPE::C_S_SHOOT };
 	SIZEID id;                      // 누가 쐈는지
     SIZE1 GunType;                  // 총 종류
     //int hitZombieId;
@@ -244,7 +244,7 @@ struct pkt_cs_shoot {
 
 // 총알 명중 패킷
 struct pkt_cs_hit {
-    PacketHeader header{0,PKT_TYPE::C_S_SHOOT };
+    PacketHeader header{sizeof(*this),PKT_TYPE::C_S_SHOOT };
     SIZEID shooterId;               // 누가 쐈는지
     SIZEID zombieId;                // 맞은 좀비 ID
 };
@@ -256,20 +256,20 @@ struct pkt_cs_hit {
 // 총알 명중 결과
 
 struct pkt_sc_player_info {
-	PacketHeader header{ 0, PKT_TYPE::S_C_PLAYER_INFO };
+	PacketHeader header{ sizeof(*this), PKT_TYPE::S_C_PLAYER_INFO };
 	SIZEID id;                      // 누가 쐈는지
 	Objectfixdata fixdata;          // 고정정보
 	ObjectDynamicInfo obj;          // 동적정보
 };
 
 
-struct pkt_sc_hit_result {
-    PacketHeader header{0, PKT_TYPE::S_C_HIT_RESULT };
-    SIZEID shooterId;               // 누가 쐈는지
-    SIZEID zombieId;
-    SIZE2 zombieHp;
-    //uint8_t damage;               // 얼마나 깎였는지
-};
+//struct pkt_sc_hit_result {
+//    PacketHeader header{sizeof(*this), PKT_TYPE::S_C_HIT_RESULT };
+//    SIZEID shooterId;               // 누가 쐈는지
+//    SIZEID zombieId;
+//    SIZE2 zombieHp;
+//    //uint8_t damage;               // 얼마나 깎였는지
+//};
 struct ZombieHit {
     SIZEID zombieId;
     SIZE2 hp;
@@ -284,20 +284,20 @@ struct pkt_sc_hit_multi_result {
 
 // --- Object 관리 패킷 ---
 struct pkt_sc_object_add {
-    PacketHeader header{0, PKT_TYPE::S_C_OBJECT_ADD };
+    PacketHeader header{sizeof(*this), PKT_TYPE::S_C_OBJECT_ADD };
 	SIZEID id; // ID
 	Objectfixdata fixdata;          // 고정정보
 };
 
 // 객체 업데이트
 struct pkt_sc_object_update {
-    PacketHeader header{0,PKT_TYPE::S_C_OBJECT_UPDATE };
+    PacketHeader header{sizeof(*this),PKT_TYPE::S_C_OBJECT_UPDATE };
 	SIZEID id; // ID
     ObjectDynamicInfo obj;          // 동적정보
 };
 // 객체 삭제
 struct pkt_sc_object_remove {
-    PacketHeader header{0,PKT_TYPE::S_C_OBJECT_REMOVE };
+    PacketHeader header{sizeof(*this),PKT_TYPE::S_C_OBJECT_REMOVE };
     SIZEID id;
     // ObjectType obj_type;
 };
@@ -305,14 +305,14 @@ struct pkt_sc_object_remove {
 // --- 게임 상황 패킷 ---
 // STAGE 정보
 struct pkt_sc_stage_info {
-    PacketHeader header{0,PKT_TYPE::S_C_STAGE_INFO };
+    PacketHeader header{sizeof(*this),PKT_TYPE::S_C_STAGE_INFO };
     SIZE2 currentStage;
     SIZE2 totalStages;
     SIZE3 timeLeft;
 };
 // SCORE 정보
 struct pkt_sc_score_info {
-    PacketHeader header{0,PKT_TYPE::S_C_SCORE_INFO };
+    PacketHeader header{sizeof(*this),PKT_TYPE::S_C_SCORE_INFO };
     SIZE2 stage_score;
 };
 

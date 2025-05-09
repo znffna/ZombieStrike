@@ -7,55 +7,88 @@
 
 #pragma comment (lib, "WS2_32.LIB")
 
+constexpr const char* SERVER_IP = "192.168.149.233";
 constexpr const char* LOOPBACK_IP = "127.0.0.1";
+#define USSING_IP LOOPBACK_IP
 
 // 클라이언트 네트워크 클래스
 // 소켓을 사용하여 서버와 통신하는 기능을 포함
 // MultiSCene에서 생성되어 WSARecv와 WSASend를 이용한 callback을 통한 로직 구현.
 
-class SendOverlapped {
-public:
-	WSAOVERLAPPED overlapped; // overlapped의 주소가 곧 SendOverlapped의 주소
-    SOCKET c_socket;
-    char send_buffer[1024];
-	WSABUF wsabuf;
+class NetworkingClient;
 
-	SendOverlapped(char* packet) {
-		ZeroMemory(&overlapped, sizeof(overlapped));
-		wsabuf.buf = send_buffer;
-        wsabuf.len = *(reinterpret_cast<SIZE2*>(packet));
-		memcpy(send_buffer, packet, wsabuf.len);
+class ExtentOverlapped {
+public:
+	WSAOVERLAPPED _overlapped; // overlapped의 주소가 곧 SendOverlapped의 주소
+    char _buffer[1024];
+	WSABUF _wsabuf;
+    NetworkingClient* _owner;
+    DWORD _debug_magic = 0xDEADBEEF; //디버그용
+
+    ~ExtentOverlapped() {
+        _debug_magic = 0xBAADF00D; // 해제 
+
+    }
+	ExtentOverlapped() {
+		ZeroMemory(&_overlapped, sizeof(_overlapped));
+		ZeroMemory(_buffer, sizeof(_buffer));
+		ZeroMemory(&_wsabuf, sizeof(_wsabuf));
+        _owner = nullptr;
 	}
+
+    // recv용 생성자
+    ExtentOverlapped(NetworkingClient* owner) {
+        ZeroMemory(&_overlapped, sizeof(_overlapped));
+        _wsabuf.buf = _buffer;
+        _wsabuf.len = sizeof(_buffer);
+        _owner = owner;
+    }
+
+    // send용 생성자
+    ExtentOverlapped(char* packet, NetworkingClient* owner = nullptr) {
+        ZeroMemory(&_overlapped, sizeof(_overlapped));
+        _wsabuf.buf = _buffer;
+        _wsabuf.len = *(reinterpret_cast<SIZE2*>(packet));
+        memcpy(_buffer, packet, _wsabuf.len);
+        _owner = owner;
+    }
 };
 
 class COnlineScene;
 
+void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
+void CALLBACK g_send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
+
+
 class NetworkingClient {
 public:
-    WSAOVERLAPPED recv_over;
+    ExtentOverlapped recv_over;
+    //WSAOVERLAPPED recv_over;
     SOCKET c_socket;
-    char recv_buffer[1024];
-    WSABUF recv_wsabuf;
+    //char recv_buffer[1024];
+    //WSABUF recv_wsabuf;
 
 	DWORD remain_bytes = 0;
 
-    bool is_running = true; // 종료 여부
-	bool is_recvLoopDone = false; // recv loop 종료 여부
+    bool is_running = false; // 종료 여부
+	bool is_recvLoopWorking = false; // recv loop이 수행중인지 확인
 
     COnlineScene* m_pScene; // Scene 포인터
 public:
 	NetworkingClient(COnlineScene* pScene);
 
-	void Connect();   // 소켓 초기화 및 서버 연결
+	bool Connect();   // 소켓 초기화 및 서버 연결
     void Logout(); // Scene의 종료시 호출하도록 구현할 것
     void error_display(const char* msg, int err_no);
 
-    static void CALLBACK recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
-    static void CALLBACK send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
+    void recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
+    void send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);
     
     void ProcessPacket(PacketHeader* recv_p);
     void recv_packet();
     void send_packet(char* packet);
+
+	void startRecvLoop();
 
     // SendPacket (테스트로 구현)
     void SendLoginPacket(std::string& name);

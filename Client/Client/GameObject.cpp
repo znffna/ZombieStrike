@@ -79,9 +79,9 @@ void CGameObject::Init()
 	//m_strName = "GameObject_" + std::to_string(m_nObjectID);
 }
 
-void CGameObject::GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs)
+void CGameObject::DeepCopyFromGameObject(std::shared_ptr<CGameObject> rhs)
 {
-	// 복사 할당 연산자 호출
+	// 복사 할당 연산자 호출 (ID는 복제되면 안된다)
 	//*this = *rhs.get();
 
 	// Object Info
@@ -96,14 +96,18 @@ void CGameObject::GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs)
 
 	/// Components Copy (Deep Copy)
 	// Copy Transform
-	// if (rhs->m_pTransform) m_pTransform = std::make_shared<CTransform>(*rhs->m_pTransform);
+	m_bPitchLock = rhs->m_bPitchLock;
+	m_bYawLock = rhs->m_bYawLock;
+	m_bRollLock = rhs->m_bRollLock;
+	if (rhs->m_pTransform) m_pTransform = std::dynamic_pointer_cast<CTransform>(rhs->m_pTransform->Clone());
+	m_pTransform->gameObject = this;
 
 	// Copy Components
 	for (auto& pComponent : rhs->m_pComponents)
 	{
 		auto pclone = pComponent->Clone();
 		m_pComponents.push_back(pclone);
-		pclone->Init(this);
+		pclone->Init(this); // Owner 재할당
 	}
 
 	// Copy Childs
@@ -111,8 +115,8 @@ void CGameObject::GetResourcesAndComponents(std::shared_ptr<CGameObject> rhs)
 	for (auto& pChild : rhs->m_pChilds)
 	{
 		pnewChild = std::make_shared<CGameObject>();
-		pnewChild->GetResourcesAndComponents(pChild);
-		m_pChilds.push_back(pnewChild);
+		pnewChild->DeepCopyFromGameObject(pChild);
+		SetChild(pnewChild); 
 	}
 }
 
@@ -224,14 +228,15 @@ void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::share
 	std::shared_ptr<CRigidBody> rigidBody = GetComponent<CRigidBody>();
 	std::shared_ptr<CRigidBody> pOtherRigidBody = pObjectB->GetComponent<CRigidBody>();
 	
+	{
+		std::string debugoutput = "Collision Root Object Occured: " + GetName() + " - " + pObjectB->GetName() + " / ";
+		debugoutput += "Collision Collider Object Occured: " + pColliderA->gameObject->GetName() + " - " + pColliderB->gameObject->GetName() + "\n";
+		OutputDebugStringA(debugoutput.c_str());
+	}
+
 	// 최소 거리 측정
 	// TODO : 의도대로 대도록 수정 필요
 	XMFLOAT3 mtv = pColliderA->GetCorrectionVector(pColliderB);
-
-	{
-		std::string DebugOutput = "MTV : " + std::to_string(mtv.x) + ", " + std::to_string(mtv.y) + ", " + std::to_string(mtv.z) + "\n";
-		OutputDebugStringA(DebugOutput.c_str());
-	}
 
 	if (rigidBody)
 	{
@@ -360,7 +365,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			// Use Collider Shader
 			CMaterial::m_pColliderShader->OnPrepareRender(pd3dCommandList, 0);
 			
-			CScene::GetMesh("CCubeMesh")->Render(pd3dCommandList);
+			CResourceManager::GetInstance().GetMesh("CCubeMesh")->Render(pd3dCommandList);
 		}
 	}
 
@@ -685,21 +690,21 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 	}
 }
 
-bool CGameObject::CloneByModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject)
+bool CGameObject::DeepCopyFromModel(std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject)
 {
-	if (auto pModel = CScene::GetResourceManager().GetModelInfo(strModelName)) {
-		return CloneByModel(pModel, pGameObject);
+	if (auto pModel = CResourceManager::GetInstance().GetModelInfo(strModelName)) {
+		return DeepCopyFromModel(pModel, pGameObject);
 	}
 	return false;
 }
 
-bool CGameObject::CloneByModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject)
+bool CGameObject::DeepCopyFromModel(std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject)
 {
 	if (pLoadModel) {
-		pGameObject->GetResourcesAndComponents(pLoadModel->m_pModelRootObject);
+		pGameObject->DeepCopyFromGameObject(pLoadModel->m_pModelRootObject);
 		// TODO : 여기서 생성하여 주는 Collider는 Model Collider이기에 Model Colldier를 변수로 추가해야 한다.
 		
-		pGameObject->m_pModelCollider.SetCollider(pLoadModel->m_MeshBoundingBox); // Mesh Bounding Box 설정
+		//pGameObject->m_pModelCollider.SetCollider(pLoadModel->m_MeshBoundingBox); // Mesh Bounding Box 설정
 		// auto pCollider = pCollider->CreateComponent<CAABBCollider>(pCollider); // Collider 추가
 		// pCollider->SetCollider(pLoadModel->m_MeshBoundingBox); // Collider 설정
 		
@@ -732,13 +737,8 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 
 			::ReadStringFromFile(file, pGameObject->m_strName);
 
-#ifdef _DEBUG
-			pGameObject->nLoadFrames = nFrame;
-			std::string debugoutput = pGameObject->m_strName + " " + std::to_string(nFrame)+ ", Stack Depth = " + std::to_string(nDepth) + "\n";
-			OutputDebugStringA(debugoutput.c_str());
-#endif
 			// Test용
-			isGetModel = CloneByModel(pGameObject->m_strName, pGameObject);
+			isGetModel = DeepCopyFromModel(pGameObject->m_strName, pGameObject);
 		}
 		else if (!strcmp(pstrToken, "<Transform>:"))
 		{
@@ -789,7 +789,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 				xmf3Extents = Vector3::ScalarProduct(xmf3Extents, 0.5f, false);
 
 				auto pCollider = pGameObject->CreateComponent<COBBCollider>(pGameObject);
-				pCollider->SetCollider(xmf3Center, xmf3Extents, xmf4Rotation);
+				pCollider->SetCollider(xmf3Center, xmf3Extents);
 			}
 		}
 		else if (!strcmp(pstrToken, "<Children>:"))
@@ -804,9 +804,13 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 					if (pChild) pGameObject->SetChild(pChild);
 
 #ifdef _WITH_DEBUG_FRAME_HIERARCHY
-					TCHAR pstrDebug[256] = { 0 };
-					_stprintf_s(pstrDebug, 256, "(Frame: %p) (Parent: %p)\n"), pChild, pGameObject);
-					OutputDebugString(pstrDebug);
+					std::string strDebug = "(Frame: " + pChild->GetName() + ") (Parent: " + pGameObject->GetName() + ")\n";
+					for (auto& pComponent : pChild->m_pComponents)
+					{
+						std::string name = typeid(*pComponent.get()).name();
+						strDebug += "\tComponent: " + name + "\n";
+					}
+					OutputDebugStringA(strDebug.c_str());
 #endif
 				}
 			}
@@ -817,7 +821,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 			::ReadStringFromFile(file, strModelName);
 			//if (strModelName == pCollider->m_strName) continue;
 			if (isGetModel) continue;
-			CloneByModel(strModelName, pGameObject);
+			DeepCopyFromModel(strModelName, pGameObject);
 		}
 		else if (!strcmp(pstrToken, "</Frame>"))
 		{
@@ -872,14 +876,6 @@ std::shared_ptr<CLoadedModelInfo> CGameObject::LoadGeometryAndAnimationFromFile(
 			break;
 		}
 	}
-
-#ifdef _WITH_DEBUG_FRAME_HIERARCHY
-	TCHAR pstrDebug[256] = { 0 };
-	_stprintf_s(pstrDebug, 256, "Frame Hierarchy\n"));
-	OutputDebugString(pstrDebug);
-
-	CGameObject::PrintFrameInfo(pGameObject, NULL);
-#endif
 
 	return(pLoadedModel);
 }
@@ -1198,11 +1194,11 @@ CCubeObject::~CCubeObject()
 void CCubeObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	// Mesh
-	auto pCubeMesh = CScene::GetMesh("CCubeMesh");
+	auto pCubeMesh = CResourceManager::GetInstance().GetMesh("CCubeMesh");
 	if (nullptr == pCubeMesh)
 	{
 		pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
-		CScene::AddMesh("CCubeMesh", pCubeMesh);
+		CResourceManager::GetInstance().SetMesh("CCubeMesh", pCubeMesh);
 	}
 	SetMesh(pCubeMesh);
 

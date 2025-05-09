@@ -13,106 +13,7 @@
 #include "Camera.h"
 #include "Shader.h"
 
-class ResourceManager
-{
-public:
-	void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, ID3D12RootSignature* rootsignature) {
-		m_d3dDevice = device;
-		m_d3dGraphicsCommandList = commandList;
-		m_d3dGraphicRootSignature = rootsignature;
-
-		LoadModelList();
-	}
-
-	// 모든 리소스 해제
-	void ReleaseResources() {
-
-		ModelInfos.clear();
-	}
-
-	////////////////////////////////////////////
-	// 텍스쳐 정보를 저장
-	void SetTexture(const std::string& name, std::shared_ptr<CTexture> texture) {
-		TextureInfos[name] = texture;
-	}
-
-	std::shared_ptr<CTexture> GetTexture(const std::string& name) {
-		if (TextureInfos.find(name) != TextureInfos.end()) {
-			// 이미 로드된 모델이 있는 경우
-
-			return TextureInfos[name];
-		}
-
-		return nullptr;
-	}
-	
-	////////////////////////////////////////////
-	// 모델 정보를 저장
-
-	void LoadModelList(std::string filepath = "Model/ModelList.txt") {
-        std::ifstream file(filepath);
-        std::string modelname;
-        while (file >> modelname) {
-            GetModelInfo(modelname);
-        }
-	}
-
-
-	void SetSkinInfo(const std::string& name, std::shared_ptr<CLoadedModelInfo> modelInfo) {
-		ModelInfos[name] = modelInfo;
-	}
-
-	std::shared_ptr<CLoadedModelInfo> GetModelInfo(const std::string& name) {
-		if (ModelInfos.find(name) != ModelInfos.end()) {
-			// 이미 로드된 모델이 있는 경우
-			if (ModelInfos[name]) return ModelInfos[name];
-			else return nullptr;
-		}
-
-		ModelInfos[name] = nullptr;
-
-		// 없는경우 바로 불러와서 저장하고 return 한다.
-		std::string filepath = "Model/" + name + ".bin";
-		/*OutputDebugStringA(filepath.c_str());
-		OutputDebugStringA("\n");*/
-
-		auto pModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(m_d3dDevice, m_d3dGraphicsCommandList, m_d3dGraphicRootSignature, filepath.c_str(), nullptr);
-		if (pModelInfo) {
-			SetSkinInfo(name, pModelInfo);
-			return pModelInfo;
-		}
-		else {
-			// 로드 실패
-		/*	std::string strDebug = "Failed to load model: " + name;
-			OutputDebugStringA(strDebug.c_str());
-		*/}
-		return nullptr;
-	}
-
-	// 메쉬 정보를 저장
-	void SetMesh(const std::string& name, std::shared_ptr<CMesh> pMesh) {
-		MeshInfos[name] = pMesh;
-	}
-
-	std::shared_ptr<CMesh> GetMesh(const std::string& name) {
-		if (MeshInfos.find(name) != MeshInfos.end()) {
-			return MeshInfos[name];
-		}
-		return nullptr;
-	}
-
-private:
-	// CGameFramework에서 상속받는다.
-	ID3D12Device* m_d3dDevice = nullptr;
-	// Resource Manager 전용 CommandList가 필요하다.
-	ID3D12GraphicsCommandList* m_d3dGraphicsCommandList = nullptr;
-	// CSCene에서 상속받는다. (또는 생성을 CGameFramework에서 하고 넘겨받는다.)
-	ID3D12RootSignature* m_d3dGraphicRootSignature = nullptr;
-
-	std::unordered_map<std::string, std::shared_ptr<CLoadedModelInfo>> ModelInfos;
-	std::unordered_map<std::string, std::shared_ptr<CTexture>> TextureInfos;
-	std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshInfos;
-};
+#include "ResourceManager.h"
 
 #define DIR_FORWARD					0x01
 #define DIR_BACKWARD				0x02
@@ -241,6 +142,7 @@ public:
 	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
 	virtual void AddObjects(const std::vector<std::shared_ptr<CGameObject>>& pObjects);
 	virtual void RemoveObject(const std::shared_ptr<CGameObject>& pObject);
+	void LateUpdate();
 	std::unordered_map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>>& GetObjects() { return m_ppGameObjects; }
 
 	void SetPlayer(std::shared_ptr<CPlayer> pPlayer);
@@ -309,6 +211,8 @@ protected:
 
 	// GameObjects
 	std::unordered_map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>> m_ppGameObjects;
+	std::list<std::shared_ptr<CGameObject>> m_pAddGameObjectList;
+	std::list<std::shared_ptr<CGameObject>> m_pRemoveGameObjectList;
 
 	// SkyBox
 	std::shared_ptr<CGameObject> m_pSkyBox;
@@ -325,27 +229,6 @@ protected:
 	// Camera
 	std::shared_ptr<CCamera> m_pCamera;
 
-public:
-	// ResourceManager 리소스 관리
-	static ResourceManager& GetResourceManager();
-	static void ReleaseResources();;
-
-	// Model Set/Get
-	static void StoreModelInfo(const std::string& filename, std::shared_ptr<CLoadedModelInfo> pSkinInfo);;
-	static std::shared_ptr<CLoadedModelInfo> GetModelInfo(const std::string& objectname);;
-
-	// Texture Set/Get
-	static void StoreTexture(const std::string& name, std::shared_ptr<CTexture> texture);;
-	static std::shared_ptr<CTexture> GetTexture(const std::string& name);;
-
-	// Mesh Set/Get
-	static void AddMesh(const std::string& name, std::shared_ptr<CMesh> mesh);;
-	static std::shared_ptr<CMesh> GetMesh(const std::string& name);;
-
-	// ObjectPool
-	std::vector<std::shared_ptr<CZombieObject>> m_pZombiePool;
-	void StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount);
-	std::shared_ptr<CZombieObject> GetZombie(int nSkinType = 0);;
 
 };
 

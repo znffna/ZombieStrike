@@ -6,13 +6,21 @@ COnlineScene::COnlineScene()
 {	
 	if(g_bNetworkDebugMode)
 	{
-		std::string debugOutput = "OnlineScene 생성됨";
+		std::string debugOutput = "\nOnlineScene 생성됨";
 		debugOutput += "m_NetworkClient Address : ";
 		debugOutput += std::to_string(reinterpret_cast<uintptr_t>(&m_NetworkClient));
 		debugOutput += "\n";
 		debugOutput += "m_NetworkClient.Overlapped Address : ";
-		debugOutput += std::to_string(reinterpret_cast<uintptr_t>(&m_NetworkClient.recv_over));
+		debugOutput += std::to_string(reinterpret_cast<uintptr_t>(&m_NetworkClient.recv_over)) + "\n";
 		OutputDebugStringA(debugOutput.c_str());
+
+		if (reinterpret_cast<uintptr_t>(&m_NetworkClient) == reinterpret_cast<uintptr_t>(&m_NetworkClient.recv_over)) {
+			OutputDebugStringA("m_NetworkClient과 m_NetworkClient.recv_over의 주소가 같습니다.\n");
+		}
+		else
+		{
+			OutputDebugStringA("m_NetworkClient과 m_NetworkClient.recv_over의 주소가 다릅니다.\n");
+		}
 	}
 }
 
@@ -22,9 +30,15 @@ COnlineScene::~COnlineScene()
 
 void COnlineScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
+	bool isComplelte = m_NetworkClient.Connect();
+	if (!isComplelte)
+	{
+		std::string debugOutput = "COnlineScene::InitializeObjects() - NetworkClient Connect 실패\n";
+		OutputDebugStringA(debugOutput.c_str());
+		return;
+	}
 	CGameScene::InitializeObjects(pd3dDevice, pd3dCommandList, pd3dRootSignature);
 
-	m_NetworkClient.Connect();
 }
 
 void COnlineScene::ReleaseObjects()
@@ -39,12 +53,36 @@ void COnlineScene::ReleaseUploadBuffers()
 
 void COnlineScene::Update(float deltaTime)
 {
+	m_NetworkClient.startRecvLoop();
+
+	#define MAX_PACKET_PER_FRAME 3
+
+	// 얼만큼 반복하나 찍어보자.
+	//int count{ 0 };
+	//for (int i = 0; i < MAX_PACKET_PER_FRAME; ++i)
+	//{
+	//	// SleepEx(0, TRUE) : 네트워크 I/O 콜백 처리
+	//	DWORD ret = SleepEx(0, TRUE);
+	//	if (ret != WAIT_IO_COMPLETION) // 비동기 작업이 없다면 즉시 중단
+	//		break;
+	//	++count;
+	//}
+
+	/*if (g_bNetworkDebugMode)
+	{
+		std::string debugOutput = "COnlineScene::Update() - SleepEx() 을 통한 I/O 횟수 : " + std::to_string(count) + "\n";
+		OutputDebugStringA(debugOutput.c_str());
+	}*/
+
+	SleepEx(0, TRUE); // 네트워크 I/O 콜백 처리
+
 	CGameScene::Update(deltaTime);
 
 	// Network Client Update
 	if (m_NetworkClient.is_running)
 	{
 		// Network Client Update
+		// 즉 클라처리 결과를 서버에 보고
 		SendPlayerState();
 	}
 }
@@ -93,29 +131,38 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	case S_C_PLAYER_INFO:
 	{
 		pkt_sc_player_info* packet = reinterpret_cast<pkt_sc_player_info*>(recv_p);
-
-		m_pPlayer->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
-		m_mapGameObjects[packet->id] = m_pPlayer;
-
-		if(g_bNetworkDebugMode){
+		if (g_bNetworkDebugMode) {
 			std::string DebugOutput = "S_C_PLAYER_INFO 패킷 수신\n";
 			DebugOutput += "position : (" + std::to_string(packet->fixdata.startposition.x) + ", " + std::to_string(packet->fixdata.startposition.y) + ", " + std::to_string(packet->fixdata.startposition.z) + ")\n";
 			OutputDebugStringA(DebugOutput.c_str());
 		}
+
+		m_pPlayer->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
+		m_mapGameObjects[packet->id] = m_pPlayer;
 		break;
 	}
 	case S_C_OBJECT_ADD:
 	{
 		pkt_sc_object_add* packet = reinterpret_cast<pkt_sc_object_add*>(recv_p);
+		if (g_bNetworkDebugMode) {
+			std::string DebugOutput = "S_C_OBJECT_ADD 패킷 수신\n";
+			DebugOutput += "position : (" + std::to_string(packet->fixdata.startposition.x) + ", " + std::to_string(packet->fixdata.startposition.y) + ", " + std::to_string(packet->fixdata.startposition.z) + ")\n";
+			OutputDebugStringA(DebugOutput.c_str());
+		}
+
 		switch (packet->fixdata.obj_type)
 		{
 		case ObjectType::PLAYER:
 		{
 			// 플레이어 오브젝트 추가
-			std::shared_ptr<CGameObject> pPlayer = GetZombie();
+			std::shared_ptr<CGameObject> pPlayer = GetPlayer(); // GetPlayer(skin_type)로 바꿔야 함
 			pPlayer->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
 			m_mapGameObjects[packet->id] = pPlayer;
-			//AddObject(pZombie);
+			{
+				std::string DebugOutput = "ObjectType::PLAYER 생성 완료\n";
+				OutputDebugStringA(DebugOutput.c_str());
+			}
+			AddObject(pPlayer);
 			break;
 		}
 		case ObjectType::ZOMBIE:
@@ -144,6 +191,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		pkt_sc_object_update* updatePkt = reinterpret_cast<pkt_sc_object_update*>(recv_p);
 		Vec3 position = updatePkt->obj.meta.position;
 		m_mapGameObjects[updatePkt->id]->SetPosition(position.x, position.y, position.z);
+
 		if (g_bNetworkDebugMode) {
 			std::string DebugOutput = "S_C_OBJECT_UPDATE[" + std::to_string(updatePkt->id) + "] ";
 			DebugOutput += "position : (" + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + ")\n";

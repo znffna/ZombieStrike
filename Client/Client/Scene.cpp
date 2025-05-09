@@ -126,8 +126,8 @@ void CScene::CreateStaticShader(ID3D12Device* pd3dDevice)
 
 void CScene::CreateStaticMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	AddMesh("CCubeMesh", std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f));
-	AddMesh("SphereMesh", std::make_shared<CSphereMesh>(pd3dDevice, pd3dCommandList));
+	CResourceManager::GetInstance().SetMesh("CCubeMesh", std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f));
+	CResourceManager::GetInstance().SetMesh("SphereMesh", std::make_shared<CSphereMesh>(pd3dDevice, pd3dCommandList));
 }
 
 void CScene::ReleaseObjects()
@@ -159,7 +159,7 @@ void CScene::InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	CreateStaticShader(pd3dDevice);
 	CreateStaticMesh(pd3dDevice, pd3dCommandList);
 
-	//GetResourceManager().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
+	//CResourceManager::GetInstance().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 }
 
 void CScene::BuildDefaultLightsAndMaterials()
@@ -218,7 +218,8 @@ void CScene::AddObject(const std::shared_ptr<CGameObject>& pObject)
 {
 	if (pObject)
 	{
-		m_ppGameObjects[pObject->GetLayer()].push_back(pObject);
+		// Add Object to Scene
+		m_pAddGameObjectList.push_back(pObject);	
 		pObject->SetActive(true);
 	}
 }
@@ -228,11 +229,7 @@ void CScene::AddObjects(const std::vector<std::shared_ptr<CGameObject>>& pObject
 	if (pObjects.empty()) return;
 	for (const auto& pObject : pObjects)
 	{
-		if (pObject)
-		{
-			m_ppGameObjects[pObject->GetLayer()].push_back(pObject);
-			pObject->SetActive(true);
-		}
+		AddObject(pObject);
 	}
 }
 
@@ -240,14 +237,34 @@ void CScene::RemoveObject(const std::shared_ptr<CGameObject>& pObject)
 {
 	if (pObject)
 	{
+		m_pRemoveGameObjectList.push_back(pObject);
+		pObject->SetActive(false);
+	}
+}
+
+void CScene::LateUpdate()
+{
+	// Add GameObjects
+	for (auto& pObject : m_pAddGameObjectList)
+	{
+		if (pObject)
+		{
+			m_ppGameObjects[pObject->GetLayer()].push_back(pObject);
+		}
+	}
+	m_pAddGameObjectList.clear();
+
+	// Remove GameObjects
+	for (auto& pObject : m_pRemoveGameObjectList)
+	{
 		auto Layer = pObject->GetLayer();
 		auto it = std::find(m_ppGameObjects[Layer].begin(), m_ppGameObjects[Layer].end(), pObject);
 		if (it != m_ppGameObjects[Layer].end())
 		{
-			m_ppGameObjects[Layer].erase(it); // 순회중 삭제 수정해야함.
+			m_ppGameObjects[Layer].erase(it); 
 		}
-		pObject->SetActive(false);
 	}
+	m_pRemoveGameObjectList.clear();
 }
 
 void CScene::SetPlayer(std::shared_ptr<CPlayer> pPlayer)
@@ -268,11 +285,7 @@ void CScene::Update(float deltaTime)
 	// Update Matrix
 	for (auto& pvecObjects : m_ppGameObjects) for (auto& pObject : pvecObjects.second)  pObject->UpdateTransform();
 
-	//if (m_pPlayer)
-	//{
-	//	m_pPlayer->Update(deltaTime);
-	//	if (!m_pPlayer->m_pSkinnedAnimationController) m_pPlayer->UpdateTransform(nullptr);
-	//}
+	LateUpdate();
 }
 
 bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
@@ -321,7 +334,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			int a = 0; // UI는 제외
 		for (auto& pObject : pvecObjects.second)
 		{
-			//pObject->Update(0.0f);
+			pObject->Update(0.0f);
 			pObject->Render(pd3dCommandList, pCamera);
 		}
 	}
@@ -728,77 +741,3 @@ void CScene::ReleaseShaderVariables()
 	m_pcbMappedLights = nullptr;
 }
 
-// ResourceManager 리소스 관리
-ResourceManager& CScene::GetResourceManager() {
-	static ResourceManager instance; // 정적 지역 변수
-	return instance;
-}
-
-void CScene::ReleaseResources()
-{
-	GetResourceManager().ReleaseResources();
-}
-
-// Model Set/Get
-void CScene::StoreModelInfo(const std::string& filename, std::shared_ptr<CLoadedModelInfo> pSkinInfo)
-{
-	GetResourceManager().SetSkinInfo(filename, pSkinInfo);
-}
-
-std::shared_ptr<CLoadedModelInfo> CScene::GetModelInfo(const std::string& objectname)
-{
-	return GetResourceManager().GetModelInfo(objectname);
-}
-
-// Texture Set/Get
-void CScene::StoreTexture(const std::string& name, std::shared_ptr<CTexture> texture)
-{
-	GetResourceManager().SetTexture(name, texture);
-}
-
-std::shared_ptr<CTexture> CScene::GetTexture(const std::string& name)
-{
-	return GetResourceManager().GetTexture(name);
-}
-
-// Mesh Set/Get
-void CScene::AddMesh(const std::string& name, std::shared_ptr<CMesh> mesh)
-{
-	GetResourceManager().SetMesh(name, mesh);
-}
-
-std::shared_ptr<CMesh> CScene::GetMesh(const std::string& name)
-{
-	return GetResourceManager().GetMesh(name);
-}
-
-void CScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)
-{
-	std::shared_ptr<CLoadedModelInfo> pModel = GetModelInfo("FuzZombie");
-	if (!pModel)
-	{
-		pModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dRootSignature, "Model/FuzZombie.bin", nullptr);
-		StoreModelInfo("FuzZombie", pModel);
-	}
-
-	m_pZombiePool.reserve(nZombieCount);
-	for (int i = 0; i < nZombieCount; ++i)
-	{
-		std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, pModel, 2);
-		pZombie->SetActive(false);
-		m_pZombiePool.push_back(pZombie);
-	}
-}
-
-std::shared_ptr<CZombieObject> CScene::GetZombie(int nSkinType)
-{
-	for (auto& pZombie : m_pZombiePool)
-	{
-		if (false == pZombie->IsActive())
-		{
-			pZombie->SetSkinType(nSkinType);
-			pZombie->SetActive(true);
-			return pZombie;
-		}
-	}
-}

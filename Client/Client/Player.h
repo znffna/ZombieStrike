@@ -22,9 +22,14 @@ public:
 	// Object Update
 	virtual void Update(float fTimeElapsed) override;
 
+	// Object Render
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
+
 	// Skin State
-	void SetSkinType(int nSkinType) { m_nSkinType = nSkinType; }
+	// Skin State
+	void SetSkinType(int nSkinType)	{ m_nSkinType = nSkinType;}
 	int GetSkinType() const { return m_nSkinType; }
+	void SetSkin(int nSkinType);
 
 private:
 	std::vector<std::string> m_ModelName{ "Ch18_nonPBR", "Ch35_nonPBR" };

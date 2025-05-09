@@ -13,6 +13,7 @@
 
 void CCollider::Init(CGameObject* pObject)
 {
+	CComponent::Init(pObject);
 }
 
 
@@ -408,7 +409,6 @@ XMFLOAT3 CalculateOBB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, cons
 		float overlap = (projA + projB) - centerDist;
 
 		if (overlap <= 0.0f) {
-			OutputDebugStringA(("No Collision: " + std::to_string(overlap) + "\n").c_str());
 			return XMFLOAT3(0, 0, 0);
 		}
 
@@ -423,7 +423,6 @@ XMFLOAT3 CalculateOBB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, cons
 		XMVECTOR mtv = XMVector3Normalize(mtvAxis) * minOverlap;
 		XMFLOAT3 result;
 		XMStoreFloat3(&result, mtv);
-		OutputDebugStringA(("MTV: " + std::to_string(result.x) + " " + std::to_string(result.y) + " " + std::to_string(result.z) + "\n").c_str());
 		return result;
 	}
 

@@ -28,7 +28,7 @@ public:
 	CComponent(CGameObject* pObject = nullptr);
 	virtual ~CComponent();
 
-	virtual void Init(CGameObject* pObject) {};
+	virtual void Init(CGameObject* pObject) { gameObject = pObject; }
 
 	virtual std::shared_ptr<CComponent> Clone() const = 0;
 
