@@ -58,10 +58,6 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	std::shared_ptr<CGun> pGun = CGun::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
 	m_pPlayer->SetGun(pGun);
 
-	//pGun = CGun::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
-	//pGun->SetPosition(DirectX::XMFLOAT3(0.0f, 15.0f, 0.0f));
-	//AddObject(pGun);
-
 	// Zombie »ý¼º
 	/*std::shared_ptr<CZombieObject> pZombie = GetZombie();
 	pZombie->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 5.0f));
@@ -73,7 +69,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	pMap->m_pModelRootObject->UpdateTransform();
 	m_pMap = pMap->m_pModelRootObject;
 	m_pMap->Update(0.0f);
-	AddObjects(m_pMap->GetChilds());
+	AddObject(m_pMap);
 	//AddObject(m_pMap);
 
 	// Collision Checker

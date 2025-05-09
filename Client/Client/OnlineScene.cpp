@@ -124,6 +124,24 @@ bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 		}*/
 	}
 
+	if (pBuffer.pKeysBuffer[VK_ESCAPE] & 0xF0)
+	{
+		SetSceneState(SCENE_STATE_ENDING);
+	}
+
+	if (pBuffer.pKeysBuffer[VK_F5] & 0xF0)
+	{
+		ChangeMap(0);
+	}
+	else if (pBuffer.pKeysBuffer[VK_F6] & 0xF0)
+	{
+		ChangeMap(1);
+	}
+	else if (pBuffer.pKeysBuffer[VK_F7] & 0xF0)
+	{
+		ChangeMap(2);
+	}
+
 	return true;
 }
 

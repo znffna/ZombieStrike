@@ -34,15 +34,20 @@ public:
 		if (m_pTerrain) RemoveObject(m_pTerrain);
 		m_pTerrain = GetTerrain(m_nStageIndex);
 		AddObject(m_pTerrain);
+
+		for (auto& pObject : m_pZombiePool)
+		{
+			if (pObject) pObject->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
+		}
+		for (auto& pObject : m_pPlayerObjects)
+		{
+			if (pObject) pObject->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
+		}
+		//if (m_pPlayer) m_pPlayer->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
 		
 		if (m_pMap) {
-			for (auto& pObject : m_pMap->GetChilds())
-			{
-				RemoveObject(pObject);
-			}
+			RemoveObject(m_pMap);
 		}
-
-		m_pMap = m_pTerrain->GetChilds()[0];
 
 		auto pMap = CResourceManager::GetInstance().GetModelInfo(m_strStageNames[m_nStageIndex]);
 		pMap->m_pModelRootObject->UpdateTransform();
@@ -50,6 +55,8 @@ public:
 		m_pMap->Update(0.0f);
 		m_pMap->SetLayer(CGameObject::LAYER_ENVIRONMENT);
 		AddObject(m_pMap);
+
+
 	};
 
 	// Shader Variables
