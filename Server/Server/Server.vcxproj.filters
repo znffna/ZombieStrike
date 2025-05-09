@@ -21,10 +21,7 @@
     <ClCompile Include="Server_tcp.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Ai_npc_logic.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="test.cpp">
+    <ClCompile Include="ZombieAI.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="Node_bin_read_test.cpp">
@@ -33,6 +30,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\protocol.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="ZombieAI.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

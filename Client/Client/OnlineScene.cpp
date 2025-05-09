@@ -184,6 +184,10 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			std::shared_ptr<CGameObject> pZombie = GetZombie(packet->fixdata.skin_type);
 			pZombie->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
 			m_mapGameObjects[packet->id] = pZombie;
+			{
+				std::string DebugOutput = "ObjectType::ZOMBIE 생성 완료\n";
+				OutputDebugStringA(DebugOutput.c_str());
+			}
 			AddObject(pZombie);
 			break;
 		}
