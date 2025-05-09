@@ -15,9 +15,9 @@ void CCollisionChecker::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	std::vector<std::pair<CGameObject::GAMEOBJECT_LAYER, CGameObject::GAMEOBJECT_LAYER>> ppObjectLayerPairs{
 	{ CGameObject::LAYER_PLAYER, CGameObject::LAYER_ENEMY,},
 	{ CGameObject::LAYER_BULLET, CGameObject::LAYER_ENEMY },
-	{ CGameObject::LAYER_PLAYER, CGameObject::LAYER_DEFUALT },
-	{ CGameObject::LAYER_ENEMY, CGameObject::LAYER_DEFUALT },
-	{ CGameObject::LAYER_BULLET, CGameObject::LAYER_DEFUALT }
+	{ CGameObject::LAYER_PLAYER, CGameObject::LAYER_ENVIRONMENT },
+	{ CGameObject::LAYER_ENEMY, CGameObject::LAYER_ENVIRONMENT },
+	{ CGameObject::LAYER_BULLET, CGameObject::LAYER_ENVIRONMENT }
 	};
 	m_ppObjectLayerPairs = ppObjectLayerPairs;
 }
