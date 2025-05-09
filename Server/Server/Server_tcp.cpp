@@ -279,7 +279,7 @@ public:
             strcpy_s(p_Add_P.fixdata.name, _name.c_str());
 			p_Add_P.fixdata.startposition = _position;
 			p_Add_P.fixdata.starthp = _hp;
-            
+			p_Add_P.fixdata.gun_type = BULLET_PISTOL;
 
             for (auto& u : g_users) {
                 if (u.first != _id) // 나를 제외한 상대방에게 알리고

@@ -165,6 +165,7 @@ struct Objectfixdata {          // 고정정보
     char name[MAX_NAME_SIZE];
     Vec3 startposition;      // 초기 위치
     SIZE2 starthp;              // 체력
+    GunType gun_type;           // 총 종류
 };
 
 struct ObjectMeta {             // 필수정보
