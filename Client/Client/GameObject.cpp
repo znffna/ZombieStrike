@@ -988,6 +988,7 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 
 CHeightMapTerrain::CHeightMapTerrain()
 {
+	SetLayer(LAYER_ENVIRONMENT);
 }
 
 CHeightMapTerrain::~CHeightMapTerrain()
