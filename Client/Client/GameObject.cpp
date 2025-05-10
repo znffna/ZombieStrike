@@ -824,7 +824,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 			::ReadStringFromFile(file, strModelName);
 			//if (strModelName == pCollider->m_strName) continue;
 			if (isGetModel) continue;
-			DeepCopyFromModel(strModelName, pGameObject);
+			isGetModel = DeepCopyFromModel(strModelName, pGameObject);
 		}
 		else if (!strcmp(pstrToken, "</Frame>"))
 		{
