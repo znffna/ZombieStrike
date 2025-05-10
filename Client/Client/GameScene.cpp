@@ -68,6 +68,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	auto pMap = resourceManager.GetModelInfo("Stage1");
 	pMap->m_pModelRootObject->UpdateTransform();
 	m_pMap = pMap->m_pModelRootObject;
+	m_pMap->SetLayer(CGameObject::LAYER_ENVIRONMENT);
 	m_pMap->Update(0.0f);
 	AddObject(m_pMap);
 	//AddObject(m_pMap);

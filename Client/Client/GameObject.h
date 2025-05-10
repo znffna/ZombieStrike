@@ -360,6 +360,8 @@ public:
 	CSkyBox();
 	virtual ~CSkyBox();
 
+	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_SKYBOX; }
+
 	// Object Initialization
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 	virtual std::string GetDefaultName() override { return "CSkyBox"; }
@@ -378,6 +380,8 @@ class CHeightMapTerrain : public CGameObject
 public:
 	CHeightMapTerrain();
 	virtual ~CHeightMapTerrain();
+
+	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_TERRAIN; }
 
 	// Object Initialization
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
