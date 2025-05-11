@@ -6,11 +6,13 @@
 #include <algorithm>
 #include <queue>
 #include <unordered_set>
-//#include <conio.h> 
+#include <conio.h> 
 
 // test , 플레이어, 좀비 시작 위치
-constexpr int MAP_WIDTH = 1024;
-constexpr int MAP_HEIGHT = 1024;
+const int BIN_WIDTH = 512;
+const int BIN_HEIGHT = 512;
+const int MAP_WIDTH = 250;
+const int MAP_HEIGHT = 250;
 constexpr int ZOMBIE_START_X = 2;
 constexpr int ZOMBIE_START_Z = 2;
 constexpr int PLAYER_START_X = 580;
@@ -214,26 +216,45 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
 
 
 
-
-
 // ------------------- 맵 로딩 & 랜덤 위치 -----------------------
 
 std::vector<std::vector<int>> LoadMapBin(const std::string& filename)
 {
-    const int MAP_SIZE = 1024;
-    std::vector<std::vector<int>> map(MAP_SIZE, std::vector<int>(MAP_SIZE, 0));
+    //const int MAP_SIZE = 1024;
+    //std::vector<std::vector<int>> map(MAP_SIZE, std::vector<int>(MAP_SIZE, 0));
+    //std::ifstream file(filename, std::ios::binary);
+    //if (!file.is_open()) {
+    //    std::cerr << "[ERROR] obstacle_mask.bin 열기 실패!\n";
+    //    exit(1);
+    //}
+
+    //for (int y = 0; y < MAP_SIZE; ++y)
+    //    for (int x = 0; x < MAP_SIZE; ++x)
+    //        map[y][x] = file.get() == 1 ? 1 : 0;
+
+    //std::cout << "[OK] obstacle_mask.bin 로드 완료\n";
+    //return map;
+
+    std::vector<std::vector<int>> map(MAP_HEIGHT, std::vector<int>(MAP_WIDTH, 0));
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open()) {
         std::cerr << "[ERROR] obstacle_mask.bin 열기 실패!\n";
         exit(1);
     }
 
-    for (int y = 0; y < MAP_SIZE; ++y)
-        for (int x = 0; x < MAP_SIZE; ++x)
-            map[y][x] = file.get() == 1 ? 1 : 0;
+    for (int z = 0; z < MAP_HEIGHT; ++z) {
+        for (int x = 0; x < MAP_WIDTH; ++x) {
+            // 각 2x2 블록의 평균 or 대표값 (왼쪽 위 픽셀 기준)
+            int bin_x = x * 2;
+            int bin_z = z * 2;
 
-    std::cout << "[OK] obstacle_mask.bin 로드 완료\n";
-    return map;
+            file.seekg(bin_z * BIN_WIDTH + bin_x, std::ios::beg);
+            char value;
+            file.read(&value, 1);
+            map[z][x] = (value == 1) ? 1 : 0;
+        }
+    }
+
 }
 //std::vector<std::vector<int>> LoadMapBin(const std::string& filename)
 //{
@@ -498,11 +519,11 @@ std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map)
 //    else
 //        std::cout << "[bad] 좀비 수가 맞지 않습니다! (" << zombieCount << " / " << NUM_ZOMBIES << ")\n";
 //}
-
-// ========================test 용 ========================
+//
+//
 //int main()
 //{
-//    auto map = LoadMapBin("../../Map/Node/obstacle_mask.bin");
+//    auto map = LoadMapBin("../../Map/Node/ob_mask_te_2.bin");
 //
 //    std::vector<ZombieAI*> zombies;
 //
