@@ -89,8 +89,8 @@ public:
     SIZE1           _skin_type;
     std::string     _name;
 
-    Vec3         _position;
-    Vec3         _direction;
+    Vec3            _position;
+    Vec3            _direction;
 	float           _speed;
     SIZE2           _hp;
     GunType         _gun_type;     
@@ -185,6 +185,7 @@ public:
         OVER_EXP* send_ov = new OVER_EXP(OP_SEND);
         SIZE2 packet_size = reinterpret_cast<SIZE2*>(buff)[0];
         memcpy(send_ov->_buffer, buff, packet_size);
+        send_ov->_wsabuf[0].buf = reinterpret_cast<CHAR*>(send_ov->_buffer);
         send_ov->_wsabuf[0].len = packet_size;
         DWORD size_sent;
 
@@ -325,30 +326,39 @@ public:
         {
 			pkt_cs_update* updatePacket = reinterpret_cast<pkt_cs_update*>(packet);
 
+
             float deltaTime = 1.0f / 60.0f; // 서버 틱 레이트 기준 (예: 60fps)
             // 이동 거리 = 방향 * 속도 * 시간
-            _position += updatePacket->obj.meta.direction * updatePacket->obj.meta.speed * deltaTime;
-         
+            //_position += updatePacket->obj.meta.direction * updatePacket->obj.meta.speed * deltaTime;
+            _position = updatePacket->obj.meta.position;
+            _direction = updatePacket->obj.meta.direction;
+            _speed = updatePacket->obj.meta.speed;
+            _hp = updatePacket->obj.meta.hp;
+            _level = updatePacket->obj.level;
+            _score = updatePacket->obj.score;
+            _damage = updatePacket->obj.damage;
+            _gun_type = updatePacket->obj.gun_type;
+            _act_type = updatePacket->obj.act_type;
+
+            // 로그
+            std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
+            std::cout << "  position  = (" << _position.x << ", " << _position.y << ", " << _position.z << ")\n";
+            std::cout << "  direction = (" << _direction.x << ", " << _direction.y << ", " << _direction.z << ")\n";
+            std::cout << "  speed     = " << _speed << "\n";
+
             pkt_sc_object_update u_move_p;
-			u_move_p.header.size = sizeof(u_move_p);
-			u_move_p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
-			u_move_p.id = _id;
-			u_move_p.obj.meta.position = _position;
-			u_move_p.obj.meta.direction = _direction;
-			u_move_p.obj.meta.speed = _speed;
-			u_move_p.obj.meta.hp = _hp;
-			u_move_p.obj.gun_type = _gun_type;
-			u_move_p.obj.level = _level;
-			u_move_p.obj.score = _score;
-			u_move_p.obj.damage = _damage;
-			u_move_p.obj.act_type = _act_type;
-			for (auto& u : g_users) {
-				if (u.first != _id) // 나를 제외한 상대방에게 알리고
-				    u.second.do_send(&u_move_p); // 나포함 모두에게 알림 좌표의 이동을
-			}
-			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n");
-			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] position: (" << _position.x << ", " << _position.y << ", " << _position.z << ") " << "\n");
-			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] direction: (" << _direction.x << ", " << _direction.y << ", " << _direction.z << ") " << "\n");
+            u_move_p.header.size = sizeof(u_move_p);
+            u_move_p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
+            u_move_p.id = _id;
+
+            u_move_p.obj = updatePacket->obj;  // ← 여기! 네가 하고 싶은 대로 정확히 이거임
+
+            for (auto& [id, session] : g_users) {
+                if (id != _id)
+                    session.do_send(&u_move_p);
+            }
+
+            break;
 
             break;
         }

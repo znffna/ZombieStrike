@@ -7,10 +7,11 @@
 #include "../../protocol.h"
 
 // 필수 정보 
-constexpr float my_gCost = 1.0f;         // 이동 비용
-constexpr float ZOMBIE_HALF_SIZE = 0.4f; // 좀비 AABB 반 사이즈
-constexpr SIZE2 ZOMBIE_HP = 500;         // 좀비 초기 체력
-constexpr float ZOMBIE_DAMAGE = 10;         // 좀비 초기 체력
+constexpr float my_gCost = 1.0f;             // 이동 비용
+constexpr float ZOMBIE_HALF_SIZE = 0.4f;     // 좀비 AABB 반 사이즈
+constexpr SIZE2 ZOMBIE_HP = 500;             // 좀비 초기 체력
+constexpr float ZOMBIE_DAMAGE = 10;          // 좀비 초기 체력
+constexpr float Z_move_speed = 0.05f;         // 좀비 
 
 constexpr float WORLD_WIDTH = 250.0f;
 constexpr float WORLD_HEIGHT = 250.0f;
@@ -34,6 +35,7 @@ public:
     void SetTargetPosition(float x, float z);
 	void SetHP(int hp);                   // 체력 설정
 
+    Vec3 FindClosestPlayer(const std::vector<Vec3>& playerPositions);
     void FindPath();                      // AI 동작
     void Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies);
 

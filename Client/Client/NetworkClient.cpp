@@ -125,6 +125,7 @@ void NetworkingClient::SendMovePacket()
     u_movePkt.obj.damage = 0; // 공격력
     u_movePkt.obj.act_type = ActionType::NONE; // 행동 타입
 
+
     send_packet((char*)&u_movePkt);
 }
 

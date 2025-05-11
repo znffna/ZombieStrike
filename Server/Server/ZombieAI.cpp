@@ -10,7 +10,8 @@
 #include <conio.h> 
 
 
-constexpr bool DEBUG_PRINT = true;
+
+constexpr bool DEBUG_PRINT = false;
 #define DEBUG_LOG(msg) \
     do { if (DEBUG_PRINT) std::cout << msg << std::endl; } while (0)
 
@@ -202,39 +203,58 @@ void ZombieAI::FindPath() {
     m_pathIndex = 1;
 }
 
+Vec3  ZombieAI::FindClosestPlayer(const std::vector<Vec3>& playerPositions)
+{
+    float minDistanceSq = FLT_MAX;
+    Vec3 closestPlayer;
+
+    Vec3 myPos(m_x, 0, m_z);
+
+    for (const auto& playerPos : playerPositions)
+    {
+        float dx = playerPos.x - myPos.x;
+        float dz = playerPos.z - myPos.z;
+        float distanceSq = dx * dx + dz * dz;
+
+        if (distanceSq < minDistanceSq)
+        {
+            minDistanceSq = distanceSq;
+            closestPlayer = playerPos;
+        }
+    }
+
+    return closestPlayer;
+}
+
 void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies)
 {
     if (playerPositions.empty()) return;
 
     // 1. 가장 가까운 플레이어 위치 계산
-    float minDist = FLT_MAX;
-    Vec3 closest;
-
-    for (const auto& pos : playerPositions)
-    {
-        Vec3 myPos(m_x, 0, m_z);
-        float dist = (pos - myPos).LengthSquared();
-        if (dist < minDist)
-        {
-            minDist = dist;
-            closest = pos;
-        }
-    }
+    Vec3 closest = FindClosestPlayer(playerPositions);
 
     // 2. 타겟 위치 설정 및 경로 재계산
-    DEBUG_LOG("[ZombieAI::Update] ID = " << m_id << ", Closest Player = (" << closest.x << ", " << closest.z << ")");
-    SetTargetPosition(closest.x, closest.z);
+    Vec3 newTarget = closest;
 
-    if (m_path.empty() || m_pathIndex >= m_path.size() || m_repath_timer > REPATH_INTERVAL)
-    {
-        FindPath();  
+    bool needRepath =
+        (int)(newTarget.x) != (int)(m_targetX) ||
+        (int)(newTarget.z) != (int)(m_targetZ) ||
+        m_path.empty() ||
+        m_pathIndex >= m_path.size() ||
+        m_repath_timer > REPATH_INTERVAL;
+
+    if (needRepath) {
+        //DEBUG_LOG("[ZombieAI::Update] ID = " << m_id << " -> 타겟 변경 또는 재계산 필요");
+        if (m_id == 10000) {
+            //std::cout << "[ZombieAI::Update] ID = " << m_id << " -> 타겟 변경 또는 재계산 필요" << std::endl;
+        }
+        SetTargetPosition(newTarget.x, newTarget.z);
+        FindPath();
         m_repath_timer = 0;
     }
-    else
-    {
-        m_repath_timer += deltaTime; // 프레임 간격 
+    else {
+        m_repath_timer += deltaTime;
     }
-    DEBUG_LOG("[ZombieAI::Update] ID = " << m_id << ", Path Size = " << m_path.size());
 
     // 3. 이동 처리 (경로 따라 이동)
     if (m_path.empty() || m_pathIndex >= m_path.size()) return;
@@ -282,7 +302,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     }
 
     Vec3 moveDir = (toTarget + avoidance).Normalize();
-    float moveSpeed = 0.1f;
+    float moveSpeed = Z_move_speed;
 
     m_x += moveDir.x * moveSpeed;
     m_z += moveDir.z * moveSpeed;
