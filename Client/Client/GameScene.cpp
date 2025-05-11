@@ -119,10 +119,10 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 {
 	// 키보드 입력의 정보 압축
 	DWORD dwDirection = 0;
-	if (pBuffer.pKeysBuffer['W'] & 0xF0)dwDirection |= DIR_FORWARD;
-	if (pBuffer.pKeysBuffer['S'] & 0xF0)dwDirection |= DIR_BACKWARD;
-	if (pBuffer.pKeysBuffer['A'] & 0xF0)dwDirection |= DIR_LEFT;
-	if (pBuffer.pKeysBuffer['D'] & 0xF0)dwDirection |= DIR_RIGHT;
+	if (pBuffer.pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
+	if (pBuffer.pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
+	if (pBuffer.pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
+	if (pBuffer.pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
 	//if (pBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
 	//if (pBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
 
@@ -130,7 +130,7 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 	{
 		if (m_pPlayer)
 		{
-			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
+			m_pPlayer->Move(dwDirection, 50.0f, deltaTime);
 			m_pPlayer->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
 		}
 	}

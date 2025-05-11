@@ -34,6 +34,15 @@ public:
 	void SetForce(const XMFLOAT3& xmf3Force) { m_xmf3Force = xmf3Force; }
 	void SetTorque(const XMFLOAT3& xmf3Torque) { m_xmf3Torque = xmf3Torque; }
 
+	void PrintVelocity() {
+		{
+			std::string debug = "m_xmf3Velocity = ("
+				+ std::to_string(m_xmf3Velocity.x) + ", "
+				+ std::to_string(m_xmf3Velocity.y) + ", "
+				+ std::to_string(m_xmf3Velocity.y) + ")\n";
+			OutputDebugStringA(debug.c_str());
+		}
+	}
 
 	XMFLOAT3 GetVelocity() { return m_xmf3Velocity; }
 	XMFLOAT3 GetGravity() { return m_xmf3Gravity; }
@@ -45,10 +54,10 @@ public:
 	XMFLOAT3 GetForce() { return m_xmf3Force; }
 	XMFLOAT3 GetTorque() { return m_xmf3Torque; }
 
-	void AddVelocity(const XMFLOAT3& xmf3Velocity) { m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Velocity); }
-	void AddVelocity(float x, float y, float z) { m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, XMFLOAT3(x, y, z)); }
+	void AddVelocity(const XMFLOAT3& xmf3Velocity) {m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Velocity);}
+	void AddVelocity(float x, float y, float z) { AddVelocity(XMFLOAT3(x, y, z)); }
 	void AddGravity(const XMFLOAT3& xmf3Gravity) { m_xmf3Gravity = Vector3::Add(m_xmf3Gravity, xmf3Gravity); }
-	void AddGravity(float x, float y, float z) { m_xmf3Gravity = Vector3::Add(m_xmf3Gravity, XMFLOAT3(x, y, z)); }
+	void AddGravity(float x, float y, float z) { AddGravity(XMFLOAT3(x, y, z)); }
 
 	void UpdateRigidBody(float fTimeElapsed);
 

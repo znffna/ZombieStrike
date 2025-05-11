@@ -145,7 +145,8 @@ void CGameObject::Move(DWORD dwDirection, float fDistance, float deltaTime)
 	if(auto cRigidbody = GetComponent<CRigidBody>())
 	{
 		// 물리 엔진을 사용하는 경우
-		cRigidbody->AddVelocity(Vector3::ScalarProduct(xmf3Direction, fDistance));
+		cRigidbody->SetVelocity(Vector3::ScalarProduct(xmf3Direction, fDistance));	// 여기는 초당속도로 갱신시키면 된다.
+		//cRigidbody->PrintVelocity();
 	}
 	else
 	{
