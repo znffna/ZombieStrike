@@ -26,6 +26,7 @@ public:
 
 	D3D12_SHADER_BYTECODE CompileShaderFromFile(const WCHAR* pszFileName, LPCSTR pszShaderName, LPCSTR pszShaderProfile, ID3DBlob** ppd3dShaderBlob);
 	D3D12_SHADER_BYTECODE ReadCompiledShaderFromFile(const WCHAR* pszFileName, ID3DBlob** ppd3dShaderBlob = NULL);
+	void SaveShaderToCSOFile(ID3DBlob* pShaderBlob, LPCSTR pszShaderName);
 
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState = 0);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState = 0);

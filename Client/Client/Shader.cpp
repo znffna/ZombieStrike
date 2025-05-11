@@ -97,6 +97,8 @@ D3D12_SHADER_BYTECODE CShader::CompileShaderFromFile(const WCHAR* pszFileName, L
 	char* pErrorString = NULL;
 	if (pd3dErrorBlob) pErrorString = (char*)pd3dErrorBlob->GetBufferPointer();
 
+	SaveShaderToCSOFile(*ppd3dShaderBlob, pszShaderName);
+
 	D3D12_SHADER_BYTECODE d3dShaderByteCode;
 	d3dShaderByteCode.BytecodeLength = (*ppd3dShaderBlob)->GetBufferSize();
 	d3dShaderByteCode.pShaderBytecode = (*ppd3dShaderBlob)->GetBufferPointer();
@@ -107,9 +109,16 @@ D3D12_SHADER_BYTECODE CShader::CompileShaderFromFile(const WCHAR* pszFileName, L
 D3D12_SHADER_BYTECODE CShader::ReadCompiledShaderFromFile(const WCHAR* pszFileName, ID3DBlob** ppd3dShaderBlob)
 {
 	UINT nReadBytes = 0;
+
+	std::wstring wstrFileName(pszFileName);
+	if (wstrFileName.length() < 4 || wstrFileName.substr(wstrFileName.length() - 4) != L".cso")
+	{
+		wstrFileName = L"Shader/" + wstrFileName + L".cso";
+	}
+
 #ifdef _WITH_WFOPEN
 	FILE* pFile = NULL;
-	::_wfopen_s(&pFile, pszFileName, L"rb");
+	::_wfopen_s(&pFile, wstrFileName, L"rb");
 	::fseek(pFile, 0, SEEK_END);
 	int nFileSize = ::ftell(pFile);
 	BYTE* pByteCode = new BYTE[nFileSize];
@@ -118,7 +127,7 @@ D3D12_SHADER_BYTECODE CShader::ReadCompiledShaderFromFile(const WCHAR* pszFileNa
 	::fclose(pFile);
 #else
 	std::ifstream ifsFile;
-	ifsFile.open(pszFileName, std::ios::in | std::ios::ate | std::ios::binary);
+	ifsFile.open(wstrFileName, std::ios::in | std::ios::ate | std::ios::binary);
 	nReadBytes = (int)ifsFile.tellg();
 	BYTE* pByteCode = new BYTE[nReadBytes];
 	ifsFile.seekg(0);
@@ -142,6 +151,35 @@ D3D12_SHADER_BYTECODE CShader::ReadCompiledShaderFromFile(const WCHAR* pszFileNa
 	}
 
 	return(d3dShaderByteCode);
+}
+
+void CShader::SaveShaderToCSOFile(ID3DBlob* pShaderBlob, const LPCSTR pszShaderName)
+{
+	if (!pShaderBlob || !pszShaderName)
+		return;
+
+	std::string shaderFileName(pszShaderName);
+
+	if (shaderFileName.length() < 4 || shaderFileName.substr(shaderFileName.length() - 4) != ".cso")
+	{
+		shaderFileName = "Shader/" + shaderFileName + ".cso";
+	}
+
+#ifdef _WITH_WFOPEN
+	FILE* pFile = nullptr;
+	if (_wfopen_s(&pFile, shaderFileName, L"wb") == 0 && pFile)
+	{
+		fwrite(pShaderBlob->GetBufferPointer(), 1, pShaderBlob->GetBufferSize(), pFile);
+		fclose(pFile);
+	}
+#else
+	std::ofstream ofsFile(shaderFileName, std::ios::out | std::ios::binary);
+	if (ofsFile)
+	{
+		ofsFile.write(reinterpret_cast<const char*>(pShaderBlob->GetBufferPointer()), pShaderBlob->GetBufferSize());
+		ofsFile.close();
+	}
+#endif
 }
 
 D3D12_SHADER_BYTECODE CShader::CreateVertexShader(int nPipelineState)
@@ -303,12 +341,20 @@ CStandardShader::~CStandardShader()
 
 D3D12_SHADER_BYTECODE CStandardShader::CreateVertexShader(int nPipelineState)
 {
+#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSStandard", "vs_5_1", &m_pd3dVertexShaderBlob));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"VSStandard", &m_pd3dVertexShaderBlob));
+#endif
 }
 
 D3D12_SHADER_BYTECODE CStandardShader::CreatePixelShader(int nPipelineState)
 {
+#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSStandard", "ps_5_1", &m_pd3dPixelShaderBlob));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"PSStandard", &m_pd3dPixelShaderBlob));
+#endif
 }
 
 D3D12_INPUT_LAYOUT_DESC CStandardShader::CreateInputLayout(int nPipelineState)
@@ -342,12 +388,20 @@ CSkyBoxShader::~CSkyBoxShader()
 
 D3D12_SHADER_BYTECODE CSkyBoxShader::CreateVertexShader(int nPipelineState)
 {
+#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSSkyBox", "vs_5_1", &m_pd3dVertexShaderBlob));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"VSSkyBox", &m_pd3dVertexShaderBlob));
+#endif
 }
 
 D3D12_SHADER_BYTECODE CSkyBoxShader::CreatePixelShader(int nPipelineState)
 {
+#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSSkyBox", "ps_5_1", &m_pd3dPixelShaderBlob));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"PSSkyBox", &m_pd3dPixelShaderBlob));
+#endif
 }
 
 D3D12_INPUT_LAYOUT_DESC CSkyBoxShader::CreateInputLayout(int nPipelineState)
@@ -425,12 +479,20 @@ D3D12_INPUT_LAYOUT_DESC CTerrainShader::CreateInputLayout(int nPipelineState)
 
 D3D12_SHADER_BYTECODE CTerrainShader::CreateVertexShader(int nPipelineState)
 {
+#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTerrain", "vs_5_1", &m_pd3dVertexShaderBlob));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"VSTerrain", &m_pd3dVertexShaderBlob));
+#endif
 }
 
 D3D12_SHADER_BYTECODE CTerrainShader::CreatePixelShader(int nPipelineState)
 {
+#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSTerrain", "ps_5_1", &m_pd3dPixelShaderBlob));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"PSTerrain", &m_pd3dPixelShaderBlob));
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -466,7 +528,11 @@ D3D12_INPUT_LAYOUT_DESC CSkinnedAnimationStandardShader::CreateInputLayout(int n
 
 D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreateVertexShader(int nPipelineState)
 {
+#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSSkinnedAnimationStandard", "vs_5_1", &m_pd3dVertexShaderBlob));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"VSSkinnedAnimationStandard", &m_pd3dVertexShaderBlob));
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -496,12 +562,20 @@ D3D12_INPUT_LAYOUT_DESC CColliderShader::CreateInputLayout(int nPipelineState)
 
 D3D12_SHADER_BYTECODE CColliderShader::CreateVertexShader(int nPipelineState)
 {
+#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSCollider", "vs_5_1", &m_pd3dVertexShaderBlob));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"VSCollider", &m_pd3dVertexShaderBlob));
+#endif
 }
 
 D3D12_SHADER_BYTECODE CColliderShader::CreatePixelShader(int nPipelineState)
 {
+#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSCollider", "ps_5_1", &m_pd3dPixelShaderBlob));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"PSCollider", &m_pd3dPixelShaderBlob));
+#endif
 }
 
 D3D12_RASTERIZER_DESC CColliderShader::CreateRasterizerState(int nPipelineState)
