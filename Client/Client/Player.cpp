@@ -1,6 +1,9 @@
 #include "Player.h"
 #include "Scene.h"
 
+///////////////////////////////////////////////////////////////////////////////////
+//
+
 CPlayer::CPlayer()
 {
 }
@@ -67,6 +70,26 @@ void CPlayer::Update(float fTimeElapsed)
 		m_pGun->Update(fTimeElapsed);
 		m_pGun->UpdateTransform(m_pGunSlot->GetWorldMatrix());
 	}
+
+	if (m_pSkinnedAnimationController)
+	{
+		XMFLOAT3 xmf3Velocity = GetComponent<CRigidBody>()->GetVelocity();
+		float fLength = sqrtf(xmf3Velocity.x * xmf3Velocity.x + xmf3Velocity.z * xmf3Velocity.z);
+		if (::IsZero(fLength))
+		{
+			m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::IDLE, 0.0f);
+		}
+	}
+}
+
+void CPlayer::Move(DWORD dwDirection, float fDistance, float deltaTime)
+{
+	if (dwDirection)
+	{		
+		m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::WALK);
+	}
+
+	CGameObject::Move(dwDirection, fDistance, deltaTime);
 }
 
 void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -142,3 +165,4 @@ void CPlayer::Rotate(float x, float y, float z)
 
 	m_pTransform->Rotate(x, y, z);
 }
+

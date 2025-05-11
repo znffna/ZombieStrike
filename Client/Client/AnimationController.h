@@ -80,12 +80,21 @@ public:
 class CAnimationController
 {
 public:
+	enum ANIMATION_STATE
+	{
+		IDLE = 0,
+		WALK
+	};
+
 	CAnimationController();
 	~CAnimationController();
 
 	void Clear();
 	void SettingByModel(std::shared_ptr<CLoadedModelInfo>& pModel, int nAnimationTracks = -1);
+
 public:
+	
+	ANIMATION_STATE state = IDLE;
 	float 							m_fTime = 0.0f;
 
 	int 							m_nAnimationTracks = 0;
@@ -114,6 +123,9 @@ public:
 	void SetAnimationCallbackHandler(int nAnimationTrack, std::shared_ptr<CAnimationCallbackHandler> pCallbackHandler) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetAnimationCallbackHandler(pCallbackHandler); };
 
 	void AdvanceTime(float fElapsedTime, CGameObject* pRootGameObject);;
+
+	void ChangeState(ANIMATION_STATE state);
+	void ChangeState(ANIMATION_STATE state, float fPosition);
 
 public:
 	bool							m_bRootMotion = false;

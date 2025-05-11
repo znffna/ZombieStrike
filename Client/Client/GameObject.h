@@ -188,7 +188,7 @@ protected:
 	// Child
 	std::vector<std::shared_ptr<CGameObject>> m_pChilds; // Child Object
 public:
-	// Animation
+	// Animation	
 	std::shared_ptr<CAnimationController> m_pSkinnedAnimationController;
 
 	// Load Model
@@ -285,7 +285,7 @@ public:
 	void Move(DirectX::XMFLOAT3 xmf3Shift) { m_pTransform->Move(xmf3Shift); };
 	void Move(float x, float y, float z) { Move(DirectX::XMFLOAT3(x, y, z)); }
 
-	void Move(DWORD dwDirection, float fDistance, float deltaTime);
+	virtual void Move(DWORD dwDirection, float fDistance, float deltaTime);
 
 	void MoveStrafe(float fDistance = 1.0f) { m_pTransform->MoveStrafe(fDistance); };
 	void MoveUp(float fDistance = 1.0f) { m_pTransform->MoveUp(fDistance); };

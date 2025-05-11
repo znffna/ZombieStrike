@@ -107,6 +107,8 @@ void CAnimationController::SettingByModel(std::shared_ptr<CLoadedModelInfo>& pMo
 {
 	Clear();
 
+	state = IDLE;
+
 	m_pModelRootObject = pModel->m_pModelRootObject;
 	m_nSkinnedMeshes = pModel->m_nSkinnedMeshes;
 	m_ppSkinnedMeshes = pModel->m_ppSkinnedMeshes;
@@ -217,4 +219,19 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 		OnRootMotion(pRootGameObject);
 		OnAnimationIK(pRootGameObject);
 	}
+}
+
+void CAnimationController::ChangeState(ANIMATION_STATE state)
+{
+	ANIMATION_STATE before = this->state;
+	this->state = state;
+
+	SetTrackEnable(before, false);
+	SetTrackEnable(state, true);
+}
+
+void CAnimationController::ChangeState(ANIMATION_STATE state, float fPosition)
+{
+	ChangeState(state);
+	SetTrackPosition(state, fPosition);
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include "GameObject.h"
 
+
 class CPlayer : public CGameObject
 {
 public:
@@ -21,6 +22,7 @@ public:
 
 	// Object Update
 	virtual void Update(float fTimeElapsed) override;
+	virtual void Move(DWORD dwDirection, float fDistance, float deltaTime) override;
 
 	// Object Render
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
