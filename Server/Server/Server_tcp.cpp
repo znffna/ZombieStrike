@@ -3,17 +3,15 @@
 #include <windows.h>
 #include <iostream>
 #include <vector>
-#include <mutex>
-#include <condition_variable>
-#include <functional>
-#include <thread>
-#include <algorithm>
-#include <cmath>
 #include <unordered_map>
+#include <mutex>
+#include <thread>
 #include <queue>
+#include <cmath>
+#include <string>
+#include <algorithm>
 #include "../../protocol.h"
 #include "ZombieAI.h" 
-#include <print>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -32,29 +30,24 @@ void error_display(const char* msg, int err_no) {
     exit(1);
 }
 
-struct ShootPacket {
-    SIZE1 GunType; // 총 종류
-    float bulletPos[3];
-    float bulletDir[3];
-};
-
-struct Zombie {
-	SIZEID id;
-    Objectfixdata zombieobj;
-	ObjectMeta zombiemeta;
-    SIZE2 damage;               
-    SIZE1 act_type;             
-};
-
-std::vector<ZombieAI*> g_zombies; // ZombieAI 객체를 서버가 관리
-std::vector<std::vector<int>> g_map; // 맵 데이터
-std::mutex zombiesMutex;
-
-bool serverRunning = true;
-short IN_g_player_n= 0;
 
 class SESSION;
-std::unordered_map<SIZEID, SESSION> g_users;
+std::atomic<bool> serverRunning = true;         // 서버 종료 여부
+std::mutex g_zombie_mutex;                         // 좀비 쓰레드 보호용
+
+std::vector<std::vector<int>> g_map;               // 맵 데이터
+std::vector<ZombieAI*> g_zombies;                  // 좀비 객체 리스트
+std::unordered_map<SIZEID, SESSION> g_users;       // 클라이언트 세션 관리
+
+SIZEID g_next_client_id = 0;                       // 클라이언트 고유 ID 부여용
+short g_next_spawn_slot = 0;                       // 플레이어 시작 위치 인덱스 (START_POSITIONS)
+
+std::atomic<SIZE2> g_current_stage = 1;
+constexpr SIZE2 g_max_stage = 3;
+std::atomic<SIZE3> g_time_left = 180;
+
+short IN_g_player_n = 0;
+
 
 void CALLBACK g_recv_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
 void CALLBACK g_send_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
@@ -85,19 +78,21 @@ public:
     OVER_EXP        _recv_over{OP_RECV};
     SIZE2           _remained = 0;
 
-    ObjectType      _obj_type;
+    // 게임 정보
+    ObjectType      _obj_type = ObjectType::PLAYER;
     SIZE1           _skin_type;
     std::string     _name;
 
     Vec3            _position;
-    Vec3            _direction;
-	float           _speed;
+    Vec3            _velocity;
+	float           _pitch;
+
     SIZE2           _hp;
     GunType         _gun_type;     
     SIZE1           _level;
     SIZE2           _score;
     SIZE2           _damage;               
-    SIZE1           _act_type;            
+	ActionType	    _act_type = ActionType::NONE;
 
     void do_recv() {
         DWORD flags = 0;
@@ -196,49 +191,83 @@ public:
         }
     }
 
-    void send_player_info() {
-		pkt_sc_player_info packet;
+    void send_player_add() {
+        pkt_sc_object_add packet;
 		ZeroMemory(&packet, sizeof(packet));
 		packet.header.size = sizeof(packet);
-        packet.header.type = PKT_TYPE::S_C_PLAYER_INFO;
+        packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
 		packet.id = _id;
-		packet.fixdata.obj_type = _obj_type;
-		packet.fixdata.skin_type = _skin_type;
-		strcpy_s(packet.fixdata.name, _name.c_str());
-		packet.fixdata.startposition = _position;
-		packet.fixdata.starthp = _hp;
+		packet.obj_type = _obj_type;
+		packet.skin_type = _skin_type;
+		strcpy_s(packet.name, _name.c_str());
+		packet.startposition = _position;
+		packet.hp = _hp;
 
-		packet.obj.act_type = _act_type;
-		packet.obj.gun_type = _gun_type;
-
-		packet.obj.level = _level;
-		packet.obj.score = _score;
-		packet.obj.damage = _damage;
-		packet.obj.meta.position = _position;
-		packet.obj.meta.direction = _direction;
-		packet.obj.meta.speed = _speed;
-		packet.obj.meta.hp = _hp;
+		packet.gun_type = _gun_type;
+        packet.act_type = _act_type;
+		packet.damage = _damage;
         do_send(&packet);
     }
 
-    void send_object_update() {
-        pkt_sc_object_update p_update;
-        p_update.header.size = sizeof(p_update);
-        p_update.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
-        p_update.id = _id;
-        p_update.obj.meta.position = _position;
-        p_update.obj.meta.direction = _direction;
-        p_update.obj.meta.speed = _speed;
-        p_update.obj.meta.hp = _hp;
+    void broadcast_my_spawn() {
+        pkt_sc_object_add packet;
+        packet.header.size = sizeof(packet);
+        packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+        packet.id = _id;
+        packet.obj_type = _obj_type;
+        packet.skin_type = _skin_type;
+        strcpy_s(packet.name, _name.c_str());
+        packet.startposition = _position;
+        packet.hp = _hp;
 
-        p_update.obj.gun_type = _gun_type;
-        p_update.obj.level = _level;
-        p_update.obj.score = _score;
-        p_update.obj.damage = _damage;
-        p_update.obj.act_type = _act_type;
-        do_send(&p_update);
+        packet.gun_type = _gun_type;
+        packet.act_type = _act_type;
+        packet.damage = _damage;
+
+        for (auto& [id, session] : g_users) {
+            if (id != _id) {
+                session.do_send(&packet);
+            }
+        }
     }
+    void send_all_other_players() {
+        for (auto& [id, session] : g_users) {
+            if (id == _id) continue;
 
+            pkt_sc_object_add packet;
+            packet.header.size = sizeof(packet);
+            packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+            packet.id = session._id;
+			packet.obj_type = session._obj_type;
+			packet.skin_type = session._skin_type;
+			strcpy_s(packet.name, session._name.c_str());
+			packet.startposition = session._position;
+			packet.hp = session._hp;
+
+			packet.gun_type = session._gun_type;
+			packet.act_type = session._act_type;
+			packet.damage = ZOMBIE_DAMAGE;
+			do_send(&packet);
+		}
+    }
+    
+	void send_all_zombies() {
+        for (auto* zombie : g_zombies) {
+            pkt_sc_object_add packet;
+            packet.header.size = sizeof(packet);
+            packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+
+            packet.id = zombie->GetID();
+            packet.obj_type = ObjectType::ZOMBIE;
+            packet.skin_type = 0;
+            strcpy_s(packet.name, "Zombie");
+            packet.startposition = zombie->GetPosition();
+            packet.hp = zombie->GetHP();
+            packet.gun_type = GunType::BULLET_MAX;
+
+            do_send(&packet);  // ← 자기 자신에게만 전송
+        }
+    }
 
 	void process_packet(SIZE2* packet) {
 
@@ -256,9 +285,11 @@ public:
             _obj_type   = ObjectType::PLAYER;
             _skin_type  = loginPacket->skin_type;
             _name       = loginPacket->name;
+
             _position   = START_POSITIONS[IN_g_player_n];
-            _direction  = { 0.0f,0.0f, 0.0f };
-            _speed      = 0.0f;
+            _velocity   = Vec3(0, 0, 0);
+            _pitch      = 0.0f;
+
             _hp         = PLAYER_HP;
 			_gun_type   = GunType::BULLET_PISTOL; // 총 종류
             _level      = 1;
@@ -267,104 +298,55 @@ public:
 			_act_type   = ActionType::NONE;
             
             IN_g_player_n++;
+
 			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _name << "\n");
 			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _skin_type << "\n");
-            send_player_info();
-            //send_object_update();
 
-			pkt_sc_object_add p_Add_P;
-			p_Add_P.header.size = sizeof(p_Add_P);
-			p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
-			p_Add_P.id = _id;
-			p_Add_P.fixdata.obj_type = ObjectType::PLAYER;
-			p_Add_P.fixdata.skin_type = _skin_type;
-            strcpy_s(p_Add_P.fixdata.name, _name.c_str());
-			p_Add_P.fixdata.startposition = _position;
-			p_Add_P.fixdata.starthp = _hp;
-			p_Add_P.fixdata.gun_type = BULLET_PISTOL;
-
-            for (auto& u : g_users) {
-                if (u.first != _id) // 나를 제외한 상대방에게 알리고
-                    u.second.do_send(&p_Add_P);
-            }
-			for (auto& u : g_users) {
-				if (u.first != _id) {// 나를 제외한 상대방의 정보를 나에게 알리고
-                    pkt_sc_object_add p_Add_P;
-                    p_Add_P.header.size = sizeof(p_Add_P);
-                    p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
-
-                    p_Add_P.id = u.first;
-                    p_Add_P.fixdata.obj_type = ObjectType::PLAYER;
-                    p_Add_P.fixdata.skin_type = u.second._skin_type;
-                    strcpy_s(p_Add_P.fixdata.name, u.second._name.c_str());
-                    p_Add_P.fixdata.startposition = u.second._position;
-                    p_Add_P.fixdata.starthp = u.second._hp;
-					do_send(&p_Add_P);
-				}
-			}
-
-            // 좀비 정보를 모든 플레이어에게 전송
-            pkt_sc_object_add packet;
-            for (auto zombie : g_zombies) {
-                packet.header.size = sizeof(packet);
-                packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
-                packet.id = zombie->GetID();
-                packet.fixdata.obj_type = ObjectType::ZOMBIE;
-                packet.fixdata.skin_type = 0;
-                strcpy_s(packet.fixdata.name, "Zombie");
-                packet.fixdata.startposition = zombie->GetPosition();
-                packet.fixdata.starthp = zombie->GetHP();
-
-                for (auto& [id, session] : g_users) {
-                    session.do_send(&packet);
-                }
-            }
+            send_player_add();            // 본인에게 자신 정보 전송
+            broadcast_my_spawn();         // 다른 유저에게 나의 정보를 알림
+            send_all_other_players();     // 다른 유저들의 정보를 나에게 알려줌
+            send_all_zombies();           // 서버 좀비 정보도 전송
 
             break;
         }
         case PKT_TYPE::C_S_UPDATE:
         {
-			pkt_cs_update* updatePacket = reinterpret_cast<pkt_cs_update*>(packet);
+            auto* p = reinterpret_cast<pkt_cs_update*>(packet);
 
-
+            // [1] 클라이언트에서 보낸 정보 저장
             float deltaTime = 1.0f / 60.0f; // 서버 틱 레이트 기준 (예: 60fps)
-            // 이동 거리 = 방향 * 속도 * 시간
-            //_position += updatePacket->obj.meta.direction * updatePacket->obj.meta.speed * deltaTime;
-            _position = updatePacket->obj.meta.position;
-            _direction = updatePacket->obj.meta.direction;
-            _speed = updatePacket->obj.meta.speed;
-            _hp = updatePacket->obj.meta.hp;
-            _level = updatePacket->obj.level;
-            _score = updatePacket->obj.score;
-            _damage = updatePacket->obj.damage;
-            _gun_type = updatePacket->obj.gun_type;
-            _act_type = updatePacket->obj.act_type;
 
-            // 로그
-            std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
-            std::cout << "  position  = (" << _position.x << ", " << _position.y << ", " << _position.z << ")\n";
-            std::cout << "  direction = (" << _direction.x << ", " << _direction.y << ", " << _direction.z << ")\n";
-            std::cout << "  speed     = " << _speed << "\n";
+            _position = p->position;
+            _velocity = p->velocity;
+            _pitch = p->pitch;
+            _hp = p->hp;
+			_gun_type = p->gun_type;
+			_level = p->level;
+			_score = p->score;
+			_damage = p->damage;
 
-            pkt_sc_object_update u_move_p;
-            u_move_p.header.size = sizeof(u_move_p);
-            u_move_p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
-            u_move_p.id = _id;
+            pkt_sc_object_update packet_update;
+            packet_update.header.size = sizeof(packet_update);
+            packet_update.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
+            packet_update.id = _id;
 
-            u_move_p.obj = updatePacket->obj;  // ← 여기! 네가 하고 싶은 대로 정확히 이거임
+			packet_update.position = _position;
+			packet_update.velocity = _velocity;
+			packet_update.pitch = _pitch;
+			packet_update.hp = _hp;
+			packet_update.gun_type = _gun_type;
+			packet_update.level = _level;
+			packet_update.score = _score;
+			packet_update.damage = _damage;
 
             for (auto& [id, session] : g_users) {
                 if (id != _id)
-                    session.do_send(&u_move_p);
+                    session.do_send(&packet_update);
             }
-
-            break;
-
             break;
         }
 
-        case PKT_TYPE::C_S_SHOOT:
-            break;
+
         default:
             std::cout << "[WARN] Unknown PacketType: " << packet_type << "\n";
             break;
@@ -391,34 +373,86 @@ void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
 
 }
 
+void TryDamagePlayer(ZombieAI& zombie)
+{
+    constexpr float attackRange = 1.5f;
+
+    for (auto& [id, session] : g_users)
+    {
+        if (session._obj_type != ObjectType::PLAYER) continue;
+        if (session._hp == 0) continue;
+
+        Vec3 diff = session._position - zombie.GetPosition();
+        if (diff.LengthSquared() < attackRange * attackRange)
+        {
+            session._hp = (session._hp > ZOMBIE_DAMAGE) ? session._hp - ZOMBIE_DAMAGE : 0;
+
+            DEBUG_LOG("[ZOMBIE] ID = " << zombie.GetID()
+                << " attacked player ID = " << id
+                << " -> HP = " << session._hp);
+
+            // 상태 갱신 전송
+            pkt_sc_object_add packet;
+            packet.header.size = sizeof(packet);
+            packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+            packet.id = session._id;
+            packet.obj_type = session._obj_type;
+            packet.skin_type = session._skin_type;
+            strcpy_s(packet.name, session._name.c_str());
+            packet.startposition = session._position;
+            packet.hp = session._hp;
+
+            packet.gun_type = session._gun_type;
+
+            for (auto& [_, s] : g_users)
+                s.do_send(&packet);
+
+            if (session._hp == 0) {
+                // 죽음 처리 또는 패킷 전송
+            }
+        }
+    }
+}
 
 void ZombieAIThread() {
     while (serverRunning) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+        // 1. 플레이어 위치 수집
         std::vector<Vec3> playerPositions;
         for (auto& [id, session] : g_users) {
             if (session._obj_type == ObjectType::PLAYER)
                 playerPositions.push_back(session._position);
         }
+        // [2] 패킷 준비
+        pkt_sc_object_update packet;
+        packet.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
 
-        for (auto& zombie : g_zombies) {
+        // [3] 한 번에 모든 좀비 처리
+        for (auto* zombie : g_zombies) {
             zombie->Update(playerPositions, g_zombies);
 
-            if (zombie->IsDirty()) {
-                ObjectDynamicInfo info = zombie->GetDynamicInfo();
+            if (zombie->GetActionType() == ATTACK)
+                TryDamagePlayer(*zombie);
+            pkt_sc_object_update p;
+            p.header.size = sizeof(p);
+            p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
+            p.id = zombie->GetID();
+            p.position = zombie->GetPosition();
+            p.velocity = Vec3(0, 0, 0);
+            p.pitch = 0.0f;
+            p.hp = zombie->GetHP();
+            p.gun_type = GunType::BULLET_MAX;
+            p.act_type = zombie->GetActionType();  
 
-                pkt_sc_object_update p;
-                p.header.size = sizeof(p);
-                p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
-                p.id = zombie->GetID();
-                p.obj = info;
+            p.level = 0;
+            p.score = 0;
+            p.damage = ZOMBIE_DAMAGE;
 
-                for (auto& [id, session] : g_users)
-                    session.do_send(&p);
+            for (auto& [_, session] : g_users)
+                session.do_send(&p);
 
-                zombie->ClearDirty();
-            }
+            zombie->ClearDirty(); 
         }
     }
 }
@@ -435,18 +469,20 @@ void SpawnZombies(int count) {
         pkt_sc_object_add p;
         p.header.size = sizeof(p);
         p.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+
         p.id = zombie->GetID();
-        p.fixdata.obj_type = ObjectType::ZOMBIE;
-        p.fixdata.skin_type = 0;
-        strcpy_s(p.fixdata.name, "Zombie");
-        p.fixdata.startposition = zombie->GetPosition();
-        p.fixdata.starthp = zombie->GetHP();
-        p.fixdata.gun_type = GunType::BULLET_MAX;
+        p.obj_type = ObjectType::ZOMBIE;
+        p.skin_type = 0;
+        strcpy_s(p.name, "Zombie");
+        p.startposition = zombie->GetPosition();
+        p.hp = zombie->GetHP();
+        p.gun_type = GunType::BULLET_MAX;
 
         for (auto& [id, session] : g_users)
             session.do_send(&p);
     }
 }
+
 
 void serverControl() {
     while (true) {
