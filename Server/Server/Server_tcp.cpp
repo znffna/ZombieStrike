@@ -17,6 +17,9 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
+constexpr bool DEBUG_PRINT = false;
+#define DEBUG_LOG(msg) \
+    do { if (DEBUG_PRINT) std::cout << msg << std::endl; } while (0)
 
 void error_display(const char* msg, int err_no) {
     WCHAR* lpMsgBuf;
@@ -108,22 +111,22 @@ public:
         if (ret == SOCKET_ERROR) {
             int err = WSAGetLastError();
             if (err != WSA_IO_PENDING) {
-                std::cout << "[do_recv] WSARecv failed: " << err << "\n";
+				std::cout << "[do_recv] WSARecv failed: " << err << "\n";
                 closesocket(_c_socket);
                 g_users.erase(_id);
             }
             else {
-                std::cout << "[do_recv] WSARecv: IO_PENDING (정상)\n";
+				DEBUG_LOG("[do_recv] WSARecv: IO_PENDING (정상)\n");
             }
         }
         else {
-            std::cout << "[do_recv] WSARecv: 즉시 수신 완료 (ret == 0)\n";
+			DEBUG_LOG("[do_recv] WSARecv: 즉시 수신 완료 (ret == 0)\n");
         }
     }
 
 public: 
     SESSION() {
-        std::cout << "DEFAULT SESSION CONSTRUCTOR CALLED!!\n";
+		DEBUG_LOG("[SESSION] Default constructor called\n");
         exit(-1);
     }
 	SESSION(SIZEID session_id, SOCKET s) : _id(session_id), _c_socket(s)
@@ -138,7 +141,7 @@ public:
 	}
     ~SESSION() 
     {
-        std::cout << "[SESSION::~SESSION] Removing ID = " << _id << "\n";
+		DEBUG_LOG("[SESSION] Destructor called ID =\n", _id);
 
         pkt_sc_object_remove rem_p;
         rem_p.header.size = sizeof(rem_p);
@@ -162,7 +165,7 @@ public:
 
             if (offset + packetSize > total) break; // 아직 패킷 완성이 안 됨
 
-            std::cout << "[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << std::endl;
+			DEBUG_LOG("[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << std::endl);
 
 			process_packet(p);    // 패킷 처리
             p += (packetSize)/sizeof(SIZE2);      // 다음 패킷으로 이동
@@ -185,10 +188,10 @@ public:
         send_ov->_wsabuf[0].len = packet_size;
         DWORD size_sent;
 
-		std::cout << "[do_send] size = " << packet_size << ", type = " << (int)reinterpret_cast<SIZE2*>(buff)[1] << std::endl;
+		DEBUG_LOG("[do_send] ID = " << _id << ", size = " << packet_size << ", type = " << (int)reinterpret_cast<SIZE2*>(buff)[1] << std::endl);
         int ret = WSASend(_c_socket, send_ov->_wsabuf, 1, &size_sent, 0, &(send_ov->_over), g_send_callback);
         if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-            std::cout << "WSASend failed\n";
+			std::cout << "[do_send] WSASend failed: " << WSAGetLastError() << "\n";
         }
     }
 
@@ -243,7 +246,7 @@ public:
             std::cout << "[ERROR] Invalid Packet Type\n";
             return;
         }
-		std::cout << "[RECV][" << _id << "] Packet Type: " << (int)packet_type << "\n";
+		DEBUG_LOG("[process_packet] ID = " << _id << ", packet_type = " << (int)packet_type << "\n");
 
         switch (packet_type) {
         case ::PKT_TYPE::C_S_LOGIN:
@@ -263,8 +266,8 @@ public:
 			_act_type   = ActionType::NONE;
             
             IN_g_player_n++;
-			std::cout << "[process_packet][RECV][" << (int)_id << "] Login: " << _name << "\n";
-			std::cout << "[process_packet][RECV][" << (int)_id << "] Skin Type: " << (int)_skin_type << "\n";
+			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _name << "\n");
+			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _skin_type << "\n");
             send_player_info();
             //send_object_update();
 
@@ -343,9 +346,9 @@ public:
 				if (u.first != _id) // 나를 제외한 상대방에게 알리고
 				    u.second.do_send(&u_move_p); // 나포함 모두에게 알림 좌표의 이동을
 			}
-            std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
-            std::cout << "[process_packet][RECV][" << (int)_id << "] position: (" << _position.x << ", " << _position.y << ", " << _position.z << ") " << "\n";
-            std::cout << "[process_packet][RECV][" << (int)_id << "] direction: (" << _direction.x << ", " << _direction.y << ", " << _direction.z << ") " << "\n";
+			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n");
+			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] position: (" << _position.x << ", " << _position.y << ", " << _position.z << ") " << "\n");
+			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] direction: (" << _direction.x << ", " << _direction.y << ", " << _direction.z << ") " << "\n");
 
             break;
         }
@@ -391,6 +394,21 @@ void ZombieAIThread() {
 
         for (auto& zombie : g_zombies) {
             zombie->Update(playerPositions, g_zombies);
+
+            if (zombie->IsDirty()) {
+                ObjectDynamicInfo info = zombie->GetDynamicInfo();
+
+                pkt_sc_object_update p;
+                p.header.size = sizeof(p);
+                p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
+                p.id = zombie->GetID();
+                p.obj = info;
+
+                for (auto& [id, session] : g_users)
+                    session.do_send(&p);
+
+                zombie->ClearDirty();
+            }
         }
     }
 }
@@ -398,29 +416,26 @@ void ZombieAIThread() {
 void SpawnZombies(int count) {
     for (int i = 0; i < count; ++i) {
         auto [x, z] = GetRandomPosition(g_map);
-        ZombieAI* zombie = new ZombieAI(g_map, 10000 + i); // 10000 이상은 좀비 ID 예약
+        ZombieAI* zombie = new ZombieAI(g_map, 10000 + i);
         zombie->SetPosition((float)x, (float)z);
+        zombie->SetHP(ZOMBIE_HP);
         g_zombies.push_back(zombie);
-        std::cout << "[SPAWN] Zombie ID: " << (10000 + i) << " at (" << x << ", " << z << ")\n";
+
+        // 좀비 정보를 모든 플레이어에게 전송
+        pkt_sc_object_add p;
+        p.header.size = sizeof(p);
+        p.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+        p.id = zombie->GetID();
+        p.fixdata.obj_type = ObjectType::ZOMBIE;
+        p.fixdata.skin_type = 0;
+        strcpy_s(p.fixdata.name, "Zombie");
+        p.fixdata.startposition = zombie->GetPosition();
+        p.fixdata.starthp = zombie->GetHP();
+        p.fixdata.gun_type = GunType::BULLET_MAX;
+
+        for (auto& [id, session] : g_users)
+            session.do_send(&p);
     }
-
-    // 좀비 정보를 모든 플레이어에게 전송
-    pkt_sc_object_add packet;
-    for (auto zombie : g_zombies) {
-        packet.header.size = sizeof(packet);
-        packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
-        packet.id = zombie->GetID();
-        packet.fixdata.obj_type = ObjectType::ZOMBIE;
-        packet.fixdata.skin_type = 0;
-        strcpy_s(packet.fixdata.name, "Zombie");
-        packet.fixdata.startposition = zombie->GetPosition();
-        packet.fixdata.starthp = zombie->GetHP();
-
-        for (auto& [id, session] : g_users) {
-            session.do_send(&packet);
-        }
-    }
-
 }
 
 void serverControl() {
