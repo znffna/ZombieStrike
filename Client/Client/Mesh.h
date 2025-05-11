@@ -564,8 +564,6 @@ public:
 
 	UINT								m_nMaxBullets = MAX_BULLETS;
 
-	ComPtr<ID3D12GraphicsCommandList> m_pd3dCommandList = NULL;
-
 	ComPtr<ID3D12Resource> m_pd3dStreamOutputBuffer = NULL;
 	ComPtr<ID3D12Resource> m_pd3dDrawBuffer = NULL;
 	ComPtr<ID3D12Resource> m_pd3dUploadDrawBuffer = NULL;

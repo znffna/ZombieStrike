@@ -27,7 +27,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	StoreTerrain(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
 
 	// Skybox
-	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature);
+	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 	AddObject(m_pSkyBox);
 	
 	// Terrain
@@ -125,20 +125,6 @@ void CGameScene::Update(float deltaTime)
 	CScene::Update(deltaTime);
 }
 
-bool CGameScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
-{
-	if (m_bMouseLButtonDown) {
-		if (m_pPlayer)
-		{
-			(m_pPlayer->GetGun())->Fire(pd3dCommandList);
-		}
-	}
-
-	CScene::Render(pd3dCommandList, pCamera);
-
-	return true;
-}
-
 void CGameScene::OnPostRender()
 {
 	if(m_pBulletObject) m_pBulletObject->OnPostRender();
@@ -161,6 +147,13 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 		{
 			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
 			m_pPlayer->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
+		}
+	}
+
+	if (m_bMouseLButtonDown) {
+		if (m_pPlayer)
+		{
+			(m_pPlayer->GetGun())->Fire();
 		}
 	}
 

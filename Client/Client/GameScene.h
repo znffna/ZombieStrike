@@ -23,9 +23,7 @@ public:
 
 	virtual void Update(float deltaTime) override;
 
-	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr) override;
 	virtual void OnPostRender();
-
 	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;

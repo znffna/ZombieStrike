@@ -7,6 +7,8 @@
 
 bool g_bRenderCollider = false;
 
+CGameFramework* CGameFramework::pGameFramework = nullptr;
+
 CGameFramework::CGameFramework()
 {
 	m_hInstance = NULL;
@@ -51,6 +53,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	m_hInstance = hInstance;
 	m_hWnd = hMainWnd;
 
+	pGameFramework = this;
 
 	CreateDirect3DDevice();
 	CreateCommandQueueAndList();
@@ -468,17 +471,6 @@ void CGameFramework::AdvanceFrame()
 
 	WaitForGpuComplete();
 
-	// Input 업데이트
-	ProcessInput();
-
-	// Scene 업데이트
-
-	int bRenderScene = 0;
-	// PreRendering [ Swap Chain Back Buffer를 렌더 타겟으로 사용하기 전 렌더링 단계 ]
-	// Shadow Map, Reflection Map, Refraction Map, Deferred Shading, G-buffer 등
-	// PreRendering 단계에서는 자체적으로 SetOM과 ExecuteCommandLists를 호출.
-	// 따라서 이미 Command List에 대한 명령들이 실행된 후, Close 상태여야 함.
-
 	// Command Allocator 재사용
 	m_pd3dCommandAllocator[m_nSwapChainBufferIndex]->Reset();
 
@@ -489,6 +481,9 @@ void CGameFramework::AdvanceFrame()
 	OMSetBackBuffer();
 	// Clear Back Buffer And Depth-Stencil Buffer 
 	ClearRtvAndDsv();
+
+	// Input 업데이트
+	ProcessInput();
 
 	// Scene 업데이트
 	for (auto it = m_Scenes.begin(); it != m_Scenes.end(); ) {
@@ -505,6 +500,7 @@ void CGameFramework::AdvanceFrame()
 		}
 	}
 
+	int bRenderScene = 0;
 	for (auto& scene : m_Scenes)
 	{		
 		if (scene->CheckWorkUpdating())
