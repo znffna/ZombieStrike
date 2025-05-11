@@ -339,6 +339,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		if (nullptr == m_pCamera) return false;
 		pCamera = m_pCamera.get();
 	}
+	if(m_pPlayer) pCamera->Update(m_pPlayer->GetPosition(), 0.0f);
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
@@ -348,7 +349,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// Render GameObjects 
 	for (auto& pvecObjects : m_ppGameObjects)
 	{
-		if (pvecObjects.first == CGameObject::GAMEOBJECT_LAYER::LAYER_PLAYER)
+		if (pvecObjects.first == CGameObject::GAMEOBJECT_LAYER::LAYER_BULLET)
 			std::cout << 1; // UI´Â Á¦¿Ü
 		for (auto& pObject : pvecObjects.second)
 		{

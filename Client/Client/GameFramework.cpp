@@ -471,10 +471,8 @@ void CGameFramework::AdvanceFrame()
 
 	WaitForGpuComplete();
 
-	// Command Allocator 재사용
-	m_pd3dCommandAllocator[m_nSwapChainBufferIndex]->Reset();
-
 	// Command List 재사용
+	m_pd3dCommandAllocator[m_nSwapChainBufferIndex]->Reset();
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->Reset(m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get(), nullptr);
 
 	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
@@ -482,10 +480,7 @@ void CGameFramework::AdvanceFrame()
 	// Clear Back Buffer And Depth-Stencil Buffer 
 	ClearRtvAndDsv();
 
-	// Input 업데이트
-	ProcessInput();
-
-	// Scene 업데이트
+	// Scene Container 업데이트
 	for (auto it = m_Scenes.begin(); it != m_Scenes.end(); ) {
 		if (it->get()->GetSceneState() == SCENE_STATE_ENDING) {
 			{
@@ -499,6 +494,9 @@ void CGameFramework::AdvanceFrame()
 			++it;
 		}
 	}
+
+	// Input 업데이트
+	ProcessInput();
 
 	int bRenderScene = 0;
 	for (auto& scene : m_Scenes)
@@ -553,7 +551,8 @@ void CGameFramework::AdvanceFrame()
 
 	for (auto& scene : m_Scenes)
 	{
-		scene->OnPostRender();
+		if (scene->CheckWorkUpdating())
+			scene->OnPostRender();
 	}
 
 	// Command Queue의 명령들이 모두 실행될 때까지 대기

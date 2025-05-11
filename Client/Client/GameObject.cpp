@@ -1298,6 +1298,7 @@ void CBulletObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* 
 
 void CBulletObject::OnPostRender()
 {
+	if (::gnCurrentBullets < 1) return;
 	m_pMesh->OnPostRender(0); //Read Stream Output Buffer Filled Size
 }
 

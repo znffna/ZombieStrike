@@ -404,6 +404,7 @@ public:
 	//지형의 높이를 계산하는 함수이다(월드 좌표계). 높이 맵의 높이에 스케일의 y를 곱한 값이다. 
 	float GetHeight(float x, float z) {
 		if (isBinary) {
+			if ((x < 0) || (z < 0) || (x >= m_nWidth) || (z >= m_nLength)) return(0.0f);
 			//높이 맵의 좌표의 정수 부분과 소수 부분을 계산한다. 
 			int nx = (int)x;
 			int nz = (int)z;

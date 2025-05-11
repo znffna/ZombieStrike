@@ -219,9 +219,14 @@ void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 			//std::string DebugOutput = "Player Position : (" + std::to_string(xmf3LookAt.x) + ", " + std::to_string(xmf3LookAt.y) + ", " + std::to_string(xmf3LookAt.z) + ")\n";
 			//DebugOutput = DebugOutput + "Camera Position : (" + std::to_string(m_xmf3Position.x) + ", " + std::to_string(m_xmf3Position.y) + ", " + std::to_string(m_xmf3Position.z) + ")\n";
 			//OutputDebugStringA(DebugOutput.c_str());
+			
+			// 카메라의 위치를 지형위로 올리기
+			OnTerrainUpdateCallback(fTimeElapsed);
 
 			RegenerateViewMatrix();
 		}
+
+
 	}
 }
 
@@ -231,6 +236,25 @@ void CThirdPersonCamera::SetLookAt(const XMFLOAT3& vLookAt)
 	m_xmf3Right = XMFLOAT3(mtxLookAt._11, mtxLookAt._21, mtxLookAt._31);
 	m_xmf3Up = XMFLOAT3(mtxLookAt._12, mtxLookAt._22, mtxLookAt._32);
 	m_xmf3Look = XMFLOAT3(mtxLookAt._13, mtxLookAt._23, mtxLookAt._33);
+}
+
+void CThirdPersonCamera::OnTerrainUpdateCallback(float fTimeElapsed)
+{
+	if(m_pTerrainUpdatedContext)
+	{
+		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pTerrainUpdatedContext;
+		XMFLOAT3 xmf3Scale = pTerrain->GetScale();
+		XMFLOAT3 xmf3CameraPosition = GetPosition();
+		float fHeight = pTerrain->GetHeight(xmf3CameraPosition.x, xmf3CameraPosition.z);
+		if (xmf3CameraPosition.y <= fHeight)
+		{
+			float dy = fHeight - xmf3CameraPosition.y;
+			xmf3CameraPosition.y = fHeight;
+			SetPosition(xmf3CameraPosition);
+
+			SetLookAt(Vector3::Add(gameObject->GetPosition(), XMFLOAT3(0, dy, 0)));
+		}
+	}
 }
 
 

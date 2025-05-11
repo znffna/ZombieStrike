@@ -391,7 +391,7 @@ VS_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_PARTICLE_INPUT input)
     return (output);
 }
 
-static float3 gf3Positions[4] = { float3(-1.0f, +1.0f, 0.0f), float3(+1.0f, +1.0f, 0.0f), float3(-1.0f, -1.0f, 0.0f), float3(+1.0f, -1.0f, 0.0f) };
+static float3 gf3Positions[4] = { float3(-1.0f, +1.0f, 0.5f), float3(+1.0f, +1.0f, 0.5f), float3(-1.0f, -1.0f, 0.5f), float3(+1.0f, -1.0f, 0.5f) };
 static float2 gf2QuadUVs[4] = { float2(0.0f, 0.0f), float2(1.0f, 0.0f), float2(0.0f, 1.0f), float2(1.0f, 1.0f) };
 
 [maxvertexcount(4)]
@@ -399,34 +399,34 @@ void GSParticleDraw(point VS_PARTICLE_DRAW_OUTPUT input[1], inout TriangleStream
 {
     GS_PARTICLE_DRAW_OUTPUT output = (GS_PARTICLE_DRAW_OUTPUT) 0;
 
-    float3 start = input[0].position;
-    float3 end = start + input[0].velocity;
-    float width = input[0].lifetime;
+    //float3 start = input[0].position;
+    //float3 end = start + input[0].velocity;
+    //float width = input[0].lifetime;
 
-    float3 up = float3(0.0f, 1.0f, 0.0f);
+    //float3 up = float3(0.0f, 1.0f, 0.0f);
 
-    float3 v0 = start + up * width; // Top-Left
-    float3 v1 = end + up * width; // Top-Right
-    float3 v2 = start - up * width; // Bottom-Left
-    float3 v3 = end - up * width; // Bottom-Right
+    //float3 v0 = start + up * width; // Top-Left
+    //float3 v1 = end + up * width; // Top-Right
+    //float3 v2 = start - up * width; // Bottom-Left
+    //float3 v3 = end - up * width; // Bottom-Right
     
-    float3 positions[4] = { v0, v1, v2, v3 };
+    //float3 positions[4] = { v0, v1, v2, v3 };
     
-    for (int i = 0; i < 4; ++i)
-    {
-        output.position = mul(mul(float4(positions[i], 1.0f), gmtxView), gmtxProjection);
-        output.uv = gf2QuadUVs[i];
-        outputStream.Append(output);
-    }
-    
-    //for (int i = 0; i < 4; i++)
+    //for (int i = 0; i < 4; ++i)
     //{
-    //    float3 positionW = mul(gf3Positions[i] * (float3) (input[0].lifetime, length(input[0].velocity), 1.0f), (float3x3) gmtxInvView) + input[0].position;
-    //    output.position = mul(mul(float4(positionW, 1.0f), gmtxView), gmtxProjection);
+    //    output.position = mul(mul(float4(positions[i], 1.0f), gmtxView), gmtxProjection);
     //    output.uv = gf2QuadUVs[i];
-
     //    outputStream.Append(output);
     //}
+    
+    for (int i = 0; i < 4; i++)
+    {
+        float3 positionW = mul(gf3Positions[i] * 100.0f, (float3x3) gmtxInvView) + input[0].position;
+        output.position = mul(mul(float4(positionW, 1.0f), gmtxView), gmtxProjection);
+        output.uv = gf2QuadUVs[i];
+
+        outputStream.Append(output);
+    }
 }
 
 float4 PSParticleDraw(GS_PARTICLE_DRAW_OUTPUT input) : SV_TARGET

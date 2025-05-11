@@ -108,6 +108,11 @@ protected:
 	ComPtr<ID3D12Resource> m_pd3dcbCamera;
 	CB_CAMERA_INFO* m_pcbMappedCamera = NULL;
 
+public:
+	virtual void OnTerrainUpdateCallback(float fTimeElapsed) {};
+	void SetTerrainUpdatedContext(LPVOID pContext) { m_pTerrainUpdatedContext = pContext; }
+
+	LPVOID						m_pTerrainUpdatedContext = NULL;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -125,5 +130,9 @@ public:
 
 	virtual void Update(const XMFLOAT3 & xmf3LookAt, float fTimeElapsed) override;
 	virtual void SetLookAt(const XMFLOAT3 & vLookAt);
+
+	virtual void OnTerrainUpdateCallback(float fTimeElapsed) override;
+
 };
+
 
