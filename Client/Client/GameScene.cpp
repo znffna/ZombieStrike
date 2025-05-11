@@ -130,7 +130,7 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 	{
 		if (m_pPlayer)
 		{
-			m_pPlayer->Move(dwDirection, 50.0f, deltaTime);
+			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
 			m_pPlayer->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
 		}
 	}

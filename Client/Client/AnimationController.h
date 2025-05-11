@@ -122,13 +122,15 @@ public:
 	void SetCallbackKey(int nAnimationTrack, int nKeyIndex, float fTime, void* pData) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetCallbackKey(nKeyIndex, fTime, pData); };
 	void SetAnimationCallbackHandler(int nAnimationTrack, std::shared_ptr<CAnimationCallbackHandler> pCallbackHandler) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetAnimationCallbackHandler(pCallbackHandler); };
 
-	void AdvanceTime(float fElapsedTime, CGameObject* pRootGameObject);;
+	void AdvanceTime(float fElapsedTime, CGameObject* pRootGameObject);
+	void ApplyPitchToSpine(CGameObject* pRootGameObject);
+	;
 
 	void ChangeState(ANIMATION_STATE state);
 	void ChangeState(ANIMATION_STATE state, float fPosition);
 
 public:
-	bool							m_bRootMotion = false;
+	bool m_bRootMotion = false;
 	std::shared_ptr<CGameObject> m_pModelRootObject;
 
 	std::shared_ptr<CGameObject> m_pRootMotionObject;
