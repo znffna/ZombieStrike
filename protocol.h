@@ -43,6 +43,7 @@ enum GunType : SIZE1 {
 enum PKT_TYPE : SIZE1 {
 
     C_S_LOGIN = 1, C_S_UPDATE, C_S_SHOOT, C_S_HIT,
+    C_S_STAGE_INFO,
 
     S_C_OBJECT_ADD, 
     S_C_OBJECT_UPDATE,
@@ -85,6 +86,7 @@ inline const char* ToString(PKT_TYPE type) {
     case C_S_UPDATE:        return "C_S_UPDATE";
     case C_S_SHOOT:         return "C_S_SHOOT";
     case C_S_HIT:           return "C_S_HIT";
+	case C_S_STAGE_INFO:    return "C_S_STAGE_INFO";
     //case S_C_PLAYER_INFO:   return "S_C_PLAYER_INFO";
     case S_C_OBJECT_ADD:    return "S_C_OBJECT_ADD";
     case S_C_OBJECT_UPDATE: return "S_C_OBJECT_UPDATE";
@@ -237,12 +239,16 @@ struct pkt_sc_hit_multi_result {
 };
 
 // --- 게임 상황 패킷 ---
+// 클라 → 서버: 스테이지 요청 패킷
+struct pkt_cs_stage_info {
+    PacketHeader header{ sizeof(*this), PKT_TYPE::C_S_STAGE_INFO };
+};
 // STAGE 정보
 struct pkt_sc_stage_info {
     PacketHeader header{sizeof(*this),PKT_TYPE::S_C_STAGE_INFO };
     SIZE2 currentStage;
     SIZE2 totalStages;
-    SIZE3 timeLeft;
+    //SIZE3 timeLeft;
 };
 // SCORE 정보
 struct pkt_sc_score_info {

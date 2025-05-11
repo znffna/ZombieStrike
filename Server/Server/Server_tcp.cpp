@@ -42,6 +42,7 @@ std::unordered_map<SIZEID, SESSION> g_users;       // 클라이언트 세션 관리
 SIZEID g_next_client_id = 0;                       // 클라이언트 고유 ID 부여용
 short g_next_spawn_slot = 0;                       // 플레이어 시작 위치 인덱스 (START_POSITIONS)
 
+std::atomic<SIZE2> g_total_stages = 3;
 std::atomic<SIZE2> g_current_stage = 1;
 constexpr SIZE2 g_max_stage = 3;
 std::atomic<SIZE3> g_time_left = 180;
@@ -345,7 +346,22 @@ public:
             }
             break;
         }
+        case PKT_TYPE::C_S_STAGE_INFO:
+        {
+            std::cout << "[RECV][" << _id << "] C_S_STAGE_INFO 요청 수신\n";
 
+            pkt_sc_stage_info packet;
+            packet.header.size = sizeof(packet);
+            packet.header.type = PKT_TYPE::S_C_STAGE_INFO;
+            packet.currentStage = g_current_stage;
+            packet.totalStages = g_total_stages;
+            //packet.timeLeft = g_stage_time_left;
+
+            for (auto& [_, session] : g_users)
+                session.do_send(&packet);
+
+            break;
+        }
 
         default:
             std::cout << "[WARN] Unknown PacketType: " << packet_type << "\n";
