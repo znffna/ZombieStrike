@@ -1,6 +1,7 @@
 #pragma once
 #include "GameObject.h"
 
+class CGun;
 
 class CPlayer : public CGameObject
 {
@@ -33,14 +34,15 @@ public:
 	void SetSkin(int nSkinType);
 
 	// Gun
-	void SetGun(std::shared_ptr<CGameObject> pGun) { m_pGun = pGun; }
+	void SetGun(const std::shared_ptr<CGun>& pGun) { m_pGun = pGun; }
+	std::shared_ptr<CGun> GetGun() const { return m_pGun; }
 
 private:
 	std::vector<std::string> m_ModelName{ "Ch18_nonPBR", "Ch35_nonPBR" };
 	std::vector<std::string> m_MeshBoneName{ "Ch18", "Ch35" };
 
 	std::shared_ptr<CGameObject> m_pGunSlot;
-	std::shared_ptr<CGameObject> m_pGun;
+	std::shared_ptr<CGun> m_pGun;
 	
 	float m_fPitch = 0.0f;
 	float m_fYaw = 0.0f;

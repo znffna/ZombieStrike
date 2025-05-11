@@ -416,6 +416,8 @@ void CGameFramework::BuildObjects()
 
 		WaitGpuWithoutPresent();
 
+		if (pMainScene) pMainScene->ReleaseUploadBuffers();
+
 		pMainScene->PostInitializeObjects(nullptr, nullptr, nullptr);
 		m_Scenes.push_back(std::move(pMainScene));
 	});
@@ -429,7 +431,6 @@ void CGameFramework::BuildObjects()
 	pLoadingScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 	pLoadingScene->SetSceneState(SCENE_STATE_RUNNING);
 	m_pLoadingScene = std::move(pLoadingScene);
-
 	
 
 	// Command List에 대한 명령들을 종료
@@ -441,6 +442,9 @@ void CGameFramework::BuildObjects()
 
 	// Command Queue의 명령들이 모두 실행될 때까지 대기
 	WaitGpuWithoutPresent();
+
+	if (m_pLoadingScene) m_pLoadingScene->ReleaseUploadBuffers();
+
 }
 
 void CGameFramework::WaitGpuWithoutPresent()
@@ -462,15 +466,14 @@ void CGameFramework::AdvanceFrame()
 	// 타이머 업데이트
 	m_GameTimer.Tick(60.0f);
 
+	WaitForGpuComplete();
+
 	// Input 업데이트
 	ProcessInput();
 
 	// Scene 업데이트
 
 	int bRenderScene = 0;
-
-	WaitForGpuComplete();
-
 	// PreRendering [ Swap Chain Back Buffer를 렌더 타겟으로 사용하기 전 렌더링 단계 ]
 	// Shadow Map, Reflection Map, Refraction Map, Deferred Shading, G-buffer 등
 	// PreRendering 단계에서는 자체적으로 SetOM과 ExecuteCommandLists를 호출.
@@ -551,6 +554,11 @@ void CGameFramework::AdvanceFrame()
 	// Command Queue에 Command List를 추가
 	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList[m_nSwapChainBufferIndex].Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+
+	for (auto& scene : m_Scenes)
+	{
+		scene->OnPostRender();
+	}
 
 	// Command Queue의 명령들이 모두 실행될 때까지 대기
 
@@ -661,6 +669,8 @@ void CGameFramework::ProcessInput()
 {
 	static INPUT_PARAMETER pInputBuffer;
 	bool bProcessedByScene = false;
+
+	if (false == g_windowActive) return;
 
 	ZeroMemory(&pInputBuffer, sizeof(INPUT_PARAMETER));
 
@@ -780,9 +790,9 @@ LRESULT CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WP
 	{
 	case WM_ACTIVATE:
 	{
-		if (LOWORD(wParam) == WA_INACTIVE)
+		if (LOWORD(wParam) == WA_INACTIVE) 
 			m_GameTimer.Stop();
-		else
+		else 
 			m_GameTimer.Start();
 		break;
 	}

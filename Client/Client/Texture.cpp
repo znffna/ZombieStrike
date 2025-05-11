@@ -94,6 +94,14 @@ void CTexture::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 	}
 }
 
+void CTexture::ReleaseUploadBuffers()
+{
+	if (false == m_pd3dTextureUploadBuffers.empty())
+	{
+		for (int i = 0; i < m_nTextures; i++) if (m_pd3dTextureUploadBuffers[i]) m_pd3dTextureUploadBuffers[i]->Release();
+	}
+}
+
 // Load Texture
 
 void CTexture::LoadTextureFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring strTextureName, UINT nResourceType, UINT nIndex)

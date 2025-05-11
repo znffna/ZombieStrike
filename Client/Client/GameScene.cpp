@@ -19,11 +19,15 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	// Create Objects
 	CResourceManager& resourceManager = CResourceManager::GetInstance();
 
+	if (pd3dRootSignature == nullptr) {
+		pd3dRootSignature = m_pd3dGraphicsRootSignature.Get();
+	}
+
 	// <Environment>
 	StoreTerrain(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
 
 	// Skybox
-	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
+	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature);
 	AddObject(m_pSkyBox);
 	
 	// Terrain
@@ -57,6 +61,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	// Gun 생성
 	std::shared_ptr<CGun> pGun = CGun::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
 	m_pPlayer->SetGun(pGun);
+	AddObject(pGun);
 
 	// Zombie 생성
 	/*std::shared_ptr<CZombieObject> pZombie = GetZombie();
@@ -77,6 +82,11 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	auto pCollisionChecker = std::make_shared<CCollisionChecker>(this);
 	pCollisionChecker->Initialize(pd3dDevice, pd3dCommandList);
 	AddObject(pCollisionChecker);
+
+	// BulletObject
+	std::shared_ptr<CBulletObject> pBullet = std::make_shared<CBulletObject>(pd3dDevice, pd3dCommandList, pd3dRootSignature, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 65.0f, 0.0f), 0.0f, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(8.0f, 8.0f), MAX_BULLETS);
+	AddObject(pBullet);
+	CGun::m_pBulletObject = pBullet;
 
 	// 마지막 모든 Object의 생성이 끝나면 Player의 카메라를 추적
 	if (m_pPlayer)
@@ -115,6 +125,25 @@ void CGameScene::Update(float deltaTime)
 	CScene::Update(deltaTime);
 }
 
+bool CGameScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (m_bMouseLButtonDown) {
+		if (m_pPlayer)
+		{
+			(m_pPlayer->GetGun())->Fire(pd3dCommandList);
+		}
+	}
+
+	CScene::Render(pd3dCommandList, pCamera);
+
+	return true;
+}
+
+void CGameScene::OnPostRender()
+{
+	if(m_pBulletObject) m_pBulletObject->OnPostRender();
+}
+
 bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 {
 	// 키보드 입력의 정보 압축
@@ -140,6 +169,13 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 
 void CGameScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
+	CScene::OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+
+	switch (nMessageID)
+	{
+	default:
+		break;
+	}
 }
 void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
@@ -153,6 +189,36 @@ void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 		}
 	}
 	}*/
+}
+
+void CGameScene::ChangeMap(int nMapIndex)
+{
+	m_nStageIndex = nMapIndex % m_strStageNames.size();
+
+	if (m_pTerrain) RemoveObject(m_pTerrain);
+	m_pTerrain = GetTerrain(m_nStageIndex);
+	AddObject(m_pTerrain);
+
+	for (auto& pObject : m_pZombiePool)
+	{
+		if (pObject) pObject->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
+	}
+	for (auto& pObject : m_pPlayerObjects)
+	{
+		if (pObject) pObject->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
+	}
+	//if (m_pPlayer) m_pPlayer->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
+
+	if (m_pMap) {
+		RemoveObject(m_pMap);
+	}
+
+	auto pMap = CResourceManager::GetInstance().GetModelInfo(m_strStageNames[m_nStageIndex]);
+	pMap->m_pModelRootObject->UpdateTransform();
+	m_pMap = pMap->m_pModelRootObject;
+	m_pMap->Update(0.0f);
+	m_pMap->SetLayer(CGameObject::LAYER_ENVIRONMENT);
+	AddObject(m_pMap);
 }
 
 void CGameScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)

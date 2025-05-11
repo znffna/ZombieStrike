@@ -1,6 +1,8 @@
 #include "Player.h"
 #include "Scene.h"
 
+#include "Gun.h"
+
 ///////////////////////////////////////////////////////////////////////////////////
 //
 
@@ -67,7 +69,7 @@ void CPlayer::Update(float fTimeElapsed)
 	if(auto pCamera = GetComponent<CCamera>()) pCamera->Update(GetPosition(), fTimeElapsed);
 
 	if (m_pGun) {
-		m_pGun->Update(fTimeElapsed);
+		//m_pGun->Update(fTimeElapsed);
 		m_pGun->UpdateTransform(m_pGunSlot->GetWorldMatrix());
 	}
 
@@ -96,9 +98,9 @@ void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 {
 	CGameObject::Render(pd3dCommandList, pCamera);
 
-	if (m_pGun)	{
-		m_pGun->Render(pd3dCommandList, pCamera);
-	}
+	//if (m_pGun)	{
+	//	m_pGun->Render(pd3dCommandList, pCamera);
+	//}
 }
 
 void CPlayer::SetSkin(int nSkinType)

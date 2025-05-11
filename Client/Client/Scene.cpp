@@ -160,6 +160,14 @@ void CScene::ReleaseObjects()
 
 void CScene::ReleaseUploadBuffers()
 {
+	// Release Shader Variables
+	for (auto& pGameObject : m_ppGameObjects)
+	{
+		for (auto& pObject : pGameObject.second)
+		{
+			pObject->ReleaseUploadBuffers();
+		}
+	}
 }
 
 void CScene::InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
@@ -572,13 +580,13 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	pd3dStaticSamplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	// Root Signature Flags
-	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = 
-		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | 
-	//	D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT |
+	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags =
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
 	//	D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
 	//	D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-	
+	//D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT;
+
 	// Root Signature Description
 	D3D12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
 	::ZeroMemory(&d3dRootSignatureDesc, sizeof(D3D12_ROOT_SIGNATURE_DESC));
@@ -749,5 +757,18 @@ void CScene::ReleaseShaderVariables()
 	if (m_pd3dcbLights) m_pd3dcbLights->Unmap(0, nullptr);
 	m_pd3dcbLights.Reset();
 	m_pcbMappedLights = nullptr;
+}
+
+void CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)
+	{
+	case WM_LBUTTONDOWN:
+		m_bMouseLButtonDown = true;
+		break;
+	case WM_LBUTTONUP:
+		m_bMouseLButtonDown = false;
+		break;
+	}
 }
 

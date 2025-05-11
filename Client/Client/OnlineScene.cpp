@@ -29,7 +29,6 @@ COnlineScene::~COnlineScene()
 
 void COnlineScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-
 	bool isComplelte = m_NetworkClient.Connect();
 	if (!isComplelte)
 	{
@@ -124,14 +123,6 @@ bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 	return true;
 }
 
-void COnlineScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
-{
-}
-
-void COnlineScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
-{
-}
-
 void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 {	
 	PKT_TYPE type = recv_p->type; // 패킷 타입  
@@ -177,7 +168,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			m_mapGameObjects[packet->id] = pPlayer;
 
 			int gun_type = packet->fixdata.gun_type;
-			std::shared_ptr<CGameObject> pGun = CGun::Create(nullptr, nullptr, nullptr, gun_type);
+			std::shared_ptr<CGun> pGun = CGun::Create(nullptr, nullptr, nullptr, gun_type);
 			pPlayer->SetGun(pGun);
 
 			{

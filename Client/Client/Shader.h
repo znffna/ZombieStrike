@@ -21,7 +21,7 @@ public:
 
 	// Create Pipeline State
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature);
-	void CreateGraphicPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState = 0);
+	void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState = 0);
 	void CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dComputeRootSignature, int nPipelineState = 0);
 
 	D3D12_SHADER_BYTECODE CompileShaderFromFile(const WCHAR* pszFileName, LPCSTR pszShaderName, LPCSTR pszShaderProfile, ID3DBlob** ppd3dShaderBlob);
@@ -33,6 +33,7 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreateDomainShader(int nPipelineState = 0);
 	virtual D3D12_SHADER_BYTECODE CreateHullShader(int nPipelineState = 0);
 	virtual D3D12_SHADER_BYTECODE CreateGeometryShader(int nPipelineState = 0);
+	virtual D3D12_STREAM_OUTPUT_DESC CreateStreamOuputState(int nPipelineState = 0);
 	virtual D3D12_SHADER_BYTECODE CreateComputeShader(int nPipelineState = 0);
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState = 0);
@@ -61,7 +62,8 @@ public:
 
 protected:
 	// Shader Variables
-	std::vector<ComPtr<ID3D12PipelineState>> m_pd3dPipelineStates; // [m_nPipelineState]
+	int m_nPipelineStates;
+	std::vector<ComPtr<ID3D12PipelineState>> m_pd3dPipelineStates; // [m_nPipelineStates]
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC m_d3dPipelineStateDesc;
 
@@ -158,4 +160,72 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState) override;
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override;
 	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState) override;
+};
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+//
+class CTexturedShader : public CShader
+{
+public:
+	CTexturedShader();
+	virtual ~CTexturedShader();
+
+	virtual std::wstring GetShaderName() override { return L"CTexturedShader"; }
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
+
+	virtual void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState);
+
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+class CBillboardShader : public CTexturedShader
+{
+public:
+	CBillboardShader();
+	virtual ~CBillboardShader();
+
+	virtual std::wstring GetShaderName() override { return L"CBillboardShader"; }
+
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+
+	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState);
+	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState);
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+class CDescirptorHeap;
+
+class CBulletShader : public CBillboardShader
+{
+public:
+	CBulletShader();
+	virtual ~CBulletShader();
+
+	virtual std::wstring GetShaderName() override { return L"CBulletShader"; }
+
+	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType(int nPipelineState);
+	virtual UINT GetNumRenderTargets(int nPipelineState);
+	virtual DXGI_FORMAT GetRTVFormat(int nPipelineState, int nRenderTarget);
+	virtual DXGI_FORMAT GetDSVFormat(int nPipelineState);
+
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreateGeometryShader(int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState);
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
+	virtual D3D12_STREAM_OUTPUT_DESC CreateStreamOuputState(int nPipelineState);
+	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState);
+	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState);
+
+	virtual void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState);
+
+private:
+	std::shared_ptr<CDescirptorHeap> m_pd3dCbvSrvDescriptorHeap = NULL;
 };

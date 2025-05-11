@@ -82,6 +82,20 @@ public:
 	~CTerrainVertex() { }
 };
 
+///////////////////////////////////////////////////////////////////////////////
+//
+
+class CBulletVertex : public CVertex
+{
+public:
+	XMFLOAT3						m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	float							m_fLifetime = 0.0f;
+
+public:
+	CBulletVertex() {}
+	~CBulletVertex() {}
+};
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mesh 클래스
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -122,8 +136,10 @@ public:
 	virtual void ReleaseUploadBuffers();
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext);
+	virtual void PreRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState) {}
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet = 0);
-	virtual void OnPostRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext);
+	virtual void PostRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState) {}
+	virtual void OnPostRender(int nPipelineState);
 
 	BoundingBox GetBoundingBox();
 	BoundingSphere GetBoundingSphere();
@@ -532,4 +548,51 @@ public:
 
 	//격자의 좌표가 (x, z)일 때 교점(정점)의 텍스쳐 좌표를 반환하는 함수이다.
 	virtual XMFLOAT2 OnGetUVs(int x, int z, void* pContext);
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+#define MAX_BULLETS				9000000
+
+class CBulletMesh : public CMesh
+{
+public:
+	CBulletMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
+	virtual ~CBulletMesh();
+
+	bool								m_bStart = true;
+
+	UINT								m_nMaxBullets = MAX_BULLETS;
+
+	ComPtr<ID3D12GraphicsCommandList> m_pd3dCommandList = NULL;
+
+	ComPtr<ID3D12Resource> m_pd3dStreamOutputBuffer = NULL;
+	ComPtr<ID3D12Resource> m_pd3dDrawBuffer = NULL;
+	ComPtr<ID3D12Resource> m_pd3dUploadDrawBuffer = NULL;
+	CBulletVertex* m_pBullets = NULL;
+
+	ComPtr<ID3D12Resource> m_pd3dDefaultBufferFilledSize = NULL;
+	ComPtr<ID3D12Resource> m_pd3dUploadBufferFilledSize = NULL;
+	UINT64* m_pnUploadBufferFilledSize = NULL;
+#ifdef _WITH_QUERY_DATA_SO_STATISTICS
+	ID3D12QueryHeap* m_pd3dSOQueryHeap = NULL;
+	ComPtr<ID3D12Resource> m_pd3dSOQueryBuffer = NULL;
+	D3D12_QUERY_DATA_SO_STATISTICS* m_pd3dSOQueryDataStatistics = NULL;
+#else
+	ComPtr<ID3D12Resource> m_pd3dReadBackBufferFilledSize = NULL;
+#endif
+
+	D3D12_STREAM_OUTPUT_BUFFER_VIEW		m_d3dStreamOutputBufferView;
+
+	virtual void CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size);
+	virtual void CreateStreamOutputBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nMaxParticles);
+
+	virtual void PreRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);
+	virtual void PostRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);
+
+	virtual void OnPostRender(int nPipelineState);
+
+	// method
+	void AddBullet(const CBulletVertex& Bullet);
 };
