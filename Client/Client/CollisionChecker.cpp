@@ -44,9 +44,9 @@ void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObjec
 				pObjectB->UpdateTransform();
 
 				// 먼저 model Bound AABB로 체크
-				/*auto pMergedA = pObjectA->GetMergedMeshBound();
+				auto pMergedA = pObjectA->GetMergedMeshBound();
 				auto pMergedB = pObjectB->GetMergedMeshBound();
-				if (!pMergedA.Intersects(pMergedB)) continue;*/
+				if (!pMergedA.Intersects(pMergedB)) continue;
 
 				// 그 이후, Collider 를 가져와 체크
 				std::vector<std::shared_ptr<CCollider>> pCollidersA;
