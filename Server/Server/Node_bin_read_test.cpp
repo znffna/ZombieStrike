@@ -192,7 +192,7 @@ void PrintMiniMapSampled(int startY, int startX, int height, int width, int samp
 
 int main()
 {
-    LoadObstacleMask2("C:/GitHub/TurboBlaze/Map/Node/ob_mask_te_2.bin");
+    LoadObstacleMask2("C:/GitHub/TurboBlaze/Map/Node/ob_mask_te_1.bin");
 
     // 중심 125,125는 250x250 맵의 정중앙
    // PrintMapWithBox(125, 125, 50, 50);       // 시야 표시
