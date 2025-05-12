@@ -1,5 +1,8 @@
 #include "Gun.h"
 
+
+std::shared_ptr<CBulletObject> CGun::m_pBulletObject; // 총알 오브젝트
+
 CGun::CGun()
 {
 }
@@ -25,7 +28,7 @@ void CGun::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dC
 	// Initialize Ammo
 	m_nCurrentAmmo = m_nMaxAmmo;
 	m_fFireRate = 0.5f;
-	m_fBulletSpeed = 100.0f;
+	m_fBulletRange = 100.0f;
 	m_fReloadTime = 2.0f;
 
 	DeepCopyFromModel(CResourceManager::GetInstance().GetModelInfo(m_strGunName[m_nGunType]));
@@ -33,6 +36,7 @@ void CGun::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dC
 
 void CGun::Update(float fTimeElapsed)
 {
+	m_fCoolTime -= fTimeElapsed;
 }
 
 void CGun::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -49,7 +53,16 @@ void CGun::SetGunType(int type)
 	DeepCopyFromModel(pModel);
 }
 
-void CGun::Fire(XMFLOAT3 xmf3Direction)
+void CGun::Fire()
 {
+	Fire(Vector3::ScalarProduct( GetLookVector(),m_fBulletRange, false));
+}
 
+void CGun::Fire(const XMFLOAT3& xmf3Direction)
+{
+	if(m_fCoolTime < 0.0f)
+	{
+		CGun::m_pBulletObject->AddBullet(GetPosition(), xmf3Direction);
+		m_fCoolTime = m_fFireRate;
+	}
 }

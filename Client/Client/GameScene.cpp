@@ -16,21 +16,30 @@ CGameScene::~CGameScene()
 
 void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
+#ifdef _DEBUG
+#endif
+
 	// Create Objects
 	CResourceManager& resourceManager = CResourceManager::GetInstance();
 
+	if (pd3dRootSignature == nullptr) {
+		pd3dRootSignature = m_pd3dGraphicsRootSignature.Get();
+	}
+
 	// <Environment>
+	StoreTerrain(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
 
 	// Skybox
 	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 	AddObject(m_pSkyBox);
 	
 	// Terrain
-	XMFLOAT3 xmf3Scale(1.0f, 32.0f / 255.0f, 1.0f);
+	XMFLOAT3 xmf3Scale(1.0f, 50.0f / 255.0f, 1.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
-	m_pTerrain = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.bin"), _T("Terrain/terrain.raw"), 1025, 1025, 65, 65, xmf3Scale, xmf4Color);
+	m_pTerrain = GetTerrain(0);
+	//m_pTerrain = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain1.bin"), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
+	//m_pTerrain = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.bin"), _T("Terrain/terrain.raw"), 1025, 1025, 65, 65, xmf3Scale, xmf4Color);
 	AddObject(m_pTerrain);
-	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 1025, 1025, 65, 65, xmf3Scale, xmf4Color);
 	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
 
 	// <Store GameObjects>
@@ -40,24 +49,21 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	// <Initialize GameObjects>
 
 	// Cube
-	std::shared_ptr<CGameObject> pGameObject;
-	pGameObject = CCubeObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature);
-	pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 10.0f));
-	AddObject(pGameObject);
+	//std::shared_ptr<CGameObject> pGameObject;
+	//pGameObject = CCubeObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature);
+	//pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 10.0f));
+	//AddObject(pGameObject);
 
 	// Player 생성
 	std::shared_ptr<CPlayer> pPlayer = GetPlayer();
 	//std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, 0);
-	pPlayer->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 0.0f));
+	pPlayer->SetPosition(DirectX::XMFLOAT3(100.0f, 0.0f, 100.0f));
 	AddObject(pPlayer);
 	m_pPlayer = pPlayer;
 
 	// Gun 생성
 	std::shared_ptr<CGun> pGun = CGun::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
 	m_pPlayer->SetGun(pGun);
-
-	pGun = CGun::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
-	pGun->SetPosition(DirectX::XMFLOAT3(0.0f, 15.0f, 0.0f));
 	AddObject(pGun);
 
 	// Zombie 생성
@@ -67,26 +73,34 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	
 	// Map Load
-	auto pMap = resourceManager.GetModelInfo("Map");
+	auto pMap = resourceManager.GetModelInfo("Stage1");
 	pMap->m_pModelRootObject->UpdateTransform();
 	m_pMap = pMap->m_pModelRootObject;
+	m_pMap->SetLayer(CGameObject::LAYER_ENVIRONMENT);
 	m_pMap->Update(0.0f);
-	AddObjects(m_pMap->GetChilds());
+	AddObject(m_pMap);
 	//AddObject(m_pMap);
 
 	// Collision Checker
 	auto pCollisionChecker = std::make_shared<CCollisionChecker>(this);
 	pCollisionChecker->Initialize(pd3dDevice, pd3dCommandList);
 	AddObject(pCollisionChecker);
+
+	// BulletObject
+	//std::shared_ptr<CBulletObject> pBullet = std::make_shared<CBulletObject>(pd3dDevice, pd3dCommandList, pd3dRootSignature, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 65.0f, 0.0f), 20.0f, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(8.0f, 8.0f), MAX_BULLETS);
+	//m_pBulletObject = pBullet;
+	//CGun::m_pBulletObject = pBullet;
+	//AddObject(pBullet);
+
+	// 마지막 모든 Object의 생성이 끝나면 Player의 카메라를 추적
+	if (m_pPlayer)
+	{
+		m_pCamera = m_pPlayer->GetComponent<CCamera>();
+	}
 }
 
 void CGameScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	if(m_pPlayer)
-	{
-		m_pCamera = m_pPlayer->GetComponent<CCamera>();
-	}
-
 	SetSceneState(SCENE_STATE_READY_TO_START);
 }
 
@@ -115,16 +129,21 @@ void CGameScene::Update(float deltaTime)
 	CScene::Update(deltaTime);
 }
 
+void CGameScene::OnPostRender()
+{
+	if(m_pBulletObject) m_pBulletObject->OnPostRender();
+}
+
 bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 {
 	// 키보드 입력의 정보 압축
 	DWORD dwDirection = 0;
-	if (pBuffer.pKeysBuffer[VK_UP] & 0xF0)dwDirection |= DIR_FORWARD;
-	if (pBuffer.pKeysBuffer[VK_DOWN] & 0xF0)dwDirection |= DIR_BACKWARD;
-	if (pBuffer.pKeysBuffer[VK_LEFT] & 0xF0)dwDirection |= DIR_LEFT;
-	if (pBuffer.pKeysBuffer[VK_RIGHT] & 0xF0)dwDirection |= DIR_RIGHT;
-	if (pBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
-	if (pBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
+	if (pBuffer.pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
+	if (pBuffer.pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
+	if (pBuffer.pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
+	if (pBuffer.pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
+	//if (pBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
+	//if (pBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
 
 	if (dwDirection || pBuffer.cxDelta != 0.0f || pBuffer.cyDelta != 0.0f)
 	{
@@ -135,91 +154,68 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 		}
 	}
 
+	if (m_bMouseLButtonDown) {
+		if (m_pPlayer && m_pBulletObject)
+		{
+			(m_pPlayer->GetGun())->Fire();
+		}
+	}
+
 	return true;
 }
 
 void CGameScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-}
+	CScene::OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
 
+	switch (nMessageID)
+	{
+	default:
+		break;
+	}
+}
 void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	switch (nMessageID) {
-	case WM_KEYDOWN: {
+	/*switch (nMessageID) {
+	case WM_KEYDOWN:
+	{
 		switch (wParam)
 		{
-			//case VK_LEFT:
-			//{
-			//	//m_pCamera->Move(-1.0f,0.0f,0.0f);
-			//	m_pCamera->Rotate(0.0f, -10.0f, 0.0f);
-			//	m_pCamera->RegenerateViewMatrix();
-			//	break;
-			//}
-			//case VK_RIGHT:
-			//{
-			//	//m_pCamera->Move(1.0f, 0.0f, 0.0f);
-			//	m_pCamera->Rotate(0.0f, 10.0f, 0.0f);
-			//	m_pCamera->RegenerateViewMatrix();
-			//	break;
-			//}
-			//case VK_UP:
-			//{
-			//	//m_pCamera->Move(0.0f, 0.0f, 1.0f);
-			//	m_pCamera->Rotate(-10.0f, 0.0f, 0.0f);
-			//	m_pCamera->RegenerateViewMatrix();
-			//	break;
-			//}
-			//case VK_DOWN:
-			//{
-			//	//m_pCamera->Move(0.0f, 0.0f, -1.0f);
-			//	m_pCamera->Rotate(10.0f, 0.0f, 0.0f);
-			//	m_pCamera->RegenerateViewMatrix();
-			//	break;
-			//}
-			/*
-			case VK_SPACE:
-			{
-				m_pCamera->Move(0.0f, 10.0f, 0.0f);
-				m_pCamera->RegenerateViewMatrix();
-				break;
-			}
-			case VK_SHIFT:
-			{
-				m_pCamera->Move(0.0f, -10.0f, 0.0f);
-				m_pCamera->RegenerateViewMatrix();
-				break;
-			}
-			*/
-			/*
-			case 'W': case 'w':
-			{
-				m_ppHierarchicalObjects[0]->Move(0.0f, 0.0f, 1.0f);
-				break;
-			}
-			case 'S': case 's':
-			{
-				m_ppHierarchicalObjects[0]->Move(0.0f, 0.0f, -1.0f);
-				break;
-			}
-			case 'A': case 'a':
-			{
-				m_ppHierarchicalObjects[0]->Move(-1.0f, 0.0f, 0.0f);
-				break;
-			}
-			case 'D': case 'd':
-			{
-				m_ppHierarchicalObjects[0]->Move(1.0f, 0.0f, 0.0f);
-				break;
-			}
-			}
-			break;
-			}
-			*/
 		default:
 			break;
 		}
 	}
+	}*/
+}
+
+void CGameScene::ChangeMap(int nMapIndex)
+{
+	m_nStageIndex = nMapIndex % m_strStageNames.size();
+
+	if (m_pTerrain) RemoveObject(m_pTerrain);
+	m_pTerrain = GetTerrain(m_nStageIndex);
+	AddObject(m_pTerrain);
+
+	for (auto& pObject : m_pZombiePool)
+	{
+		if (pObject) pObject->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
 	}
+	for (auto& pObject : m_pPlayerObjects)
+	{
+		if (pObject) pObject->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
+	}
+	//if (m_pPlayer) m_pPlayer->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
+
+	if (m_pMap) {
+		RemoveObject(m_pMap);
+	}
+
+	auto pMap = CResourceManager::GetInstance().GetModelInfo(m_strStageNames[m_nStageIndex]);
+	pMap->m_pModelRootObject->UpdateTransform();
+	m_pMap = pMap->m_pModelRootObject;
+	m_pMap->Update(0.0f);
+	m_pMap->SetLayer(CGameObject::LAYER_ENVIRONMENT);
+	AddObject(m_pMap);
 }
 
 void CGameScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)
@@ -245,6 +241,7 @@ std::shared_ptr<CZombieObject> CGameScene::GetZombie(int nSkinType)
 			return pZombie;
 		}
 	}
+	return nullptr;
 }
 
 void CGameScene::StorePlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nPlayerCount)
@@ -254,6 +251,8 @@ void CGameScene::StorePlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	{
 		std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, i);
 		pPlayer->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
+		if(auto pCamera = pPlayer->GetComponent<CCamera>())
+			pCamera->SetTerrainUpdatedContext(m_pTerrain.get());
 		pPlayer->SetActive(false);
 		m_pPlayerObjects.push_back(pPlayer);
 	}
@@ -270,4 +269,21 @@ std::shared_ptr<CPlayer> CGameScene::GetPlayer(int nSkinType)
 			return pPlayer;
 		}
 	}
+	return nullptr;
+}
+
+void CGameScene::StoreTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nTerrainCount)
+{
+	m_pTerrainObjects.reserve(nTerrainCount);
+
+	XMFLOAT3 xmf3Scale(1.0f, 50.0f / 255.0f, 1.0f);
+	XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
+
+	auto pTerrain1 = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain1.bin"), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
+	auto pTerrain2 = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain2.bin"), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
+	auto pTerrain3 = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain3.bin"), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
+
+	m_pTerrainObjects.push_back(pTerrain1);
+	m_pTerrainObjects.push_back(pTerrain2);
+	m_pTerrainObjects.push_back(pTerrain3);
 }

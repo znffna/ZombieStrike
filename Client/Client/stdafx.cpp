@@ -12,12 +12,14 @@
 UINT WINDOW_WIDTH = 1280;
 UINT WINDOW_HEIGHT = 720;
 
+int gnCurrentBullets = 0;
+
 UINT gnCbvSrvDescriptorIncrementSize = 0;
 UINT gnRtvDescriptorIncrementSize = 0;
 UINT gnDsvDescriptorIncrementSize = 0;
 
 int g_nFrameCount;
-
+bool g_windowActive = true; // 전역 또는 멤버 변수로 상태 저장
 
 // Functions
 
@@ -68,6 +70,30 @@ void ReportLiveObjects()
 	HRESULT hResult = pdxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_DETAIL);
 	pdxgiDebug->Release();
 #endif
+}
+
+void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter)
+{
+	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
+	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	d3dResourceBarrier.Transition.pResource = pd3dResource;
+	d3dResourceBarrier.Transition.StateBefore = d3dStateBefore;
+	d3dResourceBarrier.Transition.StateAfter = d3dStateAfter;
+	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+}
+
+void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ComPtr<ID3D12Resource> pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter)
+{
+	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
+	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	d3dResourceBarrier.Transition.pResource = pd3dResource.Get();
+	d3dResourceBarrier.Transition.StateBefore = d3dStateBefore;
+	d3dResourceBarrier.Transition.StateAfter = d3dStateAfter;
+	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
 }
 
 ComPtr<ID3D12Resource> CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, ID3D12Resource** ppd3dUploadBuffer)
@@ -307,6 +333,11 @@ ComPtr<ID3D12Resource> CreateTexture2DResource(ID3D12Device* pd3dDevice, ID3D12G
 	HRESULT hResult = pd3dDevice->CreateCommittedResource(&d3dHeapPropertiesDesc, D3D12_HEAP_FLAG_NONE, &d3dTextureResourceDesc, d3dResourceStates, pd3dClearValue, __uuidof(ID3D12Resource), (void**)pd3dTexture.GetAddressOf());
 
 	return(pd3dTexture);
+}
+
+void SwapResourcePointer(ComPtr<ID3D12Resource>& ppd3dResourceA, ComPtr<ID3D12Resource>& ppd3dResourceB)
+{
+	std::swap(ppd3dResourceA, ppd3dResourceB);
 }
 
 

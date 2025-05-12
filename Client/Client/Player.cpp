@@ -1,6 +1,11 @@
 #include "Player.h"
 #include "Scene.h"
 
+#include "Gun.h"
+
+///////////////////////////////////////////////////////////////////////////////////
+//
+
 CPlayer::CPlayer()
 {
 }
@@ -64,18 +69,38 @@ void CPlayer::Update(float fTimeElapsed)
 	if(auto pCamera = GetComponent<CCamera>()) pCamera->Update(GetPosition(), fTimeElapsed);
 
 	if (m_pGun) {
-		m_pGun->Update(fTimeElapsed);
-		m_pGun->UpdateTransform(FindFrame("mixamorig:RightHand")->GetWorldMatrix());
+		//m_pGun->Update(fTimeElapsed);
+		m_pGun->UpdateTransform(m_pGunSlot->GetWorldMatrix());
 	}
+
+	if (m_pSkinnedAnimationController)
+	{
+		XMFLOAT3 xmf3Velocity = GetComponent<CRigidBody>()->GetVelocity();
+		float fLength = sqrtf(xmf3Velocity.x * xmf3Velocity.x + xmf3Velocity.z * xmf3Velocity.z);
+		if (::IsZero(fLength))
+		{
+			m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::IDLE, 0.0f);
+		}
+	}
+}
+
+void CPlayer::Move(DWORD dwDirection, float fDistance, float deltaTime)
+{
+	if (dwDirection)
+	{		
+		m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::WALK);
+	}
+
+	CGameObject::Move(dwDirection, fDistance, deltaTime);
 }
 
 void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	CGameObject::Render(pd3dCommandList, pCamera);
 
-	if (m_pGun)	{
-		m_pGun->Render(pd3dCommandList, pCamera);
-	}
+	//if (m_pGun)	{
+	//	m_pGun->Render(pd3dCommandList, pCamera);
+	//}
 }
 
 void CPlayer::SetSkin(int nSkinType)
@@ -104,7 +129,7 @@ void CPlayer::SetSkin(int nSkinType)
 	pCollider->SetCollider(FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound());
 
 	// ¹Ù²ï Model¿¡ ¸ÂÃç PrepareSkinning
-	m_pRightHandFrame = FindFrame("mixamorig:RightHand");
+	m_pGunSlot = FindFrame("GunSlot");
 
 	Update(0.0f);
 	UpdateTransform();
@@ -142,3 +167,4 @@ void CPlayer::Rotate(float x, float y, float z)
 
 	m_pTransform->Rotate(x, y, z);
 }
+

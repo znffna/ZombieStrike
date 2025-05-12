@@ -7,6 +7,8 @@
 
 bool g_bRenderCollider = false;
 
+CGameFramework* CGameFramework::pGameFramework = nullptr;
+
 CGameFramework::CGameFramework()
 {
 	m_hInstance = NULL;
@@ -51,6 +53,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	m_hInstance = hInstance;
 	m_hWnd = hMainWnd;
 
+	pGameFramework = this;
 
 	CreateDirect3DDevice();
 	CreateCommandQueueAndList();
@@ -416,7 +419,9 @@ void CGameFramework::BuildObjects()
 
 		WaitGpuWithoutPresent();
 
-		pMainScene->SetSceneState(SCENE_STATE_READY_TO_START);
+		if (pMainScene) pMainScene->ReleaseUploadBuffers();
+
+		pMainScene->PostInitializeObjects(nullptr, nullptr, nullptr);
 		m_Scenes.push_back(std::move(pMainScene));
 	});
 	thread.detach();
@@ -429,7 +434,6 @@ void CGameFramework::BuildObjects()
 	pLoadingScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 	pLoadingScene->SetSceneState(SCENE_STATE_RUNNING);
 	m_pLoadingScene = std::move(pLoadingScene);
-
 	
 
 	// Command List에 대한 명령들을 종료
@@ -441,6 +445,9 @@ void CGameFramework::BuildObjects()
 
 	// Command Queue의 명령들이 모두 실행될 때까지 대기
 	WaitGpuWithoutPresent();
+
+	if (m_pLoadingScene) m_pLoadingScene->ReleaseUploadBuffers();
+
 }
 
 void CGameFramework::WaitGpuWithoutPresent()
@@ -462,24 +469,10 @@ void CGameFramework::AdvanceFrame()
 	// 타이머 업데이트
 	m_GameTimer.Tick(60.0f);
 
-	// Input 업데이트
-	ProcessInput();
-
-	// Scene 업데이트
-
-	int bRenderScene = 0;
-
 	WaitForGpuComplete();
 
-	// PreRendering [ Swap Chain Back Buffer를 렌더 타겟으로 사용하기 전 렌더링 단계 ]
-	// Shadow Map, Reflection Map, Refraction Map, Deferred Shading, G-buffer 등
-	// PreRendering 단계에서는 자체적으로 SetOM과 ExecuteCommandLists를 호출.
-	// 따라서 이미 Command List에 대한 명령들이 실행된 후, Close 상태여야 함.
-
-	// Command Allocator 재사용
-	m_pd3dCommandAllocator[m_nSwapChainBufferIndex]->Reset();
-
 	// Command List 재사용
+	m_pd3dCommandAllocator[m_nSwapChainBufferIndex]->Reset();
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->Reset(m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get(), nullptr);
 
 	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
@@ -487,9 +480,27 @@ void CGameFramework::AdvanceFrame()
 	// Clear Back Buffer And Depth-Stencil Buffer 
 	ClearRtvAndDsv();
 
-	// Scene 업데이트
+	// Scene Container 업데이트
+	for (auto it = m_Scenes.begin(); it != m_Scenes.end(); ) {
+		if (it->get()->GetSceneState() == SCENE_STATE_ENDING) {
+			{
+				std::string debug = typeid(*it).name();
+				debug += "[AdvanceFrame] Scene Ending\n";
+				OutputDebugStringA(debug.c_str());
+			}
+			it = m_Scenes.erase(it);  // erase는 다음 유효 반복자를 반환
+		}
+		else {
+			++it;
+		}
+	}
+
+	// Input 업데이트
+	ProcessInput();
+
+	int bRenderScene = 0;
 	for (auto& scene : m_Scenes)
-	{
+	{		
 		if (scene->CheckWorkUpdating())
 		{
 			// Scene 정보 업데이트
@@ -537,6 +548,12 @@ void CGameFramework::AdvanceFrame()
 	// Command Queue에 Command List를 추가
 	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList[m_nSwapChainBufferIndex].Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+
+	for (auto& scene : m_Scenes)
+	{
+		if (scene->CheckWorkUpdating())
+			scene->OnPostRender();
+	}
 
 	// Command Queue의 명령들이 모두 실행될 때까지 대기
 
@@ -647,6 +664,8 @@ void CGameFramework::ProcessInput()
 {
 	static INPUT_PARAMETER pInputBuffer;
 	bool bProcessedByScene = false;
+
+	if (false == g_windowActive) return;
 
 	ZeroMemory(&pInputBuffer, sizeof(INPUT_PARAMETER));
 
@@ -766,9 +785,9 @@ LRESULT CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WP
 	{
 	case WM_ACTIVATE:
 	{
-		if (LOWORD(wParam) == WA_INACTIVE)
+		if (LOWORD(wParam) == WA_INACTIVE) 
 			m_GameTimer.Stop();
-		else
+		else 
 			m_GameTimer.Start();
 		break;
 	}

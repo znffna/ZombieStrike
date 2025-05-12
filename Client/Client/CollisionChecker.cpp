@@ -15,9 +15,9 @@ void CCollisionChecker::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	std::vector<std::pair<CGameObject::GAMEOBJECT_LAYER, CGameObject::GAMEOBJECT_LAYER>> ppObjectLayerPairs{
 	{ CGameObject::LAYER_PLAYER, CGameObject::LAYER_ENEMY,},
 	{ CGameObject::LAYER_BULLET, CGameObject::LAYER_ENEMY },
-	{ CGameObject::LAYER_PLAYER, CGameObject::LAYER_DEFUALT },
-	{ CGameObject::LAYER_ENEMY, CGameObject::LAYER_DEFUALT },
-	{ CGameObject::LAYER_BULLET, CGameObject::LAYER_DEFUALT }
+	{ CGameObject::LAYER_PLAYER, CGameObject::LAYER_ENVIRONMENT },
+	//{ CGameObject::LAYER_ENEMY, CGameObject::LAYER_ENVIRONMENT },
+	{ CGameObject::LAYER_BULLET, CGameObject::LAYER_ENVIRONMENT }
 	};
 	m_ppObjectLayerPairs = ppObjectLayerPairs;
 }
@@ -44,9 +44,9 @@ void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObjec
 				pObjectB->UpdateTransform();
 
 				// 먼저 model Bound AABB로 체크
-				/*auto pMergedA = pObjectA->GetMergedMeshBound();
+				auto pMergedA = pObjectA->GetMergedMeshBound();
 				auto pMergedB = pObjectB->GetMergedMeshBound();
-				if (!pMergedA.Intersects(pMergedB)) continue;*/
+				if (!pMergedA.Intersects(pMergedB)) continue;
 
 				// 그 이후, Collider 를 가져와 체크
 				std::vector<std::shared_ptr<CCollider>> pCollidersA;

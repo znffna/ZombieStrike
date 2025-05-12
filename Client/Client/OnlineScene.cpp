@@ -36,7 +36,18 @@ void COnlineScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		OutputDebugStringA(debugOutput.c_str());
 		return;
 	}
+
 	CGameScene::InitializeObjects(pd3dDevice, pd3dCommandList, pd3dRootSignature);
+}
+
+void COnlineScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
+{
+	if (false == m_NetworkClient.IsConnect())
+	{
+		SetSceneState(SCENE_STATE_ENDING);
+		return;
+	}
+	SetSceneState(SCENE_STATE_READY_TO_START);
 }
 
 void COnlineScene::ReleaseObjects()
@@ -89,38 +100,27 @@ void COnlineScene::Update(float deltaTime)
 
 bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 {
-	DWORD dwDirection = 0;
-	if (pBuffer.pKeysBuffer[VK_UP] & 0xF0)dwDirection |= DIR_FORWARD;
-	if (pBuffer.pKeysBuffer[VK_DOWN] & 0xF0)dwDirection |= DIR_BACKWARD;
-	if (pBuffer.pKeysBuffer[VK_LEFT] & 0xF0)dwDirection |= DIR_LEFT;
-	if (pBuffer.pKeysBuffer[VK_RIGHT] & 0xF0)dwDirection |= DIR_RIGHT;
-	if (pBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
-	if (pBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
+	CGameScene::ProcessInput(pBuffer, deltaTime);
 
-	if (dwDirection || pBuffer.cxDelta != 0.0f || pBuffer.cyDelta != 0.0f)
+	if (pBuffer.pKeysBuffer[VK_ESCAPE] & 0xF0)
 	{
-		if (m_pPlayer)
-		{
-			m_pPlayer->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
-			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
-		}
+		SetSceneState(SCENE_STATE_ENDING);
+	}
 
-		/*if (m_pCamera)
-		{
-			m_pCamera->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
-			m_pCamera->RegenerateViewMatrix();
-		}*/
+	if (pBuffer.pKeysBuffer[VK_F5] & 0xF0)
+	{
+		ChangeMap(0);
+	}
+	else if (pBuffer.pKeysBuffer[VK_F6] & 0xF0)
+	{
+		ChangeMap(1);
+	}
+	else if (pBuffer.pKeysBuffer[VK_F7] & 0xF0)
+	{
+		ChangeMap(2);
 	}
 
 	return true;
-}
-
-void COnlineScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
-{
-}
-
-void COnlineScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
-{
 }
 
 void COnlineScene::ProcessPacket(PacketHeader* recv_p)
@@ -163,9 +163,14 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		case ObjectType::PLAYER:
 		{
 			// 플레이어 오브젝트 추가
-			std::shared_ptr<CGameObject> pPlayer = GetPlayer(); // GetPlayer(skin_type)로 바꿔야 함
+			std::shared_ptr<CPlayer> pPlayer = GetPlayer(); // GetPlayer(skin_type)로 바꿔야 함
 			pPlayer->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
 			m_mapGameObjects[packet->id] = pPlayer;
+
+			int gun_type = packet->fixdata.gun_type;
+			std::shared_ptr<CGun> pGun = CGun::Create(nullptr, nullptr, nullptr, gun_type);
+			pPlayer->SetGun(pGun);
+
 			{
 				std::string DebugOutput = "ObjectType::PLAYER 생성 완료\n";
 				OutputDebugStringA(DebugOutput.c_str());

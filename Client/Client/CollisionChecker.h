@@ -17,7 +17,7 @@ public:
 	CCollisionChecker(CScene* pScene);
 	virtual ~CCollisionChecker();
 
-	virtual GAMEOBJECT_LAYER GetLayer() { return LAYER_CONTROLLER; }
+	virtual GAMEOBJECT_LAYER GetLayer() { return m_nLayer = LAYER_CONTROLLER; }
 
 	// Object Initialization
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)  override;

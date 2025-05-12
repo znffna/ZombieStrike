@@ -11,6 +11,15 @@ std::shared_ptr<CDescirptorHeap> CScene::m_pDescriptorHeap;
 ComPtr<ID3D12RootSignature> CScene::m_pd3dGraphicsRootSignature;
 ComPtr<ID3D12RootSignature> CScene::m_pd3dComputeRootSignature;
 
+std::vector<std::string> g_vecSceneStateNames{
+	"None",
+	"Allocing",
+	"ReadyToStart",
+	"Running",
+	"Pausing",
+	"Ending"
+}; 
+
 CScene::CScene()
 {
 	ZeroMemory(m_pLights.data(), sizeof(Light) * MAX_LIGHTS);
@@ -25,11 +34,11 @@ CScene::~CScene()
 	ReleaseShaderVariables();
 
 	// Release Root Signature
-	m_pd3dGraphicsRootSignature.Reset();
-	m_pd3dComputeRootSignature.Reset();
+	//m_pd3dGraphicsRootSignature.Reset();
+	//m_pd3dComputeRootSignature.Reset();
 
 	// Scene 종료
-	m_SceneState = SCENE_STATE_ENDING;
+	SetSceneState(SCENE_STATE_ENDING);
 }
 
 void CScene::Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
@@ -42,7 +51,7 @@ void CScene::Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dComma
 
 void CScene::PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	m_SceneState = SCENE_STATE_ALLOCING;
+	SetSceneState(SCENE_STATE_ALLOCING);
 
 	// Create Default Lights and Materials
 	BuildDefaultLightsAndMaterials();
@@ -67,7 +76,7 @@ void CScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	// Scene 생성 완료
 	//m_SceneState = SCENE_STATE_RUNNING;
-	m_SceneState = SCENE_STATE_READY_TO_START;
+	SetSceneState(SCENE_STATE_READY_TO_START);
 }
 
 void CScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -151,6 +160,14 @@ void CScene::ReleaseObjects()
 
 void CScene::ReleaseUploadBuffers()
 {
+	// Release Shader Variables
+	for (auto& pGameObject : m_ppGameObjects)
+	{
+		for (auto& pObject : pGameObject.second)
+		{
+			pObject->ReleaseUploadBuffers();
+		}
+	}
 }
 
 void CScene::InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
@@ -322,6 +339,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		if (nullptr == m_pCamera) return false;
 		pCamera = m_pCamera.get();
 	}
+	if(m_pPlayer) pCamera->Update(m_pPlayer->GetPosition(), 0.0f);
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
@@ -331,7 +349,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// Render GameObjects 
 	for (auto& pvecObjects : m_ppGameObjects)
 	{
-		if (pvecObjects.first == CGameObject::GAMEOBJECT_LAYER::LAYER_PLAYER)
+		if (pvecObjects.first == CGameObject::GAMEOBJECT_LAYER::LAYER_BULLET)
 			std::cout << 1; // UI는 제외
 		for (auto& pObject : pvecObjects.second)
 		{
@@ -563,13 +581,13 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	pd3dStaticSamplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	// Root Signature Flags
-	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = 
-		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | 
-	//	D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT |
+	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags =
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
 	//	D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
 	//	D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-	
+	//D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT;
+
 	// Root Signature Description
 	D3D12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
 	::ZeroMemory(&d3dRootSignatureDesc, sizeof(D3D12_ROOT_SIGNATURE_DESC));
@@ -740,5 +758,18 @@ void CScene::ReleaseShaderVariables()
 	if (m_pd3dcbLights) m_pd3dcbLights->Unmap(0, nullptr);
 	m_pd3dcbLights.Reset();
 	m_pcbMappedLights = nullptr;
+}
+
+void CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)
+	{
+	case WM_LBUTTONDOWN:
+		m_bMouseLButtonDown = true;
+		break;
+	case WM_LBUTTONUP:
+		m_bMouseLButtonDown = false;
+		break;
+	}
 }
 
