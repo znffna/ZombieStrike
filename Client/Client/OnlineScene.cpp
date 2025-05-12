@@ -34,6 +34,7 @@ void COnlineScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	{
 		std::string debugOutput = "COnlineScene::InitializeObjects() - NetworkClient Connect 실패\n";
 		OutputDebugStringA(debugOutput.c_str());
+		exit(1);
 		return;
 	}
 
@@ -163,7 +164,8 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		case ObjectType::PLAYER:
 		{
 			// 플레이어 오브젝트 추가
-			std::shared_ptr<CPlayer> pPlayer = GetPlayer(packet->skin_type); // GetPlayer(skin_type)로 바꿔야 함
+			//std::shared_ptr<CPlayer> pPlayer = GetPlayer(packet->skin_type); // GetPlayer(skin_type)로 바꿔야 함
+			std::shared_ptr<CPlayer> pPlayer = GetPlayer(0); // GetPlayer(skin_type)로 바꿔야 함
 			pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
 			m_mapGameObjects[packet->id] = pPlayer;
 
@@ -211,7 +213,10 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		Vec3 look = updatePkt->look;
 		m_mapGameObjects[updatePkt->id]->SetLook(look.x, look.y, look.z);
 		m_mapGameObjects[updatePkt->id]->SetPosition(position.x, position.y, position.z);
-		updatePkt->act_type; // State
+		if (auto pRigidBody = m_mapGameObjects[updatePkt->id]->GetComponent<CRigidBody>()) {
+			pRigidBody->SetVelocity(updatePkt->velocity.x, updatePkt->velocity.y, updatePkt->velocity.z);
+		}
+		m_mapGameObjects[updatePkt->id]->SetState(updatePkt->act_type);
 
 	
 		if (g_bNetworkDebugMode) {

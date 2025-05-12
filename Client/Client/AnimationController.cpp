@@ -243,6 +243,8 @@ void CAnimationController::ChangeState(ANIMATION_STATE state)
 	SetTrackEnable(state, true);
 }
 
+
+
 void CAnimationController::ChangeState(ANIMATION_STATE state, float fPosition)
 {
 	ChangeState(state);
