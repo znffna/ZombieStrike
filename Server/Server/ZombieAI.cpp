@@ -227,7 +227,7 @@ Vec3  ZombieAI::FindClosestPlayer(const std::vector<Vec3>& playerPositions)
     return closestPlayer;
 }
 
-void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies)
+void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime)
 {
     if (playerPositions.empty()) return;
 
