@@ -110,25 +110,6 @@ void NetworkingClient::Logout()
     WSACleanup();
 }
 
-void NetworkingClient::SendMovePacket()
-{
-    pkt_cs_update u_movePkt{};
-    u_movePkt.header.size = sizeof(u_movePkt);
-    u_movePkt.header.type = PKT_TYPE::C_S_UPDATE;
-    u_movePkt.obj.meta.position = { 0.0f, 0.0f, 0.0f }; // 현재 위치
-    u_movePkt.obj.meta.direction = { 1.0f, 0.0f, 0.0f }; // 이동 방향
-    u_movePkt.obj.meta.speed = 5.0f; // 이동 속도
-    u_movePkt.obj.meta.hp = 100; // 체력
-    u_movePkt.obj.gun_type = GunType::BULLET_PISTOL; // 총 종류
-    u_movePkt.obj.level = 1; // 레벨
-    u_movePkt.obj.score = 0; // 점수
-    u_movePkt.obj.damage = 0; // 공격력
-    u_movePkt.obj.act_type = ActionType::NONE; // 행동 타입
-
-
-    send_packet((char*)&u_movePkt);
-}
-
 void NetworkingClient::SendLoginPacket(std::string& name)
 {
     pkt_cs_login loginPkt{};
