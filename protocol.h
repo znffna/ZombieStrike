@@ -16,7 +16,7 @@ constexpr int MAX_NAME_SIZE = 20;
 constexpr int MAX_USER = 5000;          // 서버의 최대 세션 수
 constexpr short MAX_PLAYER_COUNT = 3;   // 최대 플레이어 수
 
-constexpr short MAX_ZOMBIE_COUNT = 1;  // 최대 좀비 수
+constexpr short MAX_ZOMBIE_COUNT = 10;  // 최대 좀비 수
 
 constexpr int W_WIDTH = 250;            // 맵의 크기 정의
 constexpr int W_HEIGHT = 250;

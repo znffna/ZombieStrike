@@ -112,30 +112,17 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
             delete current;
             break;
         }
+        // 4 방향 탐색
+        const int dirX[4] = { 1, -1,  0,  0 };
+        const int dirZ[4] = { 0,  0,  1, -1 };
 
-		// 8방향 탐색
-        const int dirX[8] = { 1, -1,  0,  0,  1,  1, -1, -1 };
-        const int dirZ[8] = { 0,  0,  1, -1,  1, -1,  1, -1 };
-
-        for (int dir = 0; dir < 8; ++dir)
+        for (int dir = 0; dir < 4; ++dir)
         {
             int nx = current->x + dirX[dir];
             int nz = current->z + dirZ[dir];
 
             if (nx < 0 || nx >= m_width || nz < 0 || nz >= m_height) continue;
             if (m_map[nz][nx] != 0) continue;
-
-            // 대각선 진입 시, 양쪽 인접칸 중 하나라도 벽이면 skip
-            if (dir >= 4)
-            {
-                int adj1_x = current->x + dirX[dir];
-                int adj1_z = current->z;
-                int adj2_x = current->x;
-                int adj2_z = current->z + dirZ[dir];
-
-                if (m_map[adj1_z][adj1_x] != 0 || m_map[adj2_z][adj2_x] != 0)
-                    continue;
-            }
 
             int nextKey = nz * m_width + nx;
             if (closedList.find(nextKey) != closedList.end()) continue;
@@ -146,6 +133,38 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
             neighbor->parent = current;
             openList.push(neighbor);
         }
+
+		//// 8방향 탐색
+  //      const int dirX[8] = { 1, -1,  0,  0,  1,  1, -1, -1 };
+  //      const int dirZ[8] = { 0,  0,  1, -1,  1, -1,  1, -1 };
+  //      for (int dir = 0; dir < 8; ++dir)
+  //      {
+  //          int nx = current->x + dirX[dir];
+  //          int nz = current->z + dirZ[dir];
+  //          if (nx < 0 || nx >= m_width || nz < 0 || nz >= m_height) continue;
+  //          if (m_map[nz][nx] != 0) continue;
+  //
+  //          // 대각선 진입 시, 양쪽 인접칸 중 하나라도 벽이면 skip
+  //          if (dir >= 4)
+  //          {
+  //              int adj1_x = current->x + dirX[dir];
+  //              int adj1_z = current->z;
+  //              int adj2_x = current->x;
+  //              int adj2_z = current->z + dirZ[dir];
+  //
+  //              if (m_map[adj1_z][adj1_x] != 0 || m_map[adj2_z][adj2_x] != 0)
+  //                  continue;
+  //          }
+  //
+  //          int nextKey = nz * m_width + nx;
+  //          if (closedList.find(nextKey) != closedList.end()) continue;
+  //
+  //          Node* neighbor = new Node{ nx, nz };
+  //          neighbor->gCost = current->gCost + my_gCost;
+  //          neighbor->hCost = Heuristic(nx, nz, endX, endZ);
+  //          neighbor->parent = current;
+  //          openList.push(neighbor);
+  //      }
     }
 
     return path;
