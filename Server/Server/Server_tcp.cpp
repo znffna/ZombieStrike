@@ -256,7 +256,7 @@ public:
             _obj_type   = ObjectType::PLAYER;
             _skin_type  = loginPacket->skin_type;
             _name       = loginPacket->name;
-            _position   = START_POSITIONS[IN_g_player_n];
+            _position   = START_POSITIONS[IN_g_player_n % 3];
             _velocity  = { 0.0f,0.0f, 0.0f };
             _pitch      = 0.0f;
             _hp         = PLAYER_HP;
