@@ -431,36 +431,29 @@ void GSParticleDraw(point VS_PARTICLE_DRAW_OUTPUT input[1], inout TriangleStream
 {
     GS_PARTICLE_DRAW_OUTPUT output = (GS_PARTICLE_DRAW_OUTPUT) 0;
 
+    float3 cameraPos = GetCameraPosition();
+    
     float3 start = input[0].position;
-    float3 end = start + input[0].velocity;
-    float width = input[0].lifetime;
-
-    float3 up = float3(0.0f, 1.0f, 0.0f);
-
-    float3 v0 = start + up * width; // Top-Left
-    float3 v1 = end + up * width; // Top-Right
-    float3 v2 = start - up * width; // Bottom-Left
-    float3 v3 = end - up * width; // Bottom-Right
+    float3 end = input[0].position + input[0].velocity;
     
-    float3 positions[4] = { v0, v1, v2, v3 };
+    float3 halfPos = (end + start) * 0.5f;
     
-    for (int i = 0; i < 4; ++i)
+    float3 dir = normalize(halfPos - cameraPos);
+    dir = cross(dir, normalize(input[0].velocity));
+    
+    float3 gf3RectPositions[4] = { float3(start + dir * 0.5f * input[0].lifetime), float3(end + dir * 0.5f * input[0].lifetime), float3(start - dir * 0.5f * input[0].lifetime), float3(end - dir * 0.5f * input[0].lifetime) };
+    
+    for (int i = 0; i < 4; i++)
     {
-        output.position = mul(mul(float4(positions[i], 1.0f), gmtxView), gmtxProjection);
+        //float3 positionW = mul(gf3Positions[i], (float3x3) gmtxInvView) + input[0].position;
+        float3 positionW = gf3RectPositions[i];
+        output.position = mul(mul(float4(positionW, 1.0f), gmtxView), gmtxProjection);
         output.uv = gf2QuadUVs[i];
         output.color = input[0].color;
+
         outputStream.Append(output);
     }
     
-    //for (int i = 0; i < 4; i++)
-    //{
-    //    float3 positionW = mul(gf3Positions[i], (float3x3) gmtxInvView) + input[0].position;
-    //    output.position = mul(mul(float4(positionW, 1.0f), gmtxView), gmtxProjection);
-    //    output.uv = gf2QuadUVs[i];
-    //    output.color = input[0].color;
-
-    //    outputStream.Append(output);
-    //}
 }
 
 float4 PSParticleDraw(GS_PARTICLE_DRAW_OUTPUT input) : SV_TARGET
