@@ -356,7 +356,7 @@ public:
             u_move_p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
             u_move_p.id = _id;
 
-            u_move_p.obj = updatePacket->obj;  // ← 여기! 네가 하고 싶은 대로 정확히 이거임
+            u_move_p.obj = updatePacket->obj;  
 
             for (auto& [id, session] : g_users) {
                 if (id != _id)

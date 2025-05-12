@@ -54,6 +54,7 @@ public:
     bool IsDirty() const;
     void ClearDirty();
 
+    Vec3 GetLookVectorToPlayer() const;
     float GetX() const;
     float GetZ() const;
     float GetPlayerX() const;

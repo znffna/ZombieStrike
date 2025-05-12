@@ -177,6 +177,7 @@ void ZombieAI::SetHP(int hp) {
 
 void ZombieAI::SetTargetPosition(float x, float z) {
     m_targetX = x; m_targetZ = z;
+    // look 계산
 }
 
 std::vector<std::pair<int, int>> ZombieAI::FindPathToPlayer() {
@@ -316,6 +317,12 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     //if ((after - before).LengthSquared() > 0.0001f)
     //    m_dirty = true;
 }
+Vec3 ZombieAI::GetLookVectorToPlayer() const {
+    Vec3 zombiePos(m_x, 0, m_z);
+    Vec3 targetPos(m_targetX, 0, m_targetZ);
+    Vec3 direction = (targetPos - zombiePos).Normalize();
+    return direction;
+}
 
 Vec3 ZombieAI::GetNodeCenter(int x, int z) const {
     return Vec3(x * CELL_SIZE + 0.5f, 0, z * CELL_SIZE + 0.5f);
@@ -338,6 +345,7 @@ ObjectDynamicInfo ZombieAI::GetDynamicInfo() const {
     ObjectDynamicInfo info{};
     info.meta.position = Vec3(m_x, 0, m_z);
     info.meta.velocity = Vec3(0, 0, 1); // 현재 방향 지정 안함
+	info.meta.look = GetLookVectorToPlayer();
     info.meta.hp = m_hp;
     info.meta.pitch = 0.1f;
     info.gun_type = GunType::BULLET_MAX; // 좀비는 총 안씀
