@@ -471,6 +471,12 @@ void CGameFramework::AdvanceFrame()
 
 	WaitForGpuComplete();
 
+	for (auto& scene : m_Scenes)
+	{
+		if (scene->CheckWorkUpdating())
+			scene->OnPostRender();
+	}
+
 	// Command List 재사용
 	m_pd3dCommandAllocator[m_nSwapChainBufferIndex]->Reset();
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->Reset(m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get(), nullptr);
@@ -548,12 +554,6 @@ void CGameFramework::AdvanceFrame()
 	// Command Queue에 Command List를 추가
 	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList[m_nSwapChainBufferIndex].Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
-
-	for (auto& scene : m_Scenes)
-	{
-		if (scene->CheckWorkUpdating())
-			scene->OnPostRender();
-	}
 
 	// Command Queue의 명령들이 모두 실행될 때까지 대기
 
