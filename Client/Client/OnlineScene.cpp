@@ -134,16 +134,16 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	}
 
 	switch (type) {
-	case S_C_PLAYER_INFO:
+	case S_C_OBJ_INFO:
 	{
-		pkt_sc_player_info* packet = reinterpret_cast<pkt_sc_player_info*>(recv_p);
+		pkt_sc_obj_info* packet = reinterpret_cast<pkt_sc_obj_info*>(recv_p);
 		if (g_bNetworkDebugMode) {
 			std::string DebugOutput = "S_C_PLAYER_INFO 패킷 수신\n";
-			DebugOutput += "position : (" + std::to_string(packet->fixdata.startposition.x) + ", " + std::to_string(packet->fixdata.startposition.y) + ", " + std::to_string(packet->fixdata.startposition.z) + ")\n";
+			DebugOutput += "position : (" + std::to_string(packet->startposition.x) + ", " + std::to_string(packet->startposition.y) + ", " + std::to_string(packet->startposition.z) + ")\n";
 			OutputDebugStringA(DebugOutput.c_str());
 		}
 
-		m_pPlayer->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
+		m_pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
 		m_mapGameObjects[packet->id] = m_pPlayer;
 		break;
 	}
@@ -153,21 +153,21 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		//if (g_bNetworkDebugMode)
 		{
 			std::string DebugOutput = "S_C_OBJECT_ADD 패킷 수신\n";
-			DebugOutput += "position : (" + std::to_string(packet->fixdata.startposition.x) + ", " + std::to_string(packet->fixdata.startposition.y) + ", " + std::to_string(packet->fixdata.startposition.z) + ")\n";
-			DebugOutput += "ObjectType : " + std::to_string(packet->fixdata.obj_type) + "\n";
+			DebugOutput += "position : (" + std::to_string(packet->startposition.x) + ", " + std::to_string(packet->startposition.y) + ", " + std::to_string(packet->startposition.z) + ")\n";
+			DebugOutput += "ObjectType : " + std::to_string(packet->obj_type) + "\n";
 			//OutputDebugStringA(DebugOutput.c_str());
 		}
 
-		switch (packet->fixdata.obj_type)
+		switch (packet->obj_type)
 		{
 		case ObjectType::PLAYER:
 		{
 			// 플레이어 오브젝트 추가
-			std::shared_ptr<CPlayer> pPlayer = GetPlayer(packet->fixdata.skin_type); // GetPlayer(skin_type)로 바꿔야 함
-			pPlayer->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
+			std::shared_ptr<CPlayer> pPlayer = GetPlayer(packet->skin_type); // GetPlayer(skin_type)로 바꿔야 함
+			pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
 			m_mapGameObjects[packet->id] = pPlayer;
 
-			int gun_type = packet->fixdata.gun_type;
+			int gun_type = packet->gun_type;
 			std::shared_ptr<CGun> pGun = CGun::Create(nullptr, nullptr, nullptr, gun_type);
 			pPlayer->SetGun(pGun);
 			AddObject(pGun);
@@ -182,8 +182,8 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		case ObjectType::ZOMBIE:
 		{
 			// 좀비 오브젝트 추가
-			std::shared_ptr<CGameObject> pZombie = GetZombie(packet->fixdata.skin_type);
-			pZombie->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
+			std::shared_ptr<CGameObject> pZombie = GetZombie(packet->skin_type);
+			pZombie->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
 			m_mapGameObjects[packet->id] = pZombie;
 			{
 				std::string DebugOutput = "ObjectType::ZOMBIE 생성 완료\n";
@@ -207,11 +207,11 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	case S_C_OBJECT_UPDATE:
 	{
 		pkt_sc_object_update* updatePkt = reinterpret_cast<pkt_sc_object_update*>(recv_p);
-		Vec3 position = updatePkt->obj.meta.position;
-		Vec3 look = updatePkt->obj.meta.look;
+		Vec3 position = updatePkt->position;
+		Vec3 look = updatePkt->look;
 		m_mapGameObjects[updatePkt->id]->SetLook(look.x, look.y, look.z);
 		m_mapGameObjects[updatePkt->id]->SetPosition(position.x, position.y, position.z);
-		updatePkt->obj.act_type; // State
+		updatePkt->act_type; // State
 
 	
 		if (g_bNetworkDebugMode) {
@@ -247,20 +247,20 @@ void COnlineScene::SendPlayerState()
 		pkt_cs_update packet{};
 		packet.header.size = sizeof(packet);
 		packet.header.type = PKT_TYPE::C_S_UPDATE;
-		packet.obj.level = 1; // 레벨
-		packet.obj.score = 0; // 점수
-		packet.obj.damage = 0; // 공격력
+		packet.level = 1; // 레벨
+		packet.score = 0; // 점수
+		packet.damage = 0; // 공격력
 
 		XMFLOAT3 position = m_pPlayer->GetPosition();
 		XMFLOAT3 velocity = m_pPlayer->GetComponent<CRigidBody>()->GetVelocity();
 		XMFLOAT3 look = m_pPlayer->GetLookVector();
-		memcpy(&packet.obj.meta.position, &position, sizeof(XMFLOAT3)); // 현재 위치
-		memcpy(&packet.obj.meta.velocity, &velocity, sizeof(XMFLOAT3)); // 이동 방향
-		memcpy(&packet.obj.meta.look, &look, sizeof(XMFLOAT3)); // 이동 방향
+		memcpy(&packet.position, &position, sizeof(XMFLOAT3)); // 현재 위치
+		memcpy(&packet.velocity, &velocity, sizeof(XMFLOAT3)); // 이동 방향
+		memcpy(&packet.look, &look, sizeof(XMFLOAT3)); // 이동 방향
 		float pitch = m_pPlayer->GetComponent<CCamera>()->GetPitch();
-		packet.obj.meta.pitch = pitch; // 피치
+		packet.pitch = pitch; // 피치
 
-		packet.obj.meta.hp = 100; // 체력
+		packet.hp = 100; // 체력
 
 		m_NetworkClient.send_packet((char*)&packet);
 

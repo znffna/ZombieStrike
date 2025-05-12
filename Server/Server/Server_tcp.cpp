@@ -41,8 +41,7 @@ struct ShootPacket {
 
 struct Zombie {
 	SIZEID id;
-    Objectfixdata zombieobj;
-	ObjectMeta zombiemeta;
+    Object zombieobj;
     SIZE2 damage;               
     SIZE1 act_type;             
 };
@@ -199,28 +198,27 @@ public:
     }
 
     void send_player_info() {
-		pkt_sc_player_info packet;
+		pkt_sc_obj_info packet;
 		ZeroMemory(&packet, sizeof(packet));
 		packet.header.size = sizeof(packet);
-        packet.header.type = PKT_TYPE::S_C_PLAYER_INFO;
+        packet.header.type = PKT_TYPE::S_C_OBJ_INFO;
 		packet.id = _id;
-		packet.fixdata.obj_type = _obj_type;
-		packet.fixdata.skin_type = _skin_type;
-		strcpy_s(packet.fixdata.name, _name.c_str());
-		packet.fixdata.startposition = _position;
-		packet.fixdata.starthp = _hp;
+		packet.obj_type = _obj_type;
+		packet.skin_type = _skin_type;
+		strcpy_s(packet.name, _name.c_str());
+		packet.startposition = _position;
+		packet.starthp = _hp;
+        packet.velocity = _velocity;
+        packet.look = _look;
+        packet.pitch = _pitch;
 
-		packet.obj.act_type = _act_type;
-		packet.obj.gun_type = _gun_type;
+		packet.act_type = _act_type;
+		packet.gun_type = _gun_type;
 
-		packet.obj.level = _level;
-		packet.obj.score = _score;
-		packet.obj.damage = _damage;
-		packet.obj.meta.position = _position;
-		packet.obj.meta.velocity = _velocity;
-		packet.obj.meta.look = _look;
-		packet.obj.meta.pitch = _pitch;
-		packet.obj.meta.hp = _hp;
+		packet.level = _level;
+		packet.score = _score;
+		packet.damage = _damage;
+
         do_send(&packet);
     }
 
@@ -229,17 +227,16 @@ public:
         p_update.header.size = sizeof(p_update);
         p_update.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
         p_update.id = _id;
-        p_update.obj.meta.position = _position;
-        p_update.obj.meta.velocity = _velocity;
-        p_update.obj.meta.look = _look;
-        p_update.obj.meta.pitch = _pitch;
-        p_update.obj.meta.hp = _hp;
+        p_update.velocity = _velocity;
+        p_update.look = _look;
+        p_update.pitch = _pitch;
+        p_update.hp = _hp;
 
-        p_update.obj.gun_type = _gun_type;
-        p_update.obj.level = _level;
-        p_update.obj.score = _score;
-        p_update.obj.damage = _damage;
-        p_update.obj.act_type = _act_type;
+        p_update.gun_type = _gun_type;
+        p_update.level = _level;
+        p_update.score = _score;
+        p_update.damage = _damage;
+        p_update.act_type = _act_type;
         do_send(&p_update);
     }
 
@@ -281,12 +278,12 @@ public:
 			p_Add_P.header.size = sizeof(p_Add_P);
 			p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
 			p_Add_P.id = _id;
-			p_Add_P.fixdata.obj_type = ObjectType::PLAYER;
-			p_Add_P.fixdata.skin_type = _skin_type;
-            strcpy_s(p_Add_P.fixdata.name, _name.c_str());
-			p_Add_P.fixdata.startposition = _position;
-			p_Add_P.fixdata.starthp = _hp;
-			p_Add_P.fixdata.gun_type = BULLET_PISTOL;
+			p_Add_P.obj_type = ObjectType::PLAYER;
+			p_Add_P.skin_type = _skin_type;
+            strcpy_s(p_Add_P.name, _name.c_str());
+			p_Add_P.startposition = _position;
+			p_Add_P.starthp = _hp;
+			p_Add_P.gun_type = BULLET_PISTOL;
 
             for (auto& u : g_users) {
                 if (u.first != _id) // 나를 제외한 상대방에게 알리고
@@ -299,11 +296,11 @@ public:
                     p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
 
                     p_Add_P.id = u.first;
-                    p_Add_P.fixdata.obj_type = ObjectType::PLAYER;
-                    p_Add_P.fixdata.skin_type = u.second._skin_type;
-                    strcpy_s(p_Add_P.fixdata.name, u.second._name.c_str());
-                    p_Add_P.fixdata.startposition = u.second._position;
-                    p_Add_P.fixdata.starthp = u.second._hp;
+                    p_Add_P.obj_type = ObjectType::PLAYER;
+                    p_Add_P.skin_type = u.second._skin_type;
+                    strcpy_s(p_Add_P.name, u.second._name.c_str());
+                    p_Add_P.startposition = u.second._position;
+                    p_Add_P.starthp = u.second._hp;
 					do_send(&p_Add_P);
 				}
 			}
@@ -314,11 +311,11 @@ public:
                 packet.header.size = sizeof(packet);
                 packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
                 packet.id = zombie->GetID();
-                packet.fixdata.obj_type = ObjectType::ZOMBIE;
-                packet.fixdata.skin_type = 0;
-                strcpy_s(packet.fixdata.name, "Zombie");
-                packet.fixdata.startposition = zombie->GetPosition();
-                packet.fixdata.starthp = zombie->GetHP();
+                packet.obj_type = ObjectType::ZOMBIE;
+                packet.skin_type = 0;
+                strcpy_s(packet.name, "Zombie");
+                packet.startposition = zombie->GetPosition();
+                packet.starthp = zombie->GetHP();
 
                 for (auto& [id, session] : g_users) {
                     session.do_send(&packet);
@@ -333,18 +330,16 @@ public:
 
 
             float deltaTime = 1.0f / 60.0f; // 서버 틱 레이트 기준 (예: 60fps)
-            // 이동 거리 = 방향 * 속도 * 시간
-            //_position += updatePacket->obj.meta.direction * updatePacket->obj.meta.speed * deltaTime;
-            _position = updatePacket->obj.meta.position;
-            _velocity = updatePacket->obj.meta.velocity;
-            _look = updatePacket->obj.meta.look;
-            _pitch = updatePacket->obj.meta.pitch;
-            _hp = updatePacket->obj.meta.hp;
-            _level = updatePacket->obj.level;
-            _score = updatePacket->obj.score;
-            _damage = updatePacket->obj.damage;
-            _gun_type = updatePacket->obj.gun_type;
-            _act_type = updatePacket->obj.act_type;
+            _position = updatePacket->position;
+            _velocity = updatePacket->velocity;
+            _look = updatePacket->look;
+            _pitch = updatePacket->pitch;
+            _hp = updatePacket->hp;
+            _level = updatePacket->level;
+            _score = updatePacket->score;
+            _damage = updatePacket->damage;
+            _gun_type = updatePacket->gun_type;
+            _act_type = updatePacket->act_type;
 
             // 로그
             //std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
@@ -356,8 +351,16 @@ public:
             u_move_p.header.size = sizeof(u_move_p);
             u_move_p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
             u_move_p.id = _id;
-
-            u_move_p.obj = updatePacket->obj;  
+			u_move_p.position = _position;
+			u_move_p.velocity = _velocity;
+			u_move_p.look = _look;
+			u_move_p.pitch = _pitch;
+			u_move_p.hp = _hp;
+			u_move_p.gun_type = _gun_type;
+			u_move_p.level = _level;
+			u_move_p.score = _score;
+			u_move_p.damage = _damage;
+			u_move_p.act_type = _act_type;
 
             for (auto& [id, session] : g_users) {
                 if (id != _id)
@@ -417,13 +420,23 @@ void ZombieAIThread() {
             zombie->Update(playerPositions, g_zombies, deltaTime);
 
             if (zombie->IsDirty()) {
-                ObjectDynamicInfo info = zombie->GetDynamicInfo();
+                Object info = zombie->GetObjectinfo();
 
                 pkt_sc_object_update p;
                 p.header.size = sizeof(p);
                 p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
                 p.id = zombie->GetID();
-                p.obj = info;
+				p.act_type = info.act_type;
+				p.position = info.position;
+				p.velocity = info.velocity;
+				p.look = info.look;
+				p.pitch = info.pitch;
+				p.hp = info.hp;
+				p.gun_type = info.gun_type;
+				p.level = info.level;
+				p.score = info.score;
+				p.damage = info.damage;
+				p.act_type = info.act_type;
 
                 for (auto& [id, session] : g_users)
                     session.do_send(&p);
@@ -448,12 +461,12 @@ void SpawnZombies(int count) {
         p.header.size = sizeof(p);
         p.header.type = PKT_TYPE::S_C_OBJECT_ADD;
         p.id = zombie->GetID();
-        p.fixdata.obj_type = ObjectType::ZOMBIE;
-        p.fixdata.skin_type = 0;
-        strcpy_s(p.fixdata.name, "Zombie");
-        p.fixdata.startposition = zombie->GetPosition();
-        p.fixdata.starthp = zombie->GetHP();
-        p.fixdata.gun_type = GunType::BULLET_MAX;
+        p.obj_type = ObjectType::ZOMBIE;
+        p.skin_type = 0;
+        strcpy_s(p.name, "Zombie");
+        p.startposition = zombie->GetPosition();
+        p.starthp = zombie->GetHP();
+        p.gun_type = GunType::BULLET_MAX;
 
         for (auto& [id, session] : g_users)
             session.do_send(&p);

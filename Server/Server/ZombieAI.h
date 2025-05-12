@@ -48,7 +48,7 @@ public:
     SIZE2 GetHP() const;
   
     
-    ObjectDynamicInfo GetDynamicInfo() const; // 패킷 정보 반환
+    Object GetObjectinfo() const; // 패킷 정보 반환
 
     // Dirty 플래그
     bool IsDirty() const;

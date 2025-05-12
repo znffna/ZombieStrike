@@ -16,7 +16,7 @@ constexpr int MAX_NAME_SIZE = 20;
 constexpr int MAX_USER = 5000;          // 서버의 최대 세션 수
 constexpr short MAX_PLAYER_COUNT = 3;   // 최대 플레이어 수
 
-constexpr short MAX_ZOMBIE_COUNT = 1;  // 최대 좀비 수
+constexpr short MAX_ZOMBIE_COUNT = 10;  // 최대 좀비 수
 
 constexpr int W_WIDTH = 250;            // 맵의 크기 정의
 constexpr int W_HEIGHT = 250;
@@ -73,15 +73,16 @@ enum PKT_TYPE : SIZE1 {
 
     //S_C_LOGIN_OK = 14,
     //S_C_LOGIN_FAIL = 15,
-    S_C_PLAYER_INFO,
+    S_C_OBJ_INFO,
     //S_C_HIT_RESULT,
 
     // 오브젝트 패킷 공통 처리용
     S_C_OBJECT_ADD,
     S_C_OBJECT_UPDATE,
-    S_C_ZOMBIE_UPDATE,
+    S_C_HIT_RESULT,
     S_C_OBJECT_REMOVE,
 
+    C_S_STAGE_INFO,
     S_C_STAGE_INFO,
     S_C_SCORE_INFO,
     // ...
@@ -122,11 +123,12 @@ inline const char* ToString(PKT_TYPE type) {
     case C_S_UPDATE:        return "C_S_UPDATE";
     case C_S_SHOOT:         return "C_S_SHOOT";
     case C_S_HIT:           return "C_S_HIT";
-    case S_C_PLAYER_INFO:   return "S_C_PLAYER_INFO";
+    case S_C_OBJ_INFO:      return "S_C_OBJ_INFO";
     case S_C_OBJECT_ADD:    return "S_C_OBJECT_ADD";
     case S_C_OBJECT_UPDATE: return "S_C_OBJECT_UPDATE";
-    case S_C_ZOMBIE_UPDATE: return "S_C_ZOMBIE_UPDATE";
+    case S_C_HIT_RESULT:    return "S_C_HIT_RESULT";
     case S_C_OBJECT_REMOVE: return "S_C_OBJECT_REMOVE";
+	case C_S_STAGE_INFO:    return "C_S_STAGE_INFO";
     case S_C_STAGE_INFO:    return "S_C_STAGE_INFO";
     case S_C_SCORE_INFO:    return "S_C_SCORE_INFO";
     default:                return "UNKNOWN_PACKET";
@@ -209,16 +211,14 @@ struct Objectfixdata {          // 고정정보
     GunType gun_type;           // 총 종류
 };
 
-struct ObjectMeta {             // 필수정보
+
+struct Object {  	
     Vec3 position;              // 위치
     Vec3 velocity;              // 방향 * 속도
     Vec3 look;                  // 보는방향
     float pitch;                // 피치
     SIZE2 hp;                   // 체력
-};
 
-struct ObjectDynamicInfo {  	// 동적정보
-    ObjectMeta meta;            // 필수정보
 	GunType gun_type;           // 총 종류
     SIZE1 level;                // 레벨
     SIZE2 score;                // 점수
@@ -245,7 +245,17 @@ struct pkt_cs_login {
 // 플레이어 업데이트 패킷
 struct pkt_cs_update {
     PacketHeader header{sizeof(*this), PKT_TYPE::C_S_UPDATE };
-    ObjectDynamicInfo obj;          // 플레이어 정보
+    Vec3 position;              // 위치
+    Vec3 velocity;              // 방향 * 속도
+    Vec3 look;                  // 보는방향
+    float pitch;                // 피치
+    SIZE2 hp;                   // 체력
+
+    GunType gun_type;           // 총 종류
+    SIZE1 level;                // 레벨
+    SIZE2 score;                // 점수
+    SIZE2 damage;               // 공격력
+    SIZE1 act_type;             // NONE, Player, ZMOVE, ATTACK, ...
 };
 
 // 총알 발사 패킷
@@ -270,22 +280,13 @@ struct pkt_cs_hit {
 // 서버 ->  클라
 // --------------------------
 // 총알 명중 결과
-
-struct pkt_sc_player_info {
-	PacketHeader header{ sizeof(*this), PKT_TYPE::S_C_PLAYER_INFO };
-	SIZEID id;                      // 누가 쐈는지
-	Objectfixdata fixdata;          // 고정정보
-	ObjectDynamicInfo obj;          // 동적정보
+struct pkt_sc_hit_result {
+    PacketHeader header{sizeof(*this), PKT_TYPE::S_C_HIT_RESULT };
+    SIZEID shooterId;               // 누가 쐈는지
+    SIZEID zombieId;
+    SIZE2 zombieHp;
+    //uint8_t damage;               // 얼마나 깎였는지
 };
-
-
-//struct pkt_sc_hit_result {
-//    PacketHeader header{sizeof(*this), PKT_TYPE::S_C_HIT_RESULT };
-//    SIZEID shooterId;               // 누가 쐈는지
-//    SIZEID zombieId;
-//    SIZE2 zombieHp;
-//    //uint8_t damage;               // 얼마나 깎였는지
-//};
 struct ZombieHit {
     SIZEID zombieId;
     SIZE2 hp;
@@ -296,30 +297,68 @@ struct pkt_sc_hit_multi_result {
     uint8_t hitCount;
     ZombieHit hits[10];             // 최대 10마리 좀비 피격 처리
 };
-
+// 로그인 결과 패킷
+struct pkt_sc_obj_info {
+    PacketHeader header{ sizeof(*this), PKT_TYPE::S_C_OBJ_INFO };
+    SIZEID id;                  // ID
+    ObjectType obj_type;        // 객체 타입
+    SIZE1 skin_type;            // 스킨 타입
+    char name[MAX_NAME_SIZE];   // 이름
+    Vec3 startposition;         // 초기 위치
+	Vec3 velocity;              // 방향 * 속도
+	Vec3 look;                  // 보는방향
+	float pitch;                // 피치
+    SIZE2 starthp;              // 체력
+    SIZE1 level;                // 레벨
+    SIZE2 score;                // 점수
+    SIZE2 damage;               // 공격력
+    GunType gun_type;           // 총 종류
+    SIZE1 act_type;             // NONE, Player, ZMOVE, ATTACK, ...
+};
 
 // --- Object 관리 패킷 ---
 struct pkt_sc_object_add {
     PacketHeader header{sizeof(*this), PKT_TYPE::S_C_OBJECT_ADD };
-	SIZEID id; // ID
-	Objectfixdata fixdata;          // 고정정보
+	SIZEID id;                  // ID
+	ObjectType obj_type;        // 객체 타입
+	SIZE1 skin_type;            // 스킨 타입
+	char name[MAX_NAME_SIZE];   // 이름
+    Vec3 startposition;         // 초기 위치
+    SIZE2 starthp;              // 체력
+    GunType gun_type;           // 총 종류
+	SIZE1 act_type;			    // NONE, Player, ZMOVE, ATTACK, ...
 };
 
 // 객체 업데이트
 struct pkt_sc_object_update {
     PacketHeader header{sizeof(*this),PKT_TYPE::S_C_OBJECT_UPDATE };
-	SIZEID id; // ID
-    ObjectDynamicInfo obj;          // 동적정보
+	SIZEID id;                  // ID
+    Vec3 position;              // 위치
+    Vec3 velocity;              // 방향 * 속도
+    Vec3 look;                  // 보는방향
+    float pitch;                // 피치
+    SIZE2 hp;                   // 체력
+
+    GunType gun_type;           // 총 종류
+    SIZE1 level;                // 레벨
+    SIZE2 score;                // 점수
+    SIZE2 damage;               // 공격력
+    SIZE1 act_type;             // NONE, Player, ZMOVE, ATTACK, ...
 };
 // 객체 삭제
 struct pkt_sc_object_remove {
     PacketHeader header{sizeof(*this),PKT_TYPE::S_C_OBJECT_REMOVE };
     SIZEID id;
-    // ObjectType obj_type;
 };
 
 // --- 게임 상황 패킷 ---
 // STAGE 정보
+struct pkt_cs_stage_info {
+	PacketHeader header{ sizeof(*this),PKT_TYPE::C_S_STAGE_INFO };
+	SIZE2 currentStage;
+    SIZE3 timeLeft;
+};
+
 struct pkt_sc_stage_info {
     PacketHeader header{sizeof(*this),PKT_TYPE::S_C_STAGE_INFO };
     SIZE2 currentStage;
