@@ -16,7 +16,7 @@ constexpr int MAX_NAME_SIZE = 20;
 constexpr int MAX_USER = 5000;          // 서버의 최대 세션 수
 constexpr short MAX_PLAYER_COUNT = 3;   // 최대 플레이어 수
 
-constexpr short MAX_ZOMBIE_COUNT = 100;  // 최대 좀비 수
+constexpr short MAX_ZOMBIE_COUNT = 1;  // 최대 좀비 수
 
 constexpr int W_WIDTH = 250;            // 맵의 크기 정의
 constexpr int W_HEIGHT = 250;
@@ -211,8 +211,8 @@ struct Objectfixdata {          // 고정정보
 
 struct ObjectMeta {             // 필수정보
     Vec3 position;              // 위치
-    Vec3 direction;             // 방향
-    float speed;                // 이동 속도 (단위: m/s 또는 유닛/s)
+    Vec3 velocity;              // 방향 * 속도
+    float pitch;                // 피치
     SIZE2 hp;                   // 체력
 };
 

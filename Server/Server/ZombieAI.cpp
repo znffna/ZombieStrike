@@ -20,7 +20,7 @@ constexpr int ZOMBIE_START_X = 2;
 constexpr int ZOMBIE_START_Z = 2;
 constexpr int PLAYER_START_X = 580;
 constexpr int PLAYER_START_Z = 545;
-constexpr int NUM_ZOMBIES = 50;          // 추가: 생성할 좀비 수
+constexpr int NUM_ZOMBIES = 50;         // 추가: 생성할 좀비 수
 // 필수 정보 
 //constexpr float my_gCost = 1.0f;         // 이동 비용
 ////constexpr float CELL_SIZE = 1.0f;        // 노드당 크기
@@ -337,9 +337,9 @@ float ZombieAI::GetPlayerZ() const { return m_targetZ; }
 ObjectDynamicInfo ZombieAI::GetDynamicInfo() const {
     ObjectDynamicInfo info{};
     info.meta.position = Vec3(m_x, 0, m_z);
-    info.meta.direction = Vec3(0, 0, 1); // 현재 방향 지정 안함
+    info.meta.velocity = Vec3(0, 0, 1); // 현재 방향 지정 안함
     info.meta.hp = m_hp;
-    info.meta.speed = 0.1f;
+    info.meta.pitch = 0.1f;
     info.gun_type = GunType::BULLET_MAX; // 좀비는 총 안씀
     info.level = 0;
     info.score = 0;

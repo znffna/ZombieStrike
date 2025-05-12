@@ -90,8 +90,8 @@ public:
     std::string     _name;
 
     Vec3            _position;
-    Vec3            _direction;
-	float           _speed;
+    Vec3            _velocity;
+	float           _pitch;
     SIZE2           _hp;
     GunType         _gun_type;     
     SIZE1           _level;
@@ -215,8 +215,8 @@ public:
 		packet.obj.score = _score;
 		packet.obj.damage = _damage;
 		packet.obj.meta.position = _position;
-		packet.obj.meta.direction = _direction;
-		packet.obj.meta.speed = _speed;
+		packet.obj.meta.velocity = _velocity;
+		packet.obj.meta.pitch = _pitch;
 		packet.obj.meta.hp = _hp;
         do_send(&packet);
     }
@@ -227,8 +227,8 @@ public:
         p_update.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
         p_update.id = _id;
         p_update.obj.meta.position = _position;
-        p_update.obj.meta.direction = _direction;
-        p_update.obj.meta.speed = _speed;
+        p_update.obj.meta.velocity = _velocity;
+        p_update.obj.meta.pitch = _pitch;
         p_update.obj.meta.hp = _hp;
 
         p_update.obj.gun_type = _gun_type;
@@ -257,8 +257,8 @@ public:
             _skin_type  = loginPacket->skin_type;
             _name       = loginPacket->name;
             _position   = START_POSITIONS[IN_g_player_n];
-            _direction  = { 0.0f,0.0f, 0.0f };
-            _speed      = 0.0f;
+            _velocity  = { 0.0f,0.0f, 0.0f };
+            _pitch      = 0.0f;
             _hp         = PLAYER_HP;
 			_gun_type   = GunType::BULLET_PISTOL; // 총 종류
             _level      = 1;
@@ -331,8 +331,8 @@ public:
             // 이동 거리 = 방향 * 속도 * 시간
             //_position += updatePacket->obj.meta.direction * updatePacket->obj.meta.speed * deltaTime;
             _position = updatePacket->obj.meta.position;
-            _direction = updatePacket->obj.meta.direction;
-            _speed = updatePacket->obj.meta.speed;
+            _velocity = updatePacket->obj.meta.velocity;
+            _pitch = updatePacket->obj.meta.pitch;
             _hp = updatePacket->obj.meta.hp;
             _level = updatePacket->obj.level;
             _score = updatePacket->obj.score;
@@ -341,10 +341,10 @@ public:
             _act_type = updatePacket->obj.act_type;
 
             // 로그
-            std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
-            std::cout << "  position  = (" << _position.x << ", " << _position.y << ", " << _position.z << ")\n";
-            std::cout << "  direction = (" << _direction.x << ", " << _direction.y << ", " << _direction.z << ")\n";
-            std::cout << "  speed     = " << _speed << "\n";
+            //std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
+            //std::cout << "  position  = (" << _position.x << ", " << _position.y << ", " << _position.z << ")\n";
+            //std::cout << "  direction = (" << _direction.x << ", " << _direction.y << ", " << _direction.z << ")\n";
+            //std::cout << "  speed     = " << _speed << "\n";
 
             pkt_sc_object_update u_move_p;
             u_move_p.header.size = sizeof(u_move_p);
