@@ -1269,8 +1269,6 @@ CBulletObject::~CBulletObject()
 
 void CBulletObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (::gnCurrentBullets < 1) return;
-
 	OnPrepareRender();
 
 	for (auto& pMaterial : m_ppMaterials)
@@ -1299,7 +1297,6 @@ void CBulletObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* 
 
 void CBulletObject::OnPostRender()
 {
-	if (::gnCurrentBullets < 1) return;
 	m_pMesh->OnPostRender(0); //Read Stream Output Buffer Filled Size
 }
 
@@ -1308,7 +1305,7 @@ void CBulletObject::AddBullet(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3
 	CBulletVertex pBulletVertice;
 	pBulletVertice.m_xmf3Position = xmf3Position;
 	pBulletVertice.m_xmf3Velocity = xmf3Velocity;
-	pBulletVertice.m_fLifetime = 1.0f;
+	pBulletVertice.m_fLifetime = 0.4f;
 
 	std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullet(pBulletVertice);
 }

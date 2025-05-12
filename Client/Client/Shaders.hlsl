@@ -177,7 +177,7 @@ float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
 //    cColor = cColor + cIllumination;
 //    cColor = cColor * cIllumination;
 //    cColor = cColor / (1 + cColor);
-//    cColor = lerp(cColor, cIllumination, 0.5f);
+    cColor = lerp(cColor, cIllumination, 0.7f);
     
         return (cColor);
     }
@@ -386,9 +386,9 @@ void GSParticleStreamOutput(point VS_PARTICLE_INPUT input[1], inout PointStream<
 {
     VS_PARTICLE_INPUT particle = input[0];
 
+    particle.lifetime -= gfElapsedTime;
     if (particle.lifetime > 0.0f)
     {
-        particle.lifetime -= gfElapsedTime;
         output.Append(particle);
     }
 }

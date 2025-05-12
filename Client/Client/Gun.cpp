@@ -55,14 +55,16 @@ void CGun::SetGunType(int type)
 
 void CGun::Fire()
 {
-	Fire(Vector3::ScalarProduct( GetLookVector(),m_fBulletRange, false));
+	XMFLOAT3 direction = FindFrame("M16_4_low")->GetUpVector();
+	XMFLOAT3 position = FindFrame("M16_4_low")->GetPosition();
+	Fire(position, Vector3::ScalarProduct(direction, m_fBulletRange, false));
 }
 
-void CGun::Fire(const XMFLOAT3& xmf3Direction)
+void CGun::Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction)
 {
-	if(m_fCoolTime < 0.0f)
+	if (m_fCoolTime < 0.0f)
 	{
-		CGun::m_pBulletObject->AddBullet(GetPosition(), xmf3Direction);
+		CGun::m_pBulletObject->AddBullet(xmf3Position, xmf3Direction);
 		m_fCoolTime = m_fFireRate;
 	}
 }

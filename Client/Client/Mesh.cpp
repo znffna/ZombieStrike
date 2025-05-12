@@ -1195,7 +1195,6 @@ void CBulletMesh::CreateStreamOutputBuffer(ID3D12Device* pd3dDevice, ID3D12Graph
 
 	// DrawBuffer에 대한 Upload 버퍼를 생성한다.
 	m_pd3dUploadDrawBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, m_nStride, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
-	m_pd3dUploadDrawBuffer->Map(0, NULL, (void**)&m_pBullets);
 
 	UINT64 nBufferFilledSize = 0;
 	m_pd3dDefaultBufferFilledSize = ::CreateBufferResource(pd3dDevice, pd3dCommandList, &nBufferFilledSize, sizeof(UINT64), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_STREAM_OUT, NULL);
@@ -1308,7 +1307,7 @@ void CBulletMesh::PostRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPi
 {
 }
 
-//#define _WITH_DEBUG_STREAM_OUTPUT_VERTICES
+#define _WITH_DEBUG_STREAM_OUTPUT_VERTICES
 
 void CBulletMesh::OnPostRender(int nPipelineState)
 {
@@ -1343,6 +1342,8 @@ void CBulletMesh::AddBullet(const CBulletVertex& Bullet)
 {
 	ComPtr<ID3D12GraphicsCommandList> m_pd3dCommandList = CGameFramework::GetCommandList();
 
+	m_pd3dUploadDrawBuffer->Map(0, NULL, (void**)&m_pBullets);
+
 	// 새로운 입자를 업로드 버퍼에 추가한다.
 	memcpy(m_pBullets, &Bullet, sizeof(CBulletVertex));
 
@@ -1355,13 +1356,8 @@ void CBulletMesh::AddBullet(const CBulletVertex& Bullet)
 	// 디폴트 버퍼 상태 복원
 	::SynchronizeResourceTransition(m_pd3dCommandList.Get(), m_pd3dDrawBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
-	// 정점 갯수를 증가시킨다.
-	++m_nVertices;
-	::gnCurrentBullets = m_nVertices;
+	m_pd3dUploadDrawBuffer->Unmap(0, NULL);
 
-	{
-		std::string pstrDebug = "Bullet Fire : position (" + std::to_string(Bullet.m_xmf3Position.x) + "," + std::to_string(Bullet.m_xmf3Position.y) + "," + std::to_string(Bullet.m_xmf3Position.z) + ")";
-		pstrDebug += "velocity (" + std::to_string(Bullet.m_xmf3Velocity.x) + "," + std::to_string(Bullet.m_xmf3Velocity.y) + "," + std::to_string(Bullet.m_xmf3Velocity.z) + ")\n";
-		OutputDebugStringA(pstrDebug.c_str());
-	}
+	// 정점 갯수를 증가시킨다.
+	::gnCurrentBullets = ++m_nVertices;
 }
