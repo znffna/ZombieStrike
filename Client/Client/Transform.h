@@ -49,6 +49,8 @@ public:
 	void Rotate(const XMFLOAT3& pxmf3Axis, float fAngle);
 	void Rotate(const XMFLOAT4& pxmf4Quaternion);
 
+	void SetLook(const XMFLOAT3& xmf3Look);
+
 	XMFLOAT3 GetEulerAngles (const XMFLOAT4X4& worldMatrix, const XMFLOAT3& scale) const;
 
 	void SetLocalMatrix(DirectX::XMFLOAT4X4 xmf4x4Local) { m_xmf4x4Local = xmf4x4Local; }

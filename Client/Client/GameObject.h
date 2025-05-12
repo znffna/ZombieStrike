@@ -298,6 +298,9 @@ public:
 	virtual void Rotate(const XMFLOAT3& pxmf3Axis, float fAngle) { m_pTransform->Rotate(pxmf3Axis, fAngle); }
 	virtual void Rotate(const XMFLOAT4& pxmf4Quaternion) { m_pTransform->Rotate(pxmf4Quaternion); }
 
+	void SetLook(const XMFLOAT3& pxmf3Look) { m_pTransform->SetLook(pxmf3Look); }
+	void SetLook(float x, float y, float z) { m_pTransform->SetLook(XMFLOAT3(x,y,z)); }
+
 	void SetLocalMatrix(DirectX::XMFLOAT4X4 xmf4x4Local) { m_pTransform->SetLocalMatrix(xmf4x4Local); }
 	void SetLocalMatrix(DirectX::XMMATRIX xmf4x4Local) { m_pTransform->SetLocalMatrix(xmf4x4Local); }
 	void SetWorldMatrix(DirectX::XMFLOAT4X4 xmf4x4World) { m_pTransform->SetWorldMatrix(xmf4x4World); }

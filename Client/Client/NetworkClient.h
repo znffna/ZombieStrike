@@ -101,7 +101,6 @@ public:
 
     // SendPacket (테스트로 구현)
     void SendLoginPacket(std::string& name);
-    void SendMovePacket();
 
     std::string chooseServerIP() {
         std::cout << "\n===== 서버 접속 방법 선택 =====\n";
