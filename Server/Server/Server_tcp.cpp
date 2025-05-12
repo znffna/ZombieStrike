@@ -16,6 +16,7 @@
 #include <print>
 
 #pragma comment(lib, "ws2_32.lib")
+constexpr double FRAME_INTERVAL_MS = 1000.0 / 60.0;
 
 constexpr bool DEBUG_PRINT = false;
 #define DEBUG_LOG(msg) \
@@ -397,9 +398,14 @@ void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
 }
 
 
+auto lastTick = std::chrono::steady_clock::now();
+
 void ZombieAIThread() {
     while (serverRunning) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        auto now = std::chrono::steady_clock::now();
+        std::chrono::duration<float> dt = now - lastTick;
+        lastTick = now;
+        float deltaTime = dt.count();  // √  ¥‹¿ß
 
         std::vector<Vec3> playerPositions;
         for (auto& [id, session] : g_users) {
@@ -408,7 +414,7 @@ void ZombieAIThread() {
         }
 
         for (auto& zombie : g_zombies) {
-            zombie->Update(playerPositions, g_zombies);
+            zombie->Update(playerPositions, g_zombies, deltaTime);
 
             if (zombie->IsDirty()) {
                 ObjectDynamicInfo info = zombie->GetDynamicInfo();
@@ -416,7 +422,7 @@ void ZombieAIThread() {
                 pkt_sc_object_update p;
                 p.header.size = sizeof(p);
                 p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
-                p.id = zombie->GetID(); 
+                p.id = zombie->GetID();
                 p.obj = info;
 
                 for (auto& [id, session] : g_users)
@@ -425,9 +431,10 @@ void ZombieAIThread() {
                 zombie->ClearDirty();
             }
         }
+
+        std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(FRAME_INTERVAL_MS));
     }
 }
-
 void SpawnZombies(int count) {
     for (int i = 0; i < count; ++i) {
         auto [x, z] = GetRandomPosition(g_map);
