@@ -11,9 +11,9 @@
 #include <cmath>
 #include <unordered_map>
 #include <queue>
+#include <print>
 #include "../../protocol.h"
 #include "ZombieAI.h" 
-#include <print>
 
 #pragma comment(lib, "ws2_32.lib")
 constexpr double FRAME_INTERVAL_MS = 1000.0 / 60.0;
@@ -489,7 +489,7 @@ int main() {
 
     std::wcout.imbue(std::locale("korean")); 
 
-    g_map = LoadMapBin("../../Map/Node/obstacle_mask.bin");
+    g_map = LoadMapBin("Node/ob_mask_te_1.bin");
 
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
