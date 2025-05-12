@@ -300,7 +300,7 @@ std::string GetPacketName(PKT_TYPE packetType) {
         { C_S_UPDATE, "C_S_UPDATE" },
         { C_S_SHOOT, "C_S_SHOOT" },
         { C_S_HIT, "C_S_HIT" },
-        { S_C_PLAYER_INFO, "S_C_PLAYER_INFO" },
+        { S_C_OBJ_INFO, "S_C_OBJ_INFO" },
         { S_C_OBJECT_ADD, "S_C_OBJECT_ADD" },
         { S_C_OBJECT_UPDATE, "S_C_OBJECT_UPDATE" },
         { S_C_OBJECT_REMOVE, "S_C_OBJECT_REMOVE" },

@@ -341,13 +341,13 @@ float ZombieAI::GetPlayerX() const { return m_targetX; }
 float ZombieAI::GetPlayerZ() const { return m_targetZ; }
 
 
-ObjectDynamicInfo ZombieAI::GetDynamicInfo() const {
-    ObjectDynamicInfo info{};
-    info.meta.position = Vec3(m_x, 0, m_z);
-    info.meta.velocity = Vec3(0, 0, 1); // 현재 방향 지정 안함
-	info.meta.look = GetLookVectorToPlayer();
-    info.meta.hp = m_hp;
-    info.meta.pitch = 0.1f;
+Object ZombieAI::GetObjectinfo() const {
+    Object info{};
+    info.position = Vec3(m_x, 0, m_z);
+    info.velocity = Vec3(0, 0, 1); // 현재 방향 지정 안함
+	info.look = GetLookVectorToPlayer();
+    info.hp = m_hp;
+    info.pitch = 0.1f;
     info.gun_type = GunType::BULLET_MAX; // 좀비는 총 안씀
     info.level = 0;
     info.score = 0;
