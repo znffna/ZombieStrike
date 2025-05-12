@@ -169,6 +169,7 @@ public:
 
 	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
+	virtual void OnPostRender() {} ;
 
 	// static method
 	static ComPtr<ID3D12RootSignature> CreateGraphicsRootSignature(ID3D12Device* pd3dDevice);
@@ -202,10 +203,12 @@ public:
 
 	// Input Method
 	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) { return false; };
-	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
+	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
 
 protected:
+	bool m_bMouseLButtonDown = false;
+
 	// DescriptorHeap
 	static std::shared_ptr<CDescirptorHeap> m_pDescriptorHeap;
 

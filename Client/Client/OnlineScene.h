@@ -22,9 +22,6 @@ public:
 	virtual void Update(float deltaTime) override;
 
 	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
-	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
-	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
-
 
 	// Network Override
 	virtual void ProcessPacket(PacketHeader* recv_p); // Recv 내용 처리 (m_NetworkClient로 부터	호출됨)

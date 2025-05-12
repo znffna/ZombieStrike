@@ -96,6 +96,16 @@ void CMaterial::ReleaseShaderVariables()
 #endif // _USE_OBJECT_MATERIAL_CBV
 }
 
+void CMaterial::ReleaseUploadBuffers()
+{
+	if (false == m_ppTextures.empty()) { 
+		for (auto& pTexture : m_ppTextures) {
+			if (pTexture) pTexture->ReleaseUploadBuffers();
+		}
+	}
+
+}
+
 void LoadTextureFromFile(std::shared_ptr<CTexture>& ppTexture, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring& pwstrTexturePath, char  pstrTextureName[64], UINT nRootParameter)
 {
 	ppTexture = std::make_shared <CTexture>(1, RESOURCE_TEXTURE2D, 1);

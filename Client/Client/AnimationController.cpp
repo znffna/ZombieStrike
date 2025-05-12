@@ -107,6 +107,8 @@ void CAnimationController::SettingByModel(std::shared_ptr<CLoadedModelInfo>& pMo
 {
 	Clear();
 
+	state = IDLE;
+
 	m_pModelRootObject = pModel->m_pModelRootObject;
 	m_nSkinnedMeshes = pModel->m_nSkinnedMeshes;
 	m_ppSkinnedMeshes = pModel->m_ppSkinnedMeshes;
@@ -191,25 +193,14 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 			}
 		}
 
-		if (auto pCamera = pRootGameObject->GetComponent<CCamera>())
-		{
-			auto pitch = pRootGameObject->GetPitch();
-			auto rotateMatrix = DirectX::XMMatrixRotationX(XMConvertToRadians(pitch / 3.0f));
-			if (auto pSpine = pRootGameObject->FindFrame("mixamorig:Spine")) {
-				auto pSpineTransform = pSpine->GetLocalMatrix();
-				pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
-				pSpine->SetLocalMatrix(pSpineTransform);
-			}
-			if (auto pSpine1 = pRootGameObject->FindFrame("mixamorig:Spine")) {
-				auto pSpineTransform = pSpine1->GetLocalMatrix();
-				pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
-				pSpine1->SetLocalMatrix(pSpineTransform);
-			}
-			if (auto pSpine2 = pRootGameObject->FindFrame("mixamorig:Spine")) {
-				auto pSpineTransform = pSpine2->GetLocalMatrix();
-				pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
-				pSpine2->SetLocalMatrix(pSpineTransform);
-			}
+		ApplyPitchToSpine(pRootGameObject);
+
+		if (auto pBone = m_pModelRootObject->FindFrame("mixamorig:Hips")) {
+			auto pTransform = pBone->GetLocalMatrix();
+			//pTransform._41 = 0.0f;
+			//pTransform._42 = 0.0f;
+			pTransform._43 = 0.0f;
+			pBone->SetLocalMatrix(pTransform);
 		}
 
 		pRootGameObject->UpdateTransform(NULL);
@@ -217,4 +208,43 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 		OnRootMotion(pRootGameObject);
 		OnAnimationIK(pRootGameObject);
 	}
+}
+
+void CAnimationController::ApplyPitchToSpine(CGameObject* pRootGameObject)
+{
+	if (auto pCamera = pRootGameObject->GetComponent<CCamera>())
+	{
+		auto pitch = pRootGameObject->GetPitch();
+		auto rotateMatrix = DirectX::XMMatrixRotationX(XMConvertToRadians(pitch / 3.0f));
+		if (auto pSpine = pRootGameObject->FindFrame("mixamorig:Spine")) {
+			auto pSpineTransform = pSpine->GetLocalMatrix();
+			pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
+			pSpine->SetLocalMatrix(pSpineTransform);
+		}
+		if (auto pSpine1 = pRootGameObject->FindFrame("mixamorig:Spine")) {
+			auto pSpineTransform = pSpine1->GetLocalMatrix();
+			pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
+			pSpine1->SetLocalMatrix(pSpineTransform);
+		}
+		if (auto pSpine2 = pRootGameObject->FindFrame("mixamorig:Spine")) {
+			auto pSpineTransform = pSpine2->GetLocalMatrix();
+			pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
+			pSpine2->SetLocalMatrix(pSpineTransform);
+		}
+	}
+}
+
+void CAnimationController::ChangeState(ANIMATION_STATE state)
+{
+	ANIMATION_STATE before = this->state;
+	this->state = state;
+
+	SetTrackEnable(before, false);
+	SetTrackEnable(state, true);
+}
+
+void CAnimationController::ChangeState(ANIMATION_STATE state, float fPosition)
+{
+	ChangeState(state);
+	SetTrackPosition(state, fPosition);
 }

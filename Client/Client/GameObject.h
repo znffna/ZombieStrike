@@ -146,6 +146,8 @@ public:
 	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseShaderVariables();
 
+	virtual void ReleaseUploadBuffers();
+
 protected:
 	bool m_bActive; // Active Flag
 
@@ -188,7 +190,7 @@ protected:
 	// Child
 	std::vector<std::shared_ptr<CGameObject>> m_pChilds; // Child Object
 public:
-	// Animation
+	// Animation	
 	std::shared_ptr<CAnimationController> m_pSkinnedAnimationController;
 
 	// Load Model
@@ -285,7 +287,7 @@ public:
 	void Move(DirectX::XMFLOAT3 xmf3Shift) { m_pTransform->Move(xmf3Shift); };
 	void Move(float x, float y, float z) { Move(DirectX::XMFLOAT3(x, y, z)); }
 
-	void Move(DWORD dwDirection, float fDistance, float deltaTime);
+	virtual void Move(DWORD dwDirection, float fDistance, float deltaTime);
 
 	void MoveStrafe(float fDistance = 1.0f) { m_pTransform->MoveStrafe(fDistance); };
 	void MoveUp(float fDistance = 1.0f) { m_pTransform->MoveUp(fDistance); };
@@ -402,6 +404,7 @@ public:
 	//지형의 높이를 계산하는 함수이다(월드 좌표계). 높이 맵의 높이에 스케일의 y를 곱한 값이다. 
 	float GetHeight(float x, float z) {
 		if (isBinary) {
+			if ((x < 0) || (z < 0) || (x >= m_nWidth) || (z >= m_nLength)) return(0.0f);
 			//높이 맵의 좌표의 정수 부분과 소수 부분을 계산한다. 
 			int nx = (int)x;
 			int nz = (int)z;
@@ -459,3 +462,20 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+class CBulletObject : public CGameObject
+{
+public:
+	CBulletObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
+	virtual ~CBulletObject();
+
+	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_BULLET; }
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+	virtual void OnPostRender();
+
+	// method
+	void AddBullet(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Velocity);
+};

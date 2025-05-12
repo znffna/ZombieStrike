@@ -147,6 +147,8 @@ void CRigidBody::UpdateVelocity(float fTimeElapsed)
 	m_pTransform->Move(xmf3Velocity);
 }
 
+#include "Camera.h"
+
 void CRigidBody::OnTerrainUpdateCallback(float fTimeElapsed)
 {
 	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pTerrainUpdatedContext;
@@ -177,7 +179,6 @@ void CRigidBody::OnTerrainUpdateCallback(float fTimeElapsed)
 		SetVelocity(xmf3PlayerVelocity);
 		xmf3PlayerPosition.y = fHeight;
 		m_pTransform->SetPosition(xmf3PlayerPosition);
-	}
-	
+	}	
 }
 

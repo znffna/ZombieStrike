@@ -29,7 +29,6 @@ COnlineScene::~COnlineScene()
 
 void COnlineScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-
 	bool isComplelte = m_NetworkClient.Connect();
 	if (!isComplelte)
 	{
@@ -101,28 +100,7 @@ void COnlineScene::Update(float deltaTime)
 
 bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 {
-	DWORD dwDirection = 0;
-	if (pBuffer.pKeysBuffer[VK_UP] & 0xF0)dwDirection |= DIR_FORWARD;
-	if (pBuffer.pKeysBuffer[VK_DOWN] & 0xF0)dwDirection |= DIR_BACKWARD;
-	if (pBuffer.pKeysBuffer[VK_LEFT] & 0xF0)dwDirection |= DIR_LEFT;
-	if (pBuffer.pKeysBuffer[VK_RIGHT] & 0xF0)dwDirection |= DIR_RIGHT;
-	if (pBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
-	if (pBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
-
-	if (dwDirection || pBuffer.cxDelta != 0.0f || pBuffer.cyDelta != 0.0f)
-	{
-		if (m_pPlayer)
-		{
-			m_pPlayer->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
-			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
-		}
-
-		/*if (m_pCamera)
-		{
-			m_pCamera->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
-			m_pCamera->RegenerateViewMatrix();
-		}*/
-	}
+	CGameScene::ProcessInput(pBuffer, deltaTime);
 
 	if (pBuffer.pKeysBuffer[VK_ESCAPE] & 0xF0)
 	{
@@ -143,14 +121,6 @@ bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 	}
 
 	return true;
-}
-
-void COnlineScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
-{
-}
-
-void COnlineScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
-{
 }
 
 void COnlineScene::ProcessPacket(PacketHeader* recv_p)
@@ -198,7 +168,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			m_mapGameObjects[packet->id] = pPlayer;
 
 			int gun_type = packet->fixdata.gun_type;
-			std::shared_ptr<CGameObject> pGun = CGun::Create(nullptr, nullptr, nullptr, gun_type);
+			std::shared_ptr<CGun> pGun = CGun::Create(nullptr, nullptr, nullptr, gun_type);
 			pPlayer->SetGun(pGun);
 
 			{

@@ -23,41 +23,12 @@ public:
 
 	virtual void Update(float deltaTime) override;
 
+	virtual void OnPostRender() override;
 	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 
-	virtual void ChangeMap(int nMapIndex)
-	{
-		m_nStageIndex = nMapIndex % m_strStageNames.size();
-
-		if (m_pTerrain) RemoveObject(m_pTerrain);
-		m_pTerrain = GetTerrain(m_nStageIndex);
-		AddObject(m_pTerrain);
-
-		for (auto& pObject : m_pZombiePool)
-		{
-			if (pObject) pObject->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
-		}
-		for (auto& pObject : m_pPlayerObjects)
-		{
-			if (pObject) pObject->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
-		}
-		//if (m_pPlayer) m_pPlayer->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
-		
-		if (m_pMap) {
-			RemoveObject(m_pMap);
-		}
-
-		auto pMap = CResourceManager::GetInstance().GetModelInfo(m_strStageNames[m_nStageIndex]);
-		pMap->m_pModelRootObject->UpdateTransform();
-		m_pMap = pMap->m_pModelRootObject;
-		m_pMap->Update(0.0f);
-		m_pMap->SetLayer(CGameObject::LAYER_ENVIRONMENT);
-		AddObject(m_pMap);
-
-
-	};
+	virtual void ChangeMap(int nMapIndex);;
 
 	// Shader Variables
 	//void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
@@ -84,4 +55,6 @@ public:
 	{
 		return m_pTerrainObjects[nSkinType % (int)m_pTerrainObjects.size()];
 	};
+
+	std::shared_ptr<CBulletObject> m_pBulletObject;
 };
