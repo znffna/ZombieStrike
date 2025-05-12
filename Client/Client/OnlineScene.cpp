@@ -163,13 +163,14 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		case ObjectType::PLAYER:
 		{
 			// 플레이어 오브젝트 추가
-			std::shared_ptr<CPlayer> pPlayer = GetPlayer(); // GetPlayer(skin_type)로 바꿔야 함
+			std::shared_ptr<CPlayer> pPlayer = GetPlayer(packet->fixdata.skin_type); // GetPlayer(skin_type)로 바꿔야 함
 			pPlayer->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
 			m_mapGameObjects[packet->id] = pPlayer;
 
 			int gun_type = packet->fixdata.gun_type;
 			std::shared_ptr<CGun> pGun = CGun::Create(nullptr, nullptr, nullptr, gun_type);
 			pPlayer->SetGun(pGun);
+			AddObject(pGun);
 
 			{
 				std::string DebugOutput = "ObjectType::PLAYER 생성 완료\n";
@@ -207,7 +208,11 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	{
 		pkt_sc_object_update* updatePkt = reinterpret_cast<pkt_sc_object_update*>(recv_p);
 		Vec3 position = updatePkt->obj.meta.position;
+		Vec3 look = updatePkt->obj.meta.look;
+		m_mapGameObjects[updatePkt->id]->SetLook(look.x, look.y, look.z);
 		m_mapGameObjects[updatePkt->id]->SetPosition(position.x, position.y, position.z);
+		updatePkt->obj.act_type; // State
+
 	
 		if (g_bNetworkDebugMode) {
 			std::string DebugOutput = "S_C_OBJECT_UPDATE[" + std::to_string(updatePkt->id) + "] ";
@@ -247,17 +252,17 @@ void COnlineScene::SendPlayerState()
 		packet.obj.damage = 0; // 공격력
 
 		XMFLOAT3 position = m_pPlayer->GetPosition();
-		XMFLOAT3 direction = m_pPlayer->GetComponent<CRigidBody>()->GetVelocity();
+		XMFLOAT3 velocity = m_pPlayer->GetComponent<CRigidBody>()->GetVelocity();
+		XMFLOAT3 look = m_pPlayer->GetLookVector();
 		memcpy(&packet.obj.meta.position, &position, sizeof(XMFLOAT3)); // 현재 위치
-		memcpy(&packet.obj.meta.direction, &direction, sizeof(XMFLOAT3)); // 이동 방향
+		memcpy(&packet.obj.meta.velocity, &velocity, sizeof(XMFLOAT3)); // 이동 방향
+		memcpy(&packet.obj.meta.look, &look, sizeof(XMFLOAT3)); // 이동 방향
+		float pitch = m_pPlayer->GetComponent<CCamera>()->GetPitch();
+		packet.obj.meta.pitch = pitch; // 피치
 
-		packet.obj.meta.speed = 5.0f; // 이동 속도
 		packet.obj.meta.hp = 100; // 체력
 
 		m_NetworkClient.send_packet((char*)&packet);
 
-		//std::string DebugOutput = "COnlineScene::SendPlayerState() - Player State 전송\n";
-		//DebugOutput += "position : (" + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + ")\n";
-		//OutputDebugStringA(DebugOutput.c_str());
 	}
 }

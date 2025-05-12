@@ -37,7 +37,7 @@ public:
 
     Vec3 FindClosestPlayer(const std::vector<Vec3>& playerPositions);
     void FindPath();                      // AI 동작
-    void Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies);
+    void Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime);
 
 
     std::vector<std::pair<int, int>> FindPathToPlayer();   // 정보 조회
@@ -54,6 +54,7 @@ public:
     bool IsDirty() const;
     void ClearDirty();
 
+    Vec3 GetLookVectorToPlayer() const;
     float GetX() const;
     float GetZ() const;
     float GetPlayerX() const;

@@ -103,6 +103,19 @@ void CTransform::Rotate(const XMFLOAT4& pxmf4Quaternion)
 	UpdateTransform(nullptr);
 }
 
+void CTransform::SetLook(const XMFLOAT3& xmf3Look)
+{
+	float pitch = atan2f(xmf3Look.y, sqrtf(xmf3Look.x * xmf3Look.x + xmf3Look.z * xmf3Look.z)) * RAD_TO_DEG;
+	float yaw = atan2f(xmf3Look.x, xmf3Look.z) * RAD_TO_DEG;
+
+	m_xmf3Rotation = XMFLOAT3 (pitch, yaw, 0.0f);
+
+	XMMATRIX xmmtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(pitch), XMConvertToRadians(yaw), 0.0f);
+	m_xmf4x4Local = Matrix4x4::Multiply(xmmtxRotate, Matrix4x4::Identity());
+
+	UpdateTransform(nullptr);
+}
+
 XMFLOAT3 CTransform::GetEulerAngles(const XMFLOAT4X4& worldMatrix, const XMFLOAT3& scale) const
 {
 	// 스케일을 제거한 회전 행렬을 얻기 위해 각 축을 정규화

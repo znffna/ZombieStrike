@@ -212,6 +212,7 @@ struct Objectfixdata {          // 고정정보
 struct ObjectMeta {             // 필수정보
     Vec3 position;              // 위치
     Vec3 velocity;              // 방향 * 속도
+    Vec3 look;                  // 보는방향
     float pitch;                // 피치
     SIZE2 hp;                   // 체력
 };

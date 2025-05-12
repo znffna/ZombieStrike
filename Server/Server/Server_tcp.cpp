@@ -16,6 +16,7 @@
 #include <print>
 
 #pragma comment(lib, "ws2_32.lib")
+constexpr double FRAME_INTERVAL_MS = 1000.0 / 60.0;
 
 constexpr bool DEBUG_PRINT = false;
 #define DEBUG_LOG(msg) \
@@ -91,6 +92,7 @@ public:
 
     Vec3            _position;
     Vec3            _velocity;
+    Vec3            _look;
 	float           _pitch;
     SIZE2           _hp;
     GunType         _gun_type;     
@@ -216,6 +218,7 @@ public:
 		packet.obj.damage = _damage;
 		packet.obj.meta.position = _position;
 		packet.obj.meta.velocity = _velocity;
+		packet.obj.meta.look = _look;
 		packet.obj.meta.pitch = _pitch;
 		packet.obj.meta.hp = _hp;
         do_send(&packet);
@@ -228,6 +231,7 @@ public:
         p_update.id = _id;
         p_update.obj.meta.position = _position;
         p_update.obj.meta.velocity = _velocity;
+        p_update.obj.meta.look = _look;
         p_update.obj.meta.pitch = _pitch;
         p_update.obj.meta.hp = _hp;
 
@@ -256,8 +260,9 @@ public:
             _obj_type   = ObjectType::PLAYER;
             _skin_type  = loginPacket->skin_type;
             _name       = loginPacket->name;
-            _position   = START_POSITIONS[IN_g_player_n];
+            _position   = START_POSITIONS[IN_g_player_n % 3];
             _velocity  = { 0.0f,0.0f, 0.0f };
+            _look      = { 0.0f,0.0f, 0.0f };
             _pitch      = 0.0f;
             _hp         = PLAYER_HP;
 			_gun_type   = GunType::BULLET_PISTOL; // 총 종류
@@ -332,6 +337,7 @@ public:
             //_position += updatePacket->obj.meta.direction * updatePacket->obj.meta.speed * deltaTime;
             _position = updatePacket->obj.meta.position;
             _velocity = updatePacket->obj.meta.velocity;
+            _look = updatePacket->obj.meta.look;
             _pitch = updatePacket->obj.meta.pitch;
             _hp = updatePacket->obj.meta.hp;
             _level = updatePacket->obj.level;
@@ -351,7 +357,7 @@ public:
             u_move_p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
             u_move_p.id = _id;
 
-            u_move_p.obj = updatePacket->obj;  // ← 여기! 네가 하고 싶은 대로 정확히 이거임
+            u_move_p.obj = updatePacket->obj;  
 
             for (auto& [id, session] : g_users) {
                 if (id != _id)
@@ -392,9 +398,14 @@ void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
 }
 
 
+auto lastTick = std::chrono::steady_clock::now();
+
 void ZombieAIThread() {
     while (serverRunning) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        auto now = std::chrono::steady_clock::now();
+        std::chrono::duration<float> dt = now - lastTick;
+        lastTick = now;
+        float deltaTime = dt.count();  // 초 단위
 
         std::vector<Vec3> playerPositions;
         for (auto& [id, session] : g_users) {
@@ -403,7 +414,7 @@ void ZombieAIThread() {
         }
 
         for (auto& zombie : g_zombies) {
-            zombie->Update(playerPositions, g_zombies);
+            zombie->Update(playerPositions, g_zombies, deltaTime);
 
             if (zombie->IsDirty()) {
                 ObjectDynamicInfo info = zombie->GetDynamicInfo();
@@ -420,9 +431,10 @@ void ZombieAIThread() {
                 zombie->ClearDirty();
             }
         }
+
+        std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(FRAME_INTERVAL_MS));
     }
 }
-
 void SpawnZombies(int count) {
     for (int i = 0; i < count; ++i) {
         auto [x, z] = GetRandomPosition(g_map);
