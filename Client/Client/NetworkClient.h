@@ -7,9 +7,9 @@
 
 #pragma comment (lib, "WS2_32.LIB")
 
-constexpr const char* SERVER_IP = "192.168.149.233";
+constexpr const char* SERVER_IP = "192.168.65.133";
 constexpr const char* LOOPBACK_IP = "127.0.0.1";
-#define USSING_IP LOOPBACK_IP
+#define USSING_IP SERVER_IP
 
 extern bool g_bNetworkDebugMode;
 

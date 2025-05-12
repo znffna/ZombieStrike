@@ -1247,6 +1247,7 @@ CBulletObject::CBulletObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	std::shared_ptr<CTexture> pParticleTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
 	pParticleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Bullet.dds", RESOURCE_TEXTURE2D, 0);
+	pParticleTexture->SetName("Image/Bullet.dds");
 	CScene::CreateShaderResourceViews(pd3dDevice, pParticleTexture.get(), 0, ROOT_PARAMETER_ALBEDO_TEXTURE);
 
 	std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
@@ -1255,7 +1256,7 @@ CBulletObject::CBulletObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	std::shared_ptr<CBulletShader> pShader = std::make_shared<CBulletShader>();
-	pShader->CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0);
+	pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature);
 	pShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	pMaterial->SetShader(pShader);
@@ -1268,8 +1269,6 @@ CBulletObject::~CBulletObject()
 
 void CBulletObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (::gnCurrentBullets < 1) return;
-
 	OnPrepareRender();
 
 	for (auto& pMaterial : m_ppMaterials)
@@ -1298,7 +1297,6 @@ void CBulletObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* 
 
 void CBulletObject::OnPostRender()
 {
-	if (::gnCurrentBullets < 1) return;
 	m_pMesh->OnPostRender(0); //Read Stream Output Buffer Filled Size
 }
 
@@ -1307,7 +1305,7 @@ void CBulletObject::AddBullet(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3
 	CBulletVertex pBulletVertice;
 	pBulletVertice.m_xmf3Position = xmf3Position;
 	pBulletVertice.m_xmf3Velocity = xmf3Velocity;
-	pBulletVertice.m_fLifetime = 1.0f;
+	pBulletVertice.m_fLifetime = 0.4f;
 
 	std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullet(pBulletVertice);
 }

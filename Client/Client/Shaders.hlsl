@@ -73,6 +73,38 @@ SamplerState gssWrap : register(s0);
 
 ////////////////////////////////////////////////////////////////////////////////
 //
+struct VS_TEXTURED_INPUT
+{
+    float3 position : POSITION;
+    float2 uv : TEXCOORD;
+};
+
+struct VS_TEXTURED_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float2 uv : TEXCOORD;
+};
+
+VS_TEXTURED_OUTPUT VSBillboard(VS_TEXTURED_INPUT input)
+{
+    VS_TEXTURED_OUTPUT output;
+
+    output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
+    output.uv = input.uv;
+
+    return (output);
+}
+
+float4 PSBillboard(VS_TEXTURED_OUTPUT input) : SV_TARGET
+{
+//	float4 cColor = gtxtTexture.SampleLevel(gWrapSamplerState, input.uv, 0);
+    float4 cColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
+
+    return (cColor);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//
 
 struct VS_STANDARD_INPUT
 {
@@ -142,10 +174,9 @@ float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
     }
     cIllumination = Lighting(input.positionW, normalW);
   
-//    cColor = cColor + cIllumination;
-//    cColor = cColor * cIllumination;
-//    cColor = cColor / (1 + cColor);
-//    cColor = lerp(cColor, cIllumination, 0.5f);
+    //return lerp(cColor * 0.3, cColor * cIllumination, 0.7);
+    return (1.0 - 2.0 * cIllumination) * cColor * cColor + 2.0 * cIllumination * cColor;
+ 
     
         return (cColor);
     }
@@ -354,9 +385,9 @@ void GSParticleStreamOutput(point VS_PARTICLE_INPUT input[1], inout PointStream<
 {
     VS_PARTICLE_INPUT particle = input[0];
 
+    particle.lifetime -= gfElapsedTime;
     if (particle.lifetime > 0.0f)
     {
-        particle.lifetime -= gfElapsedTime;
         output.Append(particle);
     }
 }
@@ -367,9 +398,9 @@ void GSParticleStreamOutput(point VS_PARTICLE_INPUT input[1], inout PointStream<
 struct VS_PARTICLE_DRAW_OUTPUT
 {
     float3 position : POSITION;
-    float4 color : COLOR;
     float3 velocity : VELOCITY;
     float lifetime : LIFETIME;
+    float4 color : COLOR;
 };
 
 struct GS_PARTICLE_DRAW_OUTPUT
@@ -399,113 +430,35 @@ void GSParticleDraw(point VS_PARTICLE_DRAW_OUTPUT input[1], inout TriangleStream
 {
     GS_PARTICLE_DRAW_OUTPUT output = (GS_PARTICLE_DRAW_OUTPUT) 0;
 
-    //float3 start = input[0].position;
-    //float3 end = start + input[0].velocity;
-    //float width = input[0].lifetime;
-
-    //float3 up = float3(0.0f, 1.0f, 0.0f);
-
-    //float3 v0 = start + up * width; // Top-Left
-    //float3 v1 = end + up * width; // Top-Right
-    //float3 v2 = start - up * width; // Bottom-Left
-    //float3 v3 = end - up * width; // Bottom-Right
+    float3 cameraPos = GetCameraPosition();
     
-    //float3 positions[4] = { v0, v1, v2, v3 };
+    float3 start = input[0].position;
+    float3 end = input[0].position + input[0].velocity;
     
-    //for (int i = 0; i < 4; ++i)
-    //{
-    //    output.position = mul(mul(float4(positions[i], 1.0f), gmtxView), gmtxProjection);
-    //    output.uv = gf2QuadUVs[i];
-    //    outputStream.Append(output);
-    //}
+    float3 halfPos = (end + start) * 0.5f;
+    
+    float3 dir = normalize(halfPos - cameraPos);
+    dir = cross(dir, normalize(input[0].velocity));
+    
+    float3 gf3RectPositions[4] = { float3(start + dir * 0.5f * input[0].lifetime), float3(end + dir * 0.5f * input[0].lifetime), float3(start - dir * 0.5f * input[0].lifetime), float3(end - dir * 0.5f * input[0].lifetime) };
     
     for (int i = 0; i < 4; i++)
     {
-        float3 positionW = mul(gf3Positions[i] * 100.0f, (float3x3) gmtxInvView) + input[0].position;
+        //float3 positionW = mul(gf3Positions[i], (float3x3) gmtxInvView) + input[0].position;
+        float3 positionW = gf3RectPositions[i];
         output.position = mul(mul(float4(positionW, 1.0f), gmtxView), gmtxProjection);
         output.uv = gf2QuadUVs[i];
+        output.color = input[0].color;
 
         outputStream.Append(output);
     }
+    
 }
 
 float4 PSParticleDraw(GS_PARTICLE_DRAW_OUTPUT input) : SV_TARGET
 {
     float4 cColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
     cColor *= input.color;
-
-    return (cColor);
-}
-
-//////////////////////////////////////////////////////////////////////////////////
-//
-
-#define _WITH_BILLBOARD_ANIMATION
-
-struct VS_BILLBOARD_INSTANCING_INPUT
-{
-    float3 position : POSITION;
-    float2 uv : TEXCOORD;
-    float3 instancePosition : INSTANCEPOSITION;
-    float4 billboardInfo : BILLBOARDINFO; //(cx, cy, type, texture)
-};
-
-struct VS_BILLBOARD_INSTANCING_OUTPUT
-{
-    float4 position : SV_POSITION;
-    float2 uv : TEXCOORD;
-    int textureID : TEXTUREID;
-};
-
-#define _WITH_BILLBOARD_ANIMATION
-
-VS_BILLBOARD_INSTANCING_OUTPUT VSBillboardInstancing(VS_BILLBOARD_INSTANCING_INPUT input)
-{
-    VS_BILLBOARD_INSTANCING_OUTPUT output;
-
-    if (input.position.x < 0.0f)
-        input.position.x = -(input.billboardInfo.x * 0.5f);
-    else if (input.position.x > 0.0f)
-        input.position.x = (input.billboardInfo.x * 0.5f);
-    if (input.position.y < 0.0f)
-        input.position.y = -(input.billboardInfo.y * 0.5f);
-    else if (input.position.y > 0.0f)
-        input.position.y = (input.billboardInfo.y * 0.5f);
-
-    float3 f3Look = normalize(float3(gmtxInvView._41, gmtxInvView._42, gmtxInvView._43) - input.instancePosition);
-    float3 f3Up = float3(0.0f, 1.0f, 0.0f);
-    float3 f3Right = normalize(cross(f3Up, f3Look));
-
-    matrix mtxWorld;
-    mtxWorld[0] = float4(f3Right, 0.0f);
-    mtxWorld[1] = float4(f3Up, 0.0f);
-    mtxWorld[2] = float4(f3Look, 0.0f);
-    mtxWorld[3] = float4(input.instancePosition, 1.0f);
-
-    output.position = mul(mul(mul(float4(input.position, 1.0f), mtxWorld), gmtxView), gmtxProjection);
-
-#ifdef _WITH_BILLBOARD_ANIMATION
-    if (input.uv.y < 0.7f)
-    {
-        float fShift = 0.0f;
-        uint nResidual = ((uint) gfCurrentTime % 4);
-        if (nResidual == 1)
-            fShift = -gfElapsedTime * 10.5f;
-        if (nResidual == 3)
-            fShift = +gfElapsedTime * 10.5f;
-        input.uv.x += fShift;
-    }
-#endif
-    output.uv = input.uv;
-
-    output.textureID = (int) input.billboardInfo.w - 1;
-
-    return (output);
-}
-
-float4 PSBillboardInstancing(VS_BILLBOARD_INSTANCING_OUTPUT input) : SV_TARGET
-{
-    float4 cColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
 
     return (cColor);
 }

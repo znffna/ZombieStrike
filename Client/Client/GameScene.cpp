@@ -157,7 +157,7 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 	if (m_bMouseLButtonDown) {
 		if (m_pPlayer && m_pBulletObject)
 		{
-			(m_pPlayer->GetGun())->Fire();
+			m_pPlayer->Fire();
 		}
 	}
 

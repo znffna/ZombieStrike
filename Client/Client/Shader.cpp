@@ -54,14 +54,14 @@ void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSi
 	if (hResult == S_OK)
 	{
 		// Output Debug Message
-		std::wstring strDebugString = GetShaderName() + L" Graphic Pipeline State is created successfully.\n";
+		std::wstring strDebugString = GetShaderName()+ L" - " + std::to_wstring(nPipelineState) + L" Graphic Pipeline State is created successfully.\n";
 		OutputDebugString(strDebugString.data());
 		m_pd3dPipelineStates[nPipelineState]->SetName(GetShaderName().data());
 	}
 	else
 	{
 		// Output Debug Message
-		std::wstring strDebugString = GetShaderName() + L" Graphic Pipeline State is not created successfully.\n";
+		std::wstring strDebugString = GetShaderName() + L" - " + std::to_wstring(nPipelineState) + L" Graphic Pipeline State is not created successfully.\n";
 		OutputDebugString(strDebugString.data());
 	}
 
@@ -99,11 +99,16 @@ D3D12_SHADER_BYTECODE CShader::CompileShaderFromFile(const WCHAR* pszFileName, L
 	char* pErrorString = NULL;
 	if (pd3dErrorBlob) pErrorString = (char*)pd3dErrorBlob->GetBufferPointer();
 
-	SaveShaderToCSOFile(*ppd3dShaderBlob, pszShaderName);
-
 	D3D12_SHADER_BYTECODE d3dShaderByteCode;
 	d3dShaderByteCode.BytecodeLength = (*ppd3dShaderBlob)->GetBufferSize();
 	d3dShaderByteCode.pShaderBytecode = (*ppd3dShaderBlob)->GetBufferPointer();
+
+	SaveShaderToCSOFile(*ppd3dShaderBlob, pszShaderName);
+	{
+		std::string strDebugString = pszShaderName;
+		strDebugString = "Shader [" + strDebugString +"] is compiled successfully.\n";
+		OutputDebugStringA(strDebugString.data());
+	}
 
 	return(d3dShaderByteCode);
 }
@@ -641,12 +646,20 @@ D3D12_INPUT_LAYOUT_DESC CTexturedShader::CreateInputLayout(int nPipelineState)
 
 D3D12_SHADER_BYTECODE CTexturedShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
+#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTextured", "vs_5_1", ppd3dShaderBlob));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"VSTextured", ppd3dShaderBlob));
+#endif
 }
 
 D3D12_SHADER_BYTECODE CTexturedShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
+#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSTextured", "ps_5_1", ppd3dShaderBlob));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"PSTextured", ppd3dShaderBlob));
+#endif
 }
 
 void CTexturedShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
@@ -669,12 +682,20 @@ CBillboardShader::~CBillboardShader()
 
 D3D12_SHADER_BYTECODE CBillboardShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
+#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSBillboard", "vs_5_1", ppd3dShaderBlob));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"VSBillboard", ppd3dShaderBlob));
+#endif
 }
 
 D3D12_SHADER_BYTECODE CBillboardShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
+#ifdef _DEBUG
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSBillboard", "ps_5_1", ppd3dShaderBlob));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"PSBillboard", ppd3dShaderBlob));
+#endif
 }
 
 D3D12_RASTERIZER_DESC CBillboardShader::CreateRasterizerState(int nPipelineState)
@@ -758,10 +779,11 @@ D3D12_SHADER_BYTECODE CBulletShader::CreateVertexShader(int nPipelineState)
 		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSParticleDraw", "vs_5_1", &m_pd3dVertexShaderBlob));
 #else
 	if (nPipelineState == 0)
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSParticleStreamOutput", "vs_5_1", &m_pd3dVertexShaderBlob));
+		return(CShader::ReadCompiledShaderFromFile(L"VSParticleStreamOutput", &m_pd3dVertexShaderBlob));
 	else
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSParticleDraw", "vs_5_1", &m_pd3dVertexShaderBlob));
+		return(CShader::ReadCompiledShaderFromFile(L"VSParticleDraw", &m_pd3dVertexShaderBlob));
 #endif
+
 }
 
 D3D12_SHADER_BYTECODE CBulletShader::CreateGeometryShader(int nPipelineState)
@@ -773,9 +795,9 @@ D3D12_SHADER_BYTECODE CBulletShader::CreateGeometryShader(int nPipelineState)
 		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "GSParticleDraw", "gs_5_1", &m_pd3dGeometryShaderBlob));
 #else
 	if (nPipelineState == 0)
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "GSParticleStreamOutput", "gs_5_1", &m_pd3dGeometryShaderBlob));
+		return(CShader::ReadCompiledShaderFromFile(L"GSParticleStreamOutput", &m_pd3dGeometryShaderBlob));
 	else
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "GSParticleDraw", "gs_5_1", &m_pd3dGeometryShaderBlob));
+		return(CShader::ReadCompiledShaderFromFile(L"GSParticleDraw", &m_pd3dGeometryShaderBlob));
 #endif
 }
 
@@ -790,7 +812,7 @@ D3D12_SHADER_BYTECODE CBulletShader::CreatePixelShader(int nPipelineState)
 	if (nPipelineState == 0)
 		return(CShader::CreatePixelShader(0));
 	else
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSParticleDraw", "ps_5_1", &m_pd3dPixelShaderBlob));
+		return(CShader::ReadCompiledShaderFromFile(L"PSParticleDraw", &m_pd3dPixelShaderBlob));
 #endif
 }
 
@@ -818,9 +840,9 @@ D3D12_DEPTH_STENCIL_DESC CBulletShader::CreateDepthStencilState(int nPipelineSta
 {
 	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
 	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
-	d3dDepthStencilDesc.DepthEnable = FALSE;
-	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	d3dDepthStencilDesc.DepthEnable = TRUE;
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;	
 	d3dDepthStencilDesc.StencilEnable = FALSE;
 	d3dDepthStencilDesc.StencilReadMask = 0x00;
 	d3dDepthStencilDesc.StencilWriteMask = 0x00;
@@ -878,7 +900,7 @@ D3D12_STREAM_OUTPUT_DESC CBulletShader::CreateStreamOuputState(int nPipelineStat
 	return(d3dStreamOutputDesc);
 }
 
-void CBulletShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
+void CBulletShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	m_nPipelineStates = 2;
 	m_pd3dPipelineStates.resize(m_nPipelineStates);

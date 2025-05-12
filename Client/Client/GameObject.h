@@ -102,6 +102,10 @@ public:
 	virtual void SetLayer(GAMEOBJECT_LAYER layer) { m_nLayer = layer; }
 	virtual GAMEOBJECT_LAYER GetLayer() { return m_nLayer; }
 
+	void SetState(int state) {
+		if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->ChangeState(state);
+	}
+
 	// 상속 관계
 	std::shared_ptr<CGameObject> GetParent() { return m_pParent.lock(); }
 	std::vector<std::shared_ptr<CGameObject>> GetChilds() { return m_pChilds; }

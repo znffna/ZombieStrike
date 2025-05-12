@@ -37,6 +37,8 @@ public:
 	void SetGun(const std::shared_ptr<CGun>& pGun) { m_pGun = pGun; }
 	std::shared_ptr<CGun> GetGun() const { return m_pGun; }
 
+	void Fire();
+
 private:
 	std::vector<std::string> m_ModelName{ "Ch18_nonPBR", "Ch35_nonPBR" };
 	std::vector<std::string> m_MeshBoneName{ "Ch18", "Ch35" };

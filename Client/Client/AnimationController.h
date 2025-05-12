@@ -124,8 +124,8 @@ public:
 
 	void AdvanceTime(float fElapsedTime, CGameObject* pRootGameObject);
 	void ApplyPitchToSpine(CGameObject* pRootGameObject);
-	;
 
+	void ChangeState(int state) { ChangeState((ANIMATION_STATE)state); };
 	void ChangeState(ANIMATION_STATE state);
 	void ChangeState(ANIMATION_STATE state, float fPosition);
 
