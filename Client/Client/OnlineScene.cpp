@@ -130,7 +130,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	//if (g_bNetworkDebugMode) 
 	{
 		std::string DebugOutput = "COnlineScene::ProcessPacket() - Packet Type : " + std::to_string(type) + "\n";
-		OutputDebugStringA(DebugOutput.c_str());
+		//OutputDebugStringA(DebugOutput.c_str());
 	}
 
 	switch (type) {
@@ -155,7 +155,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			std::string DebugOutput = "S_C_OBJECT_ADD 패킷 수신\n";
 			DebugOutput += "position : (" + std::to_string(packet->fixdata.startposition.x) + ", " + std::to_string(packet->fixdata.startposition.y) + ", " + std::to_string(packet->fixdata.startposition.z) + ")\n";
 			DebugOutput += "ObjectType : " + std::to_string(packet->fixdata.obj_type) + "\n";
-			OutputDebugStringA(DebugOutput.c_str());
+			//OutputDebugStringA(DebugOutput.c_str());
 		}
 
 		switch (packet->fixdata.obj_type)
@@ -173,7 +173,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 
 			{
 				std::string DebugOutput = "ObjectType::PLAYER 생성 완료\n";
-				OutputDebugStringA(DebugOutput.c_str());
+				//OutputDebugStringA(DebugOutput.c_str());
 			}
 			AddObject(pPlayer);
 			break;
@@ -186,7 +186,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			m_mapGameObjects[packet->id] = pZombie;
 			{
 				std::string DebugOutput = "ObjectType::ZOMBIE 생성 완료\n";
-				OutputDebugStringA(DebugOutput.c_str());
+				//OutputDebugStringA(DebugOutput.c_str());
 			}
 			AddObject(pZombie);
 			break;
@@ -208,7 +208,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		pkt_sc_object_update* updatePkt = reinterpret_cast<pkt_sc_object_update*>(recv_p);
 		Vec3 position = updatePkt->obj.meta.position;
 		m_mapGameObjects[updatePkt->id]->SetPosition(position.x, position.y, position.z);
-
+	
 		if (g_bNetworkDebugMode) {
 			std::string DebugOutput = "S_C_OBJECT_UPDATE[" + std::to_string(updatePkt->id) + "] ";
 			DebugOutput += "position : (" + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + ")\n";
@@ -255,5 +255,9 @@ void COnlineScene::SendPlayerState()
 		packet.obj.meta.hp = 100; // 체력
 
 		m_NetworkClient.send_packet((char*)&packet);
+
+		//std::string DebugOutput = "COnlineScene::SendPlayerState() - Player State 전송\n";
+		//DebugOutput += "position : (" + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + ")\n";
+		//OutputDebugStringA(DebugOutput.c_str());
 	}
 }

@@ -4,42 +4,72 @@
 // --------------------------
 // 서버/클라 공통 상수 정의
 // --------------------------
+using SIZEID = uint32_t;
+using SIZE1 = uint8_t;
+using SIZE2 = uint16_t;
+using SIZE3 = uint32_t;
+
 constexpr int PORT_NUM = 4000;
 constexpr int BUF_SIZE = 200;
 constexpr int MAX_NAME_SIZE = 20;
 
-// 서버의 최대 세션 수
-constexpr int MAX_USER = 5000; 
-// 최대 플레이어 수
-constexpr short MAX_PLAYER_COUNT = 3;
-// 최대 좀비 수
-constexpr short MAX_ZOMBIE_COUNT = 10;
+constexpr int MAX_USER = 5000;          // 서버의 최대 세션 수
+constexpr short MAX_PLAYER_COUNT = 3;   // 최대 플레이어 수
 
-// 맵의 크기 정의
-constexpr int W_WIDTH = 500;
-constexpr int W_HEIGHT = 500;
+constexpr short MAX_ZOMBIE_COUNT = 1;  // 최대 좀비 수
 
-using SIZEID  = uint32_t;
-using SIZE1   = uint8_t;
-using SIZE2   = uint16_t;
-using SIZE3   = uint32_t;
+constexpr int W_WIDTH = 250;            // 맵의 크기 정의
+constexpr int W_HEIGHT = 250;
 
 
-// 플레이어의 체력
-const SIZE2 PLAYER_HP = 500;
+
+constexpr SIZE2 PLAYER_HP = 500;           // 플레이어 체력  
+
+enum ObjectType : SIZE1 {
+    PLAYER = 1,
+    ZOMBIE = 2,
+    BULLET = 3,
+    BOSS = 4,
+
+};
+
+// 공격 종류 정의
+enum ActionType : SIZE1 {
+    NONE = 0,   // 배회
+    ZMOVE = 1,   // 좀비 이동
+    ATTACK = 2,   // 근접
+    RANGED = 3,   // 원거리
+    POISON = 4,   // 독
+
+};
+
+enum SkinType : SIZE1 {
+    PLAYER_NORMAL = 0,
+    PLAYER_POLICE,
+    PLAYER_SOLDIER,
+
+    // 좀비 스킨 타입
+    ZOMBIE_NORMAL = 10,
+    ZOMBIE_RUNNER,
+    ZOMBIE_WITCH,
+    ZOMBIE_BOSS,
+};
 
 
-// --------------------------
-// 패킷 ID 정의
-// --------------------------
+// 총 종류 
+enum GunType : SIZE1 {
+    BULLET_PISTOL = 0,
+    BULLET_RIFLE,
+    BULLET_SHOTGUN,
+    BULLET_MAX
+};
 
-// 공통 헤더
 enum PKT_TYPE : SIZE1 {
 
     C_S_LOGIN = 1,
-    C_S_UPDATE ,
-    C_S_SHOOT ,
-	C_S_HIT,
+    C_S_UPDATE,
+    C_S_SHOOT,
+    C_S_HIT,
 
     //S_C_LOGIN_OK = 14,
     //S_C_LOGIN_FAIL = 15,
@@ -49,12 +79,60 @@ enum PKT_TYPE : SIZE1 {
     // 오브젝트 패킷 공통 처리용
     S_C_OBJECT_ADD,
     S_C_OBJECT_UPDATE,
+    S_C_ZOMBIE_UPDATE,
     S_C_OBJECT_REMOVE,
 
     S_C_STAGE_INFO,
     S_C_SCORE_INFO,
     // ...
 };
+
+
+inline const char* ToString(ActionType action) {
+    switch (action) {
+    case NONE:   return "NONE";
+    case ZMOVE:  return "ZMOVE";
+    case ATTACK: return "ATTACK";
+    case RANGED: return "RANGED";
+    case POISON: return "POISON";
+    default:     return "UNKNOWN";
+    }
+}
+
+inline const char* ToString(ObjectType type) {
+    switch (type) {
+    case PLAYER: return "PLAYER";
+    case ZOMBIE: return "ZOMBIE";
+    case BULLET: return "BULLET";
+    case BOSS:   return "BOSS";
+    default:     return "UNKNOWN";
+    }
+}
+inline const char* ToString(GunType gun) {
+    switch (gun) {
+    case BULLET_PISTOL:  return "PISTOL";
+    case BULLET_RIFLE:   return "RIFLE";
+    case BULLET_SHOTGUN: return "SHOTGUN";
+    default:             return "UNKNOWN";
+    }
+}
+inline const char* ToString(PKT_TYPE type) {
+    switch (type) {
+    case C_S_LOGIN:         return "C_S_LOGIN";
+    case C_S_UPDATE:        return "C_S_UPDATE";
+    case C_S_SHOOT:         return "C_S_SHOOT";
+    case C_S_HIT:           return "C_S_HIT";
+    case S_C_PLAYER_INFO:   return "S_C_PLAYER_INFO";
+    case S_C_OBJECT_ADD:    return "S_C_OBJECT_ADD";
+    case S_C_OBJECT_UPDATE: return "S_C_OBJECT_UPDATE";
+    case S_C_ZOMBIE_UPDATE: return "S_C_ZOMBIE_UPDATE";
+    case S_C_OBJECT_REMOVE: return "S_C_OBJECT_REMOVE";
+    case S_C_STAGE_INFO:    return "S_C_STAGE_INFO";
+    case S_C_SCORE_INFO:    return "S_C_SCORE_INFO";
+    default:                return "UNKNOWN_PACKET";
+    }
+}
+
 
 // --------------------------
 // 패킷 구조체 정의
@@ -103,53 +181,12 @@ struct Vec3 {
     }
 };
 
-
-// 시작 위치
 constexpr Vec3 START_POSITIONS[3] = {
     { 100.0f, 0.0f, 100.0f },
     { 110.0f, 0.0f, 100.0f },
     { 120.0f, 0.0f, 100.0f },
 };
 
-// 게임 내 객체 타입 정의
-enum ObjectType : SIZE1 {
-    PLAYER  = 1,
-    ZOMBIE  = 2,
-	BULLET  = 3,
-	BOSS    = 4,
-
-};
-
-// 공격 종류 정의
-enum ActionType : SIZE1 {
-	NONE    = 0,   // 배회
-	ZMOVE   = 1,   // 좀비 이동
-    ATTACK  = 2,   // 근접
-    RANGED  = 3,   // 원거리
-    POISON  = 4,   // 독
-
-};
-
-enum SkinType : SIZE1 {
-    PLAYER_NORMAL = 0,
-    PLAYER_POLICE ,
-    PLAYER_SOLDIER ,
-
-    // 좀비 스킨 타입
-    ZOMBIE_NORMAL = 10,
-    ZOMBIE_RUNNER ,
-    ZOMBIE_WITCH ,
-    ZOMBIE_BOSS,
-};
-
-
-// 총 종류 
-enum GunType : SIZE1 {
-    BULLET_PISTOL = 0,
-    BULLET_RIFLE,
-    BULLET_SHOTGUN,
-    BULLET_MAX
-};
 // 총 정보
 struct BulletInfo {
     float speed;         // 총알 속도 (m/s 또는 게임 단위)
@@ -174,8 +211,8 @@ struct Objectfixdata {          // 고정정보
 
 struct ObjectMeta {             // 필수정보
     Vec3 position;              // 위치
-    Vec3 direction;             // 방향
-    float speed;                // 이동 속도 (단위: m/s 또는 유닛/s)
+    Vec3 velocity;              // 방향 * 속도
+    float pitch;                // 피치
     SIZE2 hp;                   // 체력
 };
 
@@ -188,29 +225,6 @@ struct ObjectDynamicInfo {  	// 동적정보
     SIZE1 act_type;             // NONE, Player, ZMOVE, ATTACK, ...
 };
 
-//// 플레이어 정보 구조체
-//struct PlayerInfo {
-//    uint8_t id;
-//    float position[3];  // X, Y, Z
-//    char name[MAX_NAME_SIZE];
-//    uint8_t skin_type;  // 플레이어 객체 스킨
-//	uint8_t level;      // 레벨
-//    uint8_t hp;         // 플레이어 체력
-//    uint16_t score;     // 점수
-//    // ... 
-//};
-//// 좀비 정보 구조체
-//struct ZombieInfo {
-//    uint32_t id;
-//    ObjectType obj_type;    // 좀비 타입
-//    ActionType act_type;    // 플레이어 객체 타입
-//	uint8_t damage;         // 좀비 공격력
-//    float position[3];      // X, Y, Z
-//    uint8_t hp;             // 좀비 체력
-//    // ... 
-//    //ZombieInfo()
-//    //    : zombieId(0), obj_type(ObjectType::ZOMBIE), act_type(ActionType::NONE), damage(30), hp(500) {}
-//};
 
 struct PacketHeader {
     SIZE2 size;

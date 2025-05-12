@@ -17,6 +17,9 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
+constexpr bool DEBUG_PRINT = false;
+#define DEBUG_LOG(msg) \
+    do { if (DEBUG_PRINT) std::cout << msg << std::endl; } while (0)
 
 void error_display(const char* msg, int err_no) {
     WCHAR* lpMsgBuf;
@@ -86,9 +89,9 @@ public:
     SIZE1           _skin_type;
     std::string     _name;
 
-    Vec3         _position;
-    Vec3         _direction;
-	float           _speed;
+    Vec3            _position;
+    Vec3            _velocity;
+	float           _pitch;
     SIZE2           _hp;
     GunType         _gun_type;     
     SIZE1           _level;
@@ -108,22 +111,22 @@ public:
         if (ret == SOCKET_ERROR) {
             int err = WSAGetLastError();
             if (err != WSA_IO_PENDING) {
-                std::cout << "[do_recv] WSARecv failed: " << err << "\n";
+				std::cout << "[do_recv] WSARecv failed: " << err << "\n";
                 closesocket(_c_socket);
                 g_users.erase(_id);
             }
             else {
-                std::cout << "[do_recv] WSARecv: IO_PENDING (정상)\n";
+				DEBUG_LOG("[do_recv] WSARecv: IO_PENDING (정상)\n");
             }
         }
         else {
-            std::cout << "[do_recv] WSARecv: 즉시 수신 완료 (ret == 0)\n";
+			DEBUG_LOG("[do_recv] WSARecv: 즉시 수신 완료 (ret == 0)\n");
         }
     }
 
 public: 
     SESSION() {
-        std::cout << "DEFAULT SESSION CONSTRUCTOR CALLED!!\n";
+		DEBUG_LOG("[SESSION] Default constructor called\n");
         exit(-1);
     }
 	SESSION(SIZEID session_id, SOCKET s) : _id(session_id), _c_socket(s)
@@ -138,7 +141,7 @@ public:
 	}
     ~SESSION() 
     {
-        std::cout << "[SESSION::~SESSION] Removing ID = " << _id << "\n";
+		DEBUG_LOG("[SESSION] Destructor called ID =\n", _id);
 
         pkt_sc_object_remove rem_p;
         rem_p.header.size = sizeof(rem_p);
@@ -162,7 +165,7 @@ public:
 
             if (offset + packetSize > total) break; // 아직 패킷 완성이 안 됨
 
-            std::cout << "[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << std::endl;
+			DEBUG_LOG("[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << std::endl);
 
 			process_packet(p);    // 패킷 처리
             p += (packetSize)/sizeof(SIZE2);      // 다음 패킷으로 이동
@@ -182,13 +185,14 @@ public:
         OVER_EXP* send_ov = new OVER_EXP(OP_SEND);
         SIZE2 packet_size = reinterpret_cast<SIZE2*>(buff)[0];
         memcpy(send_ov->_buffer, buff, packet_size);
+        send_ov->_wsabuf[0].buf = reinterpret_cast<CHAR*>(send_ov->_buffer);
         send_ov->_wsabuf[0].len = packet_size;
         DWORD size_sent;
 
-		std::cout << "[do_send] size = " << packet_size << ", type = " << (int)reinterpret_cast<SIZE2*>(buff)[1] << std::endl;
+		DEBUG_LOG("[do_send] ID = " << _id << ", size = " << packet_size << ", type = " << (int)reinterpret_cast<SIZE2*>(buff)[1] << std::endl);
         int ret = WSASend(_c_socket, send_ov->_wsabuf, 1, &size_sent, 0, &(send_ov->_over), g_send_callback);
         if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-            std::cout << "WSASend failed\n";
+			std::cout << "[do_send] WSASend failed: " << WSAGetLastError() << "\n";
         }
     }
 
@@ -211,8 +215,8 @@ public:
 		packet.obj.score = _score;
 		packet.obj.damage = _damage;
 		packet.obj.meta.position = _position;
-		packet.obj.meta.direction = _direction;
-		packet.obj.meta.speed = _speed;
+		packet.obj.meta.velocity = _velocity;
+		packet.obj.meta.pitch = _pitch;
 		packet.obj.meta.hp = _hp;
         do_send(&packet);
     }
@@ -223,8 +227,8 @@ public:
         p_update.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
         p_update.id = _id;
         p_update.obj.meta.position = _position;
-        p_update.obj.meta.direction = _direction;
-        p_update.obj.meta.speed = _speed;
+        p_update.obj.meta.velocity = _velocity;
+        p_update.obj.meta.pitch = _pitch;
         p_update.obj.meta.hp = _hp;
 
         p_update.obj.gun_type = _gun_type;
@@ -243,7 +247,7 @@ public:
             std::cout << "[ERROR] Invalid Packet Type\n";
             return;
         }
-		std::cout << "[RECV][" << _id << "] Packet Type: " << (int)packet_type << "\n";
+		DEBUG_LOG("[process_packet] ID = " << _id << ", packet_type = " << (int)packet_type << "\n");
 
         switch (packet_type) {
         case ::PKT_TYPE::C_S_LOGIN:
@@ -253,8 +257,8 @@ public:
             _skin_type  = loginPacket->skin_type;
             _name       = loginPacket->name;
             _position   = START_POSITIONS[IN_g_player_n];
-            _direction  = { 0.0f,0.0f, 0.0f };
-            _speed      = 0.0f;
+            _velocity  = { 0.0f,0.0f, 0.0f };
+            _pitch      = 0.0f;
             _hp         = PLAYER_HP;
 			_gun_type   = GunType::BULLET_PISTOL; // 총 종류
             _level      = 1;
@@ -263,8 +267,8 @@ public:
 			_act_type   = ActionType::NONE;
             
             IN_g_player_n++;
-			std::cout << "[process_packet][RECV][" << (int)_id << "] Login: " << _name << "\n";
-			std::cout << "[process_packet][RECV][" << (int)_id << "] Skin Type: " << (int)_skin_type << "\n";
+			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _name << "\n");
+			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _skin_type << "\n");
             send_player_info();
             //send_object_update();
 
@@ -322,30 +326,39 @@ public:
         {
 			pkt_cs_update* updatePacket = reinterpret_cast<pkt_cs_update*>(packet);
 
+
             float deltaTime = 1.0f / 60.0f; // 서버 틱 레이트 기준 (예: 60fps)
             // 이동 거리 = 방향 * 속도 * 시간
-            _position += updatePacket->obj.meta.direction * updatePacket->obj.meta.speed * deltaTime;
-         
+            //_position += updatePacket->obj.meta.direction * updatePacket->obj.meta.speed * deltaTime;
+            _position = updatePacket->obj.meta.position;
+            _velocity = updatePacket->obj.meta.velocity;
+            _pitch = updatePacket->obj.meta.pitch;
+            _hp = updatePacket->obj.meta.hp;
+            _level = updatePacket->obj.level;
+            _score = updatePacket->obj.score;
+            _damage = updatePacket->obj.damage;
+            _gun_type = updatePacket->obj.gun_type;
+            _act_type = updatePacket->obj.act_type;
+
+            // 로그
+            //std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
+            //std::cout << "  position  = (" << _position.x << ", " << _position.y << ", " << _position.z << ")\n";
+            //std::cout << "  direction = (" << _direction.x << ", " << _direction.y << ", " << _direction.z << ")\n";
+            //std::cout << "  speed     = " << _speed << "\n";
+
             pkt_sc_object_update u_move_p;
-			u_move_p.header.size = sizeof(u_move_p);
-			u_move_p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
-			u_move_p.id = _id;
-			u_move_p.obj.meta.position = _position;
-			u_move_p.obj.meta.direction = _direction;
-			u_move_p.obj.meta.speed = _speed;
-			u_move_p.obj.meta.hp = _hp;
-			u_move_p.obj.gun_type = _gun_type;
-			u_move_p.obj.level = _level;
-			u_move_p.obj.score = _score;
-			u_move_p.obj.damage = _damage;
-			u_move_p.obj.act_type = _act_type;
-			for (auto& u : g_users) {
-				if (u.first != _id) // 나를 제외한 상대방에게 알리고
-				    u.second.do_send(&u_move_p); // 나포함 모두에게 알림 좌표의 이동을
-			}
-            std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
-            std::cout << "[process_packet][RECV][" << (int)_id << "] position: (" << _position.x << ", " << _position.y << ", " << _position.z << ") " << "\n";
-            std::cout << "[process_packet][RECV][" << (int)_id << "] direction: (" << _direction.x << ", " << _direction.y << ", " << _direction.z << ") " << "\n";
+            u_move_p.header.size = sizeof(u_move_p);
+            u_move_p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
+            u_move_p.id = _id;
+
+            u_move_p.obj = updatePacket->obj;  // ← 여기! 네가 하고 싶은 대로 정확히 이거임
+
+            for (auto& [id, session] : g_users) {
+                if (id != _id)
+                    session.do_send(&u_move_p);
+            }
+
+            break;
 
             break;
         }
@@ -391,6 +404,21 @@ void ZombieAIThread() {
 
         for (auto& zombie : g_zombies) {
             zombie->Update(playerPositions, g_zombies);
+
+            if (zombie->IsDirty()) {
+                ObjectDynamicInfo info = zombie->GetDynamicInfo();
+
+                pkt_sc_object_update p;
+                p.header.size = sizeof(p);
+                p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
+                p.id = zombie->GetID();
+                p.obj = info;
+
+                for (auto& [id, session] : g_users)
+                    session.do_send(&p);
+
+                zombie->ClearDirty();
+            }
         }
     }
 }
@@ -398,29 +426,26 @@ void ZombieAIThread() {
 void SpawnZombies(int count) {
     for (int i = 0; i < count; ++i) {
         auto [x, z] = GetRandomPosition(g_map);
-        ZombieAI* zombie = new ZombieAI(g_map, 10000 + i); // 10000 이상은 좀비 ID 예약
+        ZombieAI* zombie = new ZombieAI(g_map, 10000 + i);
         zombie->SetPosition((float)x, (float)z);
+        zombie->SetHP(ZOMBIE_HP);
         g_zombies.push_back(zombie);
-        std::cout << "[SPAWN] Zombie ID: " << (10000 + i) << " at (" << x << ", " << z << ")\n";
+
+        // 좀비 정보를 모든 플레이어에게 전송
+        pkt_sc_object_add p;
+        p.header.size = sizeof(p);
+        p.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+        p.id = zombie->GetID();
+        p.fixdata.obj_type = ObjectType::ZOMBIE;
+        p.fixdata.skin_type = 0;
+        strcpy_s(p.fixdata.name, "Zombie");
+        p.fixdata.startposition = zombie->GetPosition();
+        p.fixdata.starthp = zombie->GetHP();
+        p.fixdata.gun_type = GunType::BULLET_MAX;
+
+        for (auto& [id, session] : g_users)
+            session.do_send(&p);
     }
-
-    // 좀비 정보를 모든 플레이어에게 전송
-    pkt_sc_object_add packet;
-    for (auto zombie : g_zombies) {
-        packet.header.size = sizeof(packet);
-        packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
-        packet.id = zombie->GetID();
-        packet.fixdata.obj_type = ObjectType::ZOMBIE;
-        packet.fixdata.skin_type = 0;
-        strcpy_s(packet.fixdata.name, "Zombie");
-        packet.fixdata.startposition = zombie->GetPosition();
-        packet.fixdata.starthp = zombie->GetHP();
-
-        for (auto& [id, session] : g_users) {
-            session.do_send(&packet);
-        }
-    }
-
 }
 
 void serverControl() {

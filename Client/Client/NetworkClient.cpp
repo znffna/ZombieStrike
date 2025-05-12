@@ -125,6 +125,7 @@ void NetworkingClient::SendMovePacket()
     u_movePkt.obj.damage = 0; // 공격력
     u_movePkt.obj.act_type = ActionType::NONE; // 행동 타입
 
+
     send_packet((char*)&u_movePkt);
 }
 
@@ -239,7 +240,7 @@ void NetworkingClient::send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED
 void NetworkingClient::ProcessPacket(PacketHeader* recv_p)
 {  
 	//if (is_connect == false) return; // 종료된 경우 패킷 처리하지 않음
- //   if (m_pScene) m_pScene->ProcessPacket(recv_p); // Scene이 nullptr인 경우 처리하지 않음  
+    //if (m_pScene) m_pScene->ProcessPacket(recv_p); // Scene이 nullptr인 경우 처리하지 않음  
 
     if (IsConnect() == false) return;
 
