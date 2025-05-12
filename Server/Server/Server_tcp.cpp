@@ -91,6 +91,7 @@ public:
 
     Vec3            _position;
     Vec3            _velocity;
+    Vec3            _look;
 	float           _pitch;
     SIZE2           _hp;
     GunType         _gun_type;     
@@ -216,6 +217,7 @@ public:
 		packet.obj.damage = _damage;
 		packet.obj.meta.position = _position;
 		packet.obj.meta.velocity = _velocity;
+		packet.obj.meta.look = _look;
 		packet.obj.meta.pitch = _pitch;
 		packet.obj.meta.hp = _hp;
         do_send(&packet);
@@ -228,6 +230,7 @@ public:
         p_update.id = _id;
         p_update.obj.meta.position = _position;
         p_update.obj.meta.velocity = _velocity;
+        p_update.obj.meta.look = _look;
         p_update.obj.meta.pitch = _pitch;
         p_update.obj.meta.hp = _hp;
 
@@ -258,6 +261,7 @@ public:
             _name       = loginPacket->name;
             _position   = START_POSITIONS[IN_g_player_n % 3];
             _velocity  = { 0.0f,0.0f, 0.0f };
+            _look      = { 0.0f,0.0f, 0.0f };
             _pitch      = 0.0f;
             _hp         = PLAYER_HP;
 			_gun_type   = GunType::BULLET_PISTOL; // ÃÑ Á¾·ù
@@ -332,6 +336,7 @@ public:
             //_position += updatePacket->obj.meta.direction * updatePacket->obj.meta.speed * deltaTime;
             _position = updatePacket->obj.meta.position;
             _velocity = updatePacket->obj.meta.velocity;
+            _look = updatePacket->obj.meta.look;
             _pitch = updatePacket->obj.meta.pitch;
             _hp = updatePacket->obj.meta.hp;
             _level = updatePacket->obj.level;
@@ -411,7 +416,7 @@ void ZombieAIThread() {
                 pkt_sc_object_update p;
                 p.header.size = sizeof(p);
                 p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
-                p.id = zombie->GetID();
+                p.id = zombie->GetID(); 
                 p.obj = info;
 
                 for (auto& [id, session] : g_users)
