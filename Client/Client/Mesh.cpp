@@ -1176,14 +1176,13 @@ void CBulletMesh::CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	pVertices[0].m_xmf3Position = XMFLOAT3{ 0,0,0 };
 	pVertices[0].m_xmf3Velocity = XMFLOAT3{ 0,0,0 };
 	pVertices[0].m_fLifetime = 0.0f;
+	pVertices[0].m_nBulletType = BULLET_TYPE_MAINTAIN;
 
 	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
 
 	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
 	m_d3dPositionBufferView.StrideInBytes = m_nStride;
 	m_d3dPositionBufferView.SizeInBytes = m_nStride * m_nVertices;
-
-	m_nVertices = 0;
 }
 
 void CBulletMesh::CreateStreamOutputBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nMaxParticles)
@@ -1238,7 +1237,7 @@ void CBulletMesh::PreRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPip
 		{
 			m_bStart = false;
 
-			m_nVertices = 0;
+			m_nVertices = 1;
 
 			m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
 			m_d3dPositionBufferView.StrideInBytes = m_nStride;
@@ -1332,7 +1331,7 @@ void CBulletMesh::OnPostRender(int nPipelineState)
 		_stprintf_s(pstrDebug, 256, _T("Stream Output Vertices = %d\n"), m_nVertices);
 		OutputDebugString(pstrDebug);
 #endif
-		//if ((m_nVertices == 0) || (m_nVertices >= MAX_BULLETS)) m_bStart = true;
+		if ((m_nVertices == 0) || (m_nVertices >= MAX_BULLETS)) m_bStart = true;
 	}
 }
 

@@ -1246,8 +1246,8 @@ CBulletObject::CBulletObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	SetMesh(pMesh);
 
 	std::shared_ptr<CTexture> pParticleTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
-	pParticleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Bullet.dds", RESOURCE_TEXTURE2D, 0);
-	pParticleTexture->SetName("Image/Bullet.dds");
+	pParticleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/BulletTrail.dds", RESOURCE_TEXTURE2D, 0);
+	pParticleTexture->SetName("Image/BulletTrail.dds");
 	CScene::CreateShaderResourceViews(pd3dDevice, pParticleTexture.get(), 0, ROOT_PARAMETER_ALBEDO_TEXTURE);
 
 	std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
@@ -1300,12 +1300,7 @@ void CBulletObject::OnPostRender()
 	m_pMesh->OnPostRender(0); //Read Stream Output Buffer Filled Size
 }
 
-void CBulletObject::AddBullet(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Velocity)
+void CBulletObject::AddBullet(const CBulletVertex& pBulletVertex)
 {
-	CBulletVertex pBulletVertice;
-	pBulletVertice.m_xmf3Position = xmf3Position;
-	pBulletVertice.m_xmf3Velocity = xmf3Velocity;
-	pBulletVertice.m_fLifetime = 0.4f;
-
-	std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullet(pBulletVertice);
+	std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullet(pBulletVertex);
 }

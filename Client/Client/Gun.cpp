@@ -49,14 +49,26 @@ void CGun::SetGunType(int type)
 { 
 	m_nGunType = type; 
 
+	switch (m_nGunType)
+	{
+	case 0: // Assault Rifle
+		m_fFireRate = 1.0f / 12.5f;
+		m_fBulletRange = 200.0f;
+		break;
+	case 1: // Shotgun
+		m_fFireRate = 1.0f / 5.0f;
+		m_fBulletRange = 100.0f;
+		break;
+	}
+
 	auto pModel = CResourceManager::GetInstance().GetModelInfo(m_strGunName[m_nGunType]);
 	DeepCopyFromModel(pModel);
 }
 
-void CGun::Fire()
+void CGun::Fire(const XMFLOAT3& xmf3Direction)
 {
-	XMFLOAT3 direction = FindFrame("M16_4_low")->GetUpVector();
-	XMFLOAT3 position = FindFrame("M16_4_low")->GetPosition();
+	XMFLOAT3 direction = xmf3Direction;
+	XMFLOAT3 position = FindFrame("M16_4_low")->GetPosition(); // ÃÑ±¸ À§Ä¡
 	Fire(position, Vector3::ScalarProduct(direction, m_fBulletRange, false));
 }
 
@@ -64,7 +76,20 @@ void CGun::Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction)
 {
 	if (m_fCoolTime < 0.0f)
 	{
-		CGun::m_pBulletObject->AddBullet(xmf3Position, xmf3Direction);
+		CBulletVertex pBulletVertice;
+		pBulletVertice.m_xmf3Position = xmf3Position;
+		pBulletVertice.m_xmf3Velocity = xmf3Direction;
+		pBulletVertice.m_fLifetime = 0.6f;
+		pBulletVertice.m_nBulletType = m_nGunType;
+
+		CGun::m_pBulletObject->AddBullet(pBulletVertice);
 		m_fCoolTime = m_fFireRate;
+
+		{
+			std::string debug = "Gun Fire \n";
+			debug += "Position: " + std::to_string(xmf3Position.x) + ", " + std::to_string(xmf3Position.y) + ", " + std::to_string(xmf3Position.z) + "\n";
+			debug += "Direction: " + std::to_string(xmf3Direction.x) + ", " + std::to_string(xmf3Direction.y) + ", " + std::to_string(xmf3Direction.z) + "\n";
+			OutputDebugStringA(debug.c_str());
+		}
 	}
 }

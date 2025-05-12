@@ -90,6 +90,7 @@ class CBulletVertex : public CVertex
 public:
 	XMFLOAT3						m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	float							m_fLifetime = 0.0f;
+	int								m_nBulletType = 0;	
 
 public:
 	CBulletVertex() {}
@@ -559,6 +560,13 @@ class CBulletMesh : public CMesh
 public:
 	CBulletMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
 	virtual ~CBulletMesh();
+
+	enum BULLET_TYPE : int
+	{
+		BULLET_TYPE_MAINTAIN = -1,
+		BULLET_TYPE_ASSAULT,
+		BULLET_TYPE_SHOTGUN,
+	};
 
 	bool								m_bStart = true;
 

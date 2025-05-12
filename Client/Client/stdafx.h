@@ -61,7 +61,8 @@
 //#define _WITH_OBJECT_TRANSFORM	   // 오브젝트 트랜스폼 자체를 포함할 경우.(사용 안할시 class CTransform을 사용)
 #endif
 
-
+// Network IP (명령줄 인자로 Update 가능)
+extern std::string SERVER_IP;
 
 
 using namespace DirectX;
