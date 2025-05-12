@@ -87,10 +87,10 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	AddObject(pCollisionChecker);
 
 	// BulletObject
-	//std::shared_ptr<CBulletObject> pBullet = std::make_shared<CBulletObject>(pd3dDevice, pd3dCommandList, pd3dRootSignature, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 65.0f, 0.0f), 20.0f, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(8.0f, 8.0f), MAX_BULLETS);
-	//m_pBulletObject = pBullet;
-	//CGun::m_pBulletObject = pBullet;
-	//AddObject(pBullet);
+	std::shared_ptr<CBulletObject> pBullet = std::make_shared<CBulletObject>(pd3dDevice, pd3dCommandList, pd3dRootSignature, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 65.0f, 0.0f), 20.0f, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(8.0f, 8.0f), MAX_BULLETS);
+	m_pBulletObject = pBullet;
+	CGun::m_pBulletObject = pBullet;
+	AddObject(pBullet);
 
 	// 마지막 모든 Object의 생성이 끝나면 Player의 카메라를 추적
 	if (m_pPlayer)
@@ -157,7 +157,7 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 	if (m_bMouseLButtonDown) {
 		if (m_pPlayer && m_pBulletObject)
 		{
-			(m_pPlayer->GetGun())->Fire();
+			m_pPlayer->Fire();
 		}
 	}
 

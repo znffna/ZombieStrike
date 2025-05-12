@@ -135,6 +135,15 @@ void CPlayer::SetSkin(int nSkinType)
 	UpdateTransform();
 }
 
+void CPlayer::Fire()
+{ 
+	if (m_pGun) {
+		UpdateTransform();
+		m_pGun->UpdateTransform(m_pGunSlot->GetWorldMatrix());
+		m_pGun->Fire(); 
+	} 
+}
+
 void CPlayer::Rotate(float x, float y, float z)
 {
 	if (x != 0.0f)

@@ -218,13 +218,13 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState);
 	virtual D3D12_SHADER_BYTECODE CreateGeometryShader(int nPipelineState);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState);
+	virtual D3D12_STREAM_OUTPUT_DESC CreateStreamOuputState(int nPipelineState);
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
-	virtual D3D12_STREAM_OUTPUT_DESC CreateStreamOuputState(int nPipelineState);
 	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState);
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState);
 
-	virtual void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState);
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature);
 
 private:
 	std::shared_ptr<CDescirptorHeap> m_pd3dCbvSrvDescriptorHeap = NULL;

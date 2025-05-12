@@ -54,14 +54,14 @@ void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSi
 	if (hResult == S_OK)
 	{
 		// Output Debug Message
-		std::wstring strDebugString = GetShaderName() + L" Graphic Pipeline State is created successfully.\n";
+		std::wstring strDebugString = GetShaderName()+ L" - " + std::to_wstring(nPipelineState) + L" Graphic Pipeline State is created successfully.\n";
 		OutputDebugString(strDebugString.data());
 		m_pd3dPipelineStates[nPipelineState]->SetName(GetShaderName().data());
 	}
 	else
 	{
 		// Output Debug Message
-		std::wstring strDebugString = GetShaderName() + L" Graphic Pipeline State is not created successfully.\n";
+		std::wstring strDebugString = GetShaderName() + L" - " + std::to_wstring(nPipelineState) + L" Graphic Pipeline State is not created successfully.\n";
 		OutputDebugString(strDebugString.data());
 	}
 
@@ -99,11 +99,16 @@ D3D12_SHADER_BYTECODE CShader::CompileShaderFromFile(const WCHAR* pszFileName, L
 	char* pErrorString = NULL;
 	if (pd3dErrorBlob) pErrorString = (char*)pd3dErrorBlob->GetBufferPointer();
 
-	SaveShaderToCSOFile(*ppd3dShaderBlob, pszShaderName);
-
 	D3D12_SHADER_BYTECODE d3dShaderByteCode;
 	d3dShaderByteCode.BytecodeLength = (*ppd3dShaderBlob)->GetBufferSize();
 	d3dShaderByteCode.pShaderBytecode = (*ppd3dShaderBlob)->GetBufferPointer();
+
+	SaveShaderToCSOFile(*ppd3dShaderBlob, pszShaderName);
+	{
+		std::string strDebugString = pszShaderName;
+		strDebugString = "Shader [" + strDebugString +"] is compiled successfully.\n";
+		OutputDebugStringA(strDebugString.data());
+	}
 
 	return(d3dShaderByteCode);
 }
@@ -878,7 +883,7 @@ D3D12_STREAM_OUTPUT_DESC CBulletShader::CreateStreamOuputState(int nPipelineStat
 	return(d3dStreamOutputDesc);
 }
 
-void CBulletShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
+void CBulletShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	m_nPipelineStates = 2;
 	m_pd3dPipelineStates.resize(m_nPipelineStates);
