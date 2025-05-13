@@ -4,6 +4,7 @@
 
 //constexpr const char* LOOPBACK_IP = "127.0.0.1";
 
+std::string SERVER_IP = "192.168.65.133";
 bool g_bNetworkDebugMode = false;
 
 NetworkingClient::NetworkingClient(COnlineScene* pScene) : recv_over(this), m_pScene(pScene) { // recv_over(this)

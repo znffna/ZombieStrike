@@ -484,5 +484,5 @@ public:
 	virtual void OnPostRender();
 
 	// method
-	void AddBullet(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Velocity);
+	void AddBullet(const CBulletVertex& pBulletVertex);
 };

@@ -140,7 +140,7 @@ void CPlayer::Fire()
 	if (m_pGun) {
 		UpdateTransform();
 		m_pGun->UpdateTransform(m_pGunSlot->GetWorldMatrix());
-		m_pGun->Fire(); 
+		m_pGun->Fire(GetComponent<CCamera>()->GetLook()); 
 	} 
 }
 

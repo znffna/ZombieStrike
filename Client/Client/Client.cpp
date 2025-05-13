@@ -30,6 +30,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // TODO: 여기에 코드를 입력합니다.
 
+    int argc;
+    LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    if (argc >= 2) {
+        // IP 주소를 argv[1]에서 가져옵니다.
+        int bufferSize = WideCharToMultiByte(CP_UTF8, 0, argv[1], -1, nullptr, 0, nullptr, nullptr);
+        std::string str(bufferSize - 1, '\0'); // 널 문자 제외 길이만큼 공간 할당
+        WideCharToMultiByte(CP_UTF8, 0, argv[1], -1, &str[0], bufferSize, nullptr, nullptr);
+        SERVER_IP = str;
+    }
+
     // 전역 문자열을 초기화합니다.
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_CLIENT, szWindowClass, MAX_LOADSTRING);
@@ -123,6 +133,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
+
+#ifdef _WITH_SWAPCHAIN_FULLSCREEN_STATE
+   gGameFramework.ChangeSwapChainState();
+#endif
 
    return TRUE;
 }

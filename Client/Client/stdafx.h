@@ -61,7 +61,12 @@
 //#define _WITH_OBJECT_TRANSFORM	   // 오브젝트 트랜스폼 자체를 포함할 경우.(사용 안할시 class CTransform을 사용)
 #endif
 
+// 전체화면 On / OFF
+#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
 
+
+// Network IP (명령줄 인자로 Update 가능)
+extern std::string SERVER_IP;
 
 
 using namespace DirectX;

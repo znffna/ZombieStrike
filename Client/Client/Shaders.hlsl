@@ -367,11 +367,14 @@ float4 PSCollider(VS_COLLIDER_OUTPUT input) : SV_TARGET
 //////////////////////////////////////////////////////////////////////////////////
 //
 
+#define BULLET_MAINTAIN -1 // uint 가 type이기에 최대값을 가진다.
+
 struct VS_PARTICLE_INPUT
 {
     float3 position : POSITION;
     float3 velocity : VELOCITY;
     float lifetime : LIFETIME;
+    int type : TYPE;
 };
 
 VS_PARTICLE_INPUT VSParticleStreamOutput(VS_PARTICLE_INPUT input)
@@ -385,10 +388,17 @@ void GSParticleStreamOutput(point VS_PARTICLE_INPUT input[1], inout PointStream<
 {
     VS_PARTICLE_INPUT particle = input[0];
 
-    particle.lifetime -= gfElapsedTime;
-    if (particle.lifetime > 0.0f)
+    if (particle.type == BULLET_MAINTAIN)
     {
         output.Append(particle);
+    }
+    else
+    {
+        particle.lifetime -= gfElapsedTime;
+        if (particle.lifetime > 0.0f)
+        {
+            output.Append(particle);
+        }
     }
 }
 
@@ -400,6 +410,7 @@ struct VS_PARTICLE_DRAW_OUTPUT
     float3 position : POSITION;
     float3 velocity : VELOCITY;
     float lifetime : LIFETIME;
+    int type : TYPE;
     float4 color : COLOR;
 };
 
@@ -418,7 +429,8 @@ VS_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_PARTICLE_INPUT input)
     output.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
     output.velocity = input.velocity;
     output.lifetime = input.lifetime;
-	
+    output.type = input.type;
+    
     return (output);
 }
 
@@ -429,6 +441,15 @@ static float2 gf2QuadUVs[4] = { float2(0.0f, 0.0f), float2(1.0f, 0.0f), float2(0
 void GSParticleDraw(point VS_PARTICLE_DRAW_OUTPUT input[1], inout TriangleStream<GS_PARTICLE_DRAW_OUTPUT> outputStream)
 {
     GS_PARTICLE_DRAW_OUTPUT output = (GS_PARTICLE_DRAW_OUTPUT) 0;
+    
+    if (input[0].type == BULLET_MAINTAIN)
+    {
+        output.position = float4(input[0].position, 1.0f);
+        output.color = input[0].color;
+        output.uv = float2(0.5f, 0.5f);
+        outputStream.Append(output);
+        return;
+    }
 
     float3 cameraPos = GetCameraPosition();
     

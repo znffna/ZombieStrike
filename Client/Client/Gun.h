@@ -25,7 +25,7 @@ public:
 	int GetGunType() { return m_nGunType; }
 
 	// Methods
-	void Fire();
+	void Fire(const XMFLOAT3& xmf3Direction);
 	void Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction);
 
 	static std::shared_ptr<CBulletObject> m_pBulletObject; // 총알 오브젝트
@@ -33,9 +33,9 @@ private:
 
 	const std::vector<std::string> m_strGunName{ "M16" }; // 총 이름
 
-	int m_nGunType = 0; // 0: Pistol, 1: Shotgun, 2: Rifle
+	int m_nGunType = 0; // 0: Assault Rifle, 1: Shotgun
 
-	float m_fFireRate = 0.5f; // 초당 발사 횟수
+	float m_fFireRate = 12.5f; // 초당 발사 횟수
 	float m_fCoolTime = 0.0f; // 발사 대기 시간
 	float m_fBulletRange = 100.0f; // 총알 속도
 	float m_fReloadTime = 2.0f; // 재장전 시간
