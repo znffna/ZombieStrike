@@ -40,8 +40,11 @@ public:
 	void CreateCommandQueueAndList();
 	void CreateRtvAndDsvDescriptorHeap();
 	void CreateSwapChain();
-	void CreateRenderTargetView();
+	void CreateRenderTargetViews();
 	void CreateDepthStencilView();
+
+	// 창모드 <-> 전체화면
+	void ChangeSwapChainState();
 
 	void BuildObjects();
 

@@ -200,7 +200,7 @@ void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 
 		// 오브젝트 대비 상대적 위치 설정
 		XMFLOAT3 xmf3Offset = Vector3::TransformCoord(m_xmf3Offset, xmf4x4Rotate); // 상대적 위치에 회전 행렬 적용
-		XMFLOAT3 xmf3Position = Vector3::Add(pChaseTransform->GetPosition(), xmf3Offset); // 상대적 위치	+ 오브젝트 위치 = 카메라 목표 위치
+		XMFLOAT3 xmf3Position = Vector3::Add(Vector3::Add(pChaseTransform->GetPosition(), XMFLOAT3(0,1,0)), xmf3Offset); // 상대적 위치	+ 오브젝트 위치 = 카메라 목표 위치
 		XMFLOAT3 xmf3Direction = Vector3::Subtract(xmf3Position, m_xmf3Position); // 목표 위치 - 현재 위치 = 가야할 방향
 				
 		float fLength = Vector3::Length(xmf3Direction); // 가야할 거리 계산
@@ -214,19 +214,12 @@ void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 		if (fDistance > 0) // 이동해야할 경우
 		{
 			m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Direction, fDistance);
-			SetLookAt(xmf3LookAt);
-
-			//std::string DebugOutput = "Player Position : (" + std::to_string(xmf3LookAt.x) + ", " + std::to_string(xmf3LookAt.y) + ", " + std::to_string(xmf3LookAt.z) + ")\n";
-			//DebugOutput = DebugOutput + "Camera Position : (" + std::to_string(m_xmf3Position.x) + ", " + std::to_string(m_xmf3Position.y) + ", " + std::to_string(m_xmf3Position.z) + ")\n";
-			//OutputDebugStringA(DebugOutput.c_str());
-			
-			// 카메라의 위치를 지형위로 올리기
 			OnTerrainUpdateCallback(fTimeElapsed);
+
+			SetLookAt(xmf3LookAt);
 
 			RegenerateViewMatrix();
 		}
-
-
 	}
 }
 
@@ -251,8 +244,6 @@ void CThirdPersonCamera::OnTerrainUpdateCallback(float fTimeElapsed)
 			float dy = fHeight - xmf3CameraPosition.y;
 			xmf3CameraPosition.y = fHeight;
 			SetPosition(xmf3CameraPosition);
-
-			SetLookAt(Vector3::Add(gameObject->GetPosition(), XMFLOAT3(0, dy, 0)));
 		}
 	}
 }
