@@ -312,50 +312,61 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     toTarget = toTarget.Normalize();
 
 
-    // 4. 충돌 대상 수집 
-    std::vector<Vec3> nearbyTargets;
+	// 4. 충돌 대상 수집 , 좀비 , 플레이어 따로
+    std::vector<Vec3> nearbyZombies;
+    std::vector<Vec3> nearbyPlayers;
+
     for (auto* other : allZombies) {
         if (other->GetID() == m_id) continue;
         float dx = std::abs(m_x - other->GetX());
         float dz = std::abs(m_z - other->GetZ());
         if (dx < ZOMBIE_HALF_SIZE * 2 && dz < ZOMBIE_HALF_SIZE * 2)
-            nearbyTargets.emplace_back(other->GetX(), 0, other->GetZ());
+            nearbyZombies.emplace_back(other->GetX(), 0, other->GetZ());
     }
     for (const auto& playerPos : playerPositions) {
         float dx = std::abs(m_x - playerPos.x);
         float dz = std::abs(m_z - playerPos.z);
         if (dx < ZOMBIE_HALF_SIZE * 2 && dz < ZOMBIE_HALF_SIZE * 2)
-            nearbyTargets.push_back(playerPos);
+            nearbyPlayers.push_back(playerPos);
     }
 
 	// 5. 장애물 회피 벡터 계산
     Vec3 avoidance(0, 0, 0);
-    for (const auto& pos : nearbyTargets) {
+    for (const auto& pos : nearbyZombies) {
         Vec3 push = currentPos - pos;
         if (push.Length() > 0.001f)
-            avoidance += push.Normalize() * 0.03f;
+            avoidance += push.Normalize() * 0.5f;
     }
 
 	// 6. 이동 및 충돌 검사
     Vec3 moveDir = (toTarget + avoidance).Normalize();
     Vec3 nextPos = currentPos + moveDir * Z_move_speed;
 
+    // 7. 좀비끼리 밀어내기
     Vec3 pushForce(0, 0, 0);
-    for (const auto& pos : nearbyTargets) {
+    for (const auto& pos : nearbyZombies) {
         if (IsAABBCollision(nextPos.x, nextPos.z, pos.x, pos.z, ZOMBIE_HALF_SIZE)) {
             Vec3 push = currentPos - pos;
             if (push.Length() > 0.001f)
                 pushForce += push.Normalize() * 0.01f; // 약하게 밀어내기
         }
     }
- 
-    Vec3 finalMove = moveDir * Z_move_speed + pushForce;
 
-    Vec3 finalPos = currentPos + finalMove;
+	// 8. 플레이어와 충돌은 멈춤
+    bool blocked = false;
+    for (const auto& pos : nearbyPlayers) {
+        if (IsAABBCollision(nextPos.x, nextPos.z, pos.x, pos.z, ZOMBIE_HALF_SIZE)) {
+            blocked = true;
+            break;
+        }
+    }
 
-    m_x = finalPos.x;
-    m_z = finalPos.z;
-    m_dirty = true;
+    if (!blocked) {
+        Vec3 finalPos = Vec3(m_x, 0, m_z) + moveDir * Z_move_speed + pushForce;
+        m_x = finalPos.x;
+        m_z = finalPos.z;
+        m_dirty = true;
+    }
 }
 
 Vec3 ZombieAI::GetLookVectorToPlayer() const {
