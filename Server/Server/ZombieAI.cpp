@@ -20,12 +20,18 @@ constexpr int PLAYER_START_X = 580;
 constexpr int PLAYER_START_Z = 545;
 constexpr int NUM_ZOMBIES = 50; // 추가: 생성할 좀비 수
 
-static bool IsAABBCollision(float x1, float z1, float x2, float z2, float half)
-{
-    return (std::abs(x1 - x2) < half * 2) && (std::abs(z1 - z2) < half * 2);
+static bool IsAABBCollision(float x1, float z1, float x2, float z2, float half, float tolerance = 1.0f)
+{   // 겹침 판단
+    float range = half * tolerance * 2.0f;
+    return (std::abs(x1 - x2) < range) && (std::abs(z1 - z2) < range);
 }
 
-
+bool IsTooClose(float x1, float z1, float x2, float z2, float minDist)
+{   // 접근 제한
+    float dx = x1 - x2;
+    float dz = z1 - z2;
+    return (dx * dx + dz * dz) < (minDist * minDist);
+}
 // -------------------- A* 내부 클래스 -----------------------
 class ZombieAI::AStar
 {
@@ -342,23 +348,26 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     Vec3 moveDir = (toTarget + avoidance).Normalize();
     Vec3 nextPos = currentPos + moveDir * Z_move_speed;
 
-    // 7. 좀비끼리 밀어내기
-    Vec3 pushForce(0, 0, 0);
-    for (const auto& pos : nearbyZombies) {
-        if (IsAABBCollision(nextPos.x, nextPos.z, pos.x, pos.z, ZOMBIE_HALF_SIZE)) {
-            Vec3 push = currentPos - pos;
-            if (push.Length() > 0.001f)
-                pushForce += push.Normalize() * 0.01f; // 약하게 밀어내기
-        }
-    }
-
-	// 8. 플레이어와 충돌은 멈춤
+    // 7. 플레이어와 충돌은 멈춤
     bool blocked = false;
     for (const auto& pos : nearbyPlayers) {
-        if (IsAABBCollision(nextPos.x, nextPos.z, pos.x, pos.z, ZOMBIE_HALF_SIZE)) {
+        if (IsAABBCollision(nextPos.x, nextPos.z, pos.x, pos.z, ZOMBIE_HALF_SIZE, 2.f)) {
             blocked = true;
             break;
         }
+    }
+
+    // 8. 좀비끼리 밀어내기
+    Vec3 pushForce(0, 0, 0);
+    if (!blocked) {
+        for (const auto& pos : nearbyZombies) {
+            if (IsAABBCollision(nextPos.x, nextPos.z, pos.x, pos.z, ZOMBIE_HALF_SIZE)) {
+                Vec3 push = currentPos - pos;
+                if (push.Length() > 0.01f)
+                    pushForce += push.Normalize() * 0.04f; // 약하게 밀어내기
+            }
+        }
+
     }
 
     if (!blocked) {
