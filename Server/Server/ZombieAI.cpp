@@ -9,8 +9,6 @@
 #include <memory>
 #include <conio.h> 
 
-
-
 constexpr bool DEBUG_PRINT = false;
 #define DEBUG_LOG(msg) \
     do { if (DEBUG_PRINT) std::cout << msg << std::endl; } while (0)
@@ -20,19 +18,13 @@ constexpr int ZOMBIE_START_X = 2;
 constexpr int ZOMBIE_START_Z = 2;
 constexpr int PLAYER_START_X = 580;
 constexpr int PLAYER_START_Z = 545;
-constexpr int NUM_ZOMBIES = 50;         // 추가: 생성할 좀비 수
-// 필수 정보 
-//constexpr float my_gCost = 1.0f;         // 이동 비용
-////constexpr float CELL_SIZE = 1.0f;        // 노드당 크기
-//constexpr float ZOMBIE_HALF_SIZE = 0.4f; // 좀비 AABB 반 사이즈
-//constexpr SIZE2 ZOMBIE_HP = 500;         // 좀비 초기 체력
-//constexpr float ZOMBIE_DAMAGE= 10;         // 좀비 초기 체력
-//
-//constexpr float WORLD_WIDTH = 250.0f;
-//constexpr float WORLD_HEIGHT = 250.0f;
-//constexpr float GRID_WIDTH = 512.0f;
-//constexpr float GRID_HEIGHT= 512.0f;
-//constexpr float CELL_SIZE = WORLD_WIDTH / GRID_WIDTH; // 0.488..
+constexpr int NUM_ZOMBIES = 50; // 추가: 생성할 좀비 수
+
+static bool IsAABBCollision(float x1, float z1, float x2, float z2, float half)
+{
+    return (std::abs(x1 - x2) < half * 2) && (std::abs(z1 - z2) < half * 2);
+}
+
 
 // -------------------- A* 내부 클래스 -----------------------
 class ZombieAI::AStar
@@ -190,9 +182,6 @@ void ZombieAI::SetHP(int hp) {
 	m_dirty = true;
 }
 
-//void ZombieAI::SetPlayerPosition(float x, float z) {
-//    m_playerX = x; m_playerZ = z;
-//}
 
 void ZombieAI::SetTargetPosition(float x, float z) {
     m_targetX = x; m_targetZ = z;
@@ -268,6 +257,7 @@ Vec3 ZombieAI::AvoidPlayers(const std::vector<Vec3>& playerPositions)
 }
 
 
+
 void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime)
 {
     if (playerPositions.empty()) return;
@@ -301,10 +291,8 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
 
     // 3. 이동 처리 (경로 따라 이동)
     if (m_path.empty() || m_pathIndex >= m_path.size()) return;
-
     auto& targetNode = m_path[m_pathIndex];
     Vec3 targetPos = GetNodeCenter(targetNode.first, targetNode.second);
-
     Vec3 currentPos(m_x, 0, m_z);
     Vec3 toTarget = targetPos - currentPos;
     float distance = toTarget.Length();
@@ -324,40 +312,49 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     toTarget = toTarget.Normalize();
 
 
-    // 4. 충돌 회피 처리
-    Vec3 avoidance(0, 0, 0);
-    for (auto* other : allZombies)
-    {
-        if (other->GetID() == m_id)
-            continue;
-
+    // 4. 충돌 대상 수집 
+    std::vector<Vec3> nearbyTargets;
+    for (auto* other : allZombies) {
+        if (other->GetID() == m_id) continue;
         float dx = std::abs(m_x - other->GetX());
         float dz = std::abs(m_z - other->GetZ());
-
         if (dx < ZOMBIE_HALF_SIZE * 2 && dz < ZOMBIE_HALF_SIZE * 2)
-        {
-            Vec3 push(m_x - other->GetX(), 0, m_z - other->GetZ());
-            if (push.Length() > 0.001f)
-                avoidance += push.Normalize() * 0.03f;
+            nearbyTargets.emplace_back(other->GetX(), 0, other->GetZ());
+    }
+    for (const auto& playerPos : playerPositions) {
+        float dx = std::abs(m_x - playerPos.x);
+        float dz = std::abs(m_z - playerPos.z);
+        if (dx < ZOMBIE_HALF_SIZE * 2 && dz < ZOMBIE_HALF_SIZE * 2)
+            nearbyTargets.push_back(playerPos);
+    }
+
+	// 5. 장애물 회피 벡터 계산
+    Vec3 avoidance(0, 0, 0);
+    for (const auto& pos : nearbyTargets) {
+        Vec3 push = currentPos - pos;
+        if (push.Length() > 0.001f)
+            avoidance += push.Normalize() * 0.03f;
+    }
+
+	// 6. 이동 및 충돌 검사
+    Vec3 moveDir = (toTarget + avoidance).Normalize();
+    Vec3 nextPos = currentPos + moveDir * Z_move_speed;
+
+    bool blocked = false;
+    for (const auto& pos : nearbyTargets) {
+        if (IsAABBCollision(nextPos.x, nextPos.z, pos.x, pos.z, ZOMBIE_HALF_SIZE)) {
+            blocked = true;
+            break;
         }
     }
 
-    avoidance += AvoidPlayers(playerPositions); // 플레이어 회피 추가
-    Vec3 moveDir = (toTarget + avoidance).Normalize();
-    float moveSpeed = Z_move_speed;
-
-    m_x += moveDir.x * moveSpeed;
-    m_z += moveDir.z * moveSpeed;
-    m_dirty = true;
-
-    //Vec3 before(m_x, 0, m_z);
-    //m_x += moveDir.x * moveSpeed;
-    //m_z += moveDir.z * moveSpeed;
-    //Vec3 after(m_x, 0, m_z);
-    //
-    //if ((after - before).LengthSquared() > 0.0001f)
-    //    m_dirty = true;
+    if (!blocked) {
+        m_x = nextPos.x;
+        m_z = nextPos.z;
+        m_dirty = true;
+    }
 }
+
 Vec3 ZombieAI::GetLookVectorToPlayer() const {
     Vec3 zombiePos(m_x, 0, m_z);
     Vec3 targetPos(m_targetX, 0, m_targetZ);
