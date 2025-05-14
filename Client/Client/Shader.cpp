@@ -362,7 +362,7 @@ CStandardShader::~CStandardShader()
 
 D3D12_SHADER_BYTECODE CStandardShader::CreateVertexShader(int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSStandard", "vs_5_1", &m_pd3dVertexShaderBlob));
 #else
 	return(CShader::ReadCompiledShaderFromFile(L"VSStandard", &m_pd3dVertexShaderBlob));
@@ -371,7 +371,7 @@ D3D12_SHADER_BYTECODE CStandardShader::CreateVertexShader(int nPipelineState)
 
 D3D12_SHADER_BYTECODE CStandardShader::CreatePixelShader(int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSStandard", "ps_5_1", &m_pd3dPixelShaderBlob));
 #else
 	return(CShader::ReadCompiledShaderFromFile(L"PSStandard", &m_pd3dPixelShaderBlob));
@@ -409,7 +409,7 @@ CSkyBoxShader::~CSkyBoxShader()
 
 D3D12_SHADER_BYTECODE CSkyBoxShader::CreateVertexShader(int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSSkyBox", "vs_5_1", &m_pd3dVertexShaderBlob));
 #else
 	return(CShader::ReadCompiledShaderFromFile(L"VSSkyBox", &m_pd3dVertexShaderBlob));
@@ -418,7 +418,7 @@ D3D12_SHADER_BYTECODE CSkyBoxShader::CreateVertexShader(int nPipelineState)
 
 D3D12_SHADER_BYTECODE CSkyBoxShader::CreatePixelShader(int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSSkyBox", "ps_5_1", &m_pd3dPixelShaderBlob));
 #else
 	return(CShader::ReadCompiledShaderFromFile(L"PSSkyBox", &m_pd3dPixelShaderBlob));
@@ -500,7 +500,7 @@ D3D12_INPUT_LAYOUT_DESC CTerrainShader::CreateInputLayout(int nPipelineState)
 
 D3D12_SHADER_BYTECODE CTerrainShader::CreateVertexShader(int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTerrain", "vs_5_1", &m_pd3dVertexShaderBlob));
 #else
 	return(CShader::ReadCompiledShaderFromFile(L"VSTerrain", &m_pd3dVertexShaderBlob));
@@ -509,7 +509,7 @@ D3D12_SHADER_BYTECODE CTerrainShader::CreateVertexShader(int nPipelineState)
 
 D3D12_SHADER_BYTECODE CTerrainShader::CreatePixelShader(int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSTerrain", "ps_5_1", &m_pd3dPixelShaderBlob));
 #else
 	return(CShader::ReadCompiledShaderFromFile(L"PSTerrain", &m_pd3dPixelShaderBlob));
@@ -549,7 +549,7 @@ D3D12_INPUT_LAYOUT_DESC CSkinnedAnimationStandardShader::CreateInputLayout(int n
 
 D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreateVertexShader(int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSSkinnedAnimationStandard", "vs_5_1", &m_pd3dVertexShaderBlob));
 #else
 	return(CShader::ReadCompiledShaderFromFile(L"VSSkinnedAnimationStandard", &m_pd3dVertexShaderBlob));
@@ -583,7 +583,7 @@ D3D12_INPUT_LAYOUT_DESC CColliderShader::CreateInputLayout(int nPipelineState)
 
 D3D12_SHADER_BYTECODE CColliderShader::CreateVertexShader(int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSCollider", "vs_5_1", &m_pd3dVertexShaderBlob));
 #else
 	return(CShader::ReadCompiledShaderFromFile(L"VSCollider", &m_pd3dVertexShaderBlob));
@@ -592,7 +592,7 @@ D3D12_SHADER_BYTECODE CColliderShader::CreateVertexShader(int nPipelineState)
 
 D3D12_SHADER_BYTECODE CColliderShader::CreatePixelShader(int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSCollider", "ps_5_1", &m_pd3dPixelShaderBlob));
 #else
 	return(CShader::ReadCompiledShaderFromFile(L"PSCollider", &m_pd3dPixelShaderBlob));
@@ -646,7 +646,7 @@ D3D12_INPUT_LAYOUT_DESC CTexturedShader::CreateInputLayout(int nPipelineState)
 
 D3D12_SHADER_BYTECODE CTexturedShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTextured", "vs_5_1", ppd3dShaderBlob));
 #else
 	return(CShader::ReadCompiledShaderFromFile(L"VSTextured", ppd3dShaderBlob));
@@ -655,7 +655,7 @@ D3D12_SHADER_BYTECODE CTexturedShader::CreateVertexShader(ID3DBlob** ppd3dShader
 
 D3D12_SHADER_BYTECODE CTexturedShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSTextured", "ps_5_1", ppd3dShaderBlob));
 #else
 	return(CShader::ReadCompiledShaderFromFile(L"PSTextured", ppd3dShaderBlob));
@@ -682,7 +682,7 @@ CBillboardShader::~CBillboardShader()
 
 D3D12_SHADER_BYTECODE CBillboardShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSBillboard", "vs_5_1", ppd3dShaderBlob));
 #else
 	return(CShader::ReadCompiledShaderFromFile(L"VSBillboard", ppd3dShaderBlob));
@@ -691,7 +691,7 @@ D3D12_SHADER_BYTECODE CBillboardShader::CreateVertexShader(ID3DBlob** ppd3dShade
 
 D3D12_SHADER_BYTECODE CBillboardShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSBillboard", "ps_5_1", ppd3dShaderBlob));
 #else
 	return(CShader::ReadCompiledShaderFromFile(L"PSBillboard", ppd3dShaderBlob));
@@ -772,7 +772,7 @@ DXGI_FORMAT CBulletShader::GetDSVFormat(int nPipelineState)
 
 D3D12_SHADER_BYTECODE CBulletShader::CreateVertexShader(int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	if (nPipelineState == 0)
 		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSParticleStreamOutput", "vs_5_1", &m_pd3dVertexShaderBlob));
 	else
@@ -788,7 +788,7 @@ D3D12_SHADER_BYTECODE CBulletShader::CreateVertexShader(int nPipelineState)
 
 D3D12_SHADER_BYTECODE CBulletShader::CreateGeometryShader(int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	if (nPipelineState == 0)
 		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "GSParticleStreamOutput", "gs_5_1", &m_pd3dGeometryShaderBlob));
 	else
@@ -803,7 +803,7 @@ D3D12_SHADER_BYTECODE CBulletShader::CreateGeometryShader(int nPipelineState)
 
 D3D12_SHADER_BYTECODE CBulletShader::CreatePixelShader(int nPipelineState)
 {
-#ifdef _DEBUG
+#ifdef _COMPILE_SHADER
 	if (nPipelineState == 0)
 		return(CShader::CreatePixelShader(0));
 	else
