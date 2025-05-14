@@ -340,19 +340,22 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     Vec3 moveDir = (toTarget + avoidance).Normalize();
     Vec3 nextPos = currentPos + moveDir * Z_move_speed;
 
-    bool blocked = false;
+    Vec3 pushForce(0, 0, 0);
     for (const auto& pos : nearbyTargets) {
         if (IsAABBCollision(nextPos.x, nextPos.z, pos.x, pos.z, ZOMBIE_HALF_SIZE)) {
-            blocked = true;
-            break;
+            Vec3 push = currentPos - pos;
+            if (push.Length() > 0.001f)
+                pushForce += push.Normalize() * 0.01f; // 약하게 밀어내기
         }
     }
+ 
+    Vec3 finalMove = moveDir * Z_move_speed + pushForce;
 
-    if (!blocked) {
-        m_x = nextPos.x;
-        m_z = nextPos.z;
-        m_dirty = true;
-    }
+    Vec3 finalPos = currentPos + finalMove;
+
+    m_x = finalPos.x;
+    m_z = finalPos.z;
+    m_dirty = true;
 }
 
 Vec3 ZombieAI::GetLookVectorToPlayer() const {
