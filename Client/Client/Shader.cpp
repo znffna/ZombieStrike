@@ -774,14 +774,14 @@ D3D12_SHADER_BYTECODE CBulletShader::CreateVertexShader(int nPipelineState)
 {
 #ifdef _COMPILE_SHADER
 	if (nPipelineState == 0)
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSParticleStreamOutput", "vs_5_1", &m_pd3dVertexShaderBlob));
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSBulletStreamOutput", "vs_5_1", &m_pd3dVertexShaderBlob));
 	else
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSParticleDraw", "vs_5_1", &m_pd3dVertexShaderBlob));
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSBulletDraw", "vs_5_1", &m_pd3dVertexShaderBlob));
 #else
 	if (nPipelineState == 0)
-		return(CShader::ReadCompiledShaderFromFile(L"VSParticleStreamOutput", &m_pd3dVertexShaderBlob));
+		return(CShader::ReadCompiledShaderFromFile(L"VSBulletStreamOutput", &m_pd3dVertexShaderBlob));
 	else
-		return(CShader::ReadCompiledShaderFromFile(L"VSParticleDraw", &m_pd3dVertexShaderBlob));
+		return(CShader::ReadCompiledShaderFromFile(L"VSBulletDraw", &m_pd3dVertexShaderBlob));
 #endif
 
 }
@@ -790,14 +790,14 @@ D3D12_SHADER_BYTECODE CBulletShader::CreateGeometryShader(int nPipelineState)
 {
 #ifdef _COMPILE_SHADER
 	if (nPipelineState == 0)
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "GSParticleStreamOutput", "gs_5_1", &m_pd3dGeometryShaderBlob));
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "GSBulletStreamOutput", "gs_5_1", &m_pd3dGeometryShaderBlob));
 	else
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "GSParticleDraw", "gs_5_1", &m_pd3dGeometryShaderBlob));
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "GSBulletDraw", "gs_5_1", &m_pd3dGeometryShaderBlob));
 #else
 	if (nPipelineState == 0)
-		return(CShader::ReadCompiledShaderFromFile(L"GSParticleStreamOutput", &m_pd3dGeometryShaderBlob));
+		return(CShader::ReadCompiledShaderFromFile(L"GSBulletStreamOutput", &m_pd3dGeometryShaderBlob));
 	else
-		return(CShader::ReadCompiledShaderFromFile(L"GSParticleDraw", &m_pd3dGeometryShaderBlob));
+		return(CShader::ReadCompiledShaderFromFile(L"GSBulletDraw", &m_pd3dGeometryShaderBlob));
 #endif
 }
 
@@ -807,12 +807,12 @@ D3D12_SHADER_BYTECODE CBulletShader::CreatePixelShader(int nPipelineState)
 	if (nPipelineState == 0)
 		return(CShader::CreatePixelShader(0));
 	else
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSParticleDraw", "ps_5_1", &m_pd3dPixelShaderBlob));
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSBulletDraw", "ps_5_1", &m_pd3dPixelShaderBlob));
 #else
 	if (nPipelineState == 0)
 		return(CShader::CreatePixelShader(0));
 	else
-		return(CShader::ReadCompiledShaderFromFile(L"PSParticleDraw", &m_pd3dPixelShaderBlob));
+		return(CShader::ReadCompiledShaderFromFile(L"PSBulletDraw", &m_pd3dPixelShaderBlob));
 #endif
 }
 
