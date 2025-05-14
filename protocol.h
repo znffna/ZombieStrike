@@ -84,6 +84,8 @@ enum PKT_TYPE : SIZE1 {
 
     C_S_STAGE_INFO,
     S_C_STAGE_INFO,
+
+    C_S_SCORE_INFO,
     S_C_SCORE_INFO,
     // ...
 };
@@ -130,6 +132,7 @@ inline const char* ToString(PKT_TYPE type) {
     case S_C_OBJECT_REMOVE: return "S_C_OBJECT_REMOVE";
 	case C_S_STAGE_INFO:    return "C_S_STAGE_INFO";
     case S_C_STAGE_INFO:    return "S_C_STAGE_INFO";
+    case C_S_SCORE_INFO:    return "C_S_SCORE_INFO";
     case S_C_SCORE_INFO:    return "S_C_SCORE_INFO";
     default:                return "UNKNOWN_PACKET";
     }
@@ -366,6 +369,10 @@ struct pkt_sc_stage_info {
     SIZE3 timeLeft;
 };
 // SCORE Á¤º¸
+struct pkt_cs_score_info {
+    PacketHeader header{ sizeof(*this),PKT_TYPE::C_S_SCORE_INFO };
+    SIZE2 stage_score;
+};
 struct pkt_sc_score_info {
     PacketHeader header{sizeof(*this),PKT_TYPE::S_C_SCORE_INFO };
     SIZE2 stage_score;
