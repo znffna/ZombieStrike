@@ -9,8 +9,6 @@
 #include <memory>
 #include <conio.h> 
 
-
-
 constexpr bool DEBUG_PRINT = false;
 #define DEBUG_LOG(msg) \
     do { if (DEBUG_PRINT) std::cout << msg << std::endl; } while (0)
@@ -398,7 +396,7 @@ std::vector<std::vector<int>> LoadMapBin(const std::string& filename)
             map[z][x] = (value == 0) ? 0 : 1; // 0 = 길, 1 = 장애물
         }
     }
-	DEBUG_LOG("[OK] 512x512 맵 로드 완료");
+    DEBUG_LOG("[OK] 512x512 맵 로드 완료");
     return map;
 }
 
