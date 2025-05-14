@@ -61,8 +61,8 @@
 //#define _WITH_OBJECT_TRANSFORM	   // 오브젝트 트랜스폼 자체를 포함할 경우.(사용 안할시 class CTransform을 사용)
 #endif
 
-// 전체화면 On / OFF
-#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
+// 프로그램 실행시 전체화면 On / OFF (F9 키로 실행 중에 전환 가능)
+//#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
 
 // 실행시 Shader를 Compile할 것인지 여부(안하면 CSO파일을 읽어옴)
 #define _COMPILE_SHADER  
