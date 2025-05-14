@@ -27,7 +27,7 @@ static bool IsAABBCollision(float x1, float z1, float x2, float z2, float half, 
 }
 
 bool IsTooClose(float x1, float z1, float x2, float z2, float minDist)
-{   // 접근 제한
+{   // 접근 제한, 거리 유지 
     float dx = x1 - x2;
     float dz = z1 - z2;
     return (dx * dx + dz * dz) < (minDist * minDist);
@@ -171,7 +171,9 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
 // ------------------- ZombieAI 구현 -----------------------
 
 ZombieAI::ZombieAI(const std::vector<std::vector<int>>& map, int id)
-    : m_astar(nullptr), m_id(id), m_x(0), m_z(0), m_targetX(0), m_targetZ(0), m_pathIndex(0), m_hp(ZOMBIE_HP), m_dirty(true)
+    : m_map(map), m_astar(nullptr), m_pathIndex(0),
+    m_id(id), m_x(0), m_z(0), m_targetX(0), m_targetZ(0), m_hp(ZOMBIE_HP), 
+    m_dirty(true)
 {
     m_astar = std::make_unique<AStar>(map);
     //m_astar = new AStar(map);
@@ -315,65 +317,38 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         return;
     }
 
-    toTarget = toTarget.Normalize();
-
-
-	// 4. 충돌 대상 수집 , 좀비 , 플레이어 따로
-    std::vector<Vec3> nearbyZombies;
-    std::vector<Vec3> nearbyPlayers;
-
-    for (auto* other : allZombies) {
-        if (other->GetID() == m_id) continue;
-        float dx = std::abs(m_x - other->GetX());
-        float dz = std::abs(m_z - other->GetZ());
-        if (dx < ZOMBIE_HALF_SIZE * 2 && dz < ZOMBIE_HALF_SIZE * 2)
-            nearbyZombies.emplace_back(other->GetX(), 0, other->GetZ());
-    }
-    for (const auto& playerPos : playerPositions) {
-        float dx = std::abs(m_x - playerPos.x);
-        float dz = std::abs(m_z - playerPos.z);
-        if (dx < ZOMBIE_HALF_SIZE * 2 && dz < ZOMBIE_HALF_SIZE * 2)
-            nearbyPlayers.push_back(playerPos);
-    }
-
-	// 5. 장애물 회피 벡터 계산
-    Vec3 avoidance(0, 0, 0);
-    for (const auto& pos : nearbyZombies) {
-        Vec3 push = currentPos - pos;
-        if (push.Length() > 0.001f)
-            avoidance += push.Normalize() * 0.5f;
-    }
-
-	// 6. 이동 및 충돌 검사
-    Vec3 moveDir = (toTarget + avoidance).Normalize();
+    Vec3 moveDir = toTarget.Normalize();
     Vec3 nextPos = currentPos + moveDir * Z_move_speed;
 
-    // 7. 플레이어와 충돌은 멈춤
-    bool blocked = false;
-    for (const auto& pos : nearbyPlayers) {
-        if (IsAABBCollision(nextPos.x, nextPos.z, pos.x, pos.z, ZOMBIE_HALF_SIZE, 2.f)) {
-            blocked = true;
+
+    // 4. 거리 기반 충돌 제한
+    bool tooClose = false;
+    for (auto* other : allZombies) {
+        if (other->GetID() == m_id) continue;
+        if (IsTooClose(nextPos.x, nextPos.z, other->GetX(), other->GetZ(), 0.8f)) {
+            tooClose = true;
+            break;
+        }
+    }
+    for (const auto& pos : playerPositions) {
+        if (IsTooClose(nextPos.x, nextPos.z, pos.x, pos.z, 2.0f)) {
+            tooClose = true;
             break;
         }
     }
 
-    // 8. 좀비끼리 밀어내기
-    Vec3 pushForce(0, 0, 0);
-    if (!blocked) {
-        for (const auto& pos : nearbyZombies) {
-            if (IsAABBCollision(nextPos.x, nextPos.z, pos.x, pos.z, ZOMBIE_HALF_SIZE)) {
-                Vec3 push = currentPos - pos;
-                if (push.Length() > 0.01f)
-                    pushForce += push.Normalize() * 0.04f; // 약하게 밀어내기
-            }
-        }
+    // 5. 장애물 충돌 검사
+    int gridX = static_cast<int>(nextPos.x / CELL_SIZE);
+    int gridZ = static_cast<int>(nextPos.z / CELL_SIZE);
 
-    }
+    bool isBlockedByWall = (gridX < 0 || gridX >= GRID_WIDTH ||
+        gridZ < 0 || gridZ >= GRID_HEIGHT ||
+        m_map[gridZ][gridX] != 0);
 
-    if (!blocked) {
-        Vec3 finalPos = Vec3(m_x, 0, m_z) + moveDir * Z_move_speed + pushForce;
-        m_x = finalPos.x;
-        m_z = finalPos.z;
+    // 6. 최종 이동
+    if (!tooClose && !isBlockedByWall) {
+        m_x = nextPos.x;
+        m_z = nextPos.z;
         m_dirty = true;
     }
 }

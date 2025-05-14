@@ -75,6 +75,8 @@ private:
     SIZE2 m_hp;  
 
     std::vector<std::pair<int, int>> m_path;
+
+    const std::vector<std::vector<int>>& m_map;
     size_t m_pathIndex;
 
     bool m_dirty = true;
