@@ -338,17 +338,29 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     }
 
     // 5. 장애물 충돌 검사
-    int gridX = static_cast<int>(nextPos.x / CELL_SIZE);
-    int gridZ = static_cast<int>(nextPos.z / CELL_SIZE);
+    Vec3 wallPush(0, 0, 0);
+    for (int dz = -1; dz <= 1; ++dz) {
+        for (int dx = -1; dx <= 1; ++dx) {
+            int checkX = (int)(nextPos.x / CELL_SIZE) + dx;
+            int checkZ = (int)(nextPos.z / CELL_SIZE) + dz;
 
-    bool isBlockedByWall = (gridX < 0 || gridX >= GRID_WIDTH ||
-        gridZ < 0 || gridZ >= GRID_HEIGHT ||
-        m_map[gridZ][gridX] != 0);
+            if (checkX < 0 || checkX >= m_map[0].size() ||
+                checkZ < 0 || checkZ >= m_map.size()) continue;
+
+            if (m_map[checkZ][checkX] != 0) {
+                Vec3 wallCenter = GetNodeCenter(checkX, checkZ);
+                Vec3 away = nextPos - wallCenter;
+                if (away.LengthSquared() > 0.0001f)
+                    wallPush += away.Normalize() * 0.05f;
+            }
+        }
+    }
 
     // 6. 최종 이동
-    if (!tooClose && !isBlockedByWall) {
-        m_x = nextPos.x;
-        m_z = nextPos.z;
+    if (!tooClose ) {
+        Vec3 finalMove = moveDir * Z_move_speed + wallPush;
+        m_x += finalMove.x;
+        m_z += finalMove.z;
         m_dirty = true;
     }
 }
