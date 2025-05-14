@@ -369,7 +369,7 @@ float4 PSCollider(VS_COLLIDER_OUTPUT input) : SV_TARGET
 
 #define BULLET_MAINTAIN -1 // uint 가 type이기에 최대값을 가진다.
 
-struct VS_PARTICLE_INPUT
+struct VS_BULLET_INPUT
 {
     float3 position : POSITION;
     float3 velocity : VELOCITY;
@@ -377,16 +377,16 @@ struct VS_PARTICLE_INPUT
     int type : TYPE;
 };
 
-VS_PARTICLE_INPUT VSParticleStreamOutput(VS_PARTICLE_INPUT input)
+VS_BULLET_INPUT VSBulletStreamOutput(VS_BULLET_INPUT input)
 {
     return (input);
 }
 
 
 [maxvertexcount(128)]
-void GSParticleStreamOutput(point VS_PARTICLE_INPUT input[1], inout PointStream<VS_PARTICLE_INPUT> output)
+void GSBulletStreamOutput(point VS_BULLET_INPUT input[1], inout PointStream<VS_BULLET_INPUT> output)
 {
-    VS_PARTICLE_INPUT particle = input[0];
+    VS_BULLET_INPUT particle = input[0];
 
     if (particle.type == BULLET_MAINTAIN)
     {
@@ -405,7 +405,7 @@ void GSParticleStreamOutput(point VS_PARTICLE_INPUT input[1], inout PointStream<
 //////////////////////////////////////////////////////////////////////////////////
 //
 
-struct VS_PARTICLE_DRAW_OUTPUT
+struct VS_BULLET_DRAW_OUTPUT
 {
     float3 position : POSITION;
     float3 velocity : VELOCITY;
@@ -414,16 +414,16 @@ struct VS_PARTICLE_DRAW_OUTPUT
     float4 color : COLOR;
 };
 
-struct GS_PARTICLE_DRAW_OUTPUT
+struct GS_BULLET_DRAW_OUTPUT
 {
     float4 position : SV_Position;
     float4 color : COLOR;
     float2 uv : TEXTURE;
 };
 
-VS_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_PARTICLE_INPUT input)
+VS_BULLET_DRAW_OUTPUT VSBulletDraw(VS_BULLET_INPUT input)
 {
-    VS_PARTICLE_DRAW_OUTPUT output = (VS_PARTICLE_DRAW_OUTPUT) 0;
+    VS_BULLET_DRAW_OUTPUT output = (VS_BULLET_DRAW_OUTPUT) 0;
 
     output.position = input.position;
     output.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -438,9 +438,9 @@ static float3 gf3Positions[4] = { float3(-1.0f, +1.0f, 0.5f), float3(+1.0f, +1.0
 static float2 gf2QuadUVs[4] = { float2(0.0f, 0.0f), float2(1.0f, 0.0f), float2(0.0f, 1.0f), float2(1.0f, 1.0f) };
 
 [maxvertexcount(4)]
-void GSParticleDraw(point VS_PARTICLE_DRAW_OUTPUT input[1], inout TriangleStream<GS_PARTICLE_DRAW_OUTPUT> outputStream)
+void GSBulletDraw(point VS_BULLET_DRAW_OUTPUT input[1], inout TriangleStream<GS_BULLET_DRAW_OUTPUT> outputStream)
 {
-    GS_PARTICLE_DRAW_OUTPUT output = (GS_PARTICLE_DRAW_OUTPUT) 0;
+    GS_BULLET_DRAW_OUTPUT output = (GS_BULLET_DRAW_OUTPUT) 0;
     
     if (input[0].type == BULLET_MAINTAIN)
     {
@@ -476,10 +476,15 @@ void GSParticleDraw(point VS_PARTICLE_DRAW_OUTPUT input[1], inout TriangleStream
     
 }
 
-float4 PSParticleDraw(GS_PARTICLE_DRAW_OUTPUT input) : SV_TARGET
+float4 PSBulletDraw(GS_BULLET_DRAW_OUTPUT input) : SV_TARGET
 {
     float4 cColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
     cColor *= input.color;
 
     return (cColor);
 }
+
+
+
+//////////////////////////////////////////////////////////////////////////////////
+//
