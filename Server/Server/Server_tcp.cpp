@@ -14,11 +14,11 @@
 #include <print>
 #include "../../protocol.h"
 #include "ZombieAI.h" 
-
 #pragma comment(lib, "ws2_32.lib")
-constexpr double FRAME_INTERVAL_MS = 1000.0 / 60.0;
 
+constexpr double FRAME_INTERVAL_MS = 1000.0 / 60.0;
 constexpr bool DEBUG_PRINT = false;
+
 #define DEBUG_LOG(msg) \
     do { if (DEBUG_PRINT) std::cout << msg << std::endl; } while (0)
 
@@ -40,10 +40,10 @@ struct ShootPacket {
 };
 
 struct Zombie {
-	SIZEID id;
+    SIZEID id;
     Object zombieobj;
-    SIZE2 damage;               
-    SIZE1 act_type;             
+    SIZE2 damage;
+    SIZE1 act_type;
 };
 
 std::vector<ZombieAI*> g_zombies; // ZombieAI 객체를 서버가 관리
@@ -51,14 +51,20 @@ std::vector<std::vector<int>> g_map; // 맵 데이터
 std::mutex zombiesMutex;
 
 bool serverRunning = true;
-short IN_g_player_n= 0;
+short IN_g_player_n = 0;
+auto lastTick = std::chrono::steady_clock::now();
 
 class SESSION;
-std::unordered_map<SIZEID, SESSION> g_users;
+class GameObject;
+//----------------------------------
+// 전역 게임 오브젝트 컨테이너
+//----------------------------------
+std::unordered_map<SIZEID, std::shared_ptr<GameObject>> g_gameObjects;
+
+
 
 void CALLBACK g_recv_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
 void CALLBACK g_send_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
-
 
 bool validate_score_info(const pkt_cs_score_info* p) {
     return (p->stage_score <= 10000);
@@ -68,6 +74,7 @@ bool validate_stage_info(const pkt_cs_stage_info* p) {
     return (p->currentStage >= 1 && p->currentStage <= 10 && p->timeLeft <= 60000);
 
 }
+
 enum IO_OP { OP_RECV, OP_SEND };
 class OVER_EXP {
 public:
@@ -85,28 +92,65 @@ public:
     WSABUF          _wsabuf[1];
 };
 
-class SESSION {
+//----------------------------------
+// GameObject 공통 부모 클래스
+//----------------------------------
+class GameObject {
+public:
+    SIZEID          _id;
+    ObjectType      _obj_type;
+    Vec3            _position{}, _velocity{}, _look{};
+    SIZE2           _hp = 0;
+    SIZE2           _damage = 0;
+    SIZE1           _skin_type;
+    SIZE1           _act_type = NONE;
+
+    virtual void do_recv() = 0;
+    virtual void recv_callback(int num_bytes) = 0;
+    virtual void do_send(void* buff) {}
+    virtual void send_obj_info() = 0;
+    virtual void send_object_update() = 0;
+    virtual void process_packet(SIZE2* packet) = 0;
+
+    virtual ~GameObject() = default;
+};
+
+class ZombieEntity : public GameObject {
 public:
     SOCKET          _c_socket;
-    SIZEID          _id;
 
-    OVER_EXP        _recv_over{OP_RECV};
+    ZombieAI* _ai = nullptr;
+
+    void do_send(void* buff) override {
+        OVER_EXP* send_ov = new OVER_EXP(OP_SEND);
+        SIZE2 packet_size = reinterpret_cast<SIZE2*>(buff)[0];
+        memcpy(send_ov->_buffer, buff, packet_size);
+        send_ov->_wsabuf[0].buf = reinterpret_cast<CHAR*>(send_ov->_buffer);
+        send_ov->_wsabuf[0].len = packet_size;
+        DWORD size_sent;
+
+        DEBUG_LOG("[do_send] ID = " << _id << ", size = " << packet_size << ", type = " << (int)reinterpret_cast<SIZE2*>(buff)[1] << std::endl);
+        int ret = WSASend(_c_socket, send_ov->_wsabuf, 1, &size_sent, 0, &(send_ov->_over), g_send_callback);
+        if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+            std::cout << "[do_send] WSASend failed: " << WSAGetLastError() << "\n";
+        }
+    }
+};
+class PlayerSession : public GameObject {
+public:
+    SOCKET          _c_socket;
+
+    std::string     _name;
+    float           _pitch = 0.f;
+    GunType         _gun_type = BULLET_PISTOL;
+    SIZE1           _level = 1;
+    SIZE2           _score = 0;
+
+
+    OVER_EXP        _recv_over{ OP_RECV };
     SIZE2           _remained = 0;
 
-    ObjectType      _obj_type;
-    SIZE1           _skin_type;
-    std::string     _name;
 
-    Vec3            _position;
-    Vec3            _velocity;
-    Vec3            _look;
-	float           _pitch;
-    SIZE2           _hp;
-    GunType         _gun_type;     
-    SIZE1           _level;
-    SIZE2           _score;
-    SIZE2           _damage;               
-    SIZE1           _act_type;            
 
     void do_recv() {
         DWORD flags = 0;
@@ -120,47 +164,48 @@ public:
         if (ret == SOCKET_ERROR) {
             int err = WSAGetLastError();
             if (err != WSA_IO_PENDING) {
-				std::cout << "[do_recv] WSARecv failed: " << err << "\n";
+                std::cout << "[do_recv] WSARecv failed: " << err << "\n";
                 closesocket(_c_socket);
-                g_users.erase(_id);
+                g_gameObjects.erase(_id);
             }
             else {
-				DEBUG_LOG("[do_recv] WSARecv: IO_PENDING (정상)\n");
+                DEBUG_LOG("[do_recv] WSARecv: IO_PENDING (정상)\n");
             }
         }
         else {
-			DEBUG_LOG("[do_recv] WSARecv: 즉시 수신 완료 (ret == 0)\n");
+            DEBUG_LOG("[do_recv] WSARecv: 즉시 수신 완료 (ret == 0)\n");
         }
     }
 
-public: 
-    SESSION() {
-		DEBUG_LOG("[SESSION] Default constructor called\n");
+public:
+    PlayerSession() {
+        DEBUG_LOG("[SESSION] Default constructor called\n");
         exit(-1);
     }
-	SESSION(SIZEID session_id, SOCKET s) : _id(session_id), _c_socket(s)
+    PlayerSession(SIZEID session_id, SOCKET s) : GameObject(), _c_socket(s)
     {
+        _id = session_id;
         _recv_over._wsabuf[0].len = sizeof(_recv_over._buffer);
-        _recv_over._wsabuf[0].buf = reinterpret_cast<CHAR* >(_recv_over._buffer);
+        _recv_over._wsabuf[0].buf = reinterpret_cast<CHAR*>(_recv_over._buffer);
 
         _recv_over._over.hEvent = reinterpret_cast<HANDLE>(session_id);
 
         _remained = 0;
-		do_recv();
-	}
-    ~SESSION() 
+        do_recv();
+    }
+    ~PlayerSession()
     {
-		DEBUG_LOG("[SESSION] Destructor called ID =\n", _id);
+        DEBUG_LOG("[SESSION] Destructor called ID =\n", _id);
 
         pkt_sc_object_remove rem_p;
         rem_p.header.size = sizeof(rem_p);
         rem_p.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
-        rem_p.id= _id;
-        for (auto& u : g_users) {
-			if (u.first != _id) // 나를 제외한 상대방에게 알리고
-				u.second.do_send(&rem_p);
+        rem_p.id = _id;
+        for (auto& u : g_gameObjects) {
+            if (u.first != _id) // 나를 제외한 상대방에게 알리고
+                u.second->do_send(&rem_p);
         }
-		closesocket(_c_socket);
+        closesocket(_c_socket);
     }
 
     void recv_callback(int num_bytes) {
@@ -174,10 +219,10 @@ public:
 
             if (offset + packetSize > total) break; // 아직 패킷 완성이 안 됨
 
-			DEBUG_LOG("[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << std::endl);
+            DEBUG_LOG("[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << std::endl);
 
-			process_packet(p);    // 패킷 처리
-            p += (packetSize)/sizeof(SIZE2);      // 다음 패킷으로 이동
+            process_packet(p);    // 패킷 처리
+            p += (packetSize) / sizeof(SIZE2);      // 다음 패킷으로 이동
             offset += packetSize;
         }
 
@@ -188,9 +233,9 @@ public:
             memmove(_recv_over._buffer, p, _remained);
 
         do_recv(); // 다음 수신
-	}
+    }
 
-    void do_send(void* buff) {
+    void do_send(void* buff) override {
         OVER_EXP* send_ov = new OVER_EXP(OP_SEND);
         SIZE2 packet_size = reinterpret_cast<SIZE2*>(buff)[0];
         memcpy(send_ov->_buffer, buff, packet_size);
@@ -198,34 +243,34 @@ public:
         send_ov->_wsabuf[0].len = packet_size;
         DWORD size_sent;
 
-		DEBUG_LOG("[do_send] ID = " << _id << ", size = " << packet_size << ", type = " << (int)reinterpret_cast<SIZE2*>(buff)[1] << std::endl);
+        DEBUG_LOG("[do_send] ID = " << _id << ", size = " << packet_size << ", type = " << (int)reinterpret_cast<SIZE2*>(buff)[1] << std::endl);
         int ret = WSASend(_c_socket, send_ov->_wsabuf, 1, &size_sent, 0, &(send_ov->_over), g_send_callback);
         if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-			std::cout << "[do_send] WSASend failed: " << WSAGetLastError() << "\n";
+            std::cout << "[do_send] WSASend failed: " << WSAGetLastError() << "\n";
         }
     }
 
     void send_obj_info() {
-		pkt_sc_obj_info packet;
-		ZeroMemory(&packet, sizeof(packet));
-		packet.header.size = sizeof(packet);
+        pkt_sc_obj_info packet;
+        ZeroMemory(&packet, sizeof(packet));
+        packet.header.size = sizeof(packet);
         packet.header.type = PKT_TYPE::S_C_OBJ_INFO;
-		packet.id = _id;
-		packet.obj_type = _obj_type;
-		packet.skin_type = _skin_type;
-		strcpy_s(packet.name, _name.c_str());
-		packet.startposition = _position;
-		packet.starthp = _hp;
+        packet.id = _id;
+        packet.obj_type = _obj_type;
+        packet.skin_type = _skin_type;
+        strcpy_s(packet.name, _name.c_str());
+        packet.startposition = _position;
+        packet.starthp = _hp;
         packet.velocity = _velocity;
         packet.look = _look;
         packet.pitch = _pitch;
 
-		packet.act_type = _act_type;
-		packet.gun_type = _gun_type;
+        packet.act_type = _act_type;
+        packet.gun_type = _gun_type;
 
-		packet.level = _level;
-		packet.score = _score;
-		packet.damage = _damage;
+        packet.level = _level;
+        packet.score = _score;
+        packet.damage = _damage;
 
         do_send(&packet);
     }
@@ -249,69 +294,70 @@ public:
     }
 
 
-	void process_packet(SIZE2* packet) {
+    void process_packet(SIZE2* packet) {
 
-		const unsigned char packet_type = packet[1];
+        const unsigned char packet_type = packet[1];
         if (packet_type == 0) {
             std::cout << "[ERROR] Invalid Packet Type\n";
             return;
         }
-		DEBUG_LOG("[process_packet] ID = " << _id << ", packet_type = " << (int)packet_type << "\n");
+        DEBUG_LOG("[process_packet] ID = " << _id << ", packet_type = " << (int)packet_type << "\n");
 
         switch (packet_type) {
         case ::PKT_TYPE::C_S_LOGIN:
         {
             pkt_cs_login* loginPacket = reinterpret_cast<pkt_cs_login*>(packet);
-            _obj_type   = ObjectType::PLAYER;
-            _skin_type  = loginPacket->skin_type;
-            _name       = loginPacket->name;
-            _position   = START_POSITIONS[IN_g_player_n % 3];
-            _velocity  = { 0.0f,0.0f, 0.0f };
-            _look      = { 0.0f,0.0f, 0.0f };
-            _pitch      = 0.0f;
-            _hp         = PLAYER_HP;
-			_gun_type   = GunType::BULLET_PISTOL; // 총 종류
-            _level      = 1;
-            _score      = 0;
-            _damage     = 0;
-			_act_type   = ActionType::NONE;
-            
+            _obj_type = ObjectType::PLAYER;
+            _skin_type = loginPacket->skin_type;
+            _name = loginPacket->name;
+            _position = START_POSITIONS[IN_g_player_n % 3];
+            _velocity = { 0.0f,0.0f, 0.0f };
+            _look = { 0.0f,0.0f, 0.0f };
+            _pitch = 0.0f;
+            _hp = PLAYER_HP;
+            _gun_type = GunType::BULLET_PISTOL; // 총 종류
+            _level = 1;
+            _score = 0;
+            _damage = 0;
+            _act_type = ActionType::NONE;
+
             IN_g_player_n++;
-			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _name << "\n");
-			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _skin_type << "\n");
+            DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _name << "\n");
+            DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _skin_type << "\n");
             send_obj_info();
-            //send_object_update();
 
-			pkt_sc_object_add p_Add_P;
-			p_Add_P.header.size = sizeof(p_Add_P);
-			p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
-			p_Add_P.id = _id;
-			p_Add_P.obj_type = ObjectType::PLAYER;
-			p_Add_P.skin_type = _skin_type;
+            pkt_sc_object_add p_Add_P;
+            p_Add_P.header.size = sizeof(p_Add_P);
+            p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+            p_Add_P.id = _id;
+            p_Add_P.obj_type = ObjectType::PLAYER;
+            p_Add_P.skin_type = _skin_type;
             strcpy_s(p_Add_P.name, _name.c_str());
-			p_Add_P.startposition = _position;
-			p_Add_P.starthp = _hp;
-			p_Add_P.gun_type = BULLET_PISTOL;
+            p_Add_P.startposition = _position;
+            p_Add_P.starthp = _hp;
+            p_Add_P.gun_type = BULLET_PISTOL;
 
-            for (auto& u : g_users) {
+            for (auto& u : g_gameObjects) {
                 if (u.first != _id) // 나를 제외한 상대방에게 알리고
-                    u.second.do_send(&p_Add_P);
+                    u.second->do_send(&p_Add_P);
             }
-			for (auto& u : g_users) {
-				if (u.first != _id) {// 나를 제외한 상대방의 정보를 나에게 알리고
+            for (auto& u : g_gameObjects) {
+                if (u.first != _id) {// 나를 제외한 상대방의 정보를 나에게 알리고
+                    auto other = dynamic_cast<PlayerSession*>(u.second.get());
+                    if (other == nullptr) continue; // 다른 세션이 아닐 경우 무시
                     pkt_sc_object_add p_Add_P;
                     p_Add_P.header.size = sizeof(p_Add_P);
                     p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
 
-                    p_Add_P.id = u.first;
+                    p_Add_P.id = other->_id;
                     p_Add_P.obj_type = ObjectType::PLAYER;
-                    p_Add_P.skin_type = u.second._skin_type;
-                    strcpy_s(p_Add_P.name, u.second._name.c_str());
-                    p_Add_P.startposition = u.second._position;
-                    p_Add_P.starthp = u.second._hp;
-					do_send(&p_Add_P);
-				}
-			}
+                    p_Add_P.skin_type = other->_skin_type;
+                    strcpy_s(p_Add_P.name, other->_name.c_str());
+                    p_Add_P.startposition = other->_position;
+                    p_Add_P.starthp = other->_hp;
+                    do_send(&p_Add_P);
+                }
+            }
 
             // 좀비 정보를 모든 플레이어에게 전송
             pkt_sc_object_add packet;
@@ -325,8 +371,8 @@ public:
                 packet.startposition = zombie->GetPosition();
                 packet.starthp = zombie->GetHP();
 
-                for (auto& [id, session] : g_users) {
-                    session.do_send(&packet);
+                for (auto& [id, session] : g_gameObjects) {
+                    session->do_send(&packet);
                 }
             }
 
@@ -334,7 +380,7 @@ public:
         }
         case PKT_TYPE::C_S_UPDATE:
         {
-			pkt_cs_update* updatePacket = reinterpret_cast<pkt_cs_update*>(packet);
+            pkt_cs_update* updatePacket = reinterpret_cast<pkt_cs_update*>(packet);
 
 
             float deltaTime = 1.0f / 60.0f; // 서버 틱 레이트 기준 (예: 60fps)
@@ -359,20 +405,20 @@ public:
             u_move_p.header.size = sizeof(u_move_p);
             u_move_p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
             u_move_p.id = _id;
-			u_move_p.position = _position;
-			u_move_p.velocity = _velocity;
-			u_move_p.look = _look;
-			u_move_p.pitch = _pitch;
-			u_move_p.hp = _hp;
-			u_move_p.gun_type = _gun_type;
-			u_move_p.level = _level;
-			u_move_p.score = _score;
-			u_move_p.damage = _damage;
-			u_move_p.act_type = _act_type;
+            u_move_p.position = _position;
+            u_move_p.velocity = _velocity;
+            u_move_p.look = _look;
+            u_move_p.pitch = _pitch;
+            u_move_p.hp = _hp;
+            u_move_p.gun_type = _gun_type;
+            u_move_p.level = _level;
+            u_move_p.score = _score;
+            u_move_p.damage = _damage;
+            u_move_p.act_type = _act_type;
 
-            for (auto& [id, session] : g_users) {
+            for (auto& [id, session] : g_gameObjects) {
                 if (id != _id)
-                    session.do_send(&u_move_p);
+                    session->do_send(&u_move_p);
             }
             break;
         }
@@ -391,8 +437,8 @@ public:
             resp.header.type = PKT_TYPE::S_C_SCORE_INFO;
             resp.stage_score = p->stage_score;
 
-            for (auto& [id, session] : g_users)
-                session.do_send(&resp);
+            for (auto& [id, session] : g_gameObjects)
+                session->do_send(&resp);
 
             break;
         }
@@ -413,8 +459,8 @@ public:
             resp.totalStages = 1;
             resp.timeLeft = p->timeLeft;
 
-            for (auto& [id, session] : g_users)
-                session.do_send(&resp);
+            for (auto& [id, session] : g_gameObjects)
+                session->do_send(&resp);
 
             break;
         }
@@ -426,10 +472,9 @@ public:
             std::cout << "[WARN] Unknown PacketType: " << packet_type << "\n";
             break;
         }
-	}
+    }
 
 };
-
 
 
 
@@ -444,16 +489,23 @@ void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
 {
     auto my_id = reinterpret_cast<SIZEID>(p_over->hEvent);
 
-    if (g_users.find(my_id) == g_users.end()) {
-		std::cout << "[ERROR] Invalid session ID: " << my_id << "\n";
+    auto it = g_gameObjects.find(my_id);
+    if (it == g_gameObjects.end()) {
+        std::cout << "[ERROR] Invalid session ID: " << my_id << "\n";
         return;
     }
-    g_users[my_id].recv_callback(num_bytes);
 
+    auto player = dynamic_cast<PlayerSession*>(it->second.get());
+    if (!player) {
+        std::cout << "[ERROR] Object is not a PlayerSession\n";
+        return;
+    }
+
+    player->recv_callback(num_bytes);
 }
 
 
-auto lastTick = std::chrono::steady_clock::now();
+
 
 void ZombieAIThread() {
     while (serverRunning) {
@@ -463,9 +515,9 @@ void ZombieAIThread() {
         float deltaTime = dt.count();  // 초 단위
 
         std::vector<Vec3> playerPositions;
-        for (auto& [id, session] : g_users) {
-            if (session._obj_type == ObjectType::PLAYER)
-                playerPositions.push_back(session._position);
+        for (auto& [id, session] : g_gameObjects) {
+            if (session->_obj_type == ObjectType::PLAYER)
+                playerPositions.push_back(session->_position);
         }
 
         for (auto& zombie : g_zombies) {
@@ -478,20 +530,20 @@ void ZombieAIThread() {
                 p.header.size = sizeof(p);
                 p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
                 p.id = zombie->GetID();
-				p.act_type = info.act_type;
-				p.position = info.position;
-				p.velocity = info.velocity;
-				p.look = info.look;
-				p.pitch = info.pitch;
-				p.hp = info.hp;
-				p.gun_type = info.gun_type;
-				p.level = info.level;
-				p.score = info.score;
-				p.damage = info.damage;
-				p.act_type = info.act_type;
+                p.act_type = info.act_type;
+                p.position = info.position;
+                p.velocity = info.velocity;
+                p.look = info.look;
+                p.pitch = info.pitch;
+                p.hp = info.hp;
+                p.gun_type = info.gun_type;
+                p.level = info.level;
+                p.score = info.score;
+                p.damage = info.damage;
+                p.act_type = info.act_type;
 
-                for (auto& [id, session] : g_users)
-                    session.do_send(&p);
+                for (auto& [id, session] : g_gameObjects)
+                    session->do_send(&p);
 
                 zombie->ClearDirty();
             }
@@ -520,8 +572,8 @@ void SpawnZombies(int count) {
         p.starthp = zombie->GetHP();
         p.gun_type = GunType::BULLET_MAX;
 
-        for (auto& [id, session] : g_users)
-            session.do_send(&p);
+        for (auto& [id, session] : g_gameObjects)
+            session->do_send(&p);
     }
 }
 
@@ -539,7 +591,7 @@ void serverControl() {
 
 int main() {
 
-    std::wcout.imbue(std::locale("korean")); 
+    std::wcout.imbue(std::locale("korean"));
 
     g_map = LoadMapBin("Node/ob_mask_te_1.bin");
 
@@ -560,11 +612,11 @@ int main() {
     serverAddr.sin_port = htons(PORT_NUM);
     serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    if (bind (s_socket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(SOCKADDR_IN)) == SOCKET_ERROR)
+    if (bind(s_socket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(SOCKADDR_IN)) == SOCKET_ERROR)
         error_display("Bind failed", WSAGetLastError());
     else { std::cout << "Bind Success\n"; }
 
-    if (listen (s_socket, SOMAXCONN) == SOCKET_ERROR)
+    if (listen(s_socket, SOMAXCONN) == SOCKET_ERROR)
         error_display("Listen failed", WSAGetLastError());
     else { std::cout << "Listen Success\n"; }
 
@@ -579,13 +631,13 @@ int main() {
     INT serverAddr_size = sizeof(SOCKADDR_IN);
 
     while (serverRunning) {
-        auto c_socket = WSAAccept(s_socket,reinterpret_cast<sockaddr*>(&serverAddr), &serverAddr_size, NULL, NULL);
+        auto c_socket = WSAAccept(s_socket, reinterpret_cast<sockaddr*>(&serverAddr), &serverAddr_size, NULL, NULL);
         if (c_socket == INVALID_SOCKET) {
             std::cout << "Accept failed\n";
             continue;
         }
 
-        g_users.try_emplace(clientId, clientId, c_socket);
+        g_gameObjects.try_emplace(clientId, std::make_shared<PlayerSession>(clientId, c_socket));
         clientId++;
     }
 
