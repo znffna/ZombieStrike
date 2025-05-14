@@ -13,19 +13,19 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="소스 파일\Zombie">
+      <UniqueIdentifier>{be0c4023-97bb-4b7e-99d6-b08bd61d2acf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Server">
+      <UniqueIdentifier>{e642848a-4fde-48c6-bd47-4df89f13e95d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Server.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="ZombieAI.cpp">
+      <Filter>소스 파일\Zombie</Filter>
     </ClCompile>
     <ClCompile Include="Server_tcp.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="ZombieAI.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Node_bin_read_test.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\Server</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -33,7 +33,7 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="ZombieAI.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>소스 파일\Zombie</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

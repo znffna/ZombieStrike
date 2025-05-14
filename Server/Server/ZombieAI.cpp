@@ -246,6 +246,28 @@ Vec3  ZombieAI::FindClosestPlayer(const std::vector<Vec3>& playerPositions)
     return closestPlayer;
 }
 
+Vec3 ZombieAI::AvoidPlayers(const std::vector<Vec3>& playerPositions)
+{
+    Vec3 avoid(0, 0, 0);
+    Vec3 myPos(m_x, 0, m_z);
+
+    for (const auto& playerPos : playerPositions)
+    {
+        float dx = std::abs(myPos.x - playerPos.x);
+        float dz = std::abs(myPos.z - playerPos.z);
+
+        if (dx < ZOMBIE_HALF_SIZE * 2 && dz < ZOMBIE_HALF_SIZE * 2)
+        {
+            Vec3 push = myPos - playerPos;
+            if (push.Length() > 0.001f)
+                avoid += push.Normalize() * 0.1f;
+        }
+    }
+
+    return avoid;
+}
+
+
 void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime)
 {
     if (playerPositions.empty()) return;
@@ -268,6 +290,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         if (m_id == 10000) {
             //std::cout << "[ZombieAI::Update] ID = " << m_id << " -> 타겟 변경 또는 재계산 필요" << std::endl;
         }
+
         SetTargetPosition(newTarget.x, newTarget.z);
         FindPath();
         m_repath_timer = 0;
@@ -285,6 +308,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     Vec3 currentPos(m_x, 0, m_z);
     Vec3 toTarget = targetPos - currentPos;
     float distance = toTarget.Length();
+
     DEBUG_LOG("[ZombieAI::Update] ID = " << m_id
         << ", Cur = (" << m_x << ", " << m_z << ")"
         << ", Target = (" << targetNode.first << ", " << targetNode.second << ")"
@@ -299,9 +323,6 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
 
     toTarget = toTarget.Normalize();
 
-    // 단순 방향 이동 (충돌 회피 없음)
-    //Vec3 moveDir = toTarget;
-    //float moveSpeed = 0.1f;
 
     // 4. 충돌 회피 처리
     Vec3 avoidance(0, 0, 0);
@@ -317,10 +338,11 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         {
             Vec3 push(m_x - other->GetX(), 0, m_z - other->GetZ());
             if (push.Length() > 0.001f)
-                avoidance += push.Normalize() * 0.1f;
+                avoidance += push.Normalize() * 0.03f;
         }
     }
 
+    avoidance += AvoidPlayers(playerPositions); // 플레이어 회피 추가
     Vec3 moveDir = (toTarget + avoidance).Normalize();
     float moveSpeed = Z_move_speed;
 

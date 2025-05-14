@@ -37,6 +37,9 @@ public:
 
     Vec3 FindClosestPlayer(const std::vector<Vec3>& playerPositions);
     void FindPath();                      // AI 동작
+
+    Vec3 AvoidPlayers(const std::vector<Vec3>& playerPositions); // 플레이어 회피
+
     void Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime);
 
 
@@ -69,7 +72,6 @@ private:
     int m_id;
     float m_x, m_z;
     float m_targetX, m_targetZ;
-    //float m_playerX, m_playerZ;
     SIZE2 m_hp;  
 
     std::vector<std::pair<int, int>> m_path;
