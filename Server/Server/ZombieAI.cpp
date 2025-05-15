@@ -425,7 +425,9 @@ std::vector<std::vector<int>> LoadMapBin(const std::string& filename)
 				DEBUG_LOG("[ERROR] 파일 끝에 도달했습니다. 크기가 너무 작습니다.");
                 exit(1);
             }
-            map[z][x] = (value == 0) ? 0 : 1; // 0 = 길, 1 = 장애물
+            int flippedZ = GRID_WIDTH - 1 - z; // z축반전 위애래
+            map[flippedZ][x] = (value == 0) ? 0 : 1;
+            //map[z][x] = (value == 0) ? 0 : 1; // 0 = 길, 1 = 장애물
         }
     }
 	DEBUG_LOG("[OK] 512x512 맵 로드 완료");
