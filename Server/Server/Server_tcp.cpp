@@ -60,6 +60,14 @@ void CALLBACK g_recv_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
 void CALLBACK g_send_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
 
 
+bool validate_score_info(const pkt_cs_score_info* p) {
+    return (p->stage_score <= 10000);
+}
+
+bool validate_stage_info(const pkt_cs_stage_info* p) {
+    return (p->currentStage >= 1 && p->currentStage <= 10 && p->timeLeft <= 60000);
+
+}
 enum IO_OP { OP_RECV, OP_SEND };
 class OVER_EXP {
 public:
@@ -197,7 +205,7 @@ public:
         }
     }
 
-    void send_player_info() {
+    void send_obj_info() {
 		pkt_sc_obj_info packet;
 		ZeroMemory(&packet, sizeof(packet));
 		packet.header.size = sizeof(packet);
@@ -271,7 +279,7 @@ public:
             IN_g_player_n++;
 			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _name << "\n");
 			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _skin_type << "\n");
-            send_player_info();
+            send_obj_info();
             //send_object_update();
 
 			pkt_sc_object_add p_Add_P;
@@ -366,14 +374,54 @@ public:
                 if (id != _id)
                     session.do_send(&u_move_p);
             }
+            break;
+        }
+
+        case PKT_TYPE::C_S_SCORE_INFO:
+        {
+            auto* p = reinterpret_cast<pkt_cs_score_info*>(packet);
+
+            if (!validate_score_info(p)) {
+                std::cout << "[SCORE_INFO] 유효하지 않은 점수 무시\n";
+                break;
+            }
+
+            pkt_sc_score_info resp;
+            resp.header.size = sizeof(resp);
+            resp.header.type = PKT_TYPE::S_C_SCORE_INFO;
+            resp.stage_score = p->stage_score;
+
+            for (auto& [id, session] : g_users)
+                session.do_send(&resp);
 
             break;
+        }
+
+        case PKT_TYPE::C_S_STAGE_INFO:
+        {
+            auto* p = reinterpret_cast<pkt_cs_stage_info*>(packet);
+
+            if (!validate_stage_info(p)) {
+                std::cout << "[STAGE_INFO] 유효하지 않은 값 무시\n";
+                break;
+            }
+
+            pkt_sc_stage_info resp;
+            resp.header.size = sizeof(resp);
+            resp.header.type = PKT_TYPE::S_C_STAGE_INFO;
+            resp.currentStage = p->currentStage;
+            resp.totalStages = 1;
+            resp.timeLeft = p->timeLeft;
+
+            for (auto& [id, session] : g_users)
+                session.do_send(&resp);
 
             break;
         }
 
         case PKT_TYPE::C_S_SHOOT:
             break;
+
         default:
             std::cout << "[WARN] Unknown PacketType: " << packet_type << "\n";
             break;
@@ -381,6 +429,10 @@ public:
 	}
 
 };
+
+
+
+
 
 void CALLBACK g_send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
 {
@@ -402,6 +454,32 @@ void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
 
 
 auto lastTick = std::chrono::steady_clock::now();
+
+void SpawnZombies(int count) {
+    for (int i = 0; i < count; ++i) {
+        auto [x, z] = GetRandomPosition(g_map);
+        ZombieAI* zombie = new ZombieAI(g_map, 10000 + i);
+        zombie->SetPosition((float)x, (float)z);
+        zombie->SetHP(ZOMBIE_HP);
+        g_zombies.push_back(zombie);
+
+        // 좀비 정보를 모든 플레이어에게 전송
+        pkt_sc_object_add p;
+        p.header.size = sizeof(p);
+        p.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+        p.id = zombie->GetID();
+        p.obj_type = ObjectType::ZOMBIE;
+        p.skin_type = 0;
+        strcpy_s(p.name, "Zombie");
+        p.startposition = zombie->GetPosition();
+        p.starthp = zombie->GetHP();
+        p.gun_type = GunType::BULLET_MAX;
+
+        for (auto& [id, session] : g_users)
+            session.do_send(&p);
+    }
+}
+
 
 void ZombieAIThread() {
     while (serverRunning) {
@@ -446,30 +524,6 @@ void ZombieAIThread() {
         }
 
         std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(FRAME_INTERVAL_MS));
-    }
-}
-void SpawnZombies(int count) {
-    for (int i = 0; i < count; ++i) {
-        auto [x, z] = GetRandomPosition(g_map);
-        ZombieAI* zombie = new ZombieAI(g_map, 10000 + i);
-        zombie->SetPosition((float)x, (float)z);
-        zombie->SetHP(ZOMBIE_HP);
-        g_zombies.push_back(zombie);
-
-        // 좀비 정보를 모든 플레이어에게 전송
-        pkt_sc_object_add p;
-        p.header.size = sizeof(p);
-        p.header.type = PKT_TYPE::S_C_OBJECT_ADD;
-        p.id = zombie->GetID();
-        p.obj_type = ObjectType::ZOMBIE;
-        p.skin_type = 0;
-        strcpy_s(p.name, "Zombie");
-        p.startposition = zombie->GetPosition();
-        p.starthp = zombie->GetHP();
-        p.gun_type = GunType::BULLET_MAX;
-
-        for (auto& [id, session] : g_users)
-            session.do_send(&p);
     }
 }
 
