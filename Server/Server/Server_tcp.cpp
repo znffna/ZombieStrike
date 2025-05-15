@@ -455,6 +455,32 @@ void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
 
 auto lastTick = std::chrono::steady_clock::now();
 
+void SpawnZombies(int count) {
+    for (int i = 0; i < count; ++i) {
+        auto [x, z] = GetRandomPosition(g_map);
+        ZombieAI* zombie = new ZombieAI(g_map, 10000 + i);
+        zombie->SetPosition((float)x, (float)z);
+        zombie->SetHP(ZOMBIE_HP);
+        g_zombies.push_back(zombie);
+
+        // 좀비 정보를 모든 플레이어에게 전송
+        pkt_sc_object_add p;
+        p.header.size = sizeof(p);
+        p.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+        p.id = zombie->GetID();
+        p.obj_type = ObjectType::ZOMBIE;
+        p.skin_type = 0;
+        strcpy_s(p.name, "Zombie");
+        p.startposition = zombie->GetPosition();
+        p.starthp = zombie->GetHP();
+        p.gun_type = GunType::BULLET_MAX;
+
+        for (auto& [id, session] : g_users)
+            session.do_send(&p);
+    }
+}
+
+
 void ZombieAIThread() {
     while (serverRunning) {
         auto now = std::chrono::steady_clock::now();
@@ -498,30 +524,6 @@ void ZombieAIThread() {
         }
 
         std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(FRAME_INTERVAL_MS));
-    }
-}
-void SpawnZombies(int count) {
-    for (int i = 0; i < count; ++i) {
-        auto [x, z] = GetRandomPosition(g_map);
-        ZombieAI* zombie = new ZombieAI(g_map, 10000 + i);
-        zombie->SetPosition((float)x, (float)z);
-        zombie->SetHP(ZOMBIE_HP);
-        g_zombies.push_back(zombie);
-
-        // 좀비 정보를 모든 플레이어에게 전송
-        pkt_sc_object_add p;
-        p.header.size = sizeof(p);
-        p.header.type = PKT_TYPE::S_C_OBJECT_ADD;
-        p.id = zombie->GetID();
-        p.obj_type = ObjectType::ZOMBIE;
-        p.skin_type = 0;
-        strcpy_s(p.name, "Zombie");
-        p.startposition = zombie->GetPosition();
-        p.starthp = zombie->GetHP();
-        p.gun_type = GunType::BULLET_MAX;
-
-        for (auto& [id, session] : g_users)
-            session.do_send(&p);
     }
 }
 

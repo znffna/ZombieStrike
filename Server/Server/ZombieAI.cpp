@@ -9,7 +9,7 @@
 #include <memory>
 #include <conio.h> 
 
-constexpr bool DEBUG_PRINT = false;
+constexpr bool DEBUG_PRINT = true;
 #define DEBUG_LOG(msg) \
     do { if (DEBUG_PRINT) std::cout << msg << std::endl; } while (0)
 
@@ -350,8 +350,8 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
             if (m_map[checkZ][checkX] != 0) {
                 Vec3 wallCenter = GetNodeCenter(checkX, checkZ);
                 Vec3 away = nextPos - wallCenter;
-                if (away.LengthSquared() > 0.0001f)
-                    wallPush += away.Normalize() * 0.05f;
+                if (away.LengthSquared() > 0.01f)
+                    wallPush += away.Normalize() * 0.1f;
             }
         }
     }
@@ -363,6 +363,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         m_z += finalMove.z;
         m_dirty = true;
     }
+
 }
 
 Vec3 ZombieAI::GetLookVectorToPlayer() const {
@@ -475,120 +476,120 @@ std::pair<int, int> GetRandomPlayerPosition(const std::vector<std::vector<int>>&
 }
 
 // ======================== 맵 그려보는 용 ========================
-//void PrintMap2(
-//    const std::vector<std::vector<int>>& map,
-//    const std::vector<ZombieAI*>& zombies,
-//    int startZ, int startX,
-//    int height, int width,
-//    float playerX, float playerZ)
-//{
-//    int zombieCount = 0;
-//
-//    // 출력
-//    for (int z = startZ; z < startZ + height; ++z) {
-//        for (int x = startX; x < startX + width; ++x) {
-//            if (z < 0 || z >= GRID_HEIGHT || x < 0 || x >= GRID_WIDTH) {
-//                std::cout << ' ';
-//                continue;
-//            }
-//
-//            // 출력: 지형
-//            //char ch = map[z][x] == 1 ? ' ' : '# ';
-//            char ch = map[z][x] == 1 ? '#' : '0 ';
-//
-//            // 경로 위에 있으면 *
-//            for (auto zombie : zombies)
-//            {
-//                for (auto& [px, pz] : zombie->GetPath())
-//                {
-//                    if (px == x && pz == z) {
-//                        ch = '.';
-//                        break;
-//                    }
-//                }
-//            }
-//
-//            // 좀비가 이 자리에 있으면 Z
-//            for (auto zombie : zombies)
-//            {
-//                int zx = static_cast<int>(zombie->GetX() / CELL_SIZE);
-//                int zz = static_cast<int>(zombie->GetZ() / CELL_SIZE);
-//                
-//
-//                if (zx == x && zz == z) {
-//                    ch = 'Z';
-//                    zombieCount++;
-//                    break;
-//                }
-//            }
-//
-//            if (x == static_cast<int>(playerX / CELL_SIZE) && z == static_cast<int>(playerZ / CELL_SIZE))
-//                ch = 'P';
-//
-//            std::cout << ch;
-//        }
-//        std::cout << "\n";
-//    }
-//
-//	DEBUG_LOG("[DEBUG] 좀비 수: " << zombieCount);
-//    if (zombieCount == NUM_ZOMBIES)
-//		DEBUG_LOG("[ok] 좀비 전부 찍혔습니다!");
-//    else
-//		DEBUG_LOG("[bad] 좀비 수가 맞지 않습니다! (" << zombieCount << " / " << NUM_ZOMBIES << ")");
-//}
-//
-//
-//int main()
-//{
-//    auto map = LoadMapBin("../../Map/Node/ob_mask_te_1.bin");
-//
-//    std::vector<ZombieAI*> zombies;
-//
-//    // 1. 플레이어 랜덤 위치 선정
-//    auto [px, pz] = GetRandomPlayerPosition(map);
-//    DEBUG_LOG("[TEST] Player 위치: (" << px << ", " << pz << ")");
-//
-//  // 2. 좀비들 스폰
-//    for (int i = 0; i < 50; ++i)
-//    {
-//        auto [zx, zz] = GetRandomPosition(map); // 이미 장애물 피함
-//
-//        ZombieAI* zombie = new ZombieAI(map, i + 1);
-//        zombie->SetPosition((float)zx, (float)zz);
-//        zombie->SetPlayerPosition((float)px, (float)pz);
-//        zombie->FindPath(); // A* 수행
-//
-//        zombies.push_back(zombie);
-//    }
-//	DEBUG_LOG("[TEST] 좀비들 스폰 완료");
-//
-//
-//    while (true)
-//    {
-//		DEBUG_LOG("[엔터를 누르면 시작 / esc를 누르면 종료]");
-//
-//        int key = _getch(); // 엔터 대기
-//
-//        // 모든 좀비 랜덤 위치 이동
-//        if (key == 13) {
-//            for (auto z : zombies)
-//            {
-//                auto [newx, newz] = GetRandomPosition(map);
-//                z->SetPosition((float)newx, (float)newz);
-//                z->SetPlayerPosition((float)px, (float)pz);  // 같은 플레이어에게 재설정
-//                z->FindPath();
-//            }
-//
-//            //PrintMap2(map, zombies, pz - 100, px - 100, 50, 50, px, pz);  // Player 좌표 넘김
-//            PrintMap2(map, zombies, 0, 0, 512, 512, px, pz);
-//        }
-//        else if (key == 27) {
-//            break;
-//        }
-//    }
-//        
-//    for (auto z : zombies)
-//        delete z;
-//
-//    return 0;
-//}
+void PrintMap2(
+    const std::vector<std::vector<int>>& map,
+    const std::vector<ZombieAI*>& zombies,
+    int startZ, int startX,
+    int height, int width,
+    float playerX, float playerZ)
+{
+    int zombieCount = 0;
+
+    // 출력
+    for (int z = startZ; z < startZ + height; ++z) {
+        for (int x = startX; x < startX + width; ++x) {
+            if (z < 0 || z >= GRID_HEIGHT || x < 0 || x >= GRID_WIDTH) {
+                std::cout << ' ';
+                continue;
+            }
+
+            // 출력: 지형
+            //char ch = map[z][x] == 1 ? ' ' : '# ';
+            char ch = map[z][x] == 1 ? '#' : '0 ';
+
+            // 경로 위에 있으면 *
+            for (auto zombie : zombies)
+            {
+                for (auto& [px, pz] : zombie->GetPath())
+                {
+                    if (px == x && pz == z) {
+                        ch = '.';
+                        break;
+                    }
+                }
+            }
+
+            // 좀비가 이 자리에 있으면 Z
+            for (auto zombie : zombies)
+            {
+                int zx = static_cast<int>(zombie->GetX() / CELL_SIZE);
+                int zz = static_cast<int>(zombie->GetZ() / CELL_SIZE);
+                
+
+                if (zx == x && zz == z) {
+                    ch = 'Z';
+                    zombieCount++;
+                    break;
+                }
+            }
+
+            if (x == static_cast<int>(playerX / CELL_SIZE) && z == static_cast<int>(playerZ / CELL_SIZE))
+                ch = 'P';
+
+            std::cout << ch;
+        }
+        std::cout << "\n";
+    }
+
+	DEBUG_LOG("[DEBUG] 좀비 수: " << zombieCount);
+    if (zombieCount == NUM_ZOMBIES)
+		DEBUG_LOG("[ok] 좀비 전부 찍혔습니다!");
+    else
+		DEBUG_LOG("[bad] 좀비 수가 맞지 않습니다! (" << zombieCount << " / " << NUM_ZOMBIES << ")");
+}
+
+
+int main()
+{
+    auto map = LoadMapBin("Node/ob_mask_te_1.bin");
+
+    std::vector<ZombieAI*> zombies;
+
+    // 1. 플레이어 랜덤 위치 선정
+    auto [px, pz] = GetRandomPlayerPosition(map);
+    DEBUG_LOG("[TEST] Player 위치: (" << px << ", " << pz << ")");
+
+  // 2. 좀비들 스폰
+    for (int i = 0; i < 50; ++i)
+    {
+        auto [zx, zz] = GetRandomPosition(map); // 이미 장애물 피함
+
+        ZombieAI* zombie = new ZombieAI(map, i + 1);
+        zombie->SetPosition((float)zx, (float)zz);
+        zombie->SetTargetPosition((float)px, (float)pz);
+        zombie->FindPath(); // A* 수행
+
+        zombies.push_back(zombie);
+    }
+	DEBUG_LOG("[TEST] 좀비들 스폰 완료");
+
+
+    while (true)
+    {
+		DEBUG_LOG("[엔터를 누르면 시작 / esc를 누르면 종료]");
+
+        int key = _getch(); // 엔터 대기
+
+        // 모든 좀비 랜덤 위치 이동
+        if (key == 13) {
+            for (auto z : zombies)
+            {
+                auto [newx, newz] = GetRandomPosition(map);
+                z->SetPosition((float)newx, (float)newz);
+                z->SetTargetPosition((float)px, (float)pz);  // 같은 플레이어에게 재설정
+                z->FindPath();
+            }
+
+            //PrintMap2(map, zombies, pz - 100, px - 100, 50, 50, px, pz);  // Player 좌표 넘김
+            PrintMap2(map, zombies, 0, 0, 512, 512, px, pz);
+        }
+        else if (key == 27) {
+            break;
+        }
+    }
+        
+    for (auto z : zombies)
+        delete z;
+
+    return 0;
+}
