@@ -231,8 +231,15 @@ void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::share
 	}
 
 	// 최소 거리 측정
-	// TODO : 의도대로 대도록 수정 필요
 	XMFLOAT3 mtv = pColliderA->GetCorrectionVector(pColliderB);
+
+	// Y축 보정 추가
+	float yAngle = mtv.y / Vector3::Length(mtv);
+	if (yAngle > 0.7f) // y축과 mtv사이의 각도 X일때 cos(X) > 0.7f 경우를 의미.
+	{
+		mtv = XMFLOAT3(0.0f, mtv.y, 0.0f);
+	}
+
 
 	if (rigidBody)
 	{
