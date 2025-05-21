@@ -400,3 +400,4 @@ FodyWeavers.xsd
 # else
 Resource/*
 PNG 원본 모음
+산출물/*

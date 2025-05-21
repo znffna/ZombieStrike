@@ -9,8 +9,8 @@
 #include "DDSTextureLoader12.h"
 #include "WICTextureLoader12.h"
 
-UINT WINDOW_WIDTH = 1920;
-UINT WINDOW_HEIGHT = 1080;
+UINT WINDOW_WIDTH = 1280;
+UINT WINDOW_HEIGHT = 720;
 
 int gnCurrentBullets = 0;
 
