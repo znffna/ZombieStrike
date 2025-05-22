@@ -110,6 +110,13 @@ XMFLOAT3 CSphereCollider::GetCorrectionVector(CCollider* pCollider)
 	}
 }
 
+void CSphereCollider::Move(const XMFLOAT3& xmf3Shift)
+{
+	m_xmWorldBoundingSphere.Center.x += xmf3Shift.x;
+	m_xmWorldBoundingSphere.Center.y += xmf3Shift.y;
+	m_xmWorldBoundingSphere.Center.z += xmf3Shift.z;
+}
+
 XMFLOAT4X4 CSphereCollider::GetColliderMatrix()
 {
 	XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
@@ -208,6 +215,13 @@ XMFLOAT3 CAABBCollider::GetCorrectionVector(CCollider* pCollider)
 	}
 }
 
+void CAABBCollider::Move(const XMFLOAT3& xmf3Shift)
+{
+	m_xmWorldBoundingBox.Center.x += xmf3Shift.x;
+	m_xmWorldBoundingBox.Center.y += xmf3Shift.y;
+	m_xmWorldBoundingBox.Center.z += xmf3Shift.z;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 
@@ -276,6 +290,13 @@ XMFLOAT3 COBBCollider::GetCorrectionVector(CCollider* pCollider)
 			pCollider->GetCenter(), pCollider->GetExtends()
 		);
 	}
+}
+
+void COBBCollider::Move(const XMFLOAT3& xmf3Shift)
+{
+	m_xmWorldBoundingOrientedBox.Center.x += xmf3Shift.x;
+	m_xmWorldBoundingOrientedBox.Center.y += xmf3Shift.y;
+	m_xmWorldBoundingOrientedBox.Center.z += xmf3Shift.z;
 }
 
 XMFLOAT4X4 COBBCollider::GetColliderMatrix()

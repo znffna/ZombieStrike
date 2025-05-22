@@ -214,6 +214,26 @@ void CGameObject::Update(float fTimeElapsed)
 	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 
 	for (auto& pChild : m_pChilds) pChild->Update(fTimeElapsed);
+
+	// 부모가 없을 경우, 모든 OBB를 Copy
+	if(m_pParent.expired())
+	{
+		// 기존 Collider 파괴
+		m_pCachesColliders.clear();
+
+		// 현재 모든 자식내 Collider를 가져옴
+		std::vector<std::shared_ptr<CCollider>> pCachesColliders;
+		GetComponentsInChildren<CCollider>(pCachesColliders);
+		
+		// Pointer 가아닌 실제 Value를 복사
+		std::vector<std::shared_ptr<CCollider>> pColliders;
+		for (auto& pCollider : pCachesColliders)
+		{
+			pColliders.push_back(std::dynamic_pointer_cast<CCollider>(pCollider->Clone()));
+		}
+
+		m_pCachesColliders = std::move(pColliders);
+	}
 }
 
 void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::shared_ptr<CCollider>& pColliderA, std::shared_ptr<CCollider>& pColliderB)
@@ -233,24 +253,32 @@ void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::share
 	// 최소 거리 측정
 	XMFLOAT3 mtv = pColliderA->GetCorrectionVector(pColliderB);
 
-	// Y축 보정 추가
+	// 충돌 Normal을 통한 Y축 보정 추가
 	float yAngle = mtv.y / Vector3::Length(mtv);
 	if (yAngle > 0.7f) // y축과 mtv사이의 각도 X일때 cos(X) > 0.7f 경우를 의미.
 	{
 		mtv = XMFLOAT3(0.0f, mtv.y, 0.0f);
 	}
 
+	// 계단처리 수행
+	// TODO : Model의 Extend * 0.66f보다 MTV의 Y가 작을경우, 이는 계단으로 판단하고, X, Z축 MTV값을 없앤다.
+
 
 	if (rigidBody)
 	{
 		if (pOtherRigidBody)
 		{
-			XMFLOAT3 halfMTV = Vector3::ScalarProduct(mtv, 0.5f);
-			rigidBody->ApplyCorrection(halfMTV);
+			mtv = Vector3::ScalarProduct(mtv, 0.5f);
+			rigidBody->ApplyCorrection(mtv);
 			pOtherRigidBody->ApplyCorrection(Vector3::ScalarProduct(mtv, -0.5f));
 		}	
 		else {
 			rigidBody->ApplyCorrection(mtv);
+		}
+
+		// Cache Collider 갱신
+		for (auto& pCollider : m_pCachesColliders) {
+			pCollider->Move(mtv);
 		}
 	}
 }

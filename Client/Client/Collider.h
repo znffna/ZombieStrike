@@ -58,7 +58,8 @@ public:
 	virtual void SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends, const XMFLOAT4 & xmf4Orientation = XMFLOAT4{0,0,0,1}) = 0;
 	void SetCollider(const BoundingOrientedBox& boundingOrientedBox);
 	void SetCollider(const BoundingBox& boundingOrientedBox);
-
+	
+	virtual void Move(const XMFLOAT3& xmf3Shift) = 0;
 
 	// methods  
 	virtual void Update(float fTimeElapsed) override;
@@ -104,6 +105,9 @@ public:
 private:  
 	BoundingSphere m_xmBoundingSphere;  
 	BoundingSphere m_xmWorldBoundingSphere;  
+
+	// CCollider을(를) 통해 상속됨
+	void Move(const XMFLOAT3& xmf3Shift) override;
 };
 
 class CAABBCollider : public CCollider    
@@ -141,7 +145,10 @@ public:
 private:    
 	BoundingBox m_xmBoundingBox;    
 	BoundingBox m_xmWorldBoundingBox;  
-};  
+
+	// CCollider을(를) 통해 상속됨
+	void Move(const XMFLOAT3& xmf3Shift) override;
+};
 
 class COBBCollider : public CCollider    
 {    
@@ -177,4 +184,7 @@ public:
 private:    
 	BoundingOrientedBox m_xmBoundingOrientedBox;    
 	BoundingOrientedBox m_xmWorldBoundingOrientedBox;    
+
+	// CCollider을(를) 통해 상속됨
+	void Move(const XMFLOAT3& xmf3Shift) override;
 };

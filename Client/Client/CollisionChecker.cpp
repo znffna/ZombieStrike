@@ -49,13 +49,12 @@ void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObjec
 				if (!pMergedA.Intersects(pMergedB)) continue;
 
 				// 그 이후, Collider 를 가져와 체크
-				std::vector<std::shared_ptr<CCollider>> pCollidersA;
-				std::vector<std::shared_ptr<CCollider>> pCollidersB;
+				std::vector<std::shared_ptr<CCollider>> pCollidersA = pObjectA->m_pCachesColliders;
+				std::vector<std::shared_ptr<CCollider>> pCollidersB = pObjectB->m_pCachesColliders;
 
-				pObjectA->GetComponentsInChildren<CCollider>(pCollidersA);
-				pObjectB->GetComponentsInChildren<CCollider>(pCollidersB);
-				// TODO : 이떄 IsCollided를 CollisionChecker의 멤버함수로 작성
-				// TODO : 이때 로직 수행을 바로 하지 않고 따로 pair를 저장한 이후 batch 처리 생각할 것.
+				//pObjectA->GetComponentsInChildren<CCollider>(pCollidersA);
+				//pObjectB->GetComponentsInChildren<CCollider>(pCollidersB);
+
 				for (auto& pColliderA : pCollidersA) {
 					for (auto& pColliderB : pCollidersB) {		
 						if (IsCollided(pColliderA, pColliderB)) {
@@ -73,8 +72,8 @@ void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObjec
 		// TODO : 이떄 UpdateTransform을 하지 않고, Model이 가진 모든 BB를 가져와서 복사할당후, 변위값만으로 갱신시키는 코드 작성 필요.
 		// TODO : 충돌처리시 TransformUpdate를 계속 호출시 많은 부하 발생(실제 좀비렌더링에 렉도 충돌체크때문임을 체크.
 		// TODO : 즉, UpdateTransform은 충돌체크전 1번, 렌더링 전 1번 으로 한프레임에 2번만으로 바꾸어야 함.
-		ppCollisionInfo.pObjectA->UpdateTransform();
-		ppCollisionInfo.pObjectB->UpdateTransform();
+		//ppCollisionInfo.pObjectA->UpdateTransform();
+		//ppCollisionInfo.pObjectB->UpdateTransform();
 
 		ppCollisionInfo.pObjectA->OnCollision(ppCollisionInfo.pObjectB, ppCollisionInfo.pColliderA, ppCollisionInfo.pColliderB);
 	}
@@ -87,6 +86,11 @@ void CCollisionChecker::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 bool CCollisionChecker::IsCollided(std::shared_ptr<CCollider>& colliderA, std::shared_ptr<CCollider>& colliderB)
 {
 	return colliderA->IsCollided(colliderB);
+}
+
+bool CCollisionChecker::IsCollided(CCollider& colliderA, CCollider& colliderB)
+{
+	return colliderA.IsCollided(&colliderB);
 }
 
 
