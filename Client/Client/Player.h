@@ -45,6 +45,9 @@ private:
 
 	std::shared_ptr<CGameObject> m_pGunSlot;
 	std::shared_ptr<CGun> m_pGun;
+
+	// Camera Offset
+	float m_fCameraLookY = 0.0f;
 	
 	float m_fPitch = 0.0f;
 	float m_fYaw = 0.0f;

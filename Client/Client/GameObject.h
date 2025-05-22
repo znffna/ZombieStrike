@@ -182,6 +182,8 @@ public:
 	// Component
 	std::vector<std::shared_ptr<CComponent>> m_pComponents;
 
+	std::vector<std::shared_ptr<CCollider>> m_pCachesColliders; // 모든 Children Collide를 복사할당(For CollisionCheck)
+
 public:
 	// Shader Variables
 	ComPtr<ID3D12Resource> m_pd3dcbGameObject;

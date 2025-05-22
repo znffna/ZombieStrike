@@ -66,7 +66,7 @@ void CPlayer::Update(float fTimeElapsed)
 {
 	CGameObject::Update(fTimeElapsed);
 
-	if(auto pCamera = GetComponent<CCamera>()) pCamera->Update(GetPosition(), fTimeElapsed);
+	if(auto pCamera = GetComponent<CCamera>()) pCamera->Update(Vector3::Add( GetPosition(), XMFLOAT3(0, m_fCameraLookY,0)), fTimeElapsed);
 
 	if (m_pGun) {
 		//m_pGun->Update(fTimeElapsed);
@@ -130,6 +130,8 @@ void CPlayer::SetSkin(int nSkinType)
 
 	// ¹Ù²ï Model¿¡ ¸ÂÃç PrepareSkinning
 	m_pGunSlot = FindFrame("GunSlot");
+	auto bound = FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound();
+	m_fCameraLookY = bound.Center.y + bound.Extents.y;
 
 	Update(0.0f);
 	UpdateTransform();

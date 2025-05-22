@@ -28,6 +28,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr) override;
 	// Object Collision
 	virtual bool IsCollided(std::shared_ptr<CCollider>& colliderA, std::shared_ptr<CCollider>& colliderB);
+	virtual bool IsCollided(CCollider& colliderA, CCollider& colliderB);
 
 private:
 	CScene* m_pScene;
