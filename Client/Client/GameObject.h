@@ -476,6 +476,11 @@ private:
 //
 class CBulletObject : public CGameObject
 {
+	// TODO : Bullet을 전부 관리하는 Object로 변경할 예정
+	// 현황 : GPU상에서 모든 Bullet을 파티클처럼 관리 하는 중(즉, 생성만 직접하고 소멸은 GPU에서 SO를 통해 출력시 discard하는 방식)
+	// 목표 : CPU상에서 모든 Bullet을 관리. 즉, Update 및 충돌처리까지 수행. 이 결과를 매 프레임마다 Instancing을 통해 출력.
+	//      : 단, 총알 발사시 파티클과 피격위치에 대한 총알 자국등의 파티클을 현황의 출력 매커니즘을 수정하여 사용.
+	//      : 출혈에 대한 요소는 별도의 Object를 통해 생성시키는 것으로 생각 중.
 public:
 	CBulletObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
 	virtual ~CBulletObject();
