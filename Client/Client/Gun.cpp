@@ -52,11 +52,11 @@ void CGun::SetGunType(int type)
 	switch (m_nGunType)
 	{
 	case 0: // Assault Rifle
-		m_fFireRate = 1.0f / 12.5f;
+		SetFireTime(12.5f); // 초당 12.5발
 		m_fBulletRange = 200.0f;
 		break;
 	case 1: // Shotgun
-		m_fFireRate = 1.0f / 5.0f;
+		SetFireTime(1.2f); // 초당 12.5발
 		m_fBulletRange = 100.0f;
 		break;
 	}
@@ -69,13 +69,16 @@ void CGun::Fire(const XMFLOAT3& xmf3Direction)
 {
 	XMFLOAT3 direction = xmf3Direction;
 	XMFLOAT3 position = FindFrame("M16_4_low")->GetPosition(); // 총구 위치
+
 	Fire(position, Vector3::ScalarProduct(direction, m_fBulletRange, false));
 }
 
 void CGun::Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction)
 {
-	if (m_fCoolTime < 0.0f)
+	while (m_fCoolTime < 0.0f)
 	{
+		m_fCoolTime += m_fFireRate;
+
 		CBulletVertex pBulletVertice;
 		pBulletVertice.m_xmf3Position = xmf3Position;
 		pBulletVertice.m_xmf3Velocity = xmf3Direction;
@@ -83,7 +86,6 @@ void CGun::Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction)
 		pBulletVertice.m_nBulletType = m_nGunType;
 
 		CGun::m_pBulletObject->AddBullet(pBulletVertice);
-		m_fCoolTime = m_fFireRate;
 
 		{
 			std::string debug = "Gun Fire \n";
