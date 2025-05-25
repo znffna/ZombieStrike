@@ -216,7 +216,8 @@ void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 			m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Direction, fDistance);
 			OnTerrainUpdateCallback(fTimeElapsed);
 
-			SetLookAt(xmf3LookAt);
+			//SetLookAt(xmf3LookAt);
+			SetLookAt(Vector3::Add(m_xmf3Position, Vector3::TransformCoord(XMFLOAT3(0,0,1), xmf4x4Rotate)));
 
 			RegenerateViewMatrix();
 		}
