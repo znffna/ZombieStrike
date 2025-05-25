@@ -507,6 +507,7 @@ void CGameFramework::AdvanceFrame()
 	// 타이머 업데이트
 	m_GameTimer.Tick(60.0f);
 
+	// Command Queue의 명령들이 모두 실행될 때까지 대기
 	WaitForGpuComplete();
 
 	for (auto& scene : m_Scenes)
@@ -593,11 +594,9 @@ void CGameFramework::AdvanceFrame()
 	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList[m_nSwapChainBufferIndex].Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
-	// Command Queue의 명령들이 모두 실행될 때까지 대기
 
 	// Swap Chain의 Back Buffer를 화면에 표시
 	m_pdxgiSwapChain->Present(0, 0);
-
 	++g_nFrameCount;
 
 	// 다음 Frame으로 이동
