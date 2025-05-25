@@ -372,6 +372,7 @@ float4 PSCollider(VS_COLLIDER_OUTPUT input) : SV_TARGET
 struct VS_BULLET_INPUT
 {
     float3 position : POSITION;
+    float3 lastposition : LASTPOSITION;
     float3 velocity : VELOCITY;
     float lifetime : LIFETIME;
     int type : TYPE;
@@ -383,7 +384,7 @@ VS_BULLET_INPUT VSBulletStreamOutput(VS_BULLET_INPUT input)
 }
 
 
-[maxvertexcount(128)]
+[maxvertexcount(64)]
 void GSBulletStreamOutput(point VS_BULLET_INPUT input[1], inout PointStream<VS_BULLET_INPUT> output)
 {
     VS_BULLET_INPUT particle = input[0];
@@ -394,7 +395,10 @@ void GSBulletStreamOutput(point VS_BULLET_INPUT input[1], inout PointStream<VS_B
     }
     else
     {
+        particle.lastposition = particle.position;
+        particle.position += particle.velocity * gfElapsedTime;
         particle.lifetime -= gfElapsedTime;
+        
         if (particle.lifetime > 0.0f)
         {
             output.Append(particle);
@@ -408,6 +412,7 @@ void GSBulletStreamOutput(point VS_BULLET_INPUT input[1], inout PointStream<VS_B
 struct VS_BULLET_DRAW_OUTPUT
 {
     float3 position : POSITION;
+    float3 lastposition : LASTPOSITION;
     float3 velocity : VELOCITY;
     float lifetime : LIFETIME;
     int type : TYPE;
@@ -426,6 +431,7 @@ VS_BULLET_DRAW_OUTPUT VSBulletDraw(VS_BULLET_INPUT input)
     VS_BULLET_DRAW_OUTPUT output = (VS_BULLET_DRAW_OUTPUT) 0;
 
     output.position = input.position;
+    output.lastposition = input.lastposition;
     output.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
     output.velocity = input.velocity;
     output.lifetime = input.lifetime;
@@ -454,7 +460,7 @@ void GSBulletDraw(point VS_BULLET_DRAW_OUTPUT input[1], inout TriangleStream<GS_
     float3 cameraPos = GetCameraPosition();
     
     float3 start = input[0].position;
-    float3 end = input[0].position + input[0].velocity;
+    float3 end = input[0].lastposition;
     
     float3 halfPos = (end + start) * 0.5f;
     
