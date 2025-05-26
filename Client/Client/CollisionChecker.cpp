@@ -26,10 +26,10 @@ void CCollisionChecker::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 void CCollisionChecker::Update(float fTimeElapsed)
 {
 	// Collision Check
-	CollisonCheckFromLayers(m_ppObjectLayerPairs);
+	CollisionCheckFromLayers(m_ppObjectLayerPairs);
 }
 
-void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObject::GAMEOBJECT_LAYER, CGameObject::GAMEOBJECT_LAYER>>& ppObjectLayerPairs)
+void CCollisionChecker::CollisionCheckFromLayers(std::vector<std::pair<CGameObject::GAMEOBJECT_LAYER, CGameObject::GAMEOBJECT_LAYER>>& ppObjectLayerPairs)
 {
 	auto& ppObjects = m_pScene->GetObjects();	
 
@@ -38,10 +38,10 @@ void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObjec
 		auto& pObjectsA = ppObjects[ppLayerPair.first];
 		auto& pObjectsB = ppObjects[ppLayerPair.second];
 		for (auto& pObjectA : pObjectsA) {
-			pObjectA->UpdateTransform();
+			//pObjectA->UpdateTransform();
 			for (auto& pObjectB : pObjectsB) {
 				// 여기서의 Object는 RootObject임을 기억.
-				pObjectB->UpdateTransform();
+				//pObjectB->UpdateTransform();
 
 				// 먼저 model Bound AABB로 체크
 				auto pMergedA = pObjectA->GetMergedMeshBound();
@@ -91,6 +91,52 @@ bool CCollisionChecker::IsCollided(std::shared_ptr<CCollider>& colliderA, std::s
 bool CCollisionChecker::IsCollided(CCollider& colliderA, CCollider& colliderB)
 {
 	return colliderA.IsCollided(&colliderB);
+}
+
+RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction, float fRange)
+{
+	// return 값
+	RESULT_RAYCAST resultRaycast;
+	bool& isCollided = resultRaycast.isCollided;
+	float& fImpactDistance = resultRaycast.fImpactDistance;
+	resultRaycast.fImpactDistance = fRange;
+
+	// 총알 충돌 체크
+	auto& ppObjects = m_pScene->GetObjects();
+	auto& pMaps = ppObjects[CGameObject::LAYER_ENVIRONMENT];
+	auto& pEnemies = ppObjects[CGameObject::LAYER_ENEMY];
+
+	XMVECTOR xmv3Position = XMLoadFloat3(&xmf3Position);
+	XMVECTOR xmv3Direction = XMLoadFloat3(&xmf3Direction);
+	xmv3Direction = XMVector3Normalize(xmv3Direction);
+
+	float tempRange;
+	for (auto& pObject : pMaps)
+	{
+		std::vector<std::shared_ptr<CCollider>> pColliders = pObject->m_pCachesColliders;
+		for (auto& pCollider : pColliders) {
+			if (auto result = pCollider->RayCast(xmv3Position, xmv3Direction, tempRange)) {
+				isCollided = true;
+				if (tempRange < fImpactDistance) {
+					fImpactDistance = tempRange;
+				}
+			}
+		}
+	}
+
+	for (auto& pEnemy : pEnemies) {
+		std::vector<std::shared_ptr<CCollider>> pColliders = pEnemy->m_pCachesColliders;
+		for (auto& pCollider : pColliders) {
+			if (auto result = pCollider->RayCast(xmv3Position, xmv3Direction, tempRange)) {
+				isCollided = true;
+				if (tempRange < fImpactDistance) {
+					fImpactDistance = tempRange;
+				}
+			}
+		}
+	}
+	
+	return resultRaycast;
 }
 
 

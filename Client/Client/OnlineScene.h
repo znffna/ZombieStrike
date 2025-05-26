@@ -27,8 +27,12 @@ public:
 	virtual void ProcessPacket(PacketHeader* recv_p); // Recv 내용 처리 (m_NetworkClient로 부터	호출됨)
 
 	void SendPlayerState();
+	void SendFirePacket(const FIRE_INFO fireInfo);
 
 	NetworkingClient* GetClient() { return &m_NetworkClient; }//
+
+	virtual FIRE_INFO Fire() override;
+
 private:
 	NetworkingClient m_NetworkClient{ this };
 	std::unordered_map<int, std::shared_ptr<CGameObject>> m_mapGameObjects;

@@ -151,7 +151,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	case S_C_OBJECT_ADD:
 	{
 		pkt_sc_object_add* packet = reinterpret_cast<pkt_sc_object_add*>(recv_p);
-		//if (g_bNetworkDebugMode)
+		if (g_bNetworkDebugMode)
 		{
 			std::string DebugOutput = "S_C_OBJECT_ADD ÆÐÅ¶ ¼ö½Å\n";
 			DebugOutput += "position : (" + std::to_string(packet->startposition.x) + ", " + std::to_string(packet->startposition.y) + ", " + std::to_string(packet->startposition.z) + ")\n";
@@ -270,4 +270,31 @@ void COnlineScene::SendPlayerState()
 		m_NetworkClient.send_packet((char*)&packet);
 
 	}
+}
+
+void COnlineScene::SendFirePacket(const FIRE_INFO fireInfo)
+{
+	//struct pkt_cs_shoot {
+	//	PacketHeader header{ sizeof(*this), PKT_TYPE::C_S_SHOOT };
+	//	SIZEID id;                      // ´©°¡ ½ú´ÂÁö
+	//	SIZE1 GunType;                  // ÃÑ Á¾·ù
+	//	//int hitZombieId;
+	//	float bulletPos[3];
+	//	float bulletDir[3];
+	//};
+
+	pkt_cs_shoot packet{};
+	memcpy(&packet.bulletPos, &fireInfo.xmf3Position, sizeof(XMFLOAT3)); // ÃÑ¾Ë À§Ä¡
+	memcpy(&packet.bulletDir, &fireInfo.xmf3Velocity, sizeof(XMFLOAT3)); // ÃÑ¾Ë À§Ä¡
+
+	m_NetworkClient.send_packet((char*)&packet);
+}
+
+FIRE_INFO COnlineScene::Fire()
+{
+	auto fireInfo = CGameScene::Fire();
+
+	SendFirePacket(fireInfo);
+
+	return fireInfo;
 }

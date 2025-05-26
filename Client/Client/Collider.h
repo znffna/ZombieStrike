@@ -66,6 +66,7 @@ public:
 	virtual void UpdateCollider(const XMFLOAT4X4& xmf4x4World) = 0;
 	virtual bool IsCollided(CCollider* pCollider) = 0;  
 	virtual bool IsCollided(std::shared_ptr<CCollider> pCollider) { return IsCollided(pCollider.get()); };  
+	virtual bool RayCast(const XMVECTOR& xmf3Position, const XMVECTOR& xmf3Direction, float& fRange) = 0;
 };  
 
 //////////////////////////////////////////////////////////////////////////  
@@ -108,6 +109,9 @@ private:
 
 	// CCollider을(를) 통해 상속됨
 	void Move(const XMFLOAT3& xmf3Shift) override;
+
+	// CCollider을(를) 통해 상속됨
+	bool RayCast(const XMVECTOR& xmf3Position, const XMVECTOR& xmf3Direction, float& fRange) override;
 };
 
 class CAABBCollider : public CCollider    
@@ -148,6 +152,9 @@ private:
 
 	// CCollider을(를) 통해 상속됨
 	void Move(const XMFLOAT3& xmf3Shift) override;
+
+	// CCollider을(를) 통해 상속됨
+	bool RayCast(const XMVECTOR& xmf3Position, const XMVECTOR& xmf3Direction, float& fRange) override;
 };
 
 class COBBCollider : public CCollider    
@@ -187,4 +194,7 @@ private:
 
 	// CCollider을(를) 통해 상속됨
 	void Move(const XMFLOAT3& xmf3Shift) override;
+
+	// CCollider을(를) 통해 상속됨
+	bool RayCast(const XMVECTOR& xmf3Position, const XMVECTOR& xmf3Direction, float& fRange) override;
 };

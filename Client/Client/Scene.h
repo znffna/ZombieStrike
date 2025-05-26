@@ -9,6 +9,7 @@
 #include "Zombie.h" 
 #include "Player.h"
 #include "Gun.h"
+#include "CollisionChecker.h"
 
 #include "Camera.h"
 #include "Shader.h"

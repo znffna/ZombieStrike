@@ -117,6 +117,8 @@ public:
 	// Object Update
 	virtual void Update(float fTimeElapsed);
 
+	void UpdateBBCache();
+
 	// Object Render
 	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
@@ -491,5 +493,6 @@ public:
 	virtual void OnPostRender();
 
 	// method
+	void AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Velocity, float fRange);
 	void AddBullet(const CBulletVertex& pBulletVertex);
 };

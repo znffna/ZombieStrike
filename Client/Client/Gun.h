@@ -24,6 +24,9 @@ public:
 	void SetGunType(int type);
 	int GetGunType() { return m_nGunType; }
 
+	float GetRange() const { return m_fBulletRange; }
+	float GetSpeed() const { return m_fBulletSpeed; } // 총알 속도
+
 	// Methods
 	void Fire(const XMFLOAT3& xmf3Direction);
 	void Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction);
@@ -43,7 +46,8 @@ private:
 	float m_fFireTimePerSecond = 12.5f; // 초당 발사 횟수
 	float m_fFireRate = 1.0f / 12.5f; // 발당 시간 (초당 발사 횟수의 역수)
 	float m_fCoolTime = 0.0f; // 발사 대기 시간
-	float m_fBulletRange = 100.0f; // 총알 속도
+	float m_fBulletSpeed = 800.0f; // 총알 속도 (미터/초)
+	float m_fBulletRange = 300.0f; // 총알 최대 사거리
 	float m_fReloadTime = 2.0f; // 재장전 시간
 	int m_nMaxAmmo = 30; // 최대 탄약 수
 	int m_nCurrentAmmo = 30; // 현재 탄약 수

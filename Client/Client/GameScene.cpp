@@ -77,13 +77,14 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	pMap->m_pModelRootObject->UpdateTransform();
 	m_pMap = pMap->m_pModelRootObject;
 	m_pMap->SetLayer(CGameObject::LAYER_ENVIRONMENT);
-	m_pMap->Update(0.0f);
+	m_pMap->UpdateBBCache();
 	AddObject(m_pMap);
 	//AddObject(m_pMap);
 
 	// Collision Checker
 	auto pCollisionChecker = std::make_shared<CCollisionChecker>(this);
 	pCollisionChecker->Initialize(pd3dDevice, pd3dCommandList);
+	m_pCollisionChecker = pCollisionChecker;
 	AddObject(pCollisionChecker);
 
 	// BulletObject
@@ -127,6 +128,24 @@ void CGameScene::ReleaseUploadBuffers()
 void CGameScene::Update(float deltaTime)
 {
 	CScene::Update(deltaTime);
+
+	BuildFiredBullets();
+}
+
+void CGameScene::BuildFiredBullets()
+{
+	for (auto& pBullet : m_pFireInfos)
+	{
+		auto result = m_pCollisionChecker->CheckBulletCollision(pBullet.xmf3Position, pBullet.xmf3Velocity, pBullet.fRange);
+		m_pBulletObject->AddBullet(pBullet.xmf3Position, pBullet.xmf3Velocity, result.fImpactDistance);
+		{
+			std::string debugOutput = "CGameScene::BuildFiredBullets() - Bullet Position: " + std::to_string(pBullet.xmf3Position.x) + ", " + std::to_string(pBullet.xmf3Position.y) + ", " + std::to_string(pBullet.xmf3Position.z) + "\n";
+			debugOutput += "Velocity: " + std::to_string(pBullet.xmf3Velocity.x) + ", " + std::to_string(pBullet.xmf3Velocity.y) + ", " + std::to_string(pBullet.xmf3Velocity.z) + "\n";
+			debugOutput += "Impact Distance: " + std::to_string(result.fImpactDistance) + "\n";
+			OutputDebugStringA(debugOutput.c_str());
+		}
+	}
+	m_pFireInfos.clear();
 }
 
 void CGameScene::OnPostRender()
@@ -157,7 +176,7 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 	if (m_bMouseLButtonDown) {
 		if (m_pPlayer && m_pBulletObject)
 		{
-			m_pPlayer->Fire();
+			this->Fire();
 		}
 	}
 
@@ -216,6 +235,23 @@ void CGameScene::ChangeMap(int nMapIndex)
 	m_pMap->Update(0.0f);
 	m_pMap->SetLayer(CGameObject::LAYER_ENVIRONMENT);
 	AddObject(m_pMap);
+}
+
+FIRE_INFO CGameScene::Fire()
+{
+	std::shared_ptr<CPlayer> pPlayer = m_pPlayer;
+	std::shared_ptr<CGun> pGun = pPlayer->GetGun();
+
+	FIRE_INFO fireInfo;
+	fireInfo.xmf3Velocity = pPlayer->GetComponent<CCamera>()->GetLook();
+	fireInfo.xmf3Position = pGun->FindFrame("M16_4_low")->GetPosition(); // ÃÑ±¸ À§Ä¡
+	fireInfo.fRange = pGun->GetRange();
+	float gunSpeed = pGun->GetSpeed();
+
+	fireInfo.xmf3Velocity = Vector3::ScalarProduct(fireInfo.xmf3Velocity, gunSpeed, false);
+	m_pFireInfos.push_back(fireInfo);
+
+	return fireInfo;
 }
 
 void CGameScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)

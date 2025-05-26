@@ -6,6 +6,12 @@
 #pragma once
 #include "Scene.h"
 
+struct FIRE_INFO {
+	XMFLOAT3 xmf3Position;
+	XMFLOAT3 xmf3Velocity;
+	float fRange;
+};
+
 class CGameScene : public CScene
 {
 public:
@@ -23,12 +29,16 @@ public:
 
 	virtual void Update(float deltaTime) override;
 
+	void BuildFiredBullets();
+
 	virtual void OnPostRender() override;
 	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 
 	virtual void ChangeMap(int nMapIndex);;
+
+	virtual FIRE_INFO Fire();
 
 	// Shader Variables
 	//void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
@@ -57,4 +67,6 @@ public:
 	};
 
 	std::shared_ptr<CBulletObject> m_pBulletObject;
+	std::shared_ptr<CCollisionChecker> m_pCollisionChecker;
+	std::vector<FIRE_INFO> m_pFireInfos;
 };

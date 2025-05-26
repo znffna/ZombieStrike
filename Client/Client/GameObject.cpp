@@ -202,6 +202,12 @@ void CGameObject::UpdateTransform(std::shared_ptr<CGameObject>& pGameobject)
 
 void CGameObject::Update(float fTimeElapsed)
 {
+	if (GetLayer() == GAMEOBJECT_LAYER::LAYER_ENVIRONMENT)
+	{
+		// UI Layer는 Update 하지 않음
+		return;
+	}
+
 	// Component Update 
 	// TODO : 순서좀 생각해야 될 듯?
 	for (auto& pComponent : m_pComponents)
@@ -215,8 +221,13 @@ void CGameObject::Update(float fTimeElapsed)
 
 	for (auto& pChild : m_pChilds) pChild->Update(fTimeElapsed);
 
+	UpdateBBCache();
+}
+
+void CGameObject::UpdateBBCache()
+{
 	// 부모가 없을 경우, 모든 OBB를 Copy
-	if(m_pParent.expired())
+	if (m_pParent.expired())
 	{
 		// 기존 Collider 파괴
 		m_pCachesColliders.clear();
@@ -224,7 +235,7 @@ void CGameObject::Update(float fTimeElapsed)
 		// 현재 모든 자식내 Collider를 가져옴
 		std::vector<std::shared_ptr<CCollider>> pCachesColliders;
 		GetComponentsInChildren<CCollider>(pCachesColliders);
-		
+
 		// Pointer 가아닌 실제 Value를 복사
 		std::vector<std::shared_ptr<CCollider>> pColliders;
 		for (auto& pCollider : pCachesColliders)
@@ -1333,6 +1344,17 @@ void CBulletObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* 
 void CBulletObject::OnPostRender()
 {
 	m_pMesh->OnPostRender(0); //Read Stream Output Buffer Filled Size
+}
+
+void CBulletObject::AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Velocity, float fRange)
+{
+	CBulletVertex pBulletVertex;
+	pBulletVertex.m_xmf3Position = pOrigin;
+	pBulletVertex.m_xmf3LastPosition = pOrigin;
+	pBulletVertex.m_xmf3Velocity = xmf3Velocity;
+	pBulletVertex.m_fLifetime = fRange / Vector3::Length(xmf3Velocity);
+
+	AddBullet(pBulletVertex);
 }
 
 void CBulletObject::AddBullet(const CBulletVertex& pBulletVertex)
