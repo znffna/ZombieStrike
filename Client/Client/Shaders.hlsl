@@ -395,11 +395,14 @@ void GSBulletStreamOutput(point VS_BULLET_INPUT input[1], inout PointStream<VS_B
     }
     else
     {
-        particle.lastposition = particle.position;
-        particle.position += particle.velocity * gfElapsedTime;
+        float fBeforeTime = particle.lifetime;
         particle.lifetime -= gfElapsedTime;
+        float dt = particle.lifetime < 0.0f ? gfElapsedTime + particle.lifetime : gfElapsedTime;
+        particle.lastposition = particle.position;
+        particle.position += particle.velocity * dt;
         
-        if (particle.lifetime > 0.0f)
+        //if (particle.lifetime > 0.0f)
+        if (fBeforeTime > 0.0f)
         {
             output.Append(particle);
         }
