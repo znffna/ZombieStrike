@@ -240,6 +240,7 @@ void CThirdPersonCamera::OnTerrainUpdateCallback(float fTimeElapsed)
 		XMFLOAT3 xmf3Scale = pTerrain->GetScale();
 		XMFLOAT3 xmf3CameraPosition = GetPosition();
 		float fHeight = pTerrain->GetHeight(xmf3CameraPosition.x, xmf3CameraPosition.z);
+		fHeight += m_fNearZ * cos(XMConvertToRadians(m_fFovAngle / 2)); // 카메라 높이 보정
 		if (xmf3CameraPosition.y <= fHeight)
 		{
 			float dy = fHeight - xmf3CameraPosition.y;

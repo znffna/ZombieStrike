@@ -285,7 +285,7 @@ void COnlineScene::SendFirePacket(const FIRE_INFO fireInfo)
 
 	pkt_cs_shoot packet{};
 	memcpy(&packet.bulletPos, &fireInfo.xmf3Position, sizeof(XMFLOAT3)); // ÃÑ¾Ë À§Ä¡
-	memcpy(&packet.bulletDir, &fireInfo.xmf3Velocity, sizeof(XMFLOAT3)); // ÃÑ¾Ë À§Ä¡
+	memcpy(&packet.bulletDir, &fireInfo.xmf3Velocity, sizeof(XMFLOAT3)); // ÃÑ¾Ë ¹æÇâ * °Å¸®
 
 	m_NetworkClient.send_packet((char*)&packet);
 }

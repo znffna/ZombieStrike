@@ -43,8 +43,8 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
 
 	// <Store GameObjects>
-	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 300);
-	StorePlayer(pd3dDevice, pd3dCommandList, pd3dRootSignature, 2);
+	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 100);
+	StorePlayer(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
 
 	// <Initialize GameObjects>
 
@@ -249,8 +249,8 @@ FIRE_INFO CGameScene::Fire()
 	float gunSpeed = pGun->GetSpeed();
 
 	fireInfo.xmf3Velocity = Vector3::ScalarProduct(fireInfo.xmf3Velocity, gunSpeed, false);
-	m_pFireInfos.push_back(fireInfo);
 
+	m_pFireInfos.push_back(fireInfo);
 	return fireInfo;
 }
 
