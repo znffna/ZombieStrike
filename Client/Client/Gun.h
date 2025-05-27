@@ -27,7 +27,18 @@ public:
 	float GetRange() const { return m_fBulletRange; }
 	float GetSpeed() const { return m_fBulletSpeed; } // 총알 속도
 
+	using CGameObject::UpdateTransform; 
+	virtual void UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
+
 	// Methods
+	bool Fire() {
+		if (m_fCoolTime <= 0.0f && m_nCurrentAmmo > 0) {
+			m_fCoolTime = m_fFireRate;
+			m_nCurrentAmmo--;
+			return true; // 발사 성공
+		}
+		return false; // 발사 실패
+	}
 	void Fire(const XMFLOAT3& xmf3Direction);
 	void Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction);
 

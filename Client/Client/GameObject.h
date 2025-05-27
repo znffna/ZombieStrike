@@ -314,7 +314,7 @@ public:
 	void SetWorldMatrix(DirectX::XMFLOAT4X4 xmf4x4World) { m_pTransform->SetWorldMatrix(xmf4x4World); }
 	void SetWorldMatrix(DirectX::XMMATRIX xmf4x4World) { m_pTransform->SetWorldMatrix(xmf4x4World); }
 
-	void UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
+	virtual void UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
 	void UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix);
 	void UpdateTransform(std::shared_ptr<CGameObject>& pGameobject);
 };

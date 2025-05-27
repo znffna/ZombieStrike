@@ -65,6 +65,22 @@ void CGun::SetGunType(int type)
 	DeepCopyFromModel(pModel);
 }
 
+void CGun::UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
+{
+	if (nullptr == xmf4x4ParentMatrix) return;
+
+	CGameObject::UpdateTransform(xmf4x4ParentMatrix);
+
+	{
+		std::string debug = "Gun UpdateTransform \n";
+		debug += "Position: " + std::to_string(GetPosition().x) + ", " + std::to_string(GetPosition().y) + ", " + std::to_string(GetPosition().z) + "\n";
+		OutputDebugStringA(debug.c_str());
+		if (GetPosition().x + GetPosition().y + GetPosition().z < 1.0f) {
+			std::cout << 1;
+		}
+	}
+}
+
 void CGun::Fire(const XMFLOAT3& xmf3Direction)
 {
 	XMFLOAT3 direction = xmf3Direction;

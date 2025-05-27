@@ -134,6 +134,19 @@ void CGameScene::Update(float deltaTime)
 
 void CGameScene::BuildFiredBullets()
 {
+	if (m_bIschambered) {
+		if (m_pPlayer && m_pBulletObject)
+		{
+			FIRE_INFO fireInfo = Fire();
+			//m_pBulletObject->AddBullet(fireInfo.xmf3Position, fireInfo.xmf3Velocity, fireInfo.fRange);
+			/*{
+				std::string debugOutput = "CGameScene::BuildFiredBullets() - Bullet Fired at Position: " + std::to_string(fireInfo.xmf3Position.x) + ", " + std::to_string(fireInfo.xmf3Position.y) + ", " + std::to_string(fireInfo.xmf3Position.z) + "\n";
+				debugOutput += "Velocity: " + std::to_string(fireInfo.xmf3Velocity.x) + ", " + std::to_string(fireInfo.xmf3Velocity.y) + ", " + std::to_string(fireInfo.xmf3Velocity.z) + "\n";
+				debugOutput += "Range: " + std::to_string(fireInfo.fRange) + "\n";
+				OutputDebugStringA(debugOutput.c_str());
+			}*/
+		}
+	}
 	for (auto& pBullet : m_pFireInfos)
 	{
 		auto result = m_pCollisionChecker->CheckBulletCollision(pBullet.xmf3Position, pBullet.xmf3Velocity, pBullet.fRange);
@@ -173,12 +186,13 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 		}
 	}
 
-	if (m_bMouseLButtonDown) {
-		if (m_pPlayer && m_pBulletObject)
-		{
-			this->Fire();
-		}
-	}
+	m_bIschambered = m_bMouseLButtonDown;
+	//if (m_bMouseLButtonDown) {
+	//	if (m_pPlayer && m_pBulletObject)
+	//	{
+	//		this->Fire();
+	//	}
+	//}
 
 	return true;
 }
