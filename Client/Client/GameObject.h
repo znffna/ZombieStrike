@@ -39,6 +39,7 @@ public:
 	std::string m_strFileName{};
 
 	std::shared_ptr<CGameObject> m_pModelRootObject;
+	std::shared_ptr<CGameObject> m_pAnimationRootObject;
 
 	int m_nSkinnedMeshes = 0;
 	std::vector <std::shared_ptr<CSkinnedMesh>> m_ppSkinnedMeshes; //[SkinnedMeshes], Skinned Mesh Cache

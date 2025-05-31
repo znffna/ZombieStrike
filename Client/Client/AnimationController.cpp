@@ -122,6 +122,7 @@ void CAnimationController::SettingByModel(std::shared_ptr<CLoadedModelInfo>& pMo
 		m_nAnimationTracks = m_pAnimationSets->m_nAnimationSets;
 	else m_nAnimationTracks = nAnimationTracks;
 
+	m_pRootMotionObject = pModel->m_pAnimationRootObject;
 
 	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256의 배수
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
@@ -195,13 +196,13 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 
 		ApplyPitchToSpine(pRootGameObject);
 
-		if (auto pBone = m_pModelRootObject->FindFrame("mixamorig:Hips")) {
-			auto pTransform = pBone->GetLocalMatrix();
-			// Position을 사용하지 않음
+		if (m_pRootMotionObject) {
+			auto pTransform = m_pRootMotionObject->GetLocalMatrix();
+			// Position의 이동을 사용하지 않음
 			pTransform._41 = 0.0f;
-			//pTransform._42 = 0.0f;
+			//pTransform._42 = 0.0f; y축은 기본 pivot이 발바닥 가운데이기에 y축 이동을 통해 캐릭터를 땅위로 끌어올림.
 			pTransform._43 = 0.0f;
-			pBone->SetLocalMatrix(pTransform);
+			m_pRootMotionObject->SetLocalMatrix(pTransform);
 		}
 
 		pRootGameObject->UpdateTransform(NULL);

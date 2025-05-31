@@ -673,11 +673,18 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 	UINT nReads = 0;
 
 	int nAnimationSets = 0;
+	std::string strAnimationRootName;
 
 	for (; ; )
 	{
 		::ReadStringFromFile(pInFile, pstrToken);
-		if (!strcmp(pstrToken, "<AnimationSets>:"))
+		if (!strcmp(pstrToken, "<RootObject>:"))
+		{
+			char pstrRootName[64] = { '\0' };
+			::ReadStringFromFile(pInFile, pstrRootName);
+			strAnimationRootName = pstrRootName;
+		}
+		else if (!strcmp(pstrToken, "<AnimationSets>:"))
 		{
 			nAnimationSets = ::ReadIntegerFromFile(pInFile);
 			pLoadedModel->m_pAnimationSets = std::make_shared<CAnimationSets>(nAnimationSets);
@@ -744,6 +751,7 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 		}
 		else if (!strcmp(pstrToken, "</AnimationSets>"))
 		{
+			pLoadedModel->m_pAnimationRootObject = pLoadedModel->m_pModelRootObject->FindFrame(strAnimationRootName);
 			break;
 		}
 	}
