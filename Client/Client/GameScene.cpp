@@ -144,7 +144,7 @@ void CGameScene::BuildFiredBullets()
 	{
 		auto result = m_pCollisionChecker->CheckBulletCollision(pBullet.xmf3Position, pBullet.xmf3Velocity, pBullet.fRange);
 		m_pBulletObject->AddBullet(pBullet.xmf3Position, pBullet.xmf3Velocity, result.fImpactDistance);
-		{
+		if(g_bDebugOutput){
 			std::string debugOutput = "CGameScene::BuildFiredBullets() - Bullet Position: " + std::to_string(pBullet.xmf3Position.x) + ", " + std::to_string(pBullet.xmf3Position.y) + ", " + std::to_string(pBullet.xmf3Position.z) + "\n";
 			debugOutput += "Velocity: " + std::to_string(pBullet.xmf3Velocity.x) + ", " + std::to_string(pBullet.xmf3Velocity.y) + ", " + std::to_string(pBullet.xmf3Velocity.z) + "\n";
 			debugOutput += "Impact Distance: " + std::to_string(result.fImpactDistance) + "\n";
@@ -244,9 +244,8 @@ void CGameScene::ChangeMap(int nMapIndex)
 	AddObject(m_pMap);
 }
 
-FIRE_INFO CGameScene::Fire(std::shared_ptr<CPlayer>& pPlayer)
+FIRE_INFO CGameScene::Fire(const std::shared_ptr<CPlayer>& pPlayer)
 {
-	std::shared_ptr<CPlayer> pPlayer = pPlayer;
 	std::shared_ptr<CGun> pGun = pPlayer->GetGun();
 
 	FIRE_INFO fireInfo;

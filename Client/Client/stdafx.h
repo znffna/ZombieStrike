@@ -54,12 +54,9 @@
 
 #ifdef _DEBUG
 #include <dxgidebug.h>
-//#define _WITH_DEBUG_FRAME_HIERARCHY  // 프레임 계층 구조 디버깅
-//#define _WITH_DEBUG_SKINNING_BONE    // 스키닝 본 디버깅
-//#define _WITH_DEBUG_ANIMATION_UPDATE // 애니메이션 업데이트 디버깅
-//#define _WITH_DEBUG_TRANSFORM_UPDATE // 트랜스폼 업데이트 디버깅
-//#define _WITH_OBJECT_TRANSFORM	   // 오브젝트 트랜스폼 자체를 포함할 경우.(사용 안할시 class CTransform을 사용)
 #endif
+
+
 
 // 프로그램 실행시 전체화면 On / OFF (F9 키로 실행 중에 전환 가능)
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
@@ -122,6 +119,8 @@ using Microsoft::WRL::ComPtr;
 extern bool g_windowActive; // 전역 또는 멤버 변수로 상태 저장
 extern int gnCurrentBullets;
 extern bool g_bRenderCollider;
+
+extern bool g_bDebugOutput;
 
 // Window Size
 extern UINT WINDOW_WIDTH;

@@ -197,7 +197,8 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 
 		if (auto pBone = m_pModelRootObject->FindFrame("mixamorig:Hips")) {
 			auto pTransform = pBone->GetLocalMatrix();
-			//pTransform._41 = 0.0f;
+			// Position을 사용하지 않음
+			pTransform._41 = 0.0f;
 			//pTransform._42 = 0.0f;
 			pTransform._43 = 0.0f;
 			pBone->SetLocalMatrix(pTransform);
@@ -236,14 +237,19 @@ void CAnimationController::ApplyPitchToSpine(CGameObject* pRootGameObject)
 
 void CAnimationController::ChangeState(ANIMATION_STATE state)
 {
-	ANIMATION_STATE before = this->state;
+	if (state == this->state) return; // 현재 상태와 같으면 변경하지 않음
+	beforeState = this->state;
 	this->state = state;
 
-	SetTrackEnable(before, false);
+	{
+		std::string debugString = "Change Animation State: " + std::to_string(static_cast<int>(beforeState)) + " to " + std::to_string(static_cast<int>(state)) +"\n";
+		OutputDebugStringA(debugString.c_str());
+	}
+
+	SetTrackEnable(beforeState, false);
 	SetTrackEnable(state, true);
+	SetTrackPosition(state, 0.0f);
 }
-
-
 
 void CAnimationController::ChangeState(ANIMATION_STATE state, float fPosition)
 {

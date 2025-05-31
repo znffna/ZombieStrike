@@ -76,23 +76,41 @@ void CPlayer::Update(float fTimeElapsed)
 
 	if (m_pSkinnedAnimationController)
 	{
-		XMFLOAT3 xmf3Velocity = GetComponent<CRigidBody>()->GetVelocity();
-		float fLength = sqrtf(xmf3Velocity.x * xmf3Velocity.x + xmf3Velocity.z * xmf3Velocity.z);
-		if (::IsZero(fLength))
-		{
-			m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::IDLE, 0.0f);
-		}
+		UpdateUnderAnimation();
+	}
+}
+
+void CPlayer::UpdateUnderAnimation()
+{
+	XMFLOAT3 xmf3Velocity = GetComponent<CRigidBody>()->GetVelocity();
+	if (Vector3::IsZero(xmf3Velocity))
+	{
+		m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::IDLE);
+		return;
+	}
+
+	// 현재 Look 방향(x,z평면 기준)기준 Right, Forward 벡터를 구한다.
+	float fRight = Vector3::DotProduct(m_pTransform->GetRight(), xmf3Velocity);
+	float fForward = Vector3::DotProduct(m_pTransform->GetLook(), xmf3Velocity);
+	float angle = atan2(fForward, fRight);
+	if (angle < 0.0f) angle += XM_PI * 2.0f; // 각도를 [-PI,PI) 에서 [0, 2PI)로 변환
+	float degree = XMConvertToDegrees(angle); // degree로 변환[0 ~ 2Pi) => [0, 360)
+	int nDirection = (int)CAnimationController::ANIMATION_STATE::WALK_RIGHT + static_cast<int>(degree / 45.0f); // 8방향으로 나누기
+	float fLength = sqrtf(xmf3Velocity.x * xmf3Velocity.x + xmf3Velocity.z * xmf3Velocity.z);
+	if (false == ::IsZero(fLength))
+	{
+		m_pSkinnedAnimationController->ChangeState(nDirection);
 	}
 }
 
 void CPlayer::Move(DWORD dwDirection, float fDistance, float deltaTime)
 {
-	if (dwDirection)
-	{		
-		m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::WALK);
-	}
-
 	CGameObject::Move(dwDirection, fDistance, deltaTime);
+	if (dwDirection)
+	{
+		//m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::WALK_RIGHT);
+	}
+	UpdateUnderAnimation();
 }
 
 void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)

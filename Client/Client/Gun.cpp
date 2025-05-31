@@ -71,7 +71,7 @@ void CGun::UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
 
 	CGameObject::UpdateTransform(xmf4x4ParentMatrix);
 
-	{
+	if(g_bDebugOutput){
 		std::string debug = "Gun UpdateTransform \n";
 		debug += "Position: " + std::to_string(GetPosition().x) + ", " + std::to_string(GetPosition().y) + ", " + std::to_string(GetPosition().z) + "\n";
 		OutputDebugStringA(debug.c_str());
