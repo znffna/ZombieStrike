@@ -499,6 +499,7 @@ public class TextHierarchicalModelExtract : MonoBehaviour
     {
         int nTextures = GetTexturesCount(current);
         WriteObjectName(nLevel, "<Frame>: " + m_nFrames++ + " " + nTextures, current.gameObject);
+        WriteObjectTag(nLevel+1, "<Tag>:", current);
 
         WriteTransform(nLevel+1, "<Transform>:", current);
         WriteLocalMatrix(nLevel+1, "<TransformMatrix>:", current);
@@ -527,6 +528,13 @@ public class TextHierarchicalModelExtract : MonoBehaviour
             }
         }
 
+    }
+
+    private void WriteObjectTag(int nLevel, string strHeader, Transform current)
+    {
+        WriteString(nLevel, strHeader + " ");
+        WriteString(current.tag);
+        m_rTextWriter.WriteLine(" ");
     }
 
     private void WriteBoxColliders(int nLevel, Transform current)
