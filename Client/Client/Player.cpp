@@ -44,7 +44,7 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	pCamera->SetActive(true);
 
 	// Collider »ý¼º
-	auto pCollider = CreateComponent<COBBCollider>(shared_from_this());
+	//auto pCollider = CreateComponent<COBBCollider>(shared_from_this());
 
 	// Model Info
 	SetSkin(m_nSkinType);
@@ -144,8 +144,8 @@ void CPlayer::SetSkin(int nSkinType)
 		pComponent->Init(this);
 	}
 
-	auto pCollider = GetComponent<COBBCollider>();
-	pCollider->SetCollider(FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound());
+	//auto pCollider = GetComponent<COBBCollider>();
+	//pCollider->SetCollider(FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound());
 
 	// ¹Ù²ï Model¿¡ ¸ÂÃç PrepareSkinning
 	m_pGunSlot = FindFrame("GunSlot");

@@ -77,7 +77,6 @@ public:
 
 private:
 	std::shared_ptr<CTransform> m_pTransform;
-	std::shared_ptr<CCollider> m_pCollider;
 
 private:
 	float 		 				m_fMass = 1.0f;

@@ -33,8 +33,6 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	SetRotationAxisLock(true, false, true);
 
 	// <Components>
-	auto pCollider = CreateComponent<COBBCollider>(shared_from_this());
-
 	std::shared_ptr<CRigidBody> pRigidBody = CreateComponent<CRigidBody>(shared_from_this());
 	pRigidBody->SetGravity(XMFLOAT3(0.0f, -9.0f, 0.0f));
 
@@ -79,6 +77,6 @@ void CZombieObject::SetSkin(int nSkinType)
 		if (i != 0) m_pSkinnedAnimationController->SetTrackEnable(i, false);
 	}
 
-	auto pCollider = GetComponent<COBBCollider>();
-	pCollider->SetCollider(FindFrame(m_strMeshBoneName[m_nSkinType])->GetMeshBound());
+	//auto pCollider = GetComponent<COBBCollider>();
+	//pCollider->SetCollider(FindFrame(m_strMeshBoneName[m_nSkinType])->GetMeshBound());
 }
