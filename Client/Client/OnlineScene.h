@@ -31,7 +31,7 @@ public:
 
 	NetworkingClient* GetClient() { return &m_NetworkClient; }//
 
-	virtual FIRE_INFO Fire() override;
+	virtual FIRE_INFO Fire(const std::shared_ptr<CPlayer>& pPlayer) override;
 
 private:
 	NetworkingClient m_NetworkClient{ this };

@@ -137,14 +137,7 @@ void CGameScene::BuildFiredBullets()
 	if (m_bIschambered) {
 		if (m_pPlayer && m_pBulletObject)
 		{
-			FIRE_INFO fireInfo = Fire();
-			//m_pBulletObject->AddBullet(fireInfo.xmf3Position, fireInfo.xmf3Velocity, fireInfo.fRange);
-			/*{
-				std::string debugOutput = "CGameScene::BuildFiredBullets() - Bullet Fired at Position: " + std::to_string(fireInfo.xmf3Position.x) + ", " + std::to_string(fireInfo.xmf3Position.y) + ", " + std::to_string(fireInfo.xmf3Position.z) + "\n";
-				debugOutput += "Velocity: " + std::to_string(fireInfo.xmf3Velocity.x) + ", " + std::to_string(fireInfo.xmf3Velocity.y) + ", " + std::to_string(fireInfo.xmf3Velocity.z) + "\n";
-				debugOutput += "Range: " + std::to_string(fireInfo.fRange) + "\n";
-				OutputDebugStringA(debugOutput.c_str());
-			}*/
+			Fire(m_pPlayer);
 		}
 	}
 	for (auto& pBullet : m_pFireInfos)
@@ -251,9 +244,9 @@ void CGameScene::ChangeMap(int nMapIndex)
 	AddObject(m_pMap);
 }
 
-FIRE_INFO CGameScene::Fire()
+FIRE_INFO CGameScene::Fire(std::shared_ptr<CPlayer>& pPlayer)
 {
-	std::shared_ptr<CPlayer> pPlayer = m_pPlayer;
+	std::shared_ptr<CPlayer> pPlayer = pPlayer;
 	std::shared_ptr<CGun> pGun = pPlayer->GetGun();
 
 	FIRE_INFO fireInfo;

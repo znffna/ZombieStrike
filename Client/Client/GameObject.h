@@ -95,10 +95,16 @@ public:
 	UINT GetObjectID() { return m_nObjectID; }
 	void SetObjectID(UINT nObjectID) { m_nObjectID = nObjectID; }
 
+	// Server ID
+	UINT GetServerID() { return m_nObjectServerID; } // 서버 ID는 Object ID와 동일하게 사용
+	void SetServerID(UINT nServerID) { m_nObjectServerID = nServerID; } // 서버 ID는 Object ID와 동일하게 사용
+
+	// Object Name
 	std::string GetName() { return m_strName; }
 	void SetName(const std::string& strName);
 	virtual std::string GetDefaultName() { return "CGameObject"; }
 
+	// Layer
 	virtual void SetLayer(GAMEOBJECT_LAYER layer) { m_nLayer = layer; }
 	virtual GAMEOBJECT_LAYER GetLayer() { return m_nLayer; }
 
@@ -167,7 +173,9 @@ protected:
 	static UINT m_nObjectIDCounter; // Object ID Counter
 
 	UINT m_nObjectID; // Object ID
+	UINT m_nObjectServerID; // Object Server ID
 	std::string m_strName;  // Object Name
+	std::string m_strTag = "Untagged"; // Object Tag (For Skinning)
 
 	std::shared_ptr<CMesh> m_pMesh; // Object Mesh
 
@@ -480,9 +488,10 @@ class CBulletObject : public CGameObject
 {
 	// TODO : Bullet을 전부 관리하는 Object로 변경할 예정
 	// 현황 : GPU상에서 모든 Bullet을 파티클처럼 관리 하는 중(즉, 생성만 직접하고 소멸은 GPU에서 SO를 통해 출력시 discard하는 방식)
-	// 목표 : CPU상에서 모든 Bullet을 관리. 즉, Update 및 충돌처리까지 수행. 이 결과를 매 프레임마다 Instancing을 통해 출력.
-	//      : 단, 총알 발사시 파티클과 피격위치에 대한 총알 자국등의 파티클을 현황의 출력 매커니즘을 수정하여 사용.
-	//      : 출혈에 대한 요소는 별도의 Object를 통해 생성시키는 것으로 생각 중.
+	// 목표 : 사격 즉시 피격위치 확정 및 GPU에 파티클 출력.
+	//      : 이떄 총알은 GPU상에서 전진되며, GPU에 파티클 생성시에 주어진 거리 비례 LifeTime을 소유.
+	//      : 즉, 총알이 날아가는 듯한 느낌만 주기 위함이며, 실제 피격효과로 인한 출력은 HitResult에 의해
+	//      : 별도 파티클 생성으로 이루어 진다.(즉, Trail과 혈흔 표현을 별도로 구현 예정)
 public:
 	CBulletObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
 	virtual ~CBulletObject();

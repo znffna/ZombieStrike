@@ -146,6 +146,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 
 		m_pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
 		m_mapGameObjects[packet->id] = m_pPlayer;
+		m_pPlayer->SetServerID(packet->id);
 		break;
 	}
 	case S_C_OBJECT_ADD:
@@ -168,6 +169,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			std::shared_ptr<CPlayer> pPlayer = GetPlayer(0); // GetPlayer(skin_type)로 바꿔야 함
 			pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
 			m_mapGameObjects[packet->id] = pPlayer;
+			pPlayer->SetServerID(packet->id);
 
 			int gun_type = packet->gun_type;
 			std::shared_ptr<CGun> pGun = CGun::Create(nullptr, nullptr, nullptr, gun_type);
@@ -187,6 +189,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			std::shared_ptr<CGameObject> pZombie = GetZombie(packet->skin_type);
 			pZombie->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
 			m_mapGameObjects[packet->id] = pZombie;
+			pZombie->SetServerID(packet->id);
 			{
 				std::string DebugOutput = "ObjectType::ZOMBIE 생성 완료\n";
 				//OutputDebugStringA(DebugOutput.c_str());
@@ -200,6 +203,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			/*std::shared_ptr<CGameObject> pBullet = std::make_shared<CBulletObject>();
 			pBullet->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
 			m_mapGameObjects[packet->id] = pBullet;*/
+			Fire(std::dynamic_pointer_cast<CPlayer>(m_mapGameObjects[packet->id]));
 			break;
 		}
 		}
@@ -290,11 +294,11 @@ void COnlineScene::SendFirePacket(const FIRE_INFO fireInfo)
 	m_NetworkClient.send_packet((char*)&packet);
 }
 
-FIRE_INFO COnlineScene::Fire()
+FIRE_INFO COnlineScene::Fire(const std::shared_ptr<CPlayer>& pPlayer)
 {
-	auto fireInfo = CGameScene::Fire();
+	auto fireInfo = CGameScene::Fire(pPlayer);
 
-	SendFirePacket(fireInfo);
+	if (m_pPlayer == pPlayer) SendFirePacket(fireInfo);
 
 	return fireInfo;
 }

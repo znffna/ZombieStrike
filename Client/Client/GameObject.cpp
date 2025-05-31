@@ -805,6 +805,9 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 			// Test¿ë
 			isGetModel = DeepCopyFromModel(pGameObject->m_strName, pGameObject);
 		}
+		else if (!strcmp(pstrToken, "<Tag>:")) {
+			::ReadStringFromFile(file, pGameObject->m_strTag);
+		}
 		else if (!strcmp(pstrToken, "<Transform>:"))
 		{
 			XMFLOAT3 xmf3Position, xmf3Rotation, xmf3Scale;

@@ -39,7 +39,7 @@ public:
 	virtual void ChangeMap(int nMapIndex);;
 
 	bool m_bIschambered = false; // 총알 장전 여부
-	virtual FIRE_INFO Fire();
+	virtual FIRE_INFO Fire(const std::shared_ptr<CPlayer>& pPlayer);
 
 	// Shader Variables
 	//void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
