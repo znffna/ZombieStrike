@@ -256,10 +256,11 @@ public:
 
 	virtual std::wstring GetShaderName() override { return L"CDepthRenderShader"; }
 
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
 	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState) override;
 
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override;
 
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
@@ -270,7 +271,7 @@ public:
 
 	void PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
 
 protected:
 	std::shared_ptr<CTexture> m_pDepthFromLightTexture;
@@ -306,19 +307,20 @@ protected:
 class CShadowMapShader : public CShader
 {
 public:
-	CShadowMapShader();
+	CShadowMapShader(const std::shared_ptr<CScene>& pScene);
 	virtual ~CShadowMapShader();
 
-	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState();
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
+	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
 
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob);
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob);
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState) override;
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override;
 
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void ReleaseShaderVariables();
 
-	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pContext = NULL);
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CTexture> pContext = NULL);
 	virtual void AnimateObjects(float fTimeElapsed) {}
 	virtual void ReleaseObjects();
 
@@ -327,7 +329,9 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 public:
-	CTexture* m_pDepthFromLightTexture = NULL;
+	std::shared_ptr<CTexture> m_pDepthFromLightTexture;
+
+	std::weak_ptr<CScene> m_pScene;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
