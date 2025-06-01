@@ -1668,6 +1668,10 @@ void CShadowMapShader::ReleaseShaderVariables()
 {
 }
 
+void CShadowMapShader::ReleaseUploadBuffers()
+{
+}
+
 void CShadowMapShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CTexture> pContext)
 {
 	m_pDepthFromLightTexture = (std::shared_ptr<CTexture>) pContext;
@@ -1678,10 +1682,6 @@ void CShadowMapShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 void CShadowMapShader::ReleaseObjects()
 {
 	if (m_pDepthFromLightTexture) m_pDepthFromLightTexture.reset();
-}
-
-void CShadowMapShader::ReleaseUploadBuffers()
-{
 }
 
 void CShadowMapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -1703,6 +1703,89 @@ void CShadowMapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 	}
 	//m_pObjectsShader->m_pDirectionalLight->UpdateShaderVariables(pd3dCommandList);
 	//m_pObjectsShader->m_pDirectionalLight->Render(pd3dCommandList, pCamera);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+CTextureToViewportShader::CTextureToViewportShader()
+{
+}
+
+CTextureToViewportShader::~CTextureToViewportShader()
+{
+}
+
+D3D12_DEPTH_STENCIL_DESC CTextureToViewportShader::CreateDepthStencilState(int nPipelineState)
+{
+	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
+	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
+	d3dDepthStencilDesc.DepthEnable = FALSE;
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	d3dDepthStencilDesc.StencilEnable = FALSE;
+	d3dDepthStencilDesc.StencilReadMask = 0x00;
+	d3dDepthStencilDesc.StencilWriteMask = 0x00;
+	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+
+	return(d3dDepthStencilDesc);
+}
+
+D3D12_SHADER_BYTECODE CTextureToViewportShader::CreateVertexShader(int nPipelineState)
+{
+#ifdef _COMPILE_SHADER
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTextureToViewport", "vs_5_1", m_pd3dVertexShaderBlob.GetAddressOf()));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"VSTextureToViewport", m_pd3dVertexShaderBlob.GetAddressOf()));
+#endif
+}
+
+D3D12_SHADER_BYTECODE CTextureToViewportShader::CreatePixelShader(int nPipelineState)
+{
+#ifdef _COMPILE_SHADER
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSTextureToViewport", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf()));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"PSTextureToViewport", m_pd3dPixelShaderBlob.GetAddressOf()));
+#endif
+}
+
+void CTextureToViewportShader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (m_pDepthFromLightTexture) m_pDepthFromLightTexture->UpdateShaderVariables(pd3dCommandList);
+}
+
+void CTextureToViewportShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CTexture> pContext)
+{
+	m_pDepthFromLightTexture = (std::shared_ptr<CTexture>) pContext;
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+}
+
+void CTextureToViewportShader::ReleaseObjects()
+{
+	m_pDepthFromLightTexture.reset();
+}
+
+void CTextureToViewportShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	D3D12_VIEWPORT d3dViewport = { 0.0f, 0.0f, WINDOW_WIDTH * 0.25f, WINDOW_HEIGHT * 0.25f, 0.0f, 1.0f };
+	D3D12_RECT d3dScissorRect = { 0, 0, WINDOW_WIDTH / 4, WINDOW_HEIGHT / 4 };
+	pd3dCommandList->RSSetViewports(1, &d3dViewport);
+	pd3dCommandList->RSSetScissorRects(1, &d3dScissorRect);
+
+	CShader::Render(pd3dCommandList, pCamera);
+
+	UpdateShaderVariables(pd3dCommandList);
+
+	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	pd3dCommandList->DrawInstanced(6, 1, 0, 0);
 }
 
 
