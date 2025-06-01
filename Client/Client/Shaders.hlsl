@@ -35,7 +35,7 @@ struct CB_TO_LIGHT_SPACE
     float4 f4Position;
 };
 
-cbuffer cbToLightSpace : register(b6)
+cbuffer cbToLightSpace : register(b5)
 {
     CB_TO_LIGHT_SPACE gcbToLightSpaces[MAX_LIGHTS];
 };
@@ -122,19 +122,42 @@ struct VS_STANDARD_OUTPUT
     float3 tangentW : TANGENT;
     float3 bitangentW : BITANGENT;
     float2 uv : TEXCOORD;
+    
+    float4 shadowMapUVs[MAX_LIGHTS] : TEXCOORD3;
 };
+
+struct ShadowMapUVs
+{
+    float4 UVs[MAX_LIGHTS];
+};
+
+ShadowMapUVs CalculateShadowMapUVs(float4 positionW)
+{
+    ShadowMapUVs result;
+    [unroll]
+    for (int i = 0; i < MAX_LIGHTS; i++)
+    {
+        if (gcbToLightSpaces[i].f4Position.w != 0.0f)
+            result.UVs[i] = mul(positionW, gcbToLightSpaces[i].mtxToTextureSpace);
+    }
+    return result;
+}
 
 VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
 {
     VS_STANDARD_OUTPUT output;
 
-    output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
+    float4 positionW = mul(float4(input.position, 1.0f), gmtxGameObject);
+    
+    output.positionW = positionW.xyz;
     output.normalW = mul(input.normal, (float3x3) gmtxGameObject);
     output.tangentW = mul(input.tangent, (float3x3) gmtxGameObject);
     output.bitangentW = mul(input.bitangent, (float3x3) gmtxGameObject);
     output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
     output.uv = input.uv;
-
+    
+    output.shadowMapUVs = CalculateShadowMapUVs(positionW);
+    
     return (output);
 }
 
@@ -171,15 +194,13 @@ float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
         float3 vNormal = normalize(cNormalColor.rgb * 2.0f - 1.0f); //[0, 1] → [-1, 1]
         normalW = normalize(mul(vNormal, TBN));
     }
-	float4 shadowMapUVs[MAX_LIGHTS];
-    cIllumination = Lighting(input.positionW, normalW, false, shadowMapUVs);
+    cIllumination = Lighting(input.positionW, normalW, true, input.shadowMapUVs);
   
     //return lerp(cColor * 0.3, cColor * cIllumination, 0.7);
     return (1.0 - 2.0 * cIllumination) * cColor * cColor + 2.0 * cIllumination * cColor;
- 
     
-        return (cColor);
-    }
+    return (cColor);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -233,6 +254,8 @@ struct VS_TERRAIN_OUTPUT
     float3 normalW : NORMAL;
     float2 uv0 : TEXCOORD0;
     float2 uv1 : TEXCOORD1;
+    
+    float4 shadowMapUVs[MAX_LIGHTS] : TEXCOORD3;
 };
 
 //정점 셰이더를 정의한다.
@@ -240,13 +263,16 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 {
     VS_TERRAIN_OUTPUT output;
 	
+    float4 positionW = mul(float4(input.position, 1.0f), gmtxGameObject);
+    output.positionW = positionW.xyz;
     output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
     output.color = input.color;
-    output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
     output.normalW = mul(input.normal, (float3x3) gmtxGameObject);
     //output.position = float4(input.position, 1.0f);
     output.uv0 = input.uv0;
     output.uv1 = input.uv1;
+    
+    output.shadowMapUVs = CalculateShadowMapUVs(positionW);
     
     return (output);
 }
@@ -265,8 +291,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     float4 detailTexColor = gtxtStandardTextures[1].Sample(gssWrap, input.uv1);
 #endif
     
-	float4 shadowMapUVs[MAX_LIGHTS];
-    float4 cIllumination = Lighting(input.positionW, input.normalW, false, shadowMapUVs);
+    float4 cIllumination = Lighting(input.positionW, input.normalW, false, input.shadowMapUVs);
     //float4 cColor = texColor * 0.5f + cIllumination * 0.5f;
     float4 cColor = (texColor * 0.8f + detailTexColor * 0.2f);
     return lerp(cColor, cIllumination, 0.5f);
@@ -325,15 +350,18 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
 //		mtxVertexToBoneWorld += input.weights[i] * gpmtxBoneTransforms[input.indices[i]];
         mtxVertexToBoneWorld += input.weights[i] * mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i]]);
     }
-    output.positionW = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld).xyz;
+    float4 positionW = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld);
+    output.positionW = positionW.xyz;
     output.normalW = mul(input.normal, (float3x3) mtxVertexToBoneWorld).xyz;
     output.tangentW = mul(input.tangent, (float3x3) mtxVertexToBoneWorld).xyz;
     output.bitangentW = mul(input.bitangent, (float3x3) mtxVertexToBoneWorld).xyz;
 
 //	output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
 
-    output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
+    output.position = mul(mul(positionW, gmtxView), gmtxProjection);
     output.uv = input.uv;
+    
+    output.shadowMapUVs = CalculateShadowMapUVs(positionW);
 
     return (output);
 }
@@ -540,7 +568,7 @@ struct PS_DEPTH_OUTPUT
     float fDepth : SV_Depth;
 };
 
-PS_DEPTH_OUTPUT PSDepthWriteShader(VS_LIGHTING_INPUT input)
+PS_DEPTH_OUTPUT PSDepthWriteShader(VS_LIGHTING_OUTPUT input)
 {
     PS_DEPTH_OUTPUT output;
 
@@ -558,7 +586,7 @@ struct VS_SHADOW_MAP_OUTPUT
     float3 positionW : POSITION;
     float3 normalW : NORMAL;
 
-    float4 shadowMapUVs[MAX_LIGHTS] : TEXCOORD0;
+    float4 shadowMapUVs[MAX_LIGHTS] : TEXCOORD3;
 };
 
 VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_STANDARD_INPUT input)
@@ -570,11 +598,7 @@ VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_STANDARD_INPUT input)
     output.position = mul(mul(positionW, gmtxView), gmtxProjection);
     output.normalW = mul(float4(input.normal, 0.0f), gmtxGameObject).xyz;
 
-    for (int i = 0; i < MAX_LIGHTS; i++)
-    {
-        if (gcbToLightSpaces[i].f4Position.w != 0.0f)
-            output.shadowMapUVs[i] = mul(positionW, gcbToLightSpaces[i].mtxToTextureSpace);
-    }
+    output.shadowMapUVs = CalculateShadowMapUVs(positionW);
 
     return (output);
 }

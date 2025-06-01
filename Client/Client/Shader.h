@@ -16,7 +16,7 @@ class CDescirptorHeap;
 class CShader
 {
 public:
-	CShader();
+	CShader(bool bAllowShadow = true);
 	~CShader();
 
 	// For Debugging
@@ -48,7 +48,7 @@ public:
 
 	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType(int nPipelineState = 0) { return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; }
 	virtual UINT GetRenderTargetCount(int nPipelineState = 0) { return 1; }
-	virtual DXGI_FORMAT GetRenderTargetFormat(int nPipelineState = 0, int nRenderTargetIndex = 0) { return DXGI_FORMAT_R8G8B8A8_UNORM; }
+	virtual DXGI_FORMAT GetRenderTargetFormat(int nPipelineState = 0, int nRenderTargetIndex = 0, bool bDepthWrite = false) { return (bDepthWrite)? DXGI_FORMAT_R32_FLOAT : DXGI_FORMAT_R8G8B8A8_UNORM; }
 	virtual DXGI_FORMAT GetDepthStencilFormat(int nPipelineState = 0) { return DXGI_FORMAT_D24_UNORM_S8_UINT; }
 	virtual DXGI_SAMPLE_DESC GetSampleDesc(int nPipelineState = 0);
 	virtual D3D12_PIPELINE_STATE_FLAGS GetPipelineStateFlags(int nPipelineState = 0) { return D3D12_PIPELINE_STATE_FLAG_NONE; }
@@ -88,7 +88,7 @@ protected:
 protected:
 	// 그림자 관련 변수
 	/* 해당 flag를 생성자에서 Set하며, 해당 flag를 통해 pipelineState Vector의 마지막에 추가한다.*/
-	bool m_bAllowShadow = false; // 그림자 허용 여부
+	bool m_bAllowShadow = true; // 그림자 허용 여부
 	
 };
 
@@ -153,9 +153,6 @@ public:
 
 	virtual std::wstring GetShaderName() override { return L"CTerrainShader"; }
 
-
-	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature) override;
-
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState) override;
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override;
@@ -188,12 +185,10 @@ public:
 	virtual ~CTexturedShader();
 
 	virtual std::wstring GetShaderName() override { return L"CTexturedShader"; }
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
 
-	virtual void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState);
-
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState) override;
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -206,11 +201,11 @@ public:
 
 	virtual std::wstring GetShaderName() override { return L"CBillboardShader"; }
 
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState) override;
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override;
 
-	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState);
-	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState);
+	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState) override;
+	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState) override;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -226,19 +221,19 @@ public:
 
 	virtual std::wstring GetShaderName() override { return L"CBulletShader"; }
 
-	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType(int nPipelineState);
+	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType(int nPipelineState) override;
 	virtual UINT GetNumRenderTargets(int nPipelineState);
 	virtual DXGI_FORMAT GetRTVFormat(int nPipelineState, int nRenderTarget);
 	virtual DXGI_FORMAT GetDSVFormat(int nPipelineState);
 
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState);
-	virtual D3D12_SHADER_BYTECODE CreateGeometryShader(int nPipelineState);
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState);
-	virtual D3D12_STREAM_OUTPUT_DESC CreateStreamOuputState(int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState) override;
+	virtual D3D12_SHADER_BYTECODE CreateGeometryShader(int nPipelineState) override;
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override;
+	virtual D3D12_STREAM_OUTPUT_DESC CreateStreamOuputState(int nPipelineState)override;
 
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
-	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState);
-	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState);
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
+	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState) override;
+	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
 
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature);
 
@@ -278,7 +273,7 @@ public:
 
 	virtual std::wstring GetShaderName() override { return L"CDepthRenderShader"; }
 
-	virtual DXGI_FORMAT GetRenderTargetFormat(int nPipelineState, int nRenderTargetIndex) override { return DXGI_FORMAT_R32_FLOAT; }
+	virtual DXGI_FORMAT GetRenderTargetFormat(int nPipelineState, int nRenderTargetIndex, bool bDepthWrite = false) override { return DXGI_FORMAT_R32_FLOAT; }
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
 	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState) override;
 
@@ -363,7 +358,7 @@ public:
 class CTextureToViewportShader : public CShader
 {
 public:
-	CTextureToViewportShader();
+	CTextureToViewportShader(CScene* pScene);
 	virtual ~CTextureToViewportShader();
 
 	virtual std::wstring GetShaderName() override { return L"CTextureToViewportShader"; }
@@ -382,4 +377,6 @@ public:
 
 protected:
 	std::shared_ptr<CTexture> m_pDepthFromLightTexture;
+
+	CScene* m_pScene;
 };

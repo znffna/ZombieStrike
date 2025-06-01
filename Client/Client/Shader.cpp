@@ -8,9 +8,11 @@
 #include "Texture.h"
 #include "Scene.h"
 
-CShader::CShader()
+CShader::CShader(bool bAllowShadow)
+	: m_bAllowShadow(bAllowShadow)
 {
 }
+
 
 CShader::~CShader()
 {
@@ -51,7 +53,7 @@ void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSi
 	m_d3dPipelineStateDesc.NumRenderTargets = GetRenderTargetCount(nPipelineState);
 	for (UINT i = 0; i < m_d3dPipelineStateDesc.NumRenderTargets; ++i)
 	{
-		m_d3dPipelineStateDesc.RTVFormats[i] = GetRenderTargetFormat(nPipelineState, i);
+		m_d3dPipelineStateDesc.RTVFormats[i] = GetRenderTargetFormat(nPipelineState, i, false);
 	}
 	m_d3dPipelineStateDesc.DSVFormat = GetDepthStencilFormat(nPipelineState);
 	m_d3dPipelineStateDesc.SampleDesc = GetSampleDesc(nPipelineState);
@@ -471,6 +473,7 @@ D3D12_INPUT_LAYOUT_DESC CStandardShader::CreateInputLayout(int nPipelineState)
 //
 
 CSkyBoxShader::CSkyBoxShader()
+	: CShader(false)
 {
 }
 
@@ -540,15 +543,6 @@ CTerrainShader::CTerrainShader()
 
 CTerrainShader::~CTerrainShader()
 {
-}
-
-void CTerrainShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature)
-{
-	// Resize Pipeline State Vector
-	m_pd3dPipelineStates.resize(1);
-
-	// Create Pipeline State
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0, false);
 }
 
 D3D12_INPUT_LAYOUT_DESC CTerrainShader::CreateInputLayout(int nPipelineState)
@@ -715,30 +709,22 @@ D3D12_INPUT_LAYOUT_DESC CTexturedShader::CreateInputLayout(int nPipelineState)
 	return(d3dInputLayoutDesc);
 }
 
-D3D12_SHADER_BYTECODE CTexturedShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE CTexturedShader::CreateVertexShader(int nPipelineState)
 {
 #ifdef _COMPILE_SHADER
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTextured", "vs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTextured", "vs_5_1", m_pd3dVertexShaderBlob.GetAddressOf()));
 #else
-	return(CShader::ReadCompiledShaderFromFile(L"VSTextured", ppd3dShaderBlob));
+	return(CShader::ReadCompiledShaderFromFile(L"VSTextured", m_pd3dVertexShaderBlob.GetAddressOf()));
 #endif
 }
 
-D3D12_SHADER_BYTECODE CTexturedShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE CTexturedShader::CreatePixelShader(int nPipelineState)
 {
 #ifdef _COMPILE_SHADER
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSTextured", "ps_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSTextured", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf()));
 #else
-	return(CShader::ReadCompiledShaderFromFile(L"PSTextured", ppd3dShaderBlob));
+	return(CShader::ReadCompiledShaderFromFile(L"PSTextured", m_pd3dPixelShaderBlob.GetAddressOf()));
 #endif
-}
-
-void CTexturedShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
-{
-	m_nPipelineStates = 1;
-	m_pd3dPipelineStates.resize(m_nPipelineStates);
-
-	CShader::CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0, false);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -751,21 +737,21 @@ CBillboardShader::~CBillboardShader()
 {
 }
 
-D3D12_SHADER_BYTECODE CBillboardShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE CBillboardShader::CreateVertexShader(int nPipelineState)
 {
 #ifdef _COMPILE_SHADER
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSBillboard", "vs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSBillboard", "vs_5_1", m_pd3dVertexShaderBlob.GetAddressOf()));
 #else
-	return(CShader::ReadCompiledShaderFromFile(L"VSBillboard", ppd3dShaderBlob));
+	return(CShader::ReadCompiledShaderFromFile(L"VSBillboard", m_pd3dVertexShaderBlob.GetAddressOf()));
 #endif
 }
 
-D3D12_SHADER_BYTECODE CBillboardShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE CBillboardShader::CreatePixelShader(int nPipelineState)
 {
 #ifdef _COMPILE_SHADER
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSBillboard", "ps_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSBillboard", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf()));
 #else
-	return(CShader::ReadCompiledShaderFromFile(L"PSBillboard", ppd3dShaderBlob));
+	return(CShader::ReadCompiledShaderFromFile(L"PSBillboard", m_pd3dPixelShaderBlob.GetAddressOf()));
 #endif
 }
 
@@ -1026,12 +1012,15 @@ D3D12_SHADER_BYTECODE CIlluminatedShader::CreatePixelShader(int nPipelineState)
 CDepthRenderShader::CDepthRenderShader(CScene* pScene)
 	: CSkinnedAnimationStandardShader(), m_pScene(pScene), m_pd3dcbToLightSpaces(nullptr), m_pcbMappedToLightSpaces(nullptr)
 {
+	m_bAllowShadow = false;
+
 	m_pToLightSpaces.resize(1);
 
 	XMFLOAT4X4 xmf4x4ToTexture = { 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f };
 	m_xmProjectionToTexture = XMLoadFloat4x4(&xmf4x4ToTexture);
 
 	m_nPipelineStates = 2;
+
 }
 
 CDepthRenderShader::~CDepthRenderShader()
@@ -1114,10 +1103,14 @@ void CDepthRenderShader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12G
 
 void CDepthRenderShader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	// 모든 조명에 대한 Matrix 및 위치 정보 연결
 	::memcpy(m_pcbMappedToLightSpaces, m_pToLightSpaces.data(), sizeof(TOLIGHTSPACEINFO));
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dcbToLightGpuVirtualAddress = m_pd3dcbToLightSpaces->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_TO_LIGHT, d3dcbToLightGpuVirtualAddress);
+
+	// 그림자맵 연결
+	m_pDepthFromLightTexture->UpdateShaderVariables(pd3dCommandList);
 }
 
 void CDepthRenderShader::ReleaseShaderVariables()
@@ -1770,8 +1763,10 @@ void CShadowMapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-CTextureToViewportShader::CTextureToViewportShader()
+CTextureToViewportShader::CTextureToViewportShader(CScene* pScene)
+	: CShader(), m_pScene(pScene)
 {
+	m_bAllowShadow = false;
 }
 
 CTextureToViewportShader::~CTextureToViewportShader()
@@ -1842,7 +1837,7 @@ void CTextureToViewportShader::Render(ID3D12GraphicsCommandList* pd3dCommandList
 	pd3dCommandList->RSSetViewports(1, &d3dViewport);
 	pd3dCommandList->RSSetScissorRects(1, &d3dScissorRect);
 
-	CShader::Render(pd3dCommandList, pCamera);
+	CShader::OnPrepareRender(pd3dCommandList);
 
 	UpdateShaderVariables(pd3dCommandList);
 

@@ -102,6 +102,10 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pShadowShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
 	m_pShadowShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture());
 
+	m_pShadowMapToViewport = std::make_shared<CTextureToViewportShader>(this);
+	m_pShadowMapToViewport->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+	m_pShadowMapToViewport->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture());
+
 	// 마지막 모든 Object의 생성이 끝나면 Player의 카메라를 추적
 	if (m_pPlayer)
 	{
