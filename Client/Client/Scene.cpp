@@ -316,6 +316,11 @@ bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
 		return false;
 	}
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature.Get());
+
+	if (m_pDescriptorHeap) {
+		ID3D12DescriptorHeap* ppHeaps[] = { m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap.Get() };
+		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	}
 	UpdateShaderVariables(pd3dCommandList);
 
 	return true;
@@ -339,8 +344,8 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 	// Set Descriptor Heap
-	ID3D12DescriptorHeap* ppHeaps[] = { m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap.Get() };
-	pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	/*ID3D12DescriptorHeap* ppHeaps[] = { m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap.Get() };
+	pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);*/
 
 	if(m_pDepthRenderShader) m_pDepthRenderShader->UpdateShaderVariables(pd3dCommandList);
 

@@ -136,11 +136,14 @@ struct ShadowMapUVs
 ShadowMapUVs CalculateShadowMapUVs(float4 positionW)
 {
     ShadowMapUVs result;
-    [unroll]
     for (int i = 0; i < MAX_LIGHTS; i++)
     {
         if (gcbToLightSpaces[i].f4Position.w != 0.0f)
+        {
             result.UVs[i] = mul(positionW, gcbToLightSpaces[i].mtxToTextureSpace);
+            result.UVs[i].xyz /= result.UVs[i].w; // Perspective divide
+            //result.UVs[i] /= result.UVs[i].w; // Perspective divide
+        }
     }
     return result;
 }
@@ -155,10 +158,10 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
     output.normalW = mul(input.normal, (float3x3) gmtxGameObject);
     output.tangentW = mul(input.tangent, (float3x3) gmtxGameObject);
     output.bitangentW = mul(input.bitangent, (float3x3) gmtxGameObject);
-    output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
+    output.position = mul(mul(float4(positionW), gmtxView), gmtxProjection);
     output.uv = input.uv;
     
-    output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;
+    output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;   
     
     return (output);
 }
@@ -353,6 +356,7 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
 //		mtxVertexToBoneWorld += input.weights[i] * gpmtxBoneTransforms[input.indices[i]];
         mtxVertexToBoneWorld += input.weights[i] * mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i]]);
     }
+    
     float4 positionW = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld);
     output.positionW = positionW.xyz;
     output.normalW = mul(input.normal, (float3x3) mtxVertexToBoneWorld).xyz;
@@ -365,6 +369,7 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
     output.uv = input.uv;
     
     output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;
+  
 
     return (output);
 }

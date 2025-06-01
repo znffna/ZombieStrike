@@ -266,8 +266,13 @@ public:
 
 struct TOLIGHTSPACEINFO
 {
-	XMFLOAT4X4						m_pxmf4x4ToTextures[MAX_LIGHTS]; //Transposed
-	XMFLOAT4						m_pxmf4LightPositions[MAX_LIGHTS];
+	XMFLOAT4X4						m_pxmf4x4ToTextures; //Transposed
+	XMFLOAT4						m_pxmf4LightPositions;
+};
+
+struct CB_TO_LIGHTSPACES
+{
+	TOLIGHTSPACEINFO m_ToLightSpaces[MAX_LIGHTS];
 };
 
 class CDepthRenderShader : public CSkinnedAnimationStandardShader

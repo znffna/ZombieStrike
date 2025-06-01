@@ -430,13 +430,12 @@ void CShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nP
 	if (bDepthWrite)
 	{
 		if (m_pd3dPipelineStates.back()) pd3dCommandList->SetPipelineState(m_pd3dPipelineStates.back().Get());
-		return;
 	}
-
-	if (nPipelineState < m_pd3dPipelineStates.size())
+	else if (nPipelineState < m_pd3dPipelineStates.size())
 	{
 		if (m_pd3dPipelineStates[nPipelineState]) pd3dCommandList->SetPipelineState(m_pd3dPipelineStates[nPipelineState].Get());
 	}
+	UpdateShaderVariables(pd3dCommandList);
 }
 
 void CShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -1078,7 +1077,8 @@ CDepthRenderShader::CDepthRenderShader(CScene* pScene)
 {
 	m_bAllowShadow = false;
 
-	m_pToLightSpaces.resize(1);
+	m_pToLightSpaces.resize(MAX_LIGHTS);
+	ZeroMemory(m_pToLightSpaces.data(), sizeof(TOLIGHTSPACEINFO) * MAX_LIGHTS);
 
 	XMFLOAT4X4 xmf4x4ToTexture = {
 		0.5f, 0.0f, 0.0f, 0.0f
@@ -1162,7 +1162,7 @@ void CDepthRenderShader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12G
 {
 	UINT ncbDepthElementBytes;
 
-	ncbDepthElementBytes = ((sizeof(TOLIGHTSPACEINFO) + 255) & ~255); //256의 배수
+	ncbDepthElementBytes = ((sizeof(CB_TO_LIGHTSPACES) + 255) & ~255); //256의 배수
 	m_pd3dcbToLightSpaces = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbDepthElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbToLightSpaces->Map(0, NULL, (void**)&m_pcbMappedToLightSpaces);
@@ -1171,7 +1171,7 @@ void CDepthRenderShader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12G
 void CDepthRenderShader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	// 모든 조명에 대한 Matrix 및 위치 정보 연결
-	::memcpy(m_pcbMappedToLightSpaces, m_pToLightSpaces.data(), sizeof(TOLIGHTSPACEINFO));
+	::memcpy(m_pcbMappedToLightSpaces, m_pToLightSpaces.data(), sizeof(CB_TO_LIGHTSPACES));
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dcbToLightGpuVirtualAddress = m_pd3dcbToLightSpaces->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_TO_LIGHT, d3dcbToLightGpuVirtualAddress);
@@ -1696,8 +1696,8 @@ void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommand
 			XMStoreFloat4x4(&m_ppDepthRenderCameras[j]->m_xmf4x4Projection, xmmtxProjection);
 
 			XMMATRIX xmmtxToTexture = XMMatrixTranspose(xmmtxLightView * xmmtxProjection * m_xmProjectionToTexture);
-			XMStoreFloat4x4(&m_pToLightSpaces[0].m_pxmf4x4ToTextures[j], xmmtxToTexture);
-			m_pToLightSpaces[0].m_pxmf4LightPositions[j] = XMFLOAT4(xmf3Position.x, xmf3Position.y, xmf3Position.z, 1.0f);
+			XMStoreFloat4x4(&m_pToLightSpaces[j].m_pxmf4x4ToTextures, xmmtxToTexture);
+			m_pToLightSpaces[j].m_pxmf4LightPositions = XMFLOAT4(xmf3Position.x, xmf3Position.y, xmf3Position.z, 1.0f);
 
 			::SynchronizeResourceTransition(pd3dCommandList, m_pDepthFromLightTexture->GetResource(j), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
@@ -1712,7 +1712,7 @@ void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommand
 		}
 		else
 		{
-			m_pToLightSpaces[0].m_pxmf4LightPositions[j].w = 0.0f;
+			m_pToLightSpaces[j].m_pxmf4LightPositions.w = 0.0f;
 		}
 	}
 }
