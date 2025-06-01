@@ -411,11 +411,41 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		}
 	}
 
-
 	// Render Child Object
 	for (auto& pChild : m_pChilds)
 	{
 		pChild->Render(pd3dCommandList, pCamera);
+	}
+}
+
+void CGameObject::RenderForward(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (false == m_bActive) return;
+
+	// Skinned Animation Update
+	if (m_pSkinnedAnimationController)
+		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
+
+	if (m_pMesh) {
+		// Set Shader Variables
+		UpdateShaderVariables(pd3dCommandList); // GameObject Matrix Update
+
+		for (int i = 0; i < m_ppMaterials.size(); ++i)
+		{
+			// Render Mesh
+			m_pMesh->Render(pd3dCommandList, i);
+		}
+		if (m_ppMaterials.empty())
+		{
+			// Render Mesh
+			m_pMesh->Render(pd3dCommandList);
+		}
+	}
+
+	// Render Child Object
+	for (auto& pChild : m_pChilds)
+	{
+		pChild->RenderForward(pd3dCommandList, pCamera);
 	}
 }
 

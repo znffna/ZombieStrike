@@ -164,6 +164,7 @@ public:
 
 	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
+	virtual void RenderWorldObject(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 	virtual bool OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 	virtual void OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList) {} ;
 

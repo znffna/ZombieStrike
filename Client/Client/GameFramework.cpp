@@ -516,14 +516,22 @@ void CGameFramework::AdvanceFrame()
 			scene->OnPostRender(nullptr);
 	}
 
+	// Input 업데이트
+	ProcessInput();
+
 	// Command List 재사용
 	m_pd3dCommandAllocator[m_nSwapChainBufferIndex]->Reset();
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->Reset(m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get(), nullptr);
 
-	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
-	OMSetBackBuffer();
-	// Clear Back Buffer And Depth-Stencil Buffer 
-	ClearRtvAndDsv();
+	// Update
+	for (auto& scene : m_Scenes)
+	{
+		if (scene->CheckWorkUpdating())
+		{
+			// Scene 정보 업데이트
+			scene->Update(m_GameTimer.DeltaTime());
+		}
+	}
 
 	// Scene Container 업데이트
 	for (auto it = m_Scenes.begin(); it != m_Scenes.end(); ) {
@@ -540,45 +548,55 @@ void CGameFramework::AdvanceFrame()
 		}
 	}
 
-	// Input 업데이트
-	ProcessInput();
+	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
+	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
+	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
+	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	d3dResourceBarrier.Transition.pResource = m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex].Get();
+	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	m_pd3dCommandList[m_nSwapChainBufferIndex]->ResourceBarrier(1, &d3dResourceBarrier);
+
+	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
+	OMSetBackBuffer();
+	// Clear Back Buffer And Depth-Stencil Buffer 
+	ClearRtvAndDsv();
+
+
+	if(false == m_Scenes.empty()) m_Scenes.back()->PrepareRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 
 	int bRenderScene = 0;
 	for (auto& scene : m_Scenes)
 	{		
-		if (scene->CheckWorkUpdating())
+		if (scene->CheckWorkRendering())
 		{
-			// Scene 정보 업데이트
-			scene->Update(m_GameTimer.DeltaTime());
-			if (scene->CheckWorkRendering())
-			{
-				scene->PrepareRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
-				scene->OnPreRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
-				// Framework 정보 업데이트
-				UpdateShaderVariables();
+			scene->OnPreRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
+			// Framework 정보 업데이트
+			UpdateShaderVariables();
 
-				bRenderScene += scene->Render(m_pd3dCommandList[m_nSwapChainBufferIndex].Get(), nullptr) ? 1 : 0;
-			}
+			OMSetBackBuffer();
+			bRenderScene += scene->Render(m_pd3dCommandList[m_nSwapChainBufferIndex].Get(), nullptr) ? 1 : 0;
 		}
 	}
 	if (0 == bRenderScene) {
 		// 렌더링된 Scene이 없는 경우 Loading Scene을 출력
 		if(m_pLoadingScene)
 		{
+			m_pLoadingScene->Update(m_GameTimer.DeltaTime());
 			// Scene Root Signature를 사용
 			m_pLoadingScene->PrepareRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
-			m_pLoadingScene->OnPreRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 			// Framework 정보 업데이트
 			UpdateShaderVariables();
+			m_pLoadingScene->OnPreRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 
-			// Scene 정보 업데이트 및 렌더링
-			m_pLoadingScene->Update(m_GameTimer.DeltaTime());
+			OMSetBackBuffer();
 			m_pLoadingScene->Render(m_pd3dCommandList[m_nSwapChainBufferIndex].Get(), nullptr);
 		}
 	}
 
 	// Command List에 대한 명령들을 종료
-	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
 	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
 	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -611,17 +629,6 @@ void CGameFramework::AdvanceFrame()
 
 void CGameFramework::OMSetBackBuffer()
 {
-	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
-	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
-	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
-	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	d3dResourceBarrier.Transition.pResource = m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex].Get();
-	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	m_pd3dCommandList[m_nSwapChainBufferIndex]->ResourceBarrier(1, &d3dResourceBarrier);
-
 	// Get CPU Descriptor Handle of RTV
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	d3dRtvCPUDescriptorHandle.ptr += m_nSwapChainBufferIndex * ::gnRtvDescriptorIncrementSize;

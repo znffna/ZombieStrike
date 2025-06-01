@@ -314,6 +314,8 @@ bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
 		return false;
 	}
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature.Get());
+	UpdateShaderVariables(pd3dCommandList);
+
 	return true;
 }
 
@@ -333,9 +335,6 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		// Scene is not running or pausing
 		return (false);
 	}
-
-	// Set Root Signature
-	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature.Get());
 
 	// Set Descriptor Heap
 	ID3D12DescriptorHeap* ppHeaps[] = { m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap.Get() };
@@ -360,12 +359,9 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	if (m_pShadowShader) m_pShadowShader->Render(pd3dCommandList, pCamera);
 	if (m_pShadowMapToViewport) m_pShadowMapToViewport->Render(pd3dCommandList, pCamera);
 
-
 	// Render GameObjects 
 	for (auto& pvecObjects : m_ppGameObjects)
 	{
-		if (pvecObjects.first == CGameObject::GAMEOBJECT_LAYER::LAYER_BULLET)
-			std::cout << 1; // UI´Â Á¦¿Ü
 		for (auto& pObject : pvecObjects.second)
 		{
 			pObject->Update(0.0f);
@@ -387,6 +383,29 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 	return (true);
+}
+
+void CScene::RenderWorldObject(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	std::set<CGameObject::GAMEOBJECT_LAYER> layer = {
+		CGameObject::GAMEOBJECT_LAYER::LAYER_TERRAIN,
+		CGameObject::GAMEOBJECT_LAYER::LAYER_ENVIRONMENT,
+		CGameObject::GAMEOBJECT_LAYER::LAYER_PLAYER,
+		CGameObject::GAMEOBJECT_LAYER::LAYER_ENEMY,
+		CGameObject::GAMEOBJECT_LAYER::LAYER_GUN,
+	};
+
+	// Render GameObjects 
+	for (auto& pvecObjects : m_ppGameObjects)
+	{
+		if (false == layer.contains(pvecObjects.first))
+			continue;
+		for (auto& pObject : pvecObjects.second)
+		{
+			pObject->Update(0.0f);
+			pObject->RenderForward(pd3dCommandList, pCamera);
+		}
+	}
 }
 
 ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd3dDevice)
@@ -473,8 +492,21 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 		d3dDescriptorRanges.push_back(d3dDescriptorRange);
 	}
 
+	// Depth Write Texture
+	{
+		d3dDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		d3dDescriptorRange.NumDescriptors = MAX_DEPTH_TEXTURES;
+		d3dDescriptorRange.BaseShaderRegister = 14; // t14: Depth Buffer
+		d3dDescriptorRange.RegisterSpace = 0;
+		d3dDescriptorRange.OffsetInDescriptorsFromTableStart = 0;
+
+		d3dDescriptorRanges.push_back(d3dDescriptorRange);
+	}
+
 	// Root Parameter 
-	std::vector<D3D12_ROOT_PARAMETER> pd3dRootParameters(9);
+	std::vector<D3D12_ROOT_PARAMETER> pd3dRootParameters(11); // 11 = Object ~ Light (5) + Texture(1) + Skybox(1) + Skinning(2) + Depth write(1) + ToLight(1)
+
+	int nDescriptorIndexCounter = 0;
 
 #ifdef _USE_OBJECT_MATERIAL_CBV
 	// 0
@@ -523,48 +555,48 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 
 	pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[0];
+	pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[1];
+	pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[2];
+	pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[3];
+	pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[4];
+	pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[5];
+	pd3dRootParameters[ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[6];
+	pd3dRootParameters[ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 #else
 	pd3dRootParameters[ROOT_PARAMETER_STANDARD_TEXTURES].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_STANDARD_TEXTURES].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_STANDARD_TEXTURES].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[0];
+	pd3dRootParameters[ROOT_PARAMETER_STANDARD_TEXTURES].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_STANDARD_TEXTURES].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 #endif
 	// Skybox
 	pd3dRootParameters[ROOT_PARAMETER_SKYBOX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_SKYBOX].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_SKYBOX].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[ROOT_PARAMETER_SKYBOX - ROOT_PARAMETER_LIGHT - 1];
+	pd3dRootParameters[ROOT_PARAMETER_SKYBOX].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_SKYBOX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	// Skin Mesh Bone
@@ -578,8 +610,21 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].Descriptor.RegisterSpace = 0;
 	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
+	// Depth Write
+	pd3dRootParameters[ROOT_PARAMETER_DEPTH_WRITE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[ROOT_PARAMETER_DEPTH_WRITE].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[ROOT_PARAMETER_DEPTH_WRITE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
+	pd3dRootParameters[ROOT_PARAMETER_DEPTH_WRITE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	// ToLight
+	pd3dRootParameters[ROOT_PARAMETER_TO_LIGHT].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[ROOT_PARAMETER_TO_LIGHT].Descriptor.ShaderRegister = 6; // b6 : cbToLight
+	pd3dRootParameters[ROOT_PARAMETER_TO_LIGHT].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[ROOT_PARAMETER_TO_LIGHT].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+
 	// Static Sampler
-	std::vector<D3D12_STATIC_SAMPLER_DESC> pd3dStaticSamplerDescs(1);
+	std::vector<D3D12_STATIC_SAMPLER_DESC> pd3dStaticSamplerDescs(4);
 
 	// WRAP Sampler [0.0 ~ 1.0)
 	pd3dStaticSamplerDescs[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -594,6 +639,48 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	pd3dStaticSamplerDescs[0].ShaderRegister = 0;
 	pd3dStaticSamplerDescs[0].RegisterSpace = 0;
 	pd3dStaticSamplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	pd3dStaticSamplerDescs[1].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	pd3dStaticSamplerDescs[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[1].MipLODBias = 0;
+	pd3dStaticSamplerDescs[1].MaxAnisotropy = 1;
+	pd3dStaticSamplerDescs[1].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	pd3dStaticSamplerDescs[1].BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
+	pd3dStaticSamplerDescs[1].MinLOD = 0;
+	pd3dStaticSamplerDescs[1].MaxLOD = D3D12_FLOAT32_MAX;
+	pd3dStaticSamplerDescs[1].ShaderRegister = 1;
+	pd3dStaticSamplerDescs[1].RegisterSpace = 0;
+	pd3dStaticSamplerDescs[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	pd3dStaticSamplerDescs[2].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	pd3dStaticSamplerDescs[2].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[2].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[2].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[2].MipLODBias = 0.0f;
+	pd3dStaticSamplerDescs[2].MaxAnisotropy = 1;
+	pd3dStaticSamplerDescs[2].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL; //D3D12_COMPARISON_FUNC_LESS
+	pd3dStaticSamplerDescs[2].BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE; // D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+	pd3dStaticSamplerDescs[2].MinLOD = 0;
+	pd3dStaticSamplerDescs[2].MaxLOD = D3D12_FLOAT32_MAX;
+	pd3dStaticSamplerDescs[2].ShaderRegister = 2;
+	pd3dStaticSamplerDescs[2].RegisterSpace = 0;
+	pd3dStaticSamplerDescs[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	pd3dStaticSamplerDescs[3].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	pd3dStaticSamplerDescs[3].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[3].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[3].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[3].MipLODBias = 0.0f;
+	pd3dStaticSamplerDescs[3].MaxAnisotropy = 1;
+	pd3dStaticSamplerDescs[3].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	pd3dStaticSamplerDescs[3].BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+	pd3dStaticSamplerDescs[3].MinLOD = 0;
+	pd3dStaticSamplerDescs[3].MaxLOD = D3D12_FLOAT32_MAX;
+	pd3dStaticSamplerDescs[3].ShaderRegister = 3;
+	pd3dStaticSamplerDescs[3].RegisterSpace = 0;
+	pd3dStaticSamplerDescs[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	// Root Signature Flags
 	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags =

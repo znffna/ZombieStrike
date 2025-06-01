@@ -11,6 +11,7 @@
 class CCamera;
 class CScene;
 class CTexture;
+class CDescirptorHeap;
 
 class CShader
 {
@@ -242,22 +243,36 @@ private:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
+class CIlluminatedShader : public CShader
+{
+public:
+	CIlluminatedShader();
+	virtual ~CIlluminatedShader();
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
+
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState)override;
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState)override;
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
 struct TOLIGHTSPACEINFO
 {
 	XMFLOAT4X4						m_pxmf4x4ToTextures[MAX_LIGHTS]; //Transposed
 	XMFLOAT4						m_pxmf4LightPositions[MAX_LIGHTS];
 };
 
-class CDepthRenderShader : public CShader
+class CDepthRenderShader : public CIlluminatedShader
 {
 public:
-	CDepthRenderShader(const std::shared_ptr<CScene>& pScene);
+	CDepthRenderShader(CScene* pScene);
 	virtual ~CDepthRenderShader();
 
 	virtual std::wstring GetShaderName() override { return L"CDepthRenderShader"; }
 
-	virtual DXGI_FORMAT GetRenderTargetFormat(int nPipelineState = 0, int nRenderTargetIndex = 0) override { return DXGI_FORMAT_R32_FLOAT; }
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
+	virtual DXGI_FORMAT GetRenderTargetFormat(int nPipelineState, int nRenderTargetIndex) override { return DXGI_FORMAT_R32_FLOAT; }
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
 	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState) override;
 
@@ -289,8 +304,8 @@ protected:
 	XMMATRIX						m_xmProjectionToTexture;
 
 public:
-	std::shared_ptr<CTexture> GetDepthTexture() { return m_pDepthFromLightTexture; }
-	ID3D12Resource* GetDepthTextureResource(UINT nIndex) { return(m_pDepthFromLightTexture->GetResource(nIndex)); }
+	std::shared_ptr<CTexture> GetDepthTexture();
+	ID3D12Resource* GetDepthTextureResource(UINT nIndex);
 
 protected:
 	std::vector<TOLIGHTSPACEINFO> m_pToLightSpaces;
@@ -302,18 +317,17 @@ protected:
 	int m_nDepthbufferWidth;
 	int m_nDepthbufferHeight;
 
-	std::weak_ptr<CScene> m_pScene;
+	CScene* m_pScene;
 };
 
-class CShadowMapShader : public CShader
+class CShadowMapShader : public CIlluminatedShader
 {
 public:
-	CShadowMapShader(const std::shared_ptr<CScene>& pScene);
+	CShadowMapShader(CScene* pScene);
 	virtual ~CShadowMapShader();
 
 	virtual std::wstring GetShaderName() override { return L"CShadowMapShader"; }
 
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
 
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState) override;
@@ -334,7 +348,7 @@ public:
 public:
 	std::shared_ptr<CTexture> m_pDepthFromLightTexture;
 
-	std::weak_ptr<CScene> m_pScene;
+	CScene* m_pScene;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

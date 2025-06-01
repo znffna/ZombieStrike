@@ -129,6 +129,7 @@ public:
 	// Object Render
 	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
+	virtual void RenderForward(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
 
 	// Object Collision
 	virtual void OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::shared_ptr<CCollider>& pColliderA, std::shared_ptr<CCollider>& pColliderB); // Collision Event
