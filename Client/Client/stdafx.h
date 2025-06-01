@@ -56,8 +56,6 @@
 #include <dxgidebug.h>
 #endif
 
-
-
 // 프로그램 실행시 전체화면 On / OFF (F9 키로 실행 중에 전환 가능)
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
 
@@ -85,6 +83,17 @@ using Microsoft::WRL::ComPtr;
 // Global Variables
 #define _WITH_STANDARD_TEXTURE_MULTIPLE_PARAMETERS
 #define SKINNED_TRANSFORM_GPU_BUFFER 3000
+
+// Light
+#define MAX_LIGHTS 16
+
+#define POINT_LIGHT			1
+#define SPOT_LIGHT			2
+#define DIRECTIONAL_LIGHT	3
+
+// Shadow
+#define MAX_DEPTH_TEXTURES		MAX_LIGHTS
+#define _WITH_DEPTH_TO_TEXTURE
 
 // Root Signature Paramater Index
 #define ROOT_PARAMETER_OBJECT 0

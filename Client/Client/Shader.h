@@ -9,6 +9,8 @@
 #include "stdafx.h"
 
 class CCamera;
+class CScene;
+class CTexture;
 
 class CShader
 {
@@ -49,16 +51,17 @@ public:
 	virtual D3D12_PIPELINE_STATE_FLAGS GetPipelineStateFlags(int nPipelineState = 0) { return D3D12_PIPELINE_STATE_FLAG_NONE; }
 
 	// Shader Functions
-	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) { }
-	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList) { }
-	virtual void ReleaseShaderVariables() { }
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList) {}
+	virtual void ReleaseShaderVariables() {}
 
-	virtual void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4X4* pxmf4x4World) { }
+	virtual void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4X4* pxmf4x4World) {}
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
-	virtual void ReleaseUploadBuffers() { }
+	virtual void ReleaseUploadBuffers() {}
+
 
 protected:
 	// Shader Variables
@@ -72,6 +75,12 @@ protected:
 	ComPtr<ID3DBlob> m_pd3dDomainShaderBlob;
 	ComPtr<ID3DBlob> m_pd3dHullShaderBlob;
 	ComPtr<ID3DBlob> m_pd3dGeometryShaderBlob;
+
+protected:
+	std::unique_ptr<CDescirptorHeap> m_pDescriptorHeap;
+
+	void CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews);
+	void CreateShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex);
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -228,4 +237,119 @@ public:
 
 private:
 	std::shared_ptr<CDescirptorHeap> m_pd3dCbvSrvDescriptorHeap = NULL;
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+struct TOLIGHTSPACEINFO
+{
+	XMFLOAT4X4						m_pxmf4x4ToTextures[MAX_LIGHTS]; //Transposed
+	XMFLOAT4						m_pxmf4LightPositions[MAX_LIGHTS];
+};
+
+class CDepthRenderShader : public CShader
+{
+public:
+	CDepthRenderShader(const std::shared_ptr<CScene>& pScene);
+	virtual ~CDepthRenderShader();
+
+	virtual std::wstring GetShaderName() override { return L"CDepthRenderShader"; }
+
+	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
+	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState) override;
+
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState);
+
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void ReleaseShaderVariables();
+
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pContext = NULL);
+	virtual void ReleaseObjects();
+
+	void PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+protected:
+	std::shared_ptr<CTexture> m_pDepthFromLightTexture;
+
+	std::array<std::shared_ptr<CCamera>, MAX_DEPTH_TEXTURES> m_ppDepthRenderCameras;
+
+	ComPtr<ID3D12DescriptorHeap> m_pd3dRtvDescriptorHeap;
+	D3D12_CPU_DESCRIPTOR_HANDLE		m_pd3dRtvCPUDescriptorHandles[MAX_DEPTH_TEXTURES];
+
+	ComPtr<ID3D12DescriptorHeap> m_pd3dDsvDescriptorHeap;
+	ComPtr<ID3D12Resource> m_pd3dDepthBuffer;
+	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dDsvDescriptorCPUHandle;
+
+	XMMATRIX						m_xmProjectionToTexture;
+
+public:
+	CTexture* GetDepthTexture() { return(m_pDepthFromLightTexture.get()); }
+	ID3D12Resource* GetDepthTextureResource(UINT nIndex) { return(m_pDepthFromLightTexture->GetResource(nIndex)); }
+
+protected:
+	std::vector<TOLIGHTSPACEINFO> m_pToLightSpaces;
+
+	ComPtr<ID3D12Resource> m_pd3dcbToLightSpaces;
+	TOLIGHTSPACEINFO* m_pcbMappedToLightSpaces = NULL;
+
+protected:
+	int m_nDepthbufferWidth;
+	int m_nDepthbufferHeight;
+
+	std::weak_ptr<CScene> m_pScene;
+};
+
+class CShadowMapShader : public CShader
+{
+public:
+	CShadowMapShader();
+	virtual ~CShadowMapShader();
+
+	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState();
+
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob);
+
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void ReleaseShaderVariables();
+
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pContext = NULL);
+	virtual void AnimateObjects(float fTimeElapsed) {}
+	virtual void ReleaseObjects();
+
+	virtual void ReleaseUploadBuffers();
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+public:
+	CTexture* m_pDepthFromLightTexture = NULL;
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+class CTextureToViewportShader : public CShader
+{
+public:
+	CTextureToViewportShader();
+	virtual ~CTextureToViewportShader();
+
+	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState();
+
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob);
+
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pContext = NULL);
+	virtual void ReleaseObjects();
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+protected:
+	CTexture* m_pDepthFromLightTexture = NULL;
 };

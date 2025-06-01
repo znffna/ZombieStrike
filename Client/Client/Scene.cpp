@@ -630,7 +630,6 @@ void CScene::CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstant
 	m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dCbvGPUDescriptorStartHandle;
 	m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dSrvCPUDescriptorStartHandle;
 	m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dSrvGPUDescriptorStartHandle;
-
 }
 
 void CScene::CreateConstantBufferViews(ID3D12Device* pd3dDevice, int nConstantBufferViews, ID3D12Resource* pd3dConstantBuffers, UINT nStride)
@@ -771,5 +770,17 @@ void CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam,
 		m_bMouseLButtonDown = false;
 		break;
 	}
+}
+
+BoundingBox CScene::CalculateBoundingBox()
+{
+	BoundingBox ret;
+	for (auto& pvecObject : m_ppGameObjects) {
+		for (auto& pObject : pvecObject.second) {
+			BoundingBox box = pObject->GetMergedMeshBound();
+			ret.CreateMerged(ret, box, ret);
+		}
+	}
+	return ret;
 }
 

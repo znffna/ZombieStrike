@@ -99,7 +99,7 @@ protected:
 	//XMFLOAT3 m_xmf3LookAtWorld; // World
 	XMFLOAT3 m_xmf3Offset = XMFLOAT3{0.0f, 0.0f, 0.0f}; // 오브젝트(Owner)와의 상대적 포지션[Local]
 	float m_fTimeLag = 0.0f;
-
+public:
 	// Camera Shader Matrix
 	XMFLOAT4X4 m_xmf4x4View;
 	XMFLOAT4X4 m_xmf4x4Projection;

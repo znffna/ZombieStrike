@@ -30,12 +30,6 @@ struct INPUT_PARAMETER
 	float cyDelta;
 };
 
-#define MAX_LIGHTS 16
-
-#define POINT_LIGHT			1
-#define SPOT_LIGHT			2
-#define DIRECTIONAL_LIGHT	3
-
 struct Light
 {
 	XMFLOAT4				m_xmf4Ambient;
@@ -161,7 +155,7 @@ public:
 	virtual void AddObjects(const std::vector<std::shared_ptr<CGameObject>>& pObjects);
 	virtual void RemoveObject(const std::shared_ptr<CGameObject>& pObject);
 	void LateUpdate();
-	std::unordered_map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>>& GetObjects() { return m_ppGameObjects; }
+	std::map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>>& GetObjects() { return m_ppGameObjects; }
 
 	void SetPlayer(std::shared_ptr<CPlayer> pPlayer);
 
@@ -231,7 +225,7 @@ protected:
 	float								m_fElapsedTime = 0.0f;
 
 	// GameObjects
-	std::unordered_map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>> m_ppGameObjects;
+	std::map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>> m_ppGameObjects;
 	std::list<std::shared_ptr<CGameObject>> m_pAddGameObjectList;
 	std::list<std::shared_ptr<CGameObject>> m_pRemoveGameObjectList;
 
@@ -250,7 +244,14 @@ protected:
 	// Camera
 	std::shared_ptr<CCamera> m_pCamera;
 
+public:
+	std::shared_ptr<CDepthRenderShader> m_pDepthRenderShader;
 
+	std::shared_ptr<CShadowMapShader> m_pShadowShader;
+	std::shared_ptr<CTextureToViewportShader> m_pShadowMapToViewport;
+
+	BoundingBox CalculateBoundingBox();
+	std::array<Light, MAX_LIGHTS> GetLights() const { return m_pLights; }
 };
 
 
