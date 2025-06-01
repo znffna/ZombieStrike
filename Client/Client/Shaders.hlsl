@@ -196,10 +196,11 @@ float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
     }
     cIllumination = Lighting(input.positionW, normalW, true, input.shadowMapUVs);
   
-    //return lerp(cColor * 0.3, cColor * cIllumination, 0.7);
-    return (1.0 - 2.0 * cIllumination) * cColor * cColor + 2.0 * cIllumination * cColor;
+    return lerp(cColor, cColor * cIllumination, 0.7);
+    //return (1.0 - 2.0 * cIllumination) * cColor * cColor + 2.0 * cIllumination * cColor;
     
-    return (cColor);
+    //return (cColor);
+    //return (cIllumination);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -291,7 +292,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     float4 detailTexColor = gtxtStandardTextures[1].Sample(gssWrap, input.uv1);
 #endif
     
-    float4 cIllumination = Lighting(input.positionW, input.normalW, false, input.shadowMapUVs);
+    float4 cIllumination = Lighting(input.positionW, input.normalW, true, input.shadowMapUVs);
     //float4 cColor = texColor * 0.5f + cIllumination * 0.5f;
     float4 cColor = (texColor * 0.8f + detailTexColor * 0.2f);
     return lerp(cColor, cIllumination, 0.5f);
