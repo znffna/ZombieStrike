@@ -357,7 +357,7 @@ void CGameObject::OnPrepareRender()
 	}
 }
 
-void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
 	if (false == m_bActive) return;
 
@@ -377,9 +377,9 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			if (pMaterial)
 			{
 				// Set Pipeline State
-				if (pMaterial->m_pShader) pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0); // Render(pd3dCommandList, pCamera);
+				if (pMaterial->m_pShader) pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0, bDepthWrite); // Render(pd3dCommandList, pCamera);
 				// Material Update
-				pMaterial->UpdateShaderVariables(pd3dCommandList);
+				if (!bDepthWrite) pMaterial->UpdateShaderVariables(pd3dCommandList);
 			}
 			// Render Mesh
 			m_pMesh->Render(pd3dCommandList, i);
@@ -391,7 +391,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		}
 	}
 
-	if (g_bRenderCollider) {
+	if (g_bRenderCollider && !bDepthWrite) {
 		auto pColliders = GetComponents<CCollider>();
 
 		for (auto pCollider : pColliders)
@@ -405,7 +405,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 16, &xmf4x4World, 0);
 
 			// Use Collider Shader
-			CMaterial::m_pColliderShader->OnPrepareRender(pd3dCommandList, 0);
+			CMaterial::m_pColliderShader->OnPrepareRender(pd3dCommandList, 0, false);
 			
 			CResourceManager::GetInstance().GetMesh("CCubeMesh")->Render(pd3dCommandList);
 		}
@@ -414,45 +414,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	// Render Child Object
 	for (auto& pChild : m_pChilds)
 	{
-		pChild->Render(pd3dCommandList, pCamera);
-	}
-}
-
-void CGameObject::RenderForward(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
-{
-	if (false == m_bActive) return;
-
-	// Skinned Animation Update
-	if (m_pSkinnedAnimationController)
-		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
-
-	if (m_pMesh) {
-		// Set Shader Variables
-		UpdateShaderVariables(pd3dCommandList); // GameObject Matrix Update
-
-		for (int i = 0; i < m_ppMaterials.size(); ++i)
-		{
-			std::shared_ptr<CMaterial>& pMaterial = m_ppMaterials[i];
-			if (pMaterial)
-			{
-				// Material Update
-				pMaterial->UpdateShaderVariables(pd3dCommandList);
-			}
-			// Render Mesh
-			m_pMesh->Render(pd3dCommandList, i);
-		}
-
-		if (m_ppMaterials.empty())
-		{
-			// Render Mesh
-			m_pMesh->Render(pd3dCommandList);
-		}
-	}
-
-	// Render Child Object
-	for (auto& pChild : m_pChilds)
-	{
-		pChild->RenderForward(pd3dCommandList, pCamera);
+		pChild->Render(pd3dCommandList, pCamera, bDepthWrite);
 	}
 }
 
@@ -1081,16 +1043,16 @@ std::shared_ptr<CSkyBox> CSkyBox::Create(ID3D12Device* pd3dDevice, ID3D12Graphic
 	return pSkyBox;
 }
 
-void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
-	if(pCamera)
+	if (pCamera)
 	{
 		XMFLOAT3 xmf3CameraPos = pCamera->GetPosition();
 		SetPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
 	}
 	UpdateTransform();
 
-	CGameObject::Render(pd3dCommandList, pCamera);
+	CGameObject::Render(pd3dCommandList, pCamera, bDepthWrite);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1273,11 +1235,11 @@ std::shared_ptr<CHeightMapTerrain> CHeightMapTerrain::InitializeByBinary(ID3D12D
 	return pHeightMapTerrain;
 }
 
-void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
 	UpdateTransform();
 
-	CGameObject::Render(pd3dCommandList, pCamera);
+	CGameObject::Render(pd3dCommandList, pCamera, bDepthWrite);
 }
 
 
@@ -1361,13 +1323,13 @@ CBulletObject::~CBulletObject()
 {
 }
 
-void CBulletObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CBulletObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
 	OnPrepareRender();
 
 	for (auto& pMaterial : m_ppMaterials)
 	{
-		if (pMaterial->m_pShader) pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0);
+		if (pMaterial->m_pShader) pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0, false);
 		for (auto& pTexture : pMaterial->m_ppTextures)
 		{
 			if (pTexture) pTexture->UpdateShaderVariables(pd3dCommandList);
@@ -1382,7 +1344,7 @@ void CBulletObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* 
 
 	for (auto& pMaterial : m_ppMaterials)
 	{
-		if (pMaterial->m_pShader) pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 1);
+		if (pMaterial->m_pShader) pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 1, false);
 	}
 
 	m_pMesh->PreRender(pd3dCommandList, 1); //Draw

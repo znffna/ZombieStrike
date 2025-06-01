@@ -18,7 +18,7 @@ public:
 	virtual void Update(float fTimeElapsed) override;
 
 	// Object Render
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr) override;
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr, bool bDepthWrite = false) override;
 
 	// Getters and Setters
 	void SetGunType(int type);

@@ -39,9 +39,9 @@ void CGun::Update(float fTimeElapsed)
 	m_fCoolTime -= fTimeElapsed;
 }
 
-void CGun::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CGun::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
-	CGameObject::Render(pd3dCommandList, pCamera);
+	CGameObject::Render(pd3dCommandList, pCamera, bDepthWrite);
 }
 
 // Getters and Setters

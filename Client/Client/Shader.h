@@ -24,7 +24,7 @@ public:
 
 	// Create Pipeline State
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature);
-	void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState = 0);
+	void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState = 0, bool bDepthWrite = false);
 	void CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dComputeRootSignature, int nPipelineState = 0);
 
 	D3D12_SHADER_BYTECODE CompileShaderFromFile(const WCHAR* pszFileName, LPCSTR pszShaderName, LPCSTR pszShaderProfile, ID3DBlob** ppd3dShaderBlob);
@@ -32,7 +32,9 @@ public:
 	void SaveShaderToCSOFile(ID3DBlob* pShaderBlob, LPCSTR pszShaderName);
 
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState = 0);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShaderBranch(int nPipelineState = 0, bool bDepthWrite = false);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState = 0);
+	virtual D3D12_SHADER_BYTECODE CreateDepthWritePixelShader(int nPipelineState = 0);
 	virtual D3D12_SHADER_BYTECODE CreateDomainShader(int nPipelineState = 0);
 	virtual D3D12_SHADER_BYTECODE CreateHullShader(int nPipelineState = 0);
 	virtual D3D12_SHADER_BYTECODE CreateGeometryShader(int nPipelineState = 0);
@@ -58,7 +60,7 @@ public:
 
 	virtual void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4X4* pxmf4x4World) {}
 
-	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
+	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0, bool bDepthWrite = false);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 	virtual void ReleaseUploadBuffers() {}
@@ -84,8 +86,10 @@ protected:
 	void CreateShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex);
 
 protected:
+	// 그림자 관련 변수
+	/* 해당 flag를 생성자에서 Set하며, 해당 flag를 통해 pipelineState Vector의 마지막에 추가한다.*/
 	bool m_bAllowShadow = false; // 그림자 허용 여부
-	ComPtr<ID3D12PipelineState> m_d3dShadowPipelineState; // 그림자 전용 파이프라인 상태
+	
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////

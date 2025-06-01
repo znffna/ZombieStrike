@@ -79,7 +79,7 @@ void CCollisionChecker::CollisionCheckFromLayers(std::vector<std::pair<CGameObje
 	}
 }
 
-void CCollisionChecker::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CCollisionChecker::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
 }
 

@@ -30,7 +30,7 @@ public:
 	virtual void Update(float fTimeElapsed) override;
 	void CollisionCheckFromLayers(std::vector<std::pair<CGameObject::GAMEOBJECT_LAYER, CGameObject::GAMEOBJECT_LAYER>>& ppObjectLayerPairs);
 	// Object Render
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr) override;
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr, bool bDepthWrite = false) override;
 	// Object Collision
 	virtual bool IsCollided(std::shared_ptr<CCollider>& colliderA, std::shared_ptr<CCollider>& colliderB);
 	virtual bool IsCollided(CCollider& colliderA, CCollider& colliderB);

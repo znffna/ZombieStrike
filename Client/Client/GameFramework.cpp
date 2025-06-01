@@ -524,6 +524,7 @@ void CGameFramework::AdvanceFrame()
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->Reset(m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get(), nullptr);
 
 	// Update
+
 	for (auto& scene : m_Scenes)
 	{
 		if (scene->CheckWorkUpdating())

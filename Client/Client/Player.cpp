@@ -113,9 +113,9 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, float deltaTime)
 	UpdateUnderAnimation();
 }
 
-void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
-	CGameObject::Render(pd3dCommandList, pCamera);
+	CGameObject::Render(pd3dCommandList, pCamera, bDepthWrite);
 
 	//if (m_pGun)	{
 	//	m_pGun->Render(pd3dCommandList, pCamera);

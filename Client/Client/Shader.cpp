@@ -22,10 +22,17 @@ void CShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGr
 	m_pd3dPipelineStates.resize(m_nPipelineStates);
 
 	// Create Pipeline State
-	for(int i = 0; i < m_nPipelineStates; ++i) CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, i);
+	for (int i = 0; i < m_nPipelineStates; ++i) CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, i, false);
+
+	if (m_bAllowShadow)
+	{
+		m_pd3dPipelineStates.resize(m_nPipelineStates + 1);
+		// Create Shadow Pipeline State
+		CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, m_nPipelineStates, true);
+	}
 }
 
-void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
+void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState, bool bDepthWrite)
 {
 	::ZeroMemory(&m_d3dPipelineStateDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
 	m_d3dPipelineStateDesc.pRootSignature = pd3dGraphicsRootSignature;
@@ -56,7 +63,7 @@ void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSi
 	if (hResult == S_OK)
 	{
 		// Output Debug Message
-		std::wstring strDebugString = GetShaderName()+ L" - " + std::to_wstring(nPipelineState) + L" Graphic Pipeline State is created successfully.\n";
+		std::wstring strDebugString = GetShaderName() + L" - " + std::to_wstring(nPipelineState) + L" Graphic Pipeline State is created successfully.\n";
 		OutputDebugString(strDebugString.data());
 		m_pd3dPipelineStates[nPipelineState]->SetName(GetShaderName().data());
 	}
@@ -200,13 +207,27 @@ D3D12_SHADER_BYTECODE CShader::CreateVertexShader(int nPipelineState)
 	return (d3dShaderByteCode);
 }
 
+D3D12_SHADER_BYTECODE CShader::CreatePixelShaderBranch(int nPipelineState, bool bDepthWrite)
+{
+	if (bDepthWrite) return CreateDepthWritePixelShader(nPipelineState);
+	return CreatePixelShader(nPipelineState);
+}
+
 D3D12_SHADER_BYTECODE CShader::CreatePixelShader(int nPipelineState)
 {
 	D3D12_SHADER_BYTECODE d3dShaderByteCode;
 	d3dShaderByteCode.BytecodeLength = 0;
 	d3dShaderByteCode.pShaderBytecode = NULL;
-
 	return (d3dShaderByteCode);
+}
+
+D3D12_SHADER_BYTECODE CShader::CreateDepthWritePixelShader(int nPipelineState)
+{
+#ifdef _COMPILE_SHADER
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSDepthWriteShader", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf()));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"PSDepthWriteShader", m_pd3dPixelShaderBlob.GetAddressOf()));
+#endif
 }
 
 D3D12_SHADER_BYTECODE CShader::CreateDomainShader(int nPipelineState)
@@ -339,8 +360,14 @@ DXGI_SAMPLE_DESC CShader::GetSampleDesc(int nPipelineState)
 	return (dxgiSampleDesc);
 }
 
-void CShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
+void CShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState, bool bDepthWrite)
 {
+	if (bDepthWrite)
+	{
+		if (m_pd3dPipelineStates.back()) pd3dCommandList->SetPipelineState(m_pd3dPipelineStates.back().Get());
+		return;
+	}
+
 	if (nPipelineState < m_pd3dPipelineStates.size())
 	{
 		if (m_pd3dPipelineStates[nPipelineState]) pd3dCommandList->SetPipelineState(m_pd3dPipelineStates[nPipelineState].Get());
@@ -521,7 +548,7 @@ void CTerrainShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature*
 	m_pd3dPipelineStates.resize(1);
 
 	// Create Pipeline State
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0);
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0, false);
 }
 
 D3D12_INPUT_LAYOUT_DESC CTerrainShader::CreateInputLayout(int nPipelineState)
@@ -711,7 +738,7 @@ void CTexturedShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D
 	m_nPipelineStates = 1;
 	m_pd3dPipelineStates.resize(m_nPipelineStates);
 
-	CShader::CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0);
+	CShader::CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0, false);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -953,8 +980,8 @@ void CBulletShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* 
 	m_nPipelineStates = 2;
 	m_pd3dPipelineStates.resize(m_nPipelineStates);
 
-	CShader::CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0); //Stream Output Pipeline State
-	CShader::CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 1); //Draw Pipeline State
+	CShader::CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0, false); //Stream Output Pipeline State
+	CShader::CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 1, false); //Draw Pipeline State
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1627,14 +1654,14 @@ void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommand
 
 void CDepthRenderShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	CShader::OnPrepareRender(pd3dCommandList);
+	CShader::OnPrepareRender(pd3dCommandList, 0, false);
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
 	if (!m_pScene) return;
 
-	m_pScene->RenderWorldObject(pd3dCommandList, pCamera);
+	m_pScene->RenderDepthWrite(pd3dCommandList, pCamera);
 }
 
 std::shared_ptr<CTexture> CDepthRenderShader::GetDepthTexture()
@@ -1735,7 +1762,7 @@ void CShadowMapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 
 	UpdateShaderVariables(pd3dCommandList);
 
-	m_pScene->RenderWorldObject(pd3dCommandList, pCamera);
+	m_pScene->RenderDepthWrite(pd3dCommandList, pCamera);
 	//m_pObjectsShader->m_pDirectionalLight->UpdateShaderVariables(pd3dCommandList);
 	//m_pObjectsShader->m_pDirectionalLight->Render(pd3dCommandList, pCamera);
 }

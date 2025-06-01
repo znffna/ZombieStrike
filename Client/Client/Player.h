@@ -27,7 +27,7 @@ public:
 	virtual void Move(DWORD dwDirection, float fDistance, float deltaTime) override;
 
 	// Object Render
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override;
 
 	// Skin State
 	void SetSkinType(int nSkinType)	{ m_nSkinType = nSkinType % m_ModelName.size();}

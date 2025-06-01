@@ -356,8 +356,8 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// Update Shader Variables
 	UpdateShaderVariables(pd3dCommandList);
 
-	if (m_pShadowShader) m_pShadowShader->Render(pd3dCommandList, pCamera);
-	if (m_pShadowMapToViewport) m_pShadowMapToViewport->Render(pd3dCommandList, pCamera);
+	//if (m_pShadowShader) m_pShadowShader->Render(pd3dCommandList, pCamera);
+	//if (m_pShadowMapToViewport) m_pShadowMapToViewport->Render(pd3dCommandList, pCamera);
 
 	// Render GameObjects 
 	for (auto& pvecObjects : m_ppGameObjects)
@@ -365,7 +365,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		for (auto& pObject : pvecObjects.second)
 		{
 			pObject->Update(0.0f);
-			pObject->Render(pd3dCommandList, pCamera);
+			pObject->Render(pd3dCommandList, pCamera, false);
 		}
 	}
 
@@ -385,7 +385,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	return (true);
 }
 
-void CScene::RenderWorldObject(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CScene::RenderDepthWrite(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	std::set<CGameObject::GAMEOBJECT_LAYER> layer = {
 		CGameObject::GAMEOBJECT_LAYER::LAYER_TERRAIN,
@@ -403,7 +403,7 @@ void CScene::RenderWorldObject(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 		for (auto& pObject : pvecObjects.second)
 		{
 			pObject->Update(0.0f);
-			pObject->RenderForward(pd3dCommandList, pCamera);
+			pObject->Render(pd3dCommandList, pCamera, true);
 		}
 	}
 }
