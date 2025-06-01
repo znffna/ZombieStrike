@@ -18,6 +18,8 @@ cbuffer cbCameraInfo : register(b2)
     matrix gmtxInvView : packoffset(c4);
     matrix gmtxProjection : packoffset(c8);
     matrix gmtxInvProjection : packoffset(c12);
+    float3 gCameraPosition : packoffset(c16);
+    float padding : packoffset(c16.w);
 };
 
 cbuffer cbFrameworkInfo : register(b3)
@@ -156,7 +158,7 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
     output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
     output.uv = input.uv;
     
-    output.shadowMapUVs = CalculateShadowMapUVs(positionW);
+    output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;
     
     return (output);
 }
@@ -250,9 +252,9 @@ struct VS_TERRAIN_INPUT
 struct VS_TERRAIN_OUTPUT
 {
     float4 position : SV_POSITION;
-    float4 color : COLOR;
     float3 positionW : POSITION;
     float3 normalW : NORMAL;
+    float4 color : COLOR;
     float2 uv0 : TEXCOORD0;
     float2 uv1 : TEXCOORD1;
     
@@ -273,7 +275,7 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
     output.uv0 = input.uv0;
     output.uv1 = input.uv1;
     
-    output.shadowMapUVs = CalculateShadowMapUVs(positionW);
+    output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;
     
     return (output);
 }
@@ -362,7 +364,7 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
     output.position = mul(mul(positionW, gmtxView), gmtxProjection);
     output.uv = input.uv;
     
-    output.shadowMapUVs = CalculateShadowMapUVs(positionW);
+    output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;
 
     return (output);
 }
@@ -599,7 +601,7 @@ VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_STANDARD_INPUT input)
     output.position = mul(mul(positionW, gmtxView), gmtxProjection);
     output.normalW = mul(float4(input.normal, 0.0f), gmtxGameObject).xyz;
 
-    output.shadowMapUVs = CalculateShadowMapUVs(positionW);
+    output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;
 
     return (output);
 }

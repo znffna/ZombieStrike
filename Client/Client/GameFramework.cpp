@@ -46,6 +46,7 @@ CGameFramework::CGameFramework()
 
 CGameFramework::~CGameFramework()
 {
+	OnDestroy();
 }
 
 bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
@@ -75,8 +76,12 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 void CGameFramework::OnDestroy()
 {
+	if (!isWorkd) return;
+	isWorkd = false;
+
 	// 남은 Command List가 없는지 확인
-	WaitForGpuComplete();
+	//WaitForGpuComplete();
+	WaitGpuWithoutPresent();
 
 	// Shader 변수들을 해제한다.
 	ReleaseShaderVariables();
@@ -411,8 +416,7 @@ void CGameFramework::ChangeSwapChainState()
 	dxgiTargetParameters.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	m_pdxgiSwapChain->ResizeTarget(&dxgiTargetParameters);
 
-	for (int i = 0; i < m_nSwapChainBuffers; i++) if (m_ppd3dSwapChainBackBuffers[i])
-		m_ppd3dSwapChainBackBuffers[i]->Release();
+	for (int i = 0; i < m_nSwapChainBuffers; i++) if (m_ppd3dSwapChainBackBuffers[i]) m_ppd3dSwapChainBackBuffers[i].Reset();
 
 	DXGI_SWAP_CHAIN_DESC dxgiSwapChainDesc;
 	m_pdxgiSwapChain->GetDesc(&dxgiSwapChainDesc);
@@ -422,6 +426,7 @@ void CGameFramework::ChangeSwapChainState()
 	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
 	CreateRenderTargetViews();
+
 }
 
 void CGameFramework::BuildObjects()
@@ -506,15 +511,6 @@ void CGameFramework::AdvanceFrame()
 {
 	// 타이머 업데이트
 	m_GameTimer.Tick(60.0f);
-
-	// Command Queue의 명령들이 모두 실행될 때까지 대기
-	WaitForGpuComplete();
-
-	for (auto& scene : m_Scenes)
-	{
-		if (scene->CheckWorkUpdating())
-			scene->OnPostRender(nullptr);
-	}
 
 	// Input 업데이트
 	ProcessInput();
@@ -613,13 +609,22 @@ void CGameFramework::AdvanceFrame()
 	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList[m_nSwapChainBufferIndex].Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
+	// 다음 Frame으로 이동
+	MoveToNextFrame();
 
 	// Swap Chain의 Back Buffer를 화면에 표시
 	m_pdxgiSwapChain->Present(0, 0);
 	++g_nFrameCount;
 
-	// 다음 Frame으로 이동
-	MoveToNextFrame();
+	// Command Queue의 명령들이 모두 실행될 때까지 대기
+	WaitForGpuComplete();
+
+	for (auto& scene : m_Scenes)
+	{
+		if (scene->CheckWorkUpdating())
+			scene->OnPostRender(nullptr);
+	}
+
 
 	// Time / FPS 출력
 	std::wstring time = L"Time: " + std::to_wstring(m_GameTimer.GameTime());

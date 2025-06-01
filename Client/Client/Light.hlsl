@@ -55,7 +55,10 @@ cbuffer cbLights : register(b4)
 // return : Camera World Position
 float3 GetCameraPosition()
 {
-    float3 vCameraPosition = float3(-gmtxView._14, -gmtxView._24, -gmtxView._34);
+    //float3 vCameraPosition = float3(-gmtxView._14, -gmtxView._24, -gmtxView._34);
+    //float3 vCameraPosition = float3(-gmtxView._41, -gmtxView._42, -gmtxView._43);
+    float3 vCameraPosition = gCameraPosition;
+    
     return (vCameraPosition);
 }
 
@@ -70,7 +73,7 @@ float3 GetCameraPosition()
 
 #define MAX_DEPTH_TEXTURES		MAX_LIGHTS
 
-//#define _WITH_PCF_FILTERING
+#define _WITH_PCF_FILTERING
 
 Texture2D<float> gtxtDepthTextures[MAX_DEPTH_TEXTURES] : register(t14);
 SamplerComparisonState gssComparisonPCFShadow : register(s2);

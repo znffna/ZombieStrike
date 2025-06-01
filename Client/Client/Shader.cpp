@@ -53,9 +53,9 @@ void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSi
 	m_d3dPipelineStateDesc.NumRenderTargets = GetRenderTargetCount(nPipelineState);
 	for (UINT i = 0; i < m_d3dPipelineStateDesc.NumRenderTargets; ++i)
 	{
-		m_d3dPipelineStateDesc.RTVFormats[i] = GetRenderTargetFormat(nPipelineState, i, false);
+		m_d3dPipelineStateDesc.RTVFormats[i] = GetRenderTargetFormat(nPipelineState, i, bDepthWrite);
 	}
-	m_d3dPipelineStateDesc.DSVFormat = GetDepthStencilFormat(nPipelineState);
+	m_d3dPipelineStateDesc.DSVFormat = GetDepthStencilFormat(nPipelineState, bDepthWrite);
 	m_d3dPipelineStateDesc.SampleDesc = GetSampleDesc(nPipelineState);
 	m_d3dPipelineStateDesc.Flags = GetPipelineStateFlags(nPipelineState);
 
@@ -295,7 +295,7 @@ D3D12_RASTERIZER_DESC CShader::CreateRasterizerStateBranch(int nPipelineState, b
 {
 	if (bDepthWrite)
 	{
-		return CreateRasterizerState(nPipelineState);
+		return CreateDepthWriteRasterizerState(nPipelineState);
 	}
 	return CreateRasterizerState(nPipelineState);
 }
@@ -319,6 +319,8 @@ D3D12_RASTERIZER_DESC CShader::CreateRasterizerState(int nPipelineState)
 
 	return(d3dRasterizerDesc);
 }
+
+#define _WITH_RASTERIZER_DEPTH_BIAS
 
 D3D12_RASTERIZER_DESC CShader::CreateDepthWriteRasterizerState(int nPipelineState)
 {
@@ -687,6 +689,7 @@ D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreateVertexShader(int nP
 
 CColliderShader::CColliderShader()
 {
+	m_bAllowShadow = false;
 }
 
 CColliderShader::~CColliderShader()
@@ -1077,11 +1080,14 @@ CDepthRenderShader::CDepthRenderShader(CScene* pScene)
 
 	m_pToLightSpaces.resize(1);
 
-	XMFLOAT4X4 xmf4x4ToTexture = { 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f };
+	XMFLOAT4X4 xmf4x4ToTexture = {
+		0.5f, 0.0f, 0.0f, 0.0f
+		, 0.0f, -0.5f, 0.0f, 0.0f
+		, 0.0f, 0.0f, 1.0f, 0.0f
+		, 0.5f, 0.5f, 0.0f, 1.0f };
 	m_xmProjectionToTexture = XMLoadFloat4x4(&xmf4x4ToTexture);
 
 	m_nPipelineStates = 2;
-
 }
 
 CDepthRenderShader::~CDepthRenderShader()
@@ -1199,11 +1205,13 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	d3dDescriptorHeapDesc.NodeMask = 0;
 	HRESULT hResult = pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_pd3dRtvDescriptorHeap);
 
+
 	// 그림자 맵 Texture 생성(최대 조명갯수만큼 생성)
 	m_pDepthFromLightTexture = std::make_shared<CTexture>(MAX_DEPTH_TEXTURES, RESOURCE_TEXTURE2D_ARRAY, 1);
 
 	D3D12_CLEAR_VALUE d3dClearValue = { DXGI_FORMAT_R32_FLOAT, { 1.0f, 1.0f, 1.0f, 1.0f } };
 	for (UINT i = 0; i < MAX_DEPTH_TEXTURES; i++) m_pDepthFromLightTexture->CreateTexture(pd3dDevice, pd3dCommandList, i, RESOURCE_TEXTURE2D, m_nDepthbufferWidth, m_nDepthbufferHeight, 1, 0, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON, &d3dClearValue);
+	for (UINT i = 0; i < MAX_DEPTH_TEXTURES; i++) { std::wstring name = L"CDepthRenderShader::DepthFromLightTexture(Resource) - " + std::to_wstring(i); m_pDepthFromLightTexture->GetResource(i)->SetName(name.c_str()); }
 
 	// 그림자 맵을 렌더 타겟 뷰로 생성
 	D3D12_RENDER_TARGET_VIEW_DESC d3dRenderTargetViewDesc;
@@ -1253,6 +1261,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	d3dClearValue.DepthStencil.Stencil = 0;
 
 	pd3dDevice->CreateCommittedResource(&d3dHeapProperties, D3D12_HEAP_FLAG_NONE, &d3dResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &d3dClearValue, __uuidof(ID3D12Resource), (void**)&m_pd3dDepthBuffer);
+	m_pd3dDepthBuffer->SetName(L"CDepthRenderShader::DepthBuffer(DSV)");
 
 	// 깊이 스텐실 뷰 생성
 	D3D12_DEPTH_STENCIL_VIEW_DESC d3dDepthStencilViewDesc;
@@ -1274,8 +1283,10 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	}
 
 	// 그림자 맵(리소스이자 텍스쳐)을 바인딩 할때 사용할 Heap 생성
-	CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, m_pDepthFromLightTexture->GetTextures());
-	CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture.get(), 0, ROOT_PARAMETER_DEPTH_WRITE);
+	//CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, m_pDepthFromLightTexture->GetTextures());
+	//CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture.get(), 0, ROOT_PARAMETER_DEPTH_WRITE);
+	//m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->SetName(L"CDepthRenderShader::DescriptorHeap(CBV/SRV Heap)");
+	m_pScene->CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture.get(), 0, ROOT_PARAMETER_DEPTH_WRITE);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }

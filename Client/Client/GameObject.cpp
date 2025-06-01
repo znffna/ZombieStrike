@@ -377,7 +377,10 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			if (pMaterial)
 			{
 				// Set Pipeline State
-				if (pMaterial->m_pShader) pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0, bDepthWrite); // Render(pd3dCommandList, pCamera);
+				if (pMaterial->m_pShader) {
+					if (pMaterial->m_pShader->GetAllowShadow() == false) continue; // 그림자 허용 여부 확인
+					pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0, bDepthWrite); // Render(pd3dCommandList, pCamera);
+				}
 				// Material Update
 				if (!bDepthWrite) pMaterial->UpdateShaderVariables(pd3dCommandList);
 			}

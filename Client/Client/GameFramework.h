@@ -72,6 +72,8 @@ public:
 	static CGameFramework* pGameFramework;
 	static ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return pGameFramework->m_pd3dCommandList[pGameFramework->m_nSwapChainBufferIndex]; }
 private:
+	bool isWorkd = true;
+
 	HINSTANCE m_hInstance;
 	HWND m_hWnd;
 

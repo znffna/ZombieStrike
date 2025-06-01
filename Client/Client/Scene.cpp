@@ -112,6 +112,7 @@ void CScene::CreateDescriptorHeap(ID3D12Device* pd3dDevice)
 	{
 		m_pDescriptorHeap = std::make_shared<CDescirptorHeap>();
 		CreateCbvSrvDescriptorHeaps(pd3dDevice, 100, 3000);
+		m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->SetName(L"CScene::m_pd3dCbvSrvDescriptorHeap");
 	}
 }
 

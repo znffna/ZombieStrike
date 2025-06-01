@@ -53,7 +53,7 @@ public:
 	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType(int nPipelineState = 0) { return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; }
 	virtual UINT GetRenderTargetCount(int nPipelineState = 0) { return 1; }
 	virtual DXGI_FORMAT GetRenderTargetFormat(int nPipelineState = 0, int nRenderTargetIndex = 0, bool bDepthWrite = false) { return (bDepthWrite)? DXGI_FORMAT_R32_FLOAT : DXGI_FORMAT_R8G8B8A8_UNORM; }
-	virtual DXGI_FORMAT GetDepthStencilFormat(int nPipelineState = 0) { return DXGI_FORMAT_D24_UNORM_S8_UINT; }
+	virtual DXGI_FORMAT GetDepthStencilFormat(int nPipelineState = 0, bool bDepthWrite = false) { return (bDepthWrite) ? DXGI_FORMAT_D32_FLOAT : DXGI_FORMAT_D24_UNORM_S8_UINT; }
 	virtual DXGI_SAMPLE_DESC GetSampleDesc(int nPipelineState = 0);
 	virtual D3D12_PIPELINE_STATE_FLAGS GetPipelineStateFlags(int nPipelineState = 0) { return D3D12_PIPELINE_STATE_FLAG_NONE; }
 
@@ -93,7 +93,8 @@ protected:
 	// 그림자 관련 변수
 	/* 해당 flag를 생성자에서 Set하며, 해당 flag를 통해 pipelineState Vector의 마지막에 추가한다.*/
 	bool m_bAllowShadow = true; // 그림자 허용 여부
-	
+public:
+	bool GetAllowShadow() const { return m_bAllowShadow; }
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////
