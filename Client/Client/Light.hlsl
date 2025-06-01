@@ -70,7 +70,7 @@ float3 GetCameraPosition()
 
 #define MAX_DEPTH_TEXTURES		MAX_LIGHTS
 
-#define _WITH_PCF_FILTERING
+//#define _WITH_PCF_FILTERING
 
 Texture2D<float> gtxtDepthTextures[MAX_DEPTH_TEXTURES] : register(t14);
 SamplerComparisonState gssComparisonPCFShadow : register(s2);

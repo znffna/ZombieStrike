@@ -95,7 +95,7 @@ void CPlayer::UpdateUnderAnimation()
 	float angle = atan2(fForward, fRight);
 	if (angle < 0.0f) angle += XM_PI * 2.0f; // 각도를 [-PI,PI) 에서 [0, 2PI)로 변환
 	float degree = XMConvertToDegrees(angle); // degree로 변환[0 ~ 2Pi) => [0, 360)
-	int nDirection = (int)CAnimationController::ANIMATION_STATE::WALK_RIGHT + static_cast<int>(degree / 45.0f) % 8; // 8방향으로 나누기
+	int nDirection = (int)CAnimationController::ANIMATION_STATE::WALK_RIGHT + static_cast<int>(round(degree / 45.0f)) % 8; // 8방향으로 나누기
 	float fLength = sqrtf(xmf3Velocity.x * xmf3Velocity.x + xmf3Velocity.z * xmf3Velocity.z);
 	if (false == ::IsZero(fLength))
 	{

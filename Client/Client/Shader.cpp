@@ -39,14 +39,14 @@ void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSi
 	::ZeroMemory(&m_d3dPipelineStateDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
 	m_d3dPipelineStateDesc.pRootSignature = pd3dGraphicsRootSignature;
 	m_d3dPipelineStateDesc.VS = CreateVertexShader(nPipelineState);
-	m_d3dPipelineStateDesc.PS = CreatePixelShader(nPipelineState);
+	m_d3dPipelineStateDesc.PS = CreatePixelShaderBranch(nPipelineState, bDepthWrite);
 	m_d3dPipelineStateDesc.DS = CreateDomainShader(nPipelineState);
 	m_d3dPipelineStateDesc.HS = CreateHullShader(nPipelineState);
 	m_d3dPipelineStateDesc.GS = CreateGeometryShader(nPipelineState);
 	m_d3dPipelineStateDesc.StreamOutput = CreateStreamOuputState(nPipelineState);
-	m_d3dPipelineStateDesc.RasterizerState = CreateRasterizerState(nPipelineState);
+	m_d3dPipelineStateDesc.RasterizerState = CreateRasterizerStateBranch(nPipelineState, bDepthWrite);
 	m_d3dPipelineStateDesc.BlendState = CreateBlendState(nPipelineState);
-	m_d3dPipelineStateDesc.DepthStencilState = CreateDepthStencilState(nPipelineState);
+	m_d3dPipelineStateDesc.DepthStencilState = CreateDepthStencilStateBranch(nPipelineState, bDepthWrite);
 	m_d3dPipelineStateDesc.InputLayout = CreateInputLayout(nPipelineState);
 	m_d3dPipelineStateDesc.SampleMask = UINT_MAX;
 	m_d3dPipelineStateDesc.PrimitiveTopologyType = GetPrimitiveTopologyType(nPipelineState);
@@ -291,6 +291,15 @@ D3D12_INPUT_LAYOUT_DESC CShader::CreateInputLayout(int nPipelineState)
 	return(d3dInputLayoutDesc);
 }
 
+D3D12_RASTERIZER_DESC CShader::CreateRasterizerStateBranch(int nPipelineState, bool bDepthWrite)
+{
+	if (bDepthWrite)
+	{
+		return CreateRasterizerState(nPipelineState);
+	}
+	return CreateRasterizerState(nPipelineState);
+}
+
 D3D12_RASTERIZER_DESC CShader::CreateRasterizerState(int nPipelineState)
 {
 	D3D12_RASTERIZER_DESC d3dRasterizerDesc;
@@ -302,6 +311,27 @@ D3D12_RASTERIZER_DESC CShader::CreateRasterizerState(int nPipelineState)
 	d3dRasterizerDesc.DepthBias = 0;
 	d3dRasterizerDesc.DepthBiasClamp = 0.0f;
 	d3dRasterizerDesc.SlopeScaledDepthBias = 0.0f;
+	d3dRasterizerDesc.DepthClipEnable = TRUE;
+	d3dRasterizerDesc.MultisampleEnable = FALSE;
+	d3dRasterizerDesc.AntialiasedLineEnable = FALSE;
+	d3dRasterizerDesc.ForcedSampleCount = 0;
+	d3dRasterizerDesc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+
+	return(d3dRasterizerDesc);
+}
+
+D3D12_RASTERIZER_DESC CShader::CreateDepthWriteRasterizerState(int nPipelineState)
+{
+	D3D12_RASTERIZER_DESC d3dRasterizerDesc;
+	::ZeroMemory(&d3dRasterizerDesc, sizeof(D3D12_RASTERIZER_DESC));
+	d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
+	d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
+	d3dRasterizerDesc.FrontCounterClockwise = FALSE;
+#ifdef _WITH_RASTERIZER_DEPTH_BIAS
+	d3dRasterizerDesc.DepthBias = 250000;
+#endif
+	d3dRasterizerDesc.DepthBiasClamp = 0.0f;
+	d3dRasterizerDesc.SlopeScaledDepthBias = 1.0f;
 	d3dRasterizerDesc.DepthClipEnable = TRUE;
 	d3dRasterizerDesc.MultisampleEnable = FALSE;
 	d3dRasterizerDesc.AntialiasedLineEnable = FALSE;
@@ -331,6 +361,15 @@ D3D12_BLEND_DESC CShader::CreateBlendState(int nPipelineState)
 	return(d3dBlendDesc);
 }
 
+D3D12_DEPTH_STENCIL_DESC CShader::CreateDepthStencilStateBranch(int nPipelineState, bool bDepthWrite)
+{
+	if (bDepthWrite)
+	{
+		return CreateDepthWriteDepthStencilState(nPipelineState);
+	}
+	return CreateDepthStencilState(nPipelineState);
+}
+
 D3D12_DEPTH_STENCIL_DESC CShader::CreateDepthStencilState(int nPipelineState)
 {
 	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
@@ -351,6 +390,28 @@ D3D12_DEPTH_STENCIL_DESC CShader::CreateDepthStencilState(int nPipelineState)
 	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
 
 	return (d3dDepthStencilDesc);	
+}
+
+D3D12_DEPTH_STENCIL_DESC CShader::CreateDepthWriteDepthStencilState(int nPipelineState)
+{
+	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
+	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
+	d3dDepthStencilDesc.DepthEnable = TRUE;
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS; //D3D12_COMPARISON_FUNC_LESS_EQUAL
+	d3dDepthStencilDesc.StencilEnable = FALSE;
+	d3dDepthStencilDesc.StencilReadMask = 0x00;
+	d3dDepthStencilDesc.StencilWriteMask = 0x00;
+	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+
+	return(d3dDepthStencilDesc);
 }
 
 DXGI_SAMPLE_DESC CShader::GetSampleDesc(int nPipelineState)

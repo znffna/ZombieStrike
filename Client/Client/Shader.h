@@ -42,9 +42,13 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreateComputeShader(int nPipelineState = 0);
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState = 0);
+	virtual D3D12_RASTERIZER_DESC CreateRasterizerStateBranch(int nPipelineState = 0, bool bDepthWrite = false);
 	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState = 0);
+	virtual D3D12_RASTERIZER_DESC CreateDepthWriteRasterizerState(int nPipelineState = 0);
 	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState = 0);
+	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilStateBranch(int nPipelineState = 0, bool bDepthWrite = false);
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState = 0);
+	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthWriteDepthStencilState(int nPipelineState = 0);
 
 	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType(int nPipelineState = 0) { return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; }
 	virtual UINT GetRenderTargetCount(int nPipelineState = 0) { return 1; }
