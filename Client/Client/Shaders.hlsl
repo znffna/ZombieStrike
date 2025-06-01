@@ -540,7 +540,7 @@ struct PS_DEPTH_OUTPUT
     float fDepth : SV_Depth;
 };
 
-PS_DEPTH_OUTPUT PSDepthWriteShader(VS_LIGHTING_OUTPUT input)
+PS_DEPTH_OUTPUT PSDepthWriteShader(VS_LIGHTING_INPUT input)
 {
     PS_DEPTH_OUTPUT output;
 
@@ -561,7 +561,7 @@ struct VS_SHADOW_MAP_OUTPUT
     float4 shadowMapUVs[MAX_LIGHTS] : TEXCOORD0;
 };
 
-VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_LIGHTING_INPUT input)
+VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_STANDARD_INPUT input)
 {
     VS_SHADOW_MAP_OUTPUT output = (VS_SHADOW_MAP_OUTPUT) 0;
 

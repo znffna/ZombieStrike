@@ -432,9 +432,16 @@ void CGameObject::RenderForward(ID3D12GraphicsCommandList* pd3dCommandList, CCam
 
 		for (int i = 0; i < m_ppMaterials.size(); ++i)
 		{
+			std::shared_ptr<CMaterial>& pMaterial = m_ppMaterials[i];
+			if (pMaterial)
+			{
+				// Material Update
+				pMaterial->UpdateShaderVariables(pd3dCommandList);
+			}
 			// Render Mesh
 			m_pMesh->Render(pd3dCommandList, i);
 		}
+
 		if (m_ppMaterials.empty())
 		{
 			// Render Mesh

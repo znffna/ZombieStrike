@@ -66,7 +66,7 @@ public:
 
 protected:
 	// Shader Variables
-	int m_nPipelineStates;
+	int m_nPipelineStates = 1;
 	std::vector<ComPtr<ID3D12PipelineState>> m_pd3dPipelineStates; // [m_nPipelineStates]
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC m_d3dPipelineStateDesc;
@@ -82,6 +82,10 @@ protected:
 
 	void CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews);
 	void CreateShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex);
+
+protected:
+	bool m_bAllowShadow = false; // 그림자 허용 여부
+	ComPtr<ID3D12PipelineState> m_d3dShadowPipelineState; // 그림자 전용 파이프라인 상태
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -114,8 +118,6 @@ public:
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState) override;
-
-
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -264,7 +266,7 @@ struct TOLIGHTSPACEINFO
 	XMFLOAT4						m_pxmf4LightPositions[MAX_LIGHTS];
 };
 
-class CDepthRenderShader : public CIlluminatedShader
+class CDepthRenderShader : public CSkinnedAnimationStandardShader
 {
 public:
 	CDepthRenderShader(CScene* pScene);
@@ -276,6 +278,7 @@ public:
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
 	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState) override;
 
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState) override;
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override;
 
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
@@ -320,7 +323,7 @@ protected:
 	CScene* m_pScene;
 };
 
-class CShadowMapShader : public CIlluminatedShader
+class CShadowMapShader : public CSkinnedAnimationStandardShader
 {
 public:
 	CShadowMapShader(CScene* pScene);

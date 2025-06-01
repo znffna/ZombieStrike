@@ -19,10 +19,10 @@ CShader::~CShader()
 void CShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	// Resize Pipeline State Vector
-	m_pd3dPipelineStates.resize(1);
+	m_pd3dPipelineStates.resize(m_nPipelineStates);
 
 	// Create Pipeline State
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0);
+	for(int i = 0; i < m_nPipelineStates; ++i) CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, i);
 }
 
 void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
@@ -997,12 +997,14 @@ D3D12_SHADER_BYTECODE CIlluminatedShader::CreatePixelShader(int nPipelineState)
 //
 
 CDepthRenderShader::CDepthRenderShader(CScene* pScene)
-	: CIlluminatedShader(), m_pScene(pScene), m_pd3dcbToLightSpaces(nullptr), m_pcbMappedToLightSpaces(nullptr)
+	: CSkinnedAnimationStandardShader(), m_pScene(pScene), m_pd3dcbToLightSpaces(nullptr), m_pcbMappedToLightSpaces(nullptr)
 {
 	m_pToLightSpaces.resize(1);
 
 	XMFLOAT4X4 xmf4x4ToTexture = { 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f };
 	m_xmProjectionToTexture = XMLoadFloat4x4(&xmf4x4ToTexture);
+
+	m_nPipelineStates = 2;
 }
 
 CDepthRenderShader::~CDepthRenderShader()
@@ -1052,6 +1054,18 @@ D3D12_RASTERIZER_DESC CDepthRenderShader::CreateRasterizerState(int nPipelineSta
 	return(d3dRasterizerDesc);
 }
 
+D3D12_SHADER_BYTECODE CDepthRenderShader::CreateVertexShader(int nPipelineState)
+{
+	if (nPipelineState == 0)
+	{
+		return CStandardShader::CreateVertexShader(nPipelineState);
+	}
+	else if (nPipelineState == 1)
+	{
+		return CSkinnedAnimationStandardShader::CreateVertexShader(nPipelineState);
+	}
+}
+
 D3D12_SHADER_BYTECODE CDepthRenderShader::CreatePixelShader(int nPipelineState)
 {
 #ifdef _COMPILE_SHADER
@@ -1093,6 +1107,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	m_nDepthbufferWidth = WINDOW_WIDTH * 4;
 	m_nDepthbufferHeight = WINDOW_HEIGHT * 4;
 
+	// 그림자 맵 연결용 Heap 생성
 	m_pDescriptorHeap = std::make_unique<CDescirptorHeap>();
 
 	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
@@ -1103,11 +1118,13 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	d3dDescriptorHeapDesc.NodeMask = 0;
 	HRESULT hResult = pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_pd3dRtvDescriptorHeap);
 
+	// 그림자 맵 Texture 생성(최대 조명갯수만큼 생성)
 	m_pDepthFromLightTexture = std::make_shared<CTexture>(MAX_DEPTH_TEXTURES, RESOURCE_TEXTURE2D_ARRAY, 1);
 
 	D3D12_CLEAR_VALUE d3dClearValue = { DXGI_FORMAT_R32_FLOAT, { 1.0f, 1.0f, 1.0f, 1.0f } };
 	for (UINT i = 0; i < MAX_DEPTH_TEXTURES; i++) m_pDepthFromLightTexture->CreateTexture(pd3dDevice, pd3dCommandList, i, RESOURCE_TEXTURE2D, m_nDepthbufferWidth, m_nDepthbufferHeight, 1, 0, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON, &d3dClearValue);
 
+	// 그림자 맵을 렌더 타겟 뷰로 생성
 	D3D12_RENDER_TARGET_VIEW_DESC d3dRenderTargetViewDesc;
 	d3dRenderTargetViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 	d3dRenderTargetViewDesc.Texture2D.MipSlice = 0;
@@ -1123,10 +1140,12 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		d3dRtvCPUDescriptorHandle.ptr += ::gnRtvDescriptorIncrementSize;
 	}
 
+	// 그림자 맵 사용시 사용할 DSV(Depth Stencil View) 담을 Heap 생성
 	d3dDescriptorHeapDesc.NumDescriptors = 1;
 	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	hResult = pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_pd3dDsvDescriptorHeap);
 
+	// 깊이 스텐실 버퍼 생성
 	D3D12_RESOURCE_DESC d3dResourceDesc;
 	d3dResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 	d3dResourceDesc.Alignment = 0;
@@ -1154,6 +1173,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 
 	pd3dDevice->CreateCommittedResource(&d3dHeapProperties, D3D12_HEAP_FLAG_NONE, &d3dResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &d3dClearValue, __uuidof(ID3D12Resource), (void**)&m_pd3dDepthBuffer);
 
+	// 깊이 스텐실 뷰 생성
 	D3D12_DEPTH_STENCIL_VIEW_DESC d3dDepthStencilViewDesc;
 	::ZeroMemory(&d3dDepthStencilViewDesc, sizeof(D3D12_DEPTH_STENCIL_VIEW_DESC));
 	d3dDepthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT;
@@ -1163,6 +1183,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	m_d3dDsvDescriptorCPUHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	pd3dDevice->CreateDepthStencilView(m_pd3dDepthBuffer.Get(), &d3dDepthStencilViewDesc, m_d3dDsvDescriptorCPUHandle);
 
+	// 조명에 의한 렌더링 카메라 생성
 	for (int i = 0; i < MAX_DEPTH_TEXTURES; i++)
 	{
 		m_ppDepthRenderCameras[i] = std::make_shared<CCamera>();
@@ -1171,6 +1192,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		m_ppDepthRenderCameras[i]->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 
+	// 그림자 맵(리소스이자 텍스쳐)을 바인딩 할때 사용할 Heap 생성
 	CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, m_pDepthFromLightTexture->GetTextures());
 	CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture.get(), 0, ROOT_PARAMETER_DEPTH_WRITE);
 
@@ -1629,7 +1651,7 @@ ID3D12Resource* CDepthRenderShader::GetDepthTextureResource(UINT nIndex)
 //
 
 CShadowMapShader::CShadowMapShader(CScene* pScene)
-	: CIlluminatedShader(), m_pScene(pScene)
+	: CSkinnedAnimationStandardShader(), m_pScene(pScene)
 {
 }
 
