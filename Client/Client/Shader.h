@@ -256,6 +256,7 @@ public:
 
 	virtual std::wstring GetShaderName() override { return L"CDepthRenderShader"; }
 
+	virtual DXGI_FORMAT GetRenderTargetFormat(int nPipelineState = 0, int nRenderTargetIndex = 0) override { return DXGI_FORMAT_R32_FLOAT; }
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
 	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState) override;
@@ -288,7 +289,7 @@ protected:
 	XMMATRIX						m_xmProjectionToTexture;
 
 public:
-	CTexture* GetDepthTexture() { return(m_pDepthFromLightTexture.get()); }
+	std::shared_ptr<CTexture> GetDepthTexture() { return m_pDepthFromLightTexture; }
 	ID3D12Resource* GetDepthTextureResource(UINT nIndex) { return(m_pDepthFromLightTexture->GetResource(nIndex)); }
 
 protected:
@@ -309,6 +310,8 @@ class CShadowMapShader : public CShader
 public:
 	CShadowMapShader(const std::shared_ptr<CScene>& pScene);
 	virtual ~CShadowMapShader();
+
+	virtual std::wstring GetShaderName() override { return L"CShadowMapShader"; }
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
@@ -341,6 +344,8 @@ class CTextureToViewportShader : public CShader
 public:
 	CTextureToViewportShader();
 	virtual ~CTextureToViewportShader();
+
+	virtual std::wstring GetShaderName() override { return L"CTextureToViewportShader"; }
 
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
 

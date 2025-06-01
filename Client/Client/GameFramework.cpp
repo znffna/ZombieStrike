@@ -513,7 +513,7 @@ void CGameFramework::AdvanceFrame()
 	for (auto& scene : m_Scenes)
 	{
 		if (scene->CheckWorkUpdating())
-			scene->OnPostRender();
+			scene->OnPostRender(nullptr);
 	}
 
 	// Command List 재사용
@@ -550,10 +550,10 @@ void CGameFramework::AdvanceFrame()
 		{
 			// Scene 정보 업데이트
 			scene->Update(m_GameTimer.DeltaTime());
-
 			if (scene->CheckWorkRendering())
 			{
 				scene->PrepareRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
+				scene->OnPreRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 				// Framework 정보 업데이트
 				UpdateShaderVariables();
 
@@ -567,7 +567,7 @@ void CGameFramework::AdvanceFrame()
 		{
 			// Scene Root Signature를 사용
 			m_pLoadingScene->PrepareRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
-
+			m_pLoadingScene->OnPreRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 			// Framework 정보 업데이트
 			UpdateShaderVariables();
 

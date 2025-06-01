@@ -164,7 +164,8 @@ public:
 
 	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
-	virtual void OnPostRender() {} ;
+	virtual bool OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
+	virtual void OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList) {} ;
 
 	// static method
 	static ComPtr<ID3D12RootSignature> CreateGraphicsRootSignature(ID3D12Device* pd3dDevice);

@@ -31,7 +31,7 @@ public:
 
 	void BuildFiredBullets();
 
-	virtual void OnPostRender() override;
+	virtual void OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList) override;
 	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;

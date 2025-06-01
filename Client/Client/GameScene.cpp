@@ -93,6 +93,15 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	CGun::m_pBulletObject = pBullet;
 	AddObject(pBullet);
 
+	// Shader
+	m_pDepthRenderShader = std::make_shared<CDepthRenderShader>();
+	m_pDepthRenderShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+	m_pDepthRenderShader->BuildObjects(pd3dDevice, pd3dCommandList);
+
+	m_pShadowShader = std::make_shared<CShadowMapShader>();
+	m_pShadowShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+	m_pShadowShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture());
+
 	// 마지막 모든 Object의 생성이 끝나면 Player의 카메라를 추적
 	if (m_pPlayer)
 	{
@@ -154,7 +163,7 @@ void CGameScene::BuildFiredBullets()
 	m_pFireInfos.clear();
 }
 
-void CGameScene::OnPostRender()
+void CGameScene::OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	if(m_pBulletObject) m_pBulletObject->OnPostRender();
 }

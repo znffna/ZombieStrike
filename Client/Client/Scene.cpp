@@ -317,6 +317,15 @@ bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
 	return true;
 }
 
+bool CScene::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (m_pDepthRenderShader) {
+		m_pDepthRenderShader->PrepareShadowMap(pd3dCommandList, pCamera);
+		return true;
+	}
+	return false;
+}
+
 bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	if (false == CheckWorkRendering())
@@ -332,6 +341,8 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	ID3D12DescriptorHeap* ppHeaps[] = { m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap.Get() };
 	pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
+	if(m_pDepthRenderShader) m_pDepthRenderShader->UpdateShaderVariables(pd3dCommandList);
+
 	// Set Viewport and Scissor & Update Camera Variables
 	if (nullptr == pCamera)
 	{
@@ -345,6 +356,10 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 	// Update Shader Variables
 	UpdateShaderVariables(pd3dCommandList);
+
+	if (m_pShadowShader) m_pShadowShader->Render(pd3dCommandList, pCamera);
+	if (m_pShadowMapToViewport) m_pShadowMapToViewport->Render(pd3dCommandList, pCamera);
+
 
 	// Render GameObjects 
 	for (auto& pvecObjects : m_ppGameObjects)
