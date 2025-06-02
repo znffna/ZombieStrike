@@ -9,7 +9,7 @@
 
 extern std::string SERVER_IP;
 constexpr const char* LOOPBACK_IP = "127.0.0.1";
-#define USSING_IP SERVER_IP
+#define USSING_IP LOOPBACK_IP
 
 extern bool g_bNetworkDebugMode;
 

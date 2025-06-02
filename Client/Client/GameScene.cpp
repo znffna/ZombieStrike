@@ -275,7 +275,9 @@ FIRE_INFO CGameScene::Fire(const std::shared_ptr<CPlayer>& pPlayer)
 {
 	std::shared_ptr<CGun> pGun = pPlayer->GetGun();
 
-	FIRE_INFO fireInfo;
+	FIRE_INFO fireInfo{};
+	if (false == pGun->CanFire()) return fireInfo; // 총이 발사 가능한 상태가 아닐 경우
+
 	fireInfo.xmf3Velocity = pPlayer->GetComponent<CCamera>()->GetLook();
 	fireInfo.xmf3Position = pGun->FindFrame("M16_4_low")->GetPosition(); // 총구 위치
 	fireInfo.fRange = pGun->GetRange();

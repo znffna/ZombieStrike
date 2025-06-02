@@ -94,7 +94,9 @@ public:
 		WALK_BACKWARD,
 		WALK_BACKWARD_RIGHT,
 		// FIRE
-		FIRE
+		FIRE,
+		// Reload
+		//RELOAD,
 	};
 
 	CAnimationController();

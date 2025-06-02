@@ -299,6 +299,8 @@ FIRE_INFO COnlineScene::Fire(const std::shared_ptr<CPlayer>& pPlayer)
 {
 	auto fireInfo = CGameScene::Fire(pPlayer);
 
+	if (fireInfo.fRange <= 0.0f) return fireInfo; // 총알이 발사되지 않은 경우
+
 	if (m_pPlayer == pPlayer) SendFirePacket(fireInfo);
 
 	return fireInfo;

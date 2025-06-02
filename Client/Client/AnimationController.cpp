@@ -242,10 +242,10 @@ void CAnimationController::ChangeState(ANIMATION_STATE state)
 	beforeState = this->state;
 	this->state = state;
 
-	{
+	/*{
 		std::string debugString = "Change Animation State: " + std::to_string(static_cast<int>(beforeState)) + " to " + std::to_string(static_cast<int>(state)) +"\n";
 		OutputDebugStringA(debugString.c_str());
-	}
+	}*/
 
 	SetTrackEnable(beforeState, false);
 	SetTrackEnable(state, true);

@@ -9,7 +9,7 @@
 struct FIRE_INFO {
 	XMFLOAT3 xmf3Position;
 	XMFLOAT3 xmf3Velocity;
-	float fRange;
+	float fRange = 0.0f;
 };
 
 class CGameScene : public CScene

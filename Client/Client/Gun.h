@@ -31,14 +31,19 @@ public:
 	virtual void UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
 
 	// Methods
-	bool Fire() {
+	bool CanFire() {
 		if (m_fCoolTime <= 0.0f && m_nCurrentAmmo > 0) {
 			m_fCoolTime = m_fFireRate;
-			m_nCurrentAmmo--;
+			{
+				std::string debug = "CGun::CanFire() - Gun Type: " + std::to_string(m_nGunType) + ", Ammo: " + std::to_string(m_nCurrentAmmo) + "\n";
+				OutputDebugStringA(debug.c_str());
+			}
+			//m_nCurrentAmmo--; 일단 Reload 없이 총 발사 간격만 적용.
 			return true; // 발사 성공
 		}
 		return false; // 발사 실패
 	}
+	
 	void Fire(const XMFLOAT3& xmf3Direction);
 	void Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction);
 
@@ -54,8 +59,8 @@ private:
 
 	int m_nGunType = 0; // 0: Assault Rifle, 1: Shotgun
 
-	float m_fFireTimePerSecond = 12.5f; // 초당 발사 횟수
-	float m_fFireRate = 1.0f / 12.5f; // 발당 시간 (초당 발사 횟수의 역수)
+	float m_fFireTimePerSecond = 10.0f; // 초당 발사 횟수
+	float m_fFireRate = 1.0f / 10.0f; // 발당 시간 (초당 발사 횟수의 역수)
 	float m_fCoolTime = 0.0f; // 발사 대기 시간
 	float m_fBulletSpeed = 300.0f; // 총알 속도 (미터/초)
 	float m_fBulletRange = 300.0f; // 총알 최대 사거리
