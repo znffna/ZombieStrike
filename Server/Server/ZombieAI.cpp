@@ -425,13 +425,32 @@ std::vector<std::vector<int>> LoadMapBin(const std::string& filename)
 				DEBUG_LOG("[ERROR] 파일 끝에 도달했습니다. 크기가 너무 작습니다.");
                 exit(1);
             }
-            int flippedZ = GRID_WIDTH - 1 - z; // z축반전 위애래
-            map[flippedZ][x] = (value == 0) ? 0 : 1;
-            //map[z][x] = (value == 0) ? 0 : 1; // 0 = 길, 1 = 장애물
+            // z축반전 위애래
+            //int flippedZ = GRID_WIDTH - 1 - z;
+            //map[flippedZ][x] = (value == 0) ? 0 : 1;
+            map[z][x] = (value == 0) ? 0 : 1; // 0 = 길, 1 = 장애물
         }
     }
 	DEBUG_LOG("[OK] 512x512 맵 로드 완료");
     return map;
+}
+
+// 5x5 확인용 함수 (중심 기준 2칸 범위 확인)
+bool IsSurroundingsFree(const std::vector<std::vector<int>>& map, int x, int z) {
+    constexpr int RANGE = 2; // 범위 조절: 1 = 3x3, 2 = 5x5, 3 = 7x7 ...
+
+    for (int dz = -RANGE; dz <= RANGE; ++dz) {
+        for (int dx = -RANGE; dx <= RANGE; ++dx) {
+            int nx = x + dx;
+            int nz = z + dz;
+
+            if (nx < 0 || nx >= GRID_WIDTH || nz < 0 || nz >= GRID_HEIGHT)
+                return false;
+            if (map[nz][nx] != 0)
+                return false;
+        }
+    }
+    return true;
 }
 
 std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map)
@@ -449,7 +468,9 @@ std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map)
     int attempts = 0;
     while (attempts < 100) {
         int x = distX(gen), z = distZ(gen);
-        if (map[z][x] == 0) return { x, z };
+		if (map[z][x] == 0 && IsSurroundingsFree(map, x, z))
+			return { x, z };
+        //if (map[z][x] == 0) return { x, z };
         ++attempts;
     }
 
@@ -516,6 +537,7 @@ void PrintMap2(
             {
                 int zx = static_cast<int>(zombie->GetX() / CELL_SIZE);
                 int zz = static_cast<int>(zombie->GetZ() / CELL_SIZE);
+                
                 
 
                 if (zx == x && zz == z) {
