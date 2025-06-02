@@ -512,6 +512,15 @@ void CGameFramework::AdvanceFrame()
 	// 타이머 업데이트
 	m_GameTimer.Tick(60.0f);
 
+	// Command Queue의 명령들이 모두 실행될 때까지 대기
+	WaitForGpuComplete();
+
+	for (auto& scene : m_Scenes)
+	{
+		if (scene->CheckWorkUpdating())
+			scene->OnPostRender(nullptr);
+	}
+
 	// Input 업데이트
 	ProcessInput();
 
@@ -520,7 +529,6 @@ void CGameFramework::AdvanceFrame()
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->Reset(m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get(), nullptr);
 
 	// Update
-
 	for (auto& scene : m_Scenes)
 	{
 		if (scene->CheckWorkUpdating())
@@ -560,7 +568,6 @@ void CGameFramework::AdvanceFrame()
 	OMSetBackBuffer();
 	// Clear Back Buffer And Depth-Stencil Buffer 
 	ClearRtvAndDsv();
-
 
 	if(false == m_Scenes.empty()) m_Scenes.back()->PrepareRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 
@@ -615,16 +622,6 @@ void CGameFramework::AdvanceFrame()
 	// Swap Chain의 Back Buffer를 화면에 표시
 	m_pdxgiSwapChain->Present(0, 0);
 	++g_nFrameCount;
-
-	// Command Queue의 명령들이 모두 실행될 때까지 대기
-	WaitForGpuComplete();
-
-	for (auto& scene : m_Scenes)
-	{
-		if (scene->CheckWorkUpdating())
-			scene->OnPostRender(nullptr);
-	}
-
 
 	// Time / FPS 출력
 	std::wstring time = L"Time: " + std::to_wstring(m_GameTimer.GameTime());
