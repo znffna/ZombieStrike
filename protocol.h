@@ -184,6 +184,11 @@ struct Vec3 {
     float LengthSquared() const {
         return x * x + y * y + z * z;
     }
+    // 내적
+    float Dot(const Vec3& rhs) const {
+        return x * rhs.x + y * rhs.y + z * rhs.z;
+    }
+
 };
 
 constexpr Vec3 START_POSITIONS[3] = {
@@ -264,9 +269,9 @@ struct pkt_cs_update {
 // 총알 발사 패킷
 struct pkt_cs_shoot {
     PacketHeader header{sizeof(*this), PKT_TYPE::C_S_SHOOT };
-	SIZEID id;                      // 누가 쐈는지
-    SIZE1 GunType;                  // 총 종류
-    //int hitZombieId;
+	//SIZEID id;                      // 누가 쐈는지
+ //   SIZE1 GunType;                  // 총 종류
+ //   //int hitZombieId;
     float bulletPos[3];
     float bulletDir[3];
 };
@@ -286,8 +291,8 @@ struct pkt_cs_hit {
 struct pkt_sc_hit_result {
     PacketHeader header{sizeof(*this), PKT_TYPE::S_C_HIT_RESULT };
     SIZEID shooterId;               // 누가 쐈는지
-    SIZEID zombieId;
-    SIZE2 zombieHp;
+    //SIZEID zombieId;
+   //  SIZE2 zombieHp;
     //uint8_t damage;               // 얼마나 깎였는지
 };
 struct ZombieHit {

@@ -49,9 +49,10 @@ public:
     int GetID() const;   // 좀비 ID 및 상태 조회
     Vec3 GetPosition() const { return Vec3{ m_x, 0.0f, m_z }; }
     SIZE2 GetHP() const;
-  
+
+    void AddDamage(SIZE2 amount); // 체력 설정
     
-    Object GetObjectinfo() const; // 패킷 정보 반환
+    Object GetObjectinfo() const; // 패킷 정보 반환   
 
     // Dirty 플래그
     bool IsDirty() const;
@@ -73,7 +74,6 @@ private:
     float m_x, m_z;
     float m_targetX, m_targetZ;
     SIZE2 m_hp;  
-
     std::vector<std::pair<int, int>> m_path;
 
     const std::vector<std::vector<int>>& m_map;

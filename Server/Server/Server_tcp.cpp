@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <queue>
 #include <print>
+
 #include "../../protocol.h"
 #include "ZombieAI.h" 
 
@@ -47,6 +48,7 @@ struct Zombie {
 };
 
 std::vector<ZombieAI*> g_zombies; // ZombieAI 객체를 서버가 관리
+// std::vector<std::unique_ptr<ZombieAI>> g_zombies;
 std::vector<std::vector<int>> g_map; // 맵 데이터
 std::mutex zombiesMutex;
 
@@ -55,6 +57,7 @@ short IN_g_player_n= 0;
 
 class SESSION;
 std::unordered_map<SIZEID, SESSION> g_users;
+// std::unordered_map<SIZEID, std::shared_ptr<SESSION>>로 교체
 
 void CALLBACK g_recv_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
 void CALLBACK g_send_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
@@ -248,6 +251,57 @@ public:
         do_send(&p_update);
     }
 
+    // 총알 충돌 체크 및 데미지 적용
+    void check_bullet_collision(SIZEID shooter_id, const Vec3& origin, const Vec3& direction) {
+        constexpr float maxDistance = 100.0f;
+        constexpr float hitRadius = 1.0f;
+
+        Vec3 normDir = direction.Normalize();
+        Vec3 endPos = origin + normDir * maxDistance;
+
+        pkt_sc_hit_result hit_packet;
+        hit_packet.header.size = sizeof(hit_packet);
+        hit_packet.header.type = PKT_TYPE::S_C_HIT_RESULT;
+        hit_packet.shooterId = shooter_id;
+        for (auto& [id, session] : g_users)
+            session.do_send(&hit_packet);
+
+
+        // 좀비 충돌 체크
+        for (auto zombie : g_zombies) {
+            Vec3 toTarget = zombie->GetPosition() - origin;
+            float t = toTarget.Dot(normDir);
+            if (t < 0 || t > maxDistance) continue;
+
+            Vec3 closest = origin + normDir * t;
+            float distSqr = (closest - zombie->GetPosition()).LengthSquared();
+
+            if (distSqr <= hitRadius * hitRadius) {
+                zombie->AddDamage(10); 
+
+				if (zombie->GetHP() <= 0) {
+					// 좀비가 죽었을 때 처리
+					// std::cout << "[Zombie] " << zombie->GetID() << " is dead.\n";
+					zombie->ClearDirty(); // 좀비 상태 초기화 , 여기서 하는게 좋은가?
+				}
+            }
+        }
+
+        // 플레이어 충돌 체크
+     //for (auto& [id, session] : g_users) {
+     //    if (id == shooter_id) continue;
+     //    Vec3 toTarget = session._position - origin;
+     //    float t = toTarget.Dot(normDir);
+     //    if (t < 0 || t > maxDistance) continue;
+     //    Vec3 closest = origin + normDir * t;
+     //    float distSqr = (closest - session._position).LengthSquared();
+     //    if (distSqr <= hitRadius * hitRadius) {
+     //        session._hp = (std::max)(0, session._hp - 10);
+     //       // std::cout << "[Hit] " << shooter_id << " hit Player " << id << "\n";
+     //        session.send_object_update();
+     //    }
+     //}
+    }
 
 	void process_packet(SIZE2* packet) {
 
@@ -420,7 +474,17 @@ public:
         }
 
         case PKT_TYPE::C_S_SHOOT:
+        {
+            auto* p = reinterpret_cast<pkt_cs_shoot*>(packet);
+            Vec3 origin = { p->bulletPos[0], p->bulletPos[1], p->bulletPos[2] };
+            Vec3 direction = { p->bulletDir[0], p->bulletDir[1], p->bulletDir[2] };
+
+            // 레이캐스트 충돌 처리 함수 호출
+            check_bullet_collision(_id, origin, direction);
+
             break;
+        }
+
 
         default:
             std::cout << "[WARN] Unknown PacketType: " << packet_type << "\n";
@@ -568,7 +632,7 @@ int main() {
 
     if (listen (s_socket, SOMAXCONN) == SOCKET_ERROR)
         error_display("Listen failed", WSAGetLastError());
-    else { std::cout << "Listen Success\n"; }
+    else { std::cout << "Listen Success\n"; }   
 
 
     std::cout << "Zombie Strike 3D Server running on port: " << PORT_NUM << "\n";
