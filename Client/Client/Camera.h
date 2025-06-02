@@ -69,6 +69,8 @@ public:
 	float GetYaw() { return m_fYaw; }
 	float GetRoll() { return m_fRoll; }
 
+	void SetPitch(float fPitch) { m_fPitch = fPitch; }
+
 	virtual void Rotate(float x, float y, float z);
 	void Rotate(const XMFLOAT3& xmf3Shift) { Rotate(xmf3Shift.x, xmf3Shift.y, xmf3Shift.z); }
 

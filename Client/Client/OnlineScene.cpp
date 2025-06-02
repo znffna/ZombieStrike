@@ -221,7 +221,8 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			pRigidBody->SetVelocity(updatePkt->velocity.x, updatePkt->velocity.y, updatePkt->velocity.z);
 		}
 		m_mapGameObjects[updatePkt->id]->SetState(updatePkt->act_type);
-
+		float fPitch = updatePkt->pitch;
+		if(auto pCamera = m_mapGameObjects[updatePkt->id]->GetComponent<CCamera>()) pCamera->SetPitch(fPitch);
 	
 		if (g_bNetworkDebugMode) {
 			std::string DebugOutput = "S_C_OBJECT_UPDATE[" + std::to_string(updatePkt->id) + "] ";
