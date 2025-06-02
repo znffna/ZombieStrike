@@ -54,11 +54,6 @@
 
 #ifdef _DEBUG
 #include <dxgidebug.h>
-//#define _WITH_DEBUG_FRAME_HIERARCHY  // 프레임 계층 구조 디버깅
-//#define _WITH_DEBUG_SKINNING_BONE    // 스키닝 본 디버깅
-//#define _WITH_DEBUG_ANIMATION_UPDATE // 애니메이션 업데이트 디버깅
-//#define _WITH_DEBUG_TRANSFORM_UPDATE // 트랜스폼 업데이트 디버깅
-//#define _WITH_OBJECT_TRANSFORM	   // 오브젝트 트랜스폼 자체를 포함할 경우.(사용 안할시 class CTransform을 사용)
 #endif
 
 // 프로그램 실행시 전체화면 On / OFF (F9 키로 실행 중에 전환 가능)
@@ -89,6 +84,17 @@ using Microsoft::WRL::ComPtr;
 #define _WITH_STANDARD_TEXTURE_MULTIPLE_PARAMETERS
 #define SKINNED_TRANSFORM_GPU_BUFFER 3000
 
+// Light
+#define MAX_LIGHTS 16
+
+#define POINT_LIGHT			1
+#define SPOT_LIGHT			2
+#define DIRECTIONAL_LIGHT	3
+
+// Shadow
+#define MAX_DEPTH_TEXTURES		MAX_LIGHTS
+#define _WITH_DEPTH_TO_TEXTURE
+
 // Root Signature Paramater Index
 #define ROOT_PARAMETER_OBJECT 0
 #define ROOT_PARAMETER_MATERIAL (ROOT_PARAMETER_OBJECT + 1)		// 1
@@ -115,13 +121,18 @@ using Microsoft::WRL::ComPtr;
 #define ROOT_PARAMETER_SKYBOX (ROOT_PARAMETER_STANDARD_TEXTURES + 1) // 6 	
 #endif
 
-#define ROOT_PARAMETER_SKINNED_BONE_OFFSETS (ROOT_PARAMETER_SKYBOX + 1)
-#define ROOT_PARAMETER_SKINNED_BONE_TRANSFORM (ROOT_PARAMETER_SKINNED_BONE_OFFSETS + 1)
+#define ROOT_PARAMETER_SKINNED_BONE_OFFSETS (ROOT_PARAMETER_SKYBOX + 1) // 13 or 7
+#define ROOT_PARAMETER_SKINNED_BONE_TRANSFORM (ROOT_PARAMETER_SKINNED_BONE_OFFSETS + 1) // 14 or 8
+
+#define ROOT_PARAMETER_DEPTH_WRITE (ROOT_PARAMETER_SKINNED_BONE_TRANSFORM + 1) // 15 or 9
+#define ROOT_PARAMETER_TO_LIGHT (ROOT_PARAMETER_DEPTH_WRITE + 1) // 16 or 10
 
 // GaneFramework
 extern bool g_windowActive; // 전역 또는 멤버 변수로 상태 저장
 extern int gnCurrentBullets;
 extern bool g_bRenderCollider;
+
+extern bool g_bDebugOutput;
 
 // Window Size
 extern UINT WINDOW_WIDTH;

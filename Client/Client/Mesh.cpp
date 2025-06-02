@@ -1173,6 +1173,7 @@ void CBulletMesh::CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	CBulletVertex pVertices[1];
 
+	pVertices[0].m_xmf3LastPosition = XMFLOAT3{ 0,0,0 };
 	pVertices[0].m_xmf3Position = XMFLOAT3{ 0,0,0 };
 	pVertices[0].m_xmf3Velocity = XMFLOAT3{ 0,0,0 };
 	pVertices[0].m_fLifetime = 0.0f;
@@ -1306,7 +1307,7 @@ void CBulletMesh::PostRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPi
 {
 }
 
-#define _WITH_DEBUG_STREAM_OUTPUT_VERTICES
+//#define _WITH_DEBUG_STREAM_OUTPUT_VERTICES
 
 void CBulletMesh::OnPostRender(int nPipelineState)
 {

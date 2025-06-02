@@ -11,7 +11,6 @@ void CRigidBody::Init(CGameObject* pObject)
 {
 	CComponent::Init(pObject);
 	m_pTransform = pObject->GetComponent<CTransform>();
-	m_pCollider = pObject->GetComponent<CCollider>();
 }
 
 void CRigidBody::UpdateRigidBody(float fTimeElapsed)

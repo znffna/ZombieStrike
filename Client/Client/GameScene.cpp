@@ -43,8 +43,8 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
 
 	// <Store GameObjects>
-	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 300);
-	StorePlayer(pd3dDevice, pd3dCommandList, pd3dRootSignature, 2);
+	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 100);
+	StorePlayer(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
 
 	// <Initialize GameObjects>
 
@@ -77,13 +77,14 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	pMap->m_pModelRootObject->UpdateTransform();
 	m_pMap = pMap->m_pModelRootObject;
 	m_pMap->SetLayer(CGameObject::LAYER_ENVIRONMENT);
-	m_pMap->Update(0.0f);
+	m_pMap->UpdateBBCache();
 	AddObject(m_pMap);
 	//AddObject(m_pMap);
 
 	// Collision Checker
 	auto pCollisionChecker = std::make_shared<CCollisionChecker>(this);
 	pCollisionChecker->Initialize(pd3dDevice, pd3dCommandList);
+	m_pCollisionChecker = pCollisionChecker;
 	AddObject(pCollisionChecker);
 
 	// BulletObject
@@ -91,6 +92,19 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pBulletObject = pBullet;
 	CGun::m_pBulletObject = pBullet;
 	AddObject(pBullet);
+
+	// Shader
+	m_pDepthRenderShader = std::make_shared<CDepthRenderShader>(this);
+	m_pDepthRenderShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+	m_pDepthRenderShader->BuildObjects(pd3dDevice, pd3dCommandList);
+
+	m_pShadowShader = std::make_shared<CShadowMapShader>(this);
+	m_pShadowShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+	m_pShadowShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture());
+
+	m_pShadowMapToViewport = std::make_shared<CTextureToViewportShader>(this);
+	m_pShadowMapToViewport->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+	m_pShadowMapToViewport->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture());
 
 	// 마지막 모든 Object의 생성이 끝나면 Player의 카메라를 추적
 	if (m_pPlayer)
@@ -127,9 +141,47 @@ void CGameScene::ReleaseUploadBuffers()
 void CGameScene::Update(float deltaTime)
 {
 	CScene::Update(deltaTime);
+
+	BuildFiredBullets();
 }
 
-void CGameScene::OnPostRender()
+void CGameScene::UpdateLights()
+{
+	if (m_pDepthRenderShader)
+	{
+		/*auto xmf3CameraPosition = m_pCamera->GetPosition();
+		for (int i = 1; i < 2; ++i) {
+			if (m_pLights[i].m_bEnable == false) continue;
+			if (m_pLights[i].m_nType != DIRECTIONAL_LIGHT) continue;
+			float fLightRange = m_pLights[i].m_fRange;
+			m_pLights[i].m_xmf3Position = Vector3::Add(xmf3CameraPosition, Vector3::ScalarProduct(m_pLights[i].m_xmf3Direction, -fLightRange));
+		}*/
+	}
+}
+
+void CGameScene::BuildFiredBullets()
+{
+	if (m_bIschambered) {
+		if (m_pPlayer && m_pBulletObject)
+		{
+			Fire(m_pPlayer);
+		}
+	}
+	for (auto& pBullet : m_pFireInfos)
+	{
+		auto result = m_pCollisionChecker->CheckBulletCollision(pBullet.xmf3Position, pBullet.xmf3Velocity, pBullet.fRange);
+		m_pBulletObject->AddBullet(pBullet.xmf3Position, pBullet.xmf3Velocity, result.fImpactDistance);
+		if(g_bDebugOutput){
+			std::string debugOutput = "CGameScene::BuildFiredBullets() - Bullet Position: " + std::to_string(pBullet.xmf3Position.x) + ", " + std::to_string(pBullet.xmf3Position.y) + ", " + std::to_string(pBullet.xmf3Position.z) + "\n";
+			debugOutput += "Velocity: " + std::to_string(pBullet.xmf3Velocity.x) + ", " + std::to_string(pBullet.xmf3Velocity.y) + ", " + std::to_string(pBullet.xmf3Velocity.z) + "\n";
+			debugOutput += "Impact Distance: " + std::to_string(result.fImpactDistance) + "\n";
+			OutputDebugStringA(debugOutput.c_str());
+		}
+	}
+	m_pFireInfos.clear();
+}
+
+void CGameScene::OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	if(m_pBulletObject) m_pBulletObject->OnPostRender();
 }
@@ -154,12 +206,13 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 		}
 	}
 
-	if (m_bMouseLButtonDown) {
-		if (m_pPlayer && m_pBulletObject)
-		{
-			m_pPlayer->Fire();
-		}
-	}
+	m_bIschambered = m_bMouseLButtonDown;
+	//if (m_bMouseLButtonDown) {
+	//	if (m_pPlayer && m_pBulletObject)
+	//	{
+	//		this->Fire();
+	//	}
+	//}
 
 	return true;
 }
@@ -216,6 +269,22 @@ void CGameScene::ChangeMap(int nMapIndex)
 	m_pMap->Update(0.0f);
 	m_pMap->SetLayer(CGameObject::LAYER_ENVIRONMENT);
 	AddObject(m_pMap);
+}
+
+FIRE_INFO CGameScene::Fire(const std::shared_ptr<CPlayer>& pPlayer)
+{
+	std::shared_ptr<CGun> pGun = pPlayer->GetGun();
+
+	FIRE_INFO fireInfo;
+	fireInfo.xmf3Velocity = pPlayer->GetComponent<CCamera>()->GetLook();
+	fireInfo.xmf3Position = pGun->FindFrame("M16_4_low")->GetPosition(); // 총구 위치
+	fireInfo.fRange = pGun->GetRange();
+	float gunSpeed = pGun->GetSpeed();
+
+	fireInfo.xmf3Velocity = Vector3::ScalarProduct(fireInfo.xmf3Velocity, gunSpeed, false);
+
+	m_pFireInfos.push_back(fireInfo);
+	return fireInfo;
 }
 
 void CGameScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)

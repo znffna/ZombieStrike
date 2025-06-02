@@ -3,13 +3,7 @@
 // Shaders.hlsl : Shader 정의 파일
 // Version : 0.1
 ///////////////////////////////////////////////////////////////////////////////
-struct MATERIAL
-{
-    float4 m_cAmbient;
-    float4 m_cDiffuse;
-    float4 m_cSpecular; //a = power
-    float4 m_cEmissive;
-};
+
 
 #define _USE_OBJECT_MATERIAL_CBV
 
@@ -18,18 +12,14 @@ cbuffer cbGameObjectInfo : register(b0)
     matrix gmtxGameObject : packoffset(c0);
 };
 
-cbuffer cbMaterialInfo : register(b1)
-{
-    MATERIAL gMaterial : packoffset(c0);
-    uint gnTexturesMask : packoffset(c4.x);
-};
-
 cbuffer cbCameraInfo : register(b2)
 {
     matrix gmtxView : packoffset(c0);
     matrix gmtxInvView : packoffset(c4);
     matrix gmtxProjection : packoffset(c8);
     matrix gmtxInvProjection : packoffset(c12);
+    float3 gCameraPosition : packoffset(c16);
+    float padding : packoffset(c16.w);
 };
 
 cbuffer cbFrameworkInfo : register(b3)
@@ -37,9 +27,21 @@ cbuffer cbFrameworkInfo : register(b3)
     float gfCurrentTime : packoffset(c0.x);
     float gfElapsedTime : packoffset(c0.y);
     uint gnRenderMode : packoffset(c0.z);
+    float gfBias : packoffset(c0.w);
 };
 
 #include "Light.hlsl"
+
+struct CB_TO_LIGHT_SPACE
+{
+    matrix mtxToTextureSpace;
+    float4 f4Position;
+};
+
+cbuffer cbToLightSpace : register(b5)
+{
+    CB_TO_LIGHT_SPACE gcbToLightSpaces[MAX_LIGHTS];
+};
 
 // Render Config
 #define _WITH_STANDARD_TEXTURE_MULTIPLE_PARAMETERS
@@ -123,19 +125,45 @@ struct VS_STANDARD_OUTPUT
     float3 tangentW : TANGENT;
     float3 bitangentW : BITANGENT;
     float2 uv : TEXCOORD;
+    
+    float4 shadowMapUVs[MAX_LIGHTS] : TEXCOORD3;
 };
+
+struct ShadowMapUVs
+{
+    float4 UVs[MAX_LIGHTS];
+};
+
+ShadowMapUVs CalculateShadowMapUVs(float4 positionW)
+{
+    ShadowMapUVs result;
+    for (int i = 0; i < MAX_LIGHTS; i++)
+    {
+        if (gcbToLightSpaces[i].f4Position.w != 0.0f)
+        {
+            result.UVs[i] = mul(positionW, gcbToLightSpaces[i].mtxToTextureSpace);
+            result.UVs[i].xyz /= result.UVs[i].w; // Perspective divide
+            //result.UVs[i] /= result.UVs[i].w; // Perspective divide
+        }
+    }
+    return result;
+}
 
 VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
 {
     VS_STANDARD_OUTPUT output;
 
-    output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
+    float4 positionW = mul(float4(input.position, 1.0f), gmtxGameObject);
+    
+    output.positionW = positionW.xyz;
     output.normalW = mul(input.normal, (float3x3) gmtxGameObject);
     output.tangentW = mul(input.tangent, (float3x3) gmtxGameObject);
     output.bitangentW = mul(input.bitangent, (float3x3) gmtxGameObject);
-    output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
+    output.position = mul(mul(float4(positionW), gmtxView), gmtxProjection);
     output.uv = input.uv;
-
+    
+    output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;   
+    
     return (output);
 }
 
@@ -172,14 +200,14 @@ float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
         float3 vNormal = normalize(cNormalColor.rgb * 2.0f - 1.0f); //[0, 1] → [-1, 1]
         normalW = normalize(mul(vNormal, TBN));
     }
-    cIllumination = Lighting(input.positionW, normalW);
+    cIllumination = Lighting(input.positionW, normalW, true, input.shadowMapUVs);
   
-    //return lerp(cColor * 0.3, cColor * cIllumination, 0.7);
-    return (1.0 - 2.0 * cIllumination) * cColor * cColor + 2.0 * cIllumination * cColor;
- 
+    return lerp(cColor, cColor * cIllumination, 0.7);
+    //return (1.0 - 2.0 * cIllumination) * cColor * cColor + 2.0 * cIllumination * cColor;
     
-        return (cColor);
-    }
+    //return (cColor);
+    //return (cIllumination);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -228,11 +256,13 @@ struct VS_TERRAIN_INPUT
 struct VS_TERRAIN_OUTPUT
 {
     float4 position : SV_POSITION;
-    float4 color : COLOR;
     float3 positionW : POSITION;
     float3 normalW : NORMAL;
+    float4 color : COLOR;
     float2 uv0 : TEXCOORD0;
     float2 uv1 : TEXCOORD1;
+    
+    float4 shadowMapUVs[MAX_LIGHTS] : TEXCOORD3;
 };
 
 //정점 셰이더를 정의한다.
@@ -240,13 +270,16 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 {
     VS_TERRAIN_OUTPUT output;
 	
+    float4 positionW = mul(float4(input.position, 1.0f), gmtxGameObject);
+    output.positionW = positionW.xyz;
     output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
     output.color = input.color;
-    output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
     output.normalW = mul(input.normal, (float3x3) gmtxGameObject);
     //output.position = float4(input.position, 1.0f);
     output.uv0 = input.uv0;
     output.uv1 = input.uv1;
+    
+    output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;
     
     return (output);
 }
@@ -265,7 +298,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     float4 detailTexColor = gtxtStandardTextures[1].Sample(gssWrap, input.uv1);
 #endif
     
-    float4 cIllumination = Lighting(input.positionW, input.normalW);
+    float4 cIllumination = Lighting(input.positionW, input.normalW, true, input.shadowMapUVs);
     //float4 cColor = texColor * 0.5f + cIllumination * 0.5f;
     float4 cColor = (texColor * 0.8f + detailTexColor * 0.2f);
     return lerp(cColor, cIllumination, 0.5f);
@@ -324,15 +357,20 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
 //		mtxVertexToBoneWorld += input.weights[i] * gpmtxBoneTransforms[input.indices[i]];
         mtxVertexToBoneWorld += input.weights[i] * mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i]]);
     }
-    output.positionW = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld).xyz;
+    
+    float4 positionW = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld);
+    output.positionW = positionW.xyz;
     output.normalW = mul(input.normal, (float3x3) mtxVertexToBoneWorld).xyz;
     output.tangentW = mul(input.tangent, (float3x3) mtxVertexToBoneWorld).xyz;
     output.bitangentW = mul(input.bitangent, (float3x3) mtxVertexToBoneWorld).xyz;
 
 //	output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
 
-    output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
+    output.position = mul(mul(positionW, gmtxView), gmtxProjection);
     output.uv = input.uv;
+    
+    output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;
+  
 
     return (output);
 }
@@ -372,6 +410,7 @@ float4 PSCollider(VS_COLLIDER_OUTPUT input) : SV_TARGET
 struct VS_BULLET_INPUT
 {
     float3 position : POSITION;
+    float3 lastposition : LASTPOSITION;
     float3 velocity : VELOCITY;
     float lifetime : LIFETIME;
     int type : TYPE;
@@ -383,7 +422,7 @@ VS_BULLET_INPUT VSBulletStreamOutput(VS_BULLET_INPUT input)
 }
 
 
-[maxvertexcount(128)]
+[maxvertexcount(64)]
 void GSBulletStreamOutput(point VS_BULLET_INPUT input[1], inout PointStream<VS_BULLET_INPUT> output)
 {
     VS_BULLET_INPUT particle = input[0];
@@ -394,8 +433,14 @@ void GSBulletStreamOutput(point VS_BULLET_INPUT input[1], inout PointStream<VS_B
     }
     else
     {
+        float fBeforeTime = particle.lifetime;
         particle.lifetime -= gfElapsedTime;
-        if (particle.lifetime > 0.0f)
+        float dt = particle.lifetime < 0.0f ? gfElapsedTime + particle.lifetime : gfElapsedTime;
+        particle.lastposition = particle.position;
+        particle.position += particle.velocity * dt;
+        
+        //if (particle.lifetime > 0.0f)
+        if (fBeforeTime > 0.0f)
         {
             output.Append(particle);
         }
@@ -408,6 +453,7 @@ void GSBulletStreamOutput(point VS_BULLET_INPUT input[1], inout PointStream<VS_B
 struct VS_BULLET_DRAW_OUTPUT
 {
     float3 position : POSITION;
+    float3 lastposition : LASTPOSITION;
     float3 velocity : VELOCITY;
     float lifetime : LIFETIME;
     int type : TYPE;
@@ -426,6 +472,7 @@ VS_BULLET_DRAW_OUTPUT VSBulletDraw(VS_BULLET_INPUT input)
     VS_BULLET_DRAW_OUTPUT output = (VS_BULLET_DRAW_OUTPUT) 0;
 
     output.position = input.position;
+    output.lastposition = input.lastposition;
     output.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
     output.velocity = input.velocity;
     output.lifetime = input.lifetime;
@@ -454,14 +501,16 @@ void GSBulletDraw(point VS_BULLET_DRAW_OUTPUT input[1], inout TriangleStream<GS_
     float3 cameraPos = GetCameraPosition();
     
     float3 start = input[0].position;
-    float3 end = input[0].position + input[0].velocity;
+    float3 end = input[0].lastposition;
     
     float3 halfPos = (end + start) * 0.5f;
     
     float3 dir = normalize(halfPos - cameraPos);
     dir = cross(dir, normalize(input[0].velocity));
     
-    float3 gf3RectPositions[4] = { float3(start + dir * 0.5f * input[0].lifetime), float3(end + dir * 0.5f * input[0].lifetime), float3(start - dir * 0.5f * input[0].lifetime), float3(end - dir * 0.5f * input[0].lifetime) };
+    float height = 0.1f;
+    
+    float3 gf3RectPositions[4] = { float3(start + dir * height), float3(end + dir * height), float3(start - dir * height), float3(end - dir * height) };
     
     for (int i = 0; i < 4; i++)
     {
@@ -484,7 +533,177 @@ float4 PSBulletDraw(GS_BULLET_DRAW_OUTPUT input) : SV_TARGET
     return (cColor);
 }
 
-
-
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+struct VS_LIGHTING_INPUT
+{
+    float3 position : POSITION;
+    float3 normal : NORMAL;
+};
+
+struct VS_LIGHTING_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float3 positionW : POSITION;
+    float3 normalW : NORMAL;
+};
+
+VS_LIGHTING_OUTPUT VSLighting(VS_LIGHTING_INPUT input)
+{
+    VS_LIGHTING_OUTPUT output;
+
+    output.normalW = mul(input.normal, (float3x3) gmtxGameObject);
+    output.positionW = (float3) mul(float4(input.position, 1.0f), gmtxGameObject);
+    output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
+
+    return (output);
+}
+
+float4 PSLighting(VS_LIGHTING_OUTPUT input) : SV_TARGET
+{
+    input.normalW = normalize(input.normalW);
+    float4 shadowMapUVs[MAX_LIGHTS];
+    float4 cIllumination = Lighting(input.positionW, input.normalW, false, shadowMapUVs);
+
+//	return(cIllumination);
+    return (float4(input.normalW * 0.5f + 0.5f, 1.0f));
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+struct PS_DEPTH_OUTPUT
+{
+    float fzPosition : SV_Target;
+    float fDepth : SV_Depth;
+};
+
+PS_DEPTH_OUTPUT PSDepthWriteShader(VS_LIGHTING_OUTPUT input)
+{
+    PS_DEPTH_OUTPUT output;
+
+    output.fzPosition = input.position.z;
+    output.fDepth = input.position.z;
+
+    return (output);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+struct VS_SHADOW_MAP_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float3 positionW : POSITION;
+    float3 normalW : NORMAL;
+
+    float4 shadowMapUVs[MAX_LIGHTS] : TEXCOORD3;
+};
+
+VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_STANDARD_INPUT input)
+{
+    VS_SHADOW_MAP_OUTPUT output = (VS_SHADOW_MAP_OUTPUT) 0;
+
+    float4 positionW = mul(float4(input.position, 1.0f), gmtxGameObject);
+    output.positionW = positionW.xyz;
+    output.position = mul(mul(positionW, gmtxView), gmtxProjection);
+    output.normalW = mul(float4(input.normal, 0.0f), gmtxGameObject).xyz;
+
+    output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;
+
+    return (output);
+}
+
+float4 PSShadowMapShadow(VS_SHADOW_MAP_OUTPUT input) : SV_TARGET
+{
+    float4 cIllumination = Lighting(input.positionW, normalize(input.normalW), true, input.shadowMapUVs);
+    return (cIllumination);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+
+VS_TEXTURED_OUTPUT VSTextureToViewport(uint nVertexID : SV_VertexID)
+{
+    VS_TEXTURED_OUTPUT output = (VS_TEXTURED_OUTPUT) 0;
+
+    if (nVertexID == 0)
+    {
+        output.position = float4(-1.0f, +1.0f, 0.0f, 1.0f);
+        output.uv = float2(0.0f, 0.0f);
+    }
+    if (nVertexID == 1)
+    {
+        output.position = float4(+1.0f, +1.0f, 0.0f, 1.0f);
+        output.uv = float2(1.0f, 0.0f);
+    }
+    if (nVertexID == 2)
+    {
+        output.position = float4(+1.0f, -1.0f, 0.0f, 1.0f);
+        output.uv = float2(1.0f, 1.0f);
+    }
+    if (nVertexID == 3)
+    {
+        output.position = float4(-1.0f, +1.0f, 0.0f, 1.0f);
+        output.uv = float2(0.0f, 0.0f);
+    }
+    if (nVertexID == 4)
+    {
+        output.position = float4(+1.0f, -1.0f, 0.0f, 1.0f);
+        output.uv = float2(1.0f, 1.0f);
+    }
+    if (nVertexID == 5)
+    {
+        output.position = float4(-1.0f, -1.0f, 0.0f, 1.0f);
+        output.uv = float2(0.0f, 1.0f);
+    }
+
+    return (output);
+}
+
+float4 GetColorFromDepth(float fDepth)
+{
+    float4 cColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+
+    if (fDepth < 0.00625f)
+        cColor = float4(1.0f, 0.0f, 0.0f, 1.0f);
+    else if (fDepth < 0.0125f)
+        cColor = float4(0.0f, 1.0f, 0.0f, 1.0f);
+    else if (fDepth < 0.025f)
+        cColor = float4(0.0f, 0.0f, 1.0f, 1.0f);
+    else if (fDepth < 0.05f)
+        cColor = float4(1.0f, 1.0f, 0.0f, 1.0f);
+    else if (fDepth < 0.075f)
+        cColor = float4(0.0f, 1.0f, 1.0f, 1.0f);
+    else if (fDepth < 0.1f)
+        cColor = float4(1.0f, 0.5f, 0.5f, 1.0f);
+    else if (fDepth < 0.4f)
+        cColor = float4(0.5f, 1.0f, 1.0f, 1.0f);
+    else if (fDepth < 0.6f)
+        cColor = float4(1.0f, 0.0f, 1.0f, 1.0f);
+    else if (fDepth < 0.8f)
+        cColor = float4(0.5f, 0.5f, 1.0f, 1.0f);
+    else if (fDepth < 0.9f)
+        cColor = float4(0.5f, 1.0f, 0.5f, 1.0f);
+    else if (fDepth < 0.95f)
+        cColor = float4(0.5f, 0.0f, 0.5f, 1.0f);
+    else if (fDepth < 0.99f)
+        cColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    else if (fDepth < 0.999f)
+        cColor = float4(1.0f, 0.0f, 1.0f, 1.0f);
+    else if (fDepth == 1.0f)
+        cColor = float4(0.5f, 0.5f, 0.5f, 1.0f);
+    else if (fDepth > 1.0f)
+        cColor = float4(0.0f, 0.0f, 0.5f, 1.0f);
+    else
+        cColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+
+    return (cColor);
+}
+
+SamplerState gssBorder : register(s3);
+
+float4 PSTextureToViewport(VS_TEXTURED_OUTPUT input) : SV_Target
+{
+    float fDepthFromLight0 = gtxtDepthTextures[0].SampleLevel(gssBorder, input.uv, 0).r;
+
+    return ((float4) (fDepthFromLight0));
+}

@@ -14,6 +14,14 @@
 #define _WITH_THETA_PHI_CONES
 //#define _WITH_REFLECT
 
+struct MATERIAL
+{
+    float4 m_cAmbient;
+    float4 m_cDiffuse;
+    float4 m_cSpecular; //a = power
+    float4 m_cEmissive;
+};
+
 struct LIGHT
 {
     float4 m_cAmbient;
@@ -31,6 +39,12 @@ struct LIGHT
     float padding;
 };
 
+cbuffer cbMaterialInfo : register(b1)
+{
+    MATERIAL gMaterial : packoffset(c0);
+    uint gnTexturesMask : packoffset(c4.x);
+};
+
 cbuffer cbLights : register(b4)
 {
     LIGHT gLights[MAX_LIGHTS];
@@ -41,8 +55,42 @@ cbuffer cbLights : register(b4)
 // return : Camera World Position
 float3 GetCameraPosition()
 {
-    float3 vCameraPosition = float3(-gmtxView._14, -gmtxView._24, -gmtxView._34);
+    //float3 vCameraPosition = float3(-gmtxView._14, -gmtxView._24, -gmtxView._34);
+    //float3 vCameraPosition = float3(-gmtxView._41, -gmtxView._42, -gmtxView._43);
+    float3 vCameraPosition = gCameraPosition;
+    
     return (vCameraPosition);
+}
+
+#define FRAME_BUFFER_WIDTH		1280
+#define FRAME_BUFFER_HEIGHT		720
+
+#define _DEPTH_BUFFER_WIDTH		(FRAME_BUFFER_WIDTH * 4)
+#define _DEPTH_BUFFER_HEIGHT	(FRAME_BUFFER_HEIGHT * 4)
+
+#define DELTA_X					(1.0f / _DEPTH_BUFFER_WIDTH)
+#define DELTA_Y					(1.0f / _DEPTH_BUFFER_HEIGHT)
+
+#define MAX_DEPTH_TEXTURES		MAX_LIGHTS
+
+#define _WITH_PCF_FILTERING
+
+Texture2D<float> gtxtDepthTextures[MAX_DEPTH_TEXTURES] : register(t14);
+SamplerComparisonState gssComparisonPCFShadow : register(s2);
+
+float Compute3x3ShadowFactor(float2 uv, float fDepth, uint nIndex)
+{
+    float fPercentLit = gtxtDepthTextures[nIndex].SampleCmpLevelZero(gssComparisonPCFShadow, uv, fDepth).r;
+    fPercentLit += gtxtDepthTextures[nIndex].SampleCmpLevelZero(gssComparisonPCFShadow, uv + float2(-DELTA_X, 0.0f), fDepth).r;
+    fPercentLit += gtxtDepthTextures[nIndex].SampleCmpLevelZero(gssComparisonPCFShadow, uv + float2(+DELTA_X, 0.0f), fDepth).r;
+    fPercentLit += gtxtDepthTextures[nIndex].SampleCmpLevelZero(gssComparisonPCFShadow, uv + float2(0.0f, -DELTA_Y), fDepth).r;
+    fPercentLit += gtxtDepthTextures[nIndex].SampleCmpLevelZero(gssComparisonPCFShadow, uv + float2(0.0f, +DELTA_Y), fDepth).r;
+    fPercentLit += gtxtDepthTextures[nIndex].SampleCmpLevelZero(gssComparisonPCFShadow, uv + float2(-DELTA_X, -DELTA_Y), fDepth).r;
+    fPercentLit += gtxtDepthTextures[nIndex].SampleCmpLevelZero(gssComparisonPCFShadow, uv + float2(-DELTA_X, +DELTA_Y), fDepth).r;
+    fPercentLit += gtxtDepthTextures[nIndex].SampleCmpLevelZero(gssComparisonPCFShadow, uv + float2(+DELTA_X, -DELTA_Y), fDepth).r;
+    fPercentLit += gtxtDepthTextures[nIndex].SampleCmpLevelZero(gssComparisonPCFShadow, uv + float2(+DELTA_X, +DELTA_Y), fDepth).r;
+
+    return (fPercentLit / 9.0f);
 }
 
 float4 DirectionalLight(int nIndex, float3 vNormal, float3 vToCamera)
@@ -143,7 +191,38 @@ float4 SpotLight(int nIndex, float3 vPosition, float3 vNormal, float3 vToCamera)
     return (float4(0.0f, 0.0f, 0.0f, 0.0f));
 }
 
-float4 Lighting(float3 vPosition, float3 vNormal)
+//float4 Lighting(float3 vPosition, float3 vNormal)
+//{
+//    float3 vCameraPosition = GetCameraPosition();
+//    float3 vToCamera = normalize(vCameraPosition - vPosition);
+
+//    float4 cColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
+//	[unroll(MAX_LIGHTS)]
+//    for (int i = 0; i < gnLights; i++)
+//    {
+//        if (gLights[i].m_bEnable)
+//        {
+//            if (gLights[i].m_nType == DIRECTIONAL_LIGHT)
+//            {
+//                cColor += DirectionalLight(i, vNormal, vToCamera);
+//            }
+//            else if (gLights[i].m_nType == POINT_LIGHT)
+//            {
+//                cColor += PointLight(i, vPosition, vNormal, vToCamera);
+//            }
+//            else if (gLights[i].m_nType == SPOT_LIGHT)
+//            {
+//                cColor += SpotLight(i, vPosition, vNormal, vToCamera);
+//            }
+//        }
+//    }
+//    cColor += (gcGlobalAmbientLight * gMaterial.m_cAmbient);
+//    cColor.a = gMaterial.m_cDiffuse.a;
+
+//    return (cColor);
+//}
+
+float4 Lighting(float3 vPosition, float3 vNormal, bool bShadow, float4 shadowMapUVs[MAX_LIGHTS])
 {
     float3 vCameraPosition = GetCameraPosition();
     float3 vToCamera = normalize(vCameraPosition - vPosition);
@@ -152,20 +231,28 @@ float4 Lighting(float3 vPosition, float3 vNormal)
 	[unroll(MAX_LIGHTS)]
     for (int i = 0; i < gnLights; i++)
     {
+		float fShadowFactor = 1.0f;
+        float fBias = gfBias; // Bias to prevent shadow acne
+#ifdef _WITH_PCF_FILTERING
+		if (bShadow) fShadowFactor = Compute3x3ShadowFactor(shadowMapUVs[i].xy, shadowMapUVs[i].z + fBias, i);
+#else
+        if (bShadow) fShadowFactor = gtxtDepthTextures[i].SampleCmpLevelZero(gssComparisonPCFShadow, shadowMapUVs[i].xy, shadowMapUVs[i].z).r;
+#endif
         if (gLights[i].m_bEnable)
         {
             if (gLights[i].m_nType == DIRECTIONAL_LIGHT)
             {
-                cColor += DirectionalLight(i, vNormal, vToCamera);
+                cColor += DirectionalLight(i, vNormal, vToCamera) * fShadowFactor;
             }
             else if (gLights[i].m_nType == POINT_LIGHT)
             {
-                cColor += PointLight(i, vPosition, vNormal, vToCamera);
+                cColor += PointLight(i, vPosition, vNormal, vToCamera) * fShadowFactor;
             }
             else if (gLights[i].m_nType == SPOT_LIGHT)
             {
-                cColor += SpotLight(i, vPosition, vNormal, vToCamera);
+                cColor += SpotLight(i, vPosition, vNormal, vToCamera) * fShadowFactor;
             }
+            cColor += (gLights[i].m_cAmbient * gMaterial.m_cAmbient);
         }
     }
     cColor += (gcGlobalAmbientLight * gMaterial.m_cAmbient);
@@ -173,4 +260,5 @@ float4 Lighting(float3 vPosition, float3 vNormal)
 
     return (cColor);
 }
+
 

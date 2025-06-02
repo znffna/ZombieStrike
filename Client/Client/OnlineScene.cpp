@@ -146,12 +146,13 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 
 		m_pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
 		m_mapGameObjects[packet->id] = m_pPlayer;
+		m_pPlayer->SetServerID(packet->id);
 		break;
 	}
 	case S_C_OBJECT_ADD:
 	{
 		pkt_sc_object_add* packet = reinterpret_cast<pkt_sc_object_add*>(recv_p);
-		//if (g_bNetworkDebugMode)
+		if (g_bNetworkDebugMode)
 		{
 			std::string DebugOutput = "S_C_OBJECT_ADD 패킷 수신\n";
 			DebugOutput += "position : (" + std::to_string(packet->startposition.x) + ", " + std::to_string(packet->startposition.y) + ", " + std::to_string(packet->startposition.z) + ")\n";
@@ -168,6 +169,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			std::shared_ptr<CPlayer> pPlayer = GetPlayer(0); // GetPlayer(skin_type)로 바꿔야 함
 			pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
 			m_mapGameObjects[packet->id] = pPlayer;
+			pPlayer->SetServerID(packet->id);
 
 			int gun_type = packet->gun_type;
 			std::shared_ptr<CGun> pGun = CGun::Create(nullptr, nullptr, nullptr, gun_type);
@@ -187,6 +189,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			std::shared_ptr<CGameObject> pZombie = GetZombie(packet->skin_type);
 			pZombie->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
 			m_mapGameObjects[packet->id] = pZombie;
+			pZombie->SetServerID(packet->id);
 			{
 				std::string DebugOutput = "ObjectType::ZOMBIE 생성 완료\n";
 				//OutputDebugStringA(DebugOutput.c_str());
@@ -200,6 +203,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			/*std::shared_ptr<CGameObject> pBullet = std::make_shared<CBulletObject>();
 			pBullet->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
 			m_mapGameObjects[packet->id] = pBullet;*/
+			Fire(std::dynamic_pointer_cast<CPlayer>(m_mapGameObjects[packet->id]));
 			break;
 		}
 		}
@@ -217,7 +221,8 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			pRigidBody->SetVelocity(updatePkt->velocity.x, updatePkt->velocity.y, updatePkt->velocity.z);
 		}
 		m_mapGameObjects[updatePkt->id]->SetState(updatePkt->act_type);
-
+		float fPitch = updatePkt->pitch;
+		if(auto pCamera = m_mapGameObjects[updatePkt->id]->GetComponent<CCamera>()) pCamera->SetPitch(fPitch);
 	
 		if (g_bNetworkDebugMode) {
 			std::string DebugOutput = "S_C_OBJECT_UPDATE[" + std::to_string(updatePkt->id) + "] ";
@@ -270,4 +275,31 @@ void COnlineScene::SendPlayerState()
 		m_NetworkClient.send_packet((char*)&packet);
 
 	}
+}
+
+void COnlineScene::SendFirePacket(const FIRE_INFO fireInfo)
+{
+	//struct pkt_cs_shoot {
+	//	PacketHeader header{ sizeof(*this), PKT_TYPE::C_S_SHOOT };
+	//	SIZEID id;                      // 누가 쐈는지
+	//	SIZE1 GunType;                  // 총 종류
+	//	//int hitZombieId;
+	//	float bulletPos[3];
+	//	float bulletDir[3];
+	//};
+
+	pkt_cs_shoot packet{};
+	memcpy(&packet.bulletPos, &fireInfo.xmf3Position, sizeof(XMFLOAT3)); // 총알 위치
+	memcpy(&packet.bulletDir, &fireInfo.xmf3Velocity, sizeof(XMFLOAT3)); // 총알 방향 * 거리
+
+	m_NetworkClient.send_packet((char*)&packet);
+}
+
+FIRE_INFO COnlineScene::Fire(const std::shared_ptr<CPlayer>& pPlayer)
+{
+	auto fireInfo = CGameScene::Fire(pPlayer);
+
+	if (m_pPlayer == pPlayer) SendFirePacket(fireInfo);
+
+	return fireInfo;
 }

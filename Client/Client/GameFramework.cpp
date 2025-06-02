@@ -46,6 +46,7 @@ CGameFramework::CGameFramework()
 
 CGameFramework::~CGameFramework()
 {
+	OnDestroy();
 }
 
 bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
@@ -75,8 +76,12 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 void CGameFramework::OnDestroy()
 {
+	if (!isWorkd) return;
+	isWorkd = false;
+
 	// 남은 Command List가 없는지 확인
-	WaitForGpuComplete();
+	//WaitForGpuComplete();
+	WaitGpuWithoutPresent();
 
 	// Shader 변수들을 해제한다.
 	ReleaseShaderVariables();
@@ -411,8 +416,7 @@ void CGameFramework::ChangeSwapChainState()
 	dxgiTargetParameters.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	m_pdxgiSwapChain->ResizeTarget(&dxgiTargetParameters);
 
-	for (int i = 0; i < m_nSwapChainBuffers; i++) if (m_ppd3dSwapChainBackBuffers[i])
-		m_ppd3dSwapChainBackBuffers[i]->Release();
+	for (int i = 0; i < m_nSwapChainBuffers; i++) if (m_ppd3dSwapChainBackBuffers[i]) m_ppd3dSwapChainBackBuffers[i].Reset();
 
 	DXGI_SWAP_CHAIN_DESC dxgiSwapChainDesc;
 	m_pdxgiSwapChain->GetDesc(&dxgiSwapChainDesc);
@@ -422,6 +426,7 @@ void CGameFramework::ChangeSwapChainState()
 	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
 	CreateRenderTargetViews();
+
 }
 
 void CGameFramework::BuildObjects()
@@ -507,22 +512,31 @@ void CGameFramework::AdvanceFrame()
 	// 타이머 업데이트
 	m_GameTimer.Tick(60.0f);
 
+	// Command Queue의 명령들이 모두 실행될 때까지 대기
 	WaitForGpuComplete();
 
 	for (auto& scene : m_Scenes)
 	{
 		if (scene->CheckWorkUpdating())
-			scene->OnPostRender();
+			scene->OnPostRender(nullptr);
 	}
+
+	// Input 업데이트
+	ProcessInput();
 
 	// Command List 재사용
 	m_pd3dCommandAllocator[m_nSwapChainBufferIndex]->Reset();
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->Reset(m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get(), nullptr);
 
-	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
-	OMSetBackBuffer();
-	// Clear Back Buffer And Depth-Stencil Buffer 
-	ClearRtvAndDsv();
+	// Update
+	for (auto& scene : m_Scenes)
+	{
+		if (scene->CheckWorkUpdating())
+		{
+			// Scene 정보 업데이트
+			scene->Update(m_GameTimer.DeltaTime());
+		}
+	}
 
 	// Scene Container 업데이트
 	for (auto it = m_Scenes.begin(); it != m_Scenes.end(); ) {
@@ -539,45 +553,54 @@ void CGameFramework::AdvanceFrame()
 		}
 	}
 
-	// Input 업데이트
-	ProcessInput();
+	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
+	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
+	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
+	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	d3dResourceBarrier.Transition.pResource = m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex].Get();
+	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	m_pd3dCommandList[m_nSwapChainBufferIndex]->ResourceBarrier(1, &d3dResourceBarrier);
+
+	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
+	OMSetBackBuffer();
+	// Clear Back Buffer And Depth-Stencil Buffer 
+	ClearRtvAndDsv();
+
+	if(false == m_Scenes.empty()) m_Scenes.back()->PrepareRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 
 	int bRenderScene = 0;
 	for (auto& scene : m_Scenes)
 	{		
-		if (scene->CheckWorkUpdating())
+		if (scene->CheckWorkRendering())
 		{
-			// Scene 정보 업데이트
-			scene->Update(m_GameTimer.DeltaTime());
+			scene->OnPreRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
+			// Framework 정보 업데이트
+			UpdateShaderVariables();
 
-			if (scene->CheckWorkRendering())
-			{
-				scene->PrepareRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
-				// Framework 정보 업데이트
-				UpdateShaderVariables();
-
-				bRenderScene += scene->Render(m_pd3dCommandList[m_nSwapChainBufferIndex].Get(), nullptr) ? 1 : 0;
-			}
+			OMSetBackBuffer();
+			bRenderScene += scene->Render(m_pd3dCommandList[m_nSwapChainBufferIndex].Get(), nullptr) ? 1 : 0;
 		}
 	}
 	if (0 == bRenderScene) {
 		// 렌더링된 Scene이 없는 경우 Loading Scene을 출력
 		if(m_pLoadingScene)
 		{
+			m_pLoadingScene->Update(m_GameTimer.DeltaTime());
 			// Scene Root Signature를 사용
 			m_pLoadingScene->PrepareRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
-
 			// Framework 정보 업데이트
 			UpdateShaderVariables();
+			m_pLoadingScene->OnPreRender(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 
-			// Scene 정보 업데이트 및 렌더링
-			m_pLoadingScene->Update(m_GameTimer.DeltaTime());
+			OMSetBackBuffer();
 			m_pLoadingScene->Render(m_pd3dCommandList[m_nSwapChainBufferIndex].Get(), nullptr);
 		}
 	}
 
 	// Command List에 대한 명령들을 종료
-	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
 	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
 	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -593,15 +616,12 @@ void CGameFramework::AdvanceFrame()
 	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList[m_nSwapChainBufferIndex].Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
-	// Command Queue의 명령들이 모두 실행될 때까지 대기
+	// 다음 Frame으로 이동
+	MoveToNextFrame();
 
 	// Swap Chain의 Back Buffer를 화면에 표시
 	m_pdxgiSwapChain->Present(0, 0);
-
 	++g_nFrameCount;
-
-	// 다음 Frame으로 이동
-	MoveToNextFrame();
 
 	// Time / FPS 출력
 	std::wstring time = L"Time: " + std::to_wstring(m_GameTimer.GameTime());
@@ -612,17 +632,6 @@ void CGameFramework::AdvanceFrame()
 
 void CGameFramework::OMSetBackBuffer()
 {
-	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
-	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
-	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
-	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	d3dResourceBarrier.Transition.pResource = m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex].Get();
-	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	m_pd3dCommandList[m_nSwapChainBufferIndex]->ResourceBarrier(1, &d3dResourceBarrier);
-
 	// Get CPU Descriptor Handle of RTV
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	d3dRtvCPUDescriptorHandle.ptr += m_nSwapChainBufferIndex * ::gnRtvDescriptorIncrementSize;
@@ -683,7 +692,8 @@ void CGameFramework::UpdateShaderVariables()
 {
 	m_pcbMappedFrameworkInfo->m_fCurrentTime = m_GameTimer.GameTime();
 	m_pcbMappedFrameworkInfo->m_fElapsedTime = m_GameTimer.DeltaTime();
-	m_pcbMappedFrameworkInfo->m_nRenderMode = 0;
+	m_pcbMappedFrameworkInfo->m_nRenderMode = g_bRenderCollider ? 1 : 0;
+	m_pcbMappedFrameworkInfo->m_fBias = m_fBias;
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbFrameworkInfo->GetGPUVirtualAddress();
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_FRAMEWORK, d3dGpuVirtualAddress);
@@ -812,6 +822,21 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			//“F9” 키가 눌려지면 윈도우 모드와 전체화면 모드의 전환을 처리한다.
 			ChangeSwapChainState();
 			break;
+		/*case VK_F5:
+			m_fBias += 0.001f;
+			{
+				std::string debug = "[OnProcessingKeyboardMessage] Bias = " + std::to_string(m_fBias) + "\n";
+				OutputDebugStringA(debug.c_str());
+			}
+			break;
+		case VK_F6:
+			m_fBias -= 0.001f;
+			if (m_fBias < 0.0f) m_fBias = 0.0f;
+			{
+				std::string debug = "[OnProcessingKeyboardMessage] Bias = " + std::to_string(m_fBias) + "\n";
+				OutputDebugStringA(debug.c_str());
+			}
+			break;*/
 		default:
 			break;
 		}

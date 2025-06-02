@@ -112,6 +112,7 @@ void CScene::CreateDescriptorHeap(ID3D12Device* pd3dDevice)
 	{
 		m_pDescriptorHeap = std::make_shared<CDescirptorHeap>();
 		CreateCbvSrvDescriptorHeaps(pd3dDevice, 100, 3000);
+		m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->SetName(L"CScene::m_pd3dCbvSrvDescriptorHeap");
 	}
 }
 
@@ -188,48 +189,62 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_xmf4GlobalAmbient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
 
 	// Light
-	m_pLights[0].m_bEnable = false;
-	m_pLights[0].m_nType = POINT_LIGHT;
-	m_pLights[0].m_fRange = 1000.0f;
-	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.1f, 0.0f, 0.0f, 1.0f);
-	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.0f, 0.0f, 1.0f);
-	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
-	m_pLights[0].m_xmf3Position = XMFLOAT3(30.0f, 30.0f, 30.0f);
-	m_pLights[0].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+	int nIndex = 0;
+	m_pLights[nIndex].m_bEnable = true;
+	m_pLights[nIndex].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[nIndex].m_fRange = 2000.0f;
+	m_pLights[nIndex].m_xmf4Ambient = XMFLOAT4(0.2f, 0.0f, 0.0f, 1.0f);
+	m_pLights[nIndex].m_xmf4Diffuse = XMFLOAT4(0.73f, 0.73f, 0.73f, 1.0f);
+	m_pLights[nIndex].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+	m_pLights[nIndex].m_xmf3Position = XMFLOAT3(513 * 1.5f, 450.0f, 0);
+	m_pLights[nIndex].m_xmf3Direction = XMFLOAT3(-1.0f, -1.0f, 0.0f);
+	nIndex++;
 
-	m_pLights[1].m_bEnable = true;
+	m_pLights[nIndex].m_bEnable = false;
+	m_pLights[nIndex].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[nIndex].m_fRange = 2000.0f;
+	m_pLights[nIndex].m_xmf4Ambient = XMFLOAT4(0.2f, 0.0f, 0.0f, 1.0f);
+	m_pLights[nIndex].m_xmf4Diffuse = XMFLOAT4(0.73f, 0.73f, 0.73f, 1.0f);
+	m_pLights[nIndex].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+	m_pLights[nIndex].m_xmf3Position = XMFLOAT3(513.0f, 450.0f, 0);
+	m_pLights[nIndex].m_xmf3Direction = XMFLOAT3(-1.0f, -1.0f, 0.0f);
+	nIndex++;
+
+
+	/*m_pLights[1].m_bEnable = false;
 	m_pLights[1].m_nType = SPOT_LIGHT;
-	m_pLights[1].m_fRange = 500.0f;
+	m_pLights[1].m_fRange = 1000.0f;
 	m_pLights[1].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
-	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(0.4f, 0.4f, 0.4f, 1.0f);
-	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[1].m_xmf3Position = XMFLOAT3(0.0f, 0.0f, -100.0f);
-	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
-	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-	m_pLights[1].m_fFalloff = 8.0f;
-	m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
-	m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
+	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(0.54f, 0.54f, 0.54f, 1.0f);
+	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.13f, 0.13f, 0.13f, 0.0f);
+	m_pLights[1].m_xmf3Position = XMFLOAT3(-50.0f, 120.0f, -5.0f);
+	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
+	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.1f, 0.001f);
+	m_pLights[1].m_fFalloff = 16.0f;
+	m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(60.0f));
+	m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
 
-	m_pLights[2].m_bEnable = true;
-	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.7f, 0.7f, 0.7f, 1.0f);
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.4f, 0.4f, 0.4f, 0.0f);
-	m_pLights[2].m_xmf3Direction = XMFLOAT3(1.0f, 0.0f, 0.0f);
+	m_pLights[2].m_bEnable = false;
+	m_pLights[2].m_nType = SPOT_LIGHT;
+	m_pLights[2].m_fRange = 500.0f;
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
+	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.85f, 0.85f, 0.85f, 1.0f);
+	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pLights[2].m_xmf3Position = XMFLOAT3(0.0f, 256.0f, 0.0f);
+	m_pLights[2].m_xmf3Direction = XMFLOAT3(+1.0f, -1.0f, 0.0f);
+	m_pLights[2].m_xmf3Attenuation = XMFLOAT3(0.5f, 0.01f, 0.0001f);
+	m_pLights[2].m_fFalloff = 4.0f;
+	m_pLights[2].m_fPhi = (float)cos(XMConvertToRadians(60.0f));
+	m_pLights[2].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
 
-	m_pLights[3].m_bEnable = true;
-	m_pLights[3].m_nType = SPOT_LIGHT;
-	m_pLights[3].m_fRange = 600.0f;
-	m_pLights[3].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-	m_pLights[3].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.7f, 0.0f, 1.0f);
+	m_pLights[3].m_bEnable = false;
+	m_pLights[3].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[3].m_fRange = 1000.0f;
+	m_pLights[3].m_xmf4Ambient = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	m_pLights[3].m_xmf4Diffuse = XMFLOAT4(0.83f, 0.83f, 0.83f, 1.0f);
 	m_pLights[3].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[3].m_xmf3Position = XMFLOAT3(50.0f, 30.0f, 30.0f);
-	m_pLights[3].m_xmf3Direction = XMFLOAT3(0.0f, 1.0f, 1.0f);
-	m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-	m_pLights[3].m_fFalloff = 8.0f;
-	m_pLights[3].m_fPhi = (float)cos(XMConvertToRadians(90.0f));
-	m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
+	m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 128.0f, 0.0f);
+	m_pLights[3].m_xmf3Direction = XMFLOAT3(+1.0f, -1.0f, 0.0f);*/
 }
 
 void CScene::AddObject(const std::shared_ptr<CGameObject>& pObject)
@@ -303,6 +318,8 @@ void CScene::Update(float deltaTime)
 	// Update Matrix
 	for (auto& pvecObjects : m_ppGameObjects) for (auto& pObject : pvecObjects.second)  pObject->UpdateTransform();
 
+	UpdateLights();
+
 	LateUpdate();
 }
 
@@ -314,7 +331,23 @@ bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
 		return false;
 	}
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature.Get());
+
+	if (m_pDescriptorHeap) {
+		ID3D12DescriptorHeap* ppHeaps[] = { m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap.Get() };
+		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	}
+	UpdateShaderVariables(pd3dCommandList);
+
 	return true;
+}
+
+bool CScene::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (m_pDepthRenderShader) {
+		m_pDepthRenderShader->PrepareShadowMap(pd3dCommandList, pCamera);
+		return true;
+	}
+	return false;
 }
 
 bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -325,12 +358,11 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		return (false);
 	}
 
-	// Set Root Signature
-	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature.Get());
-
 	// Set Descriptor Heap
-	ID3D12DescriptorHeap* ppHeaps[] = { m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap.Get() };
-	pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	/*ID3D12DescriptorHeap* ppHeaps[] = { m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap.Get() };
+	pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);*/
+
+	if(m_pDepthRenderShader) m_pDepthRenderShader->UpdateShaderVariables(pd3dCommandList);
 
 	// Set Viewport and Scissor & Update Camera Variables
 	if (nullptr == pCamera)
@@ -346,15 +378,16 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// Update Shader Variables
 	UpdateShaderVariables(pd3dCommandList);
 
+	//if (m_pShadowShader) m_pShadowShader->Render(pd3dCommandList, pCamera);
+	//if (m_pShadowMapToViewport) m_pShadowMapToViewport->Render(pd3dCommandList, pCamera);
+
 	// Render GameObjects 
 	for (auto& pvecObjects : m_ppGameObjects)
 	{
-		if (pvecObjects.first == CGameObject::GAMEOBJECT_LAYER::LAYER_BULLET)
-			std::cout << 1; // UI´Â Á¦¿Ü
 		for (auto& pObject : pvecObjects.second)
 		{
 			pObject->Update(0.0f);
-			pObject->Render(pd3dCommandList, pCamera);
+			pObject->Render(pd3dCommandList, pCamera, false);
 		}
 	}
 
@@ -371,7 +404,36 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		m_pSkyBox->Render(pd3dCommandList, pCamera);
 	}
 
+	if (m_pShadowMapToViewport)
+	{
+		// Render Shadow Map to Viewport
+		m_pShadowMapToViewport->Render(pd3dCommandList, pCamera);
+	}
+
 	return (true);
+}
+
+void CScene::RenderDepthWrite(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	std::set<CGameObject::GAMEOBJECT_LAYER> layer = {
+		CGameObject::GAMEOBJECT_LAYER::LAYER_TERRAIN,
+		CGameObject::GAMEOBJECT_LAYER::LAYER_ENVIRONMENT,
+		CGameObject::GAMEOBJECT_LAYER::LAYER_PLAYER,
+		CGameObject::GAMEOBJECT_LAYER::LAYER_ENEMY,
+		CGameObject::GAMEOBJECT_LAYER::LAYER_GUN,
+	};
+
+	// Render GameObjects 
+	for (auto& pvecObjects : m_ppGameObjects)
+	{
+		if (false == layer.contains(pvecObjects.first))
+			continue;
+		for (auto& pObject : pvecObjects.second)
+		{
+			pObject->Update(0.0f);
+			pObject->Render(pd3dCommandList, pCamera, true);
+		}
+	}
 }
 
 ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd3dDevice)
@@ -458,8 +520,21 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 		d3dDescriptorRanges.push_back(d3dDescriptorRange);
 	}
 
+	// Depth Write Texture
+	{
+		d3dDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		d3dDescriptorRange.NumDescriptors = MAX_DEPTH_TEXTURES;
+		d3dDescriptorRange.BaseShaderRegister = 14; // t14: Depth Buffer
+		d3dDescriptorRange.RegisterSpace = 0;
+		d3dDescriptorRange.OffsetInDescriptorsFromTableStart = 0;
+
+		d3dDescriptorRanges.push_back(d3dDescriptorRange);
+	}
+
 	// Root Parameter 
-	std::vector<D3D12_ROOT_PARAMETER> pd3dRootParameters(9);
+	std::vector<D3D12_ROOT_PARAMETER> pd3dRootParameters(11); // 11 = Object ~ Light (5) + Texture(1) + Skybox(1) + Skinning(2) + Depth write(1) + ToLight(1)
+
+	int nDescriptorIndexCounter = 0;
 
 #ifdef _USE_OBJECT_MATERIAL_CBV
 	// 0
@@ -508,48 +583,48 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 
 	pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[0];
+	pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[1];
+	pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[2];
+	pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[3];
+	pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[4];
+	pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[5];
+	pd3dRootParameters[ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	pd3dRootParameters[ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[6];
+	pd3dRootParameters[ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 #else
 	pd3dRootParameters[ROOT_PARAMETER_STANDARD_TEXTURES].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_STANDARD_TEXTURES].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_STANDARD_TEXTURES].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[0];
+	pd3dRootParameters[ROOT_PARAMETER_STANDARD_TEXTURES].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_STANDARD_TEXTURES].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 #endif
 	// Skybox
 	pd3dRootParameters[ROOT_PARAMETER_SKYBOX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_SKYBOX].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[ROOT_PARAMETER_SKYBOX].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[ROOT_PARAMETER_SKYBOX - ROOT_PARAMETER_LIGHT - 1];
+	pd3dRootParameters[ROOT_PARAMETER_SKYBOX].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_SKYBOX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	// Skin Mesh Bone
@@ -563,8 +638,21 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].Descriptor.RegisterSpace = 0;
 	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
+	// Depth Write
+	pd3dRootParameters[ROOT_PARAMETER_DEPTH_WRITE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[ROOT_PARAMETER_DEPTH_WRITE].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[ROOT_PARAMETER_DEPTH_WRITE].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
+	pd3dRootParameters[ROOT_PARAMETER_DEPTH_WRITE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	// ToLight
+	pd3dRootParameters[ROOT_PARAMETER_TO_LIGHT].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[ROOT_PARAMETER_TO_LIGHT].Descriptor.ShaderRegister = 5; // b5 : cbToLight
+	pd3dRootParameters[ROOT_PARAMETER_TO_LIGHT].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[ROOT_PARAMETER_TO_LIGHT].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+
 	// Static Sampler
-	std::vector<D3D12_STATIC_SAMPLER_DESC> pd3dStaticSamplerDescs(1);
+	std::vector<D3D12_STATIC_SAMPLER_DESC> pd3dStaticSamplerDescs(4);
 
 	// WRAP Sampler [0.0 ~ 1.0)
 	pd3dStaticSamplerDescs[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -579,6 +667,48 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	pd3dStaticSamplerDescs[0].ShaderRegister = 0;
 	pd3dStaticSamplerDescs[0].RegisterSpace = 0;
 	pd3dStaticSamplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	pd3dStaticSamplerDescs[1].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	pd3dStaticSamplerDescs[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[1].MipLODBias = 0;
+	pd3dStaticSamplerDescs[1].MaxAnisotropy = 1;
+	pd3dStaticSamplerDescs[1].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	pd3dStaticSamplerDescs[1].BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
+	pd3dStaticSamplerDescs[1].MinLOD = 0;
+	pd3dStaticSamplerDescs[1].MaxLOD = D3D12_FLOAT32_MAX;
+	pd3dStaticSamplerDescs[1].ShaderRegister = 1;
+	pd3dStaticSamplerDescs[1].RegisterSpace = 0;
+	pd3dStaticSamplerDescs[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	pd3dStaticSamplerDescs[2].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	pd3dStaticSamplerDescs[2].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[2].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[2].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[2].MipLODBias = 0.0f;
+	pd3dStaticSamplerDescs[2].MaxAnisotropy = 1;
+	pd3dStaticSamplerDescs[2].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL; //D3D12_COMPARISON_FUNC_LESS
+	pd3dStaticSamplerDescs[2].BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE; // D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+	pd3dStaticSamplerDescs[2].MinLOD = 0;
+	pd3dStaticSamplerDescs[2].MaxLOD = D3D12_FLOAT32_MAX;
+	pd3dStaticSamplerDescs[2].ShaderRegister = 2;
+	pd3dStaticSamplerDescs[2].RegisterSpace = 0;
+	pd3dStaticSamplerDescs[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	pd3dStaticSamplerDescs[3].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	pd3dStaticSamplerDescs[3].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[3].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[3].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	pd3dStaticSamplerDescs[3].MipLODBias = 0.0f;
+	pd3dStaticSamplerDescs[3].MaxAnisotropy = 1;
+	pd3dStaticSamplerDescs[3].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	pd3dStaticSamplerDescs[3].BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+	pd3dStaticSamplerDescs[3].MinLOD = 0;
+	pd3dStaticSamplerDescs[3].MaxLOD = D3D12_FLOAT32_MAX;
+	pd3dStaticSamplerDescs[3].ShaderRegister = 3;
+	pd3dStaticSamplerDescs[3].RegisterSpace = 0;
+	pd3dStaticSamplerDescs[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	// Root Signature Flags
 	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags =
@@ -630,7 +760,6 @@ void CScene::CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstant
 	m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dCbvGPUDescriptorStartHandle;
 	m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dSrvCPUDescriptorStartHandle;
 	m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dSrvGPUDescriptorStartHandle;
-
 }
 
 void CScene::CreateConstantBufferViews(ID3D12Device* pd3dDevice, int nConstantBufferViews, ID3D12Resource* pd3dConstantBuffers, UINT nStride)
@@ -771,5 +900,17 @@ void CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam,
 		m_bMouseLButtonDown = false;
 		break;
 	}
+}
+
+BoundingBox CScene::CalculateBoundingBox()
+{
+	BoundingBox ret;
+	for (auto& pvecObject : m_ppGameObjects) {
+		for (auto& pObject : pvecObject.second) {
+			BoundingBox box = pObject->GetMergedMeshBound();
+			ret.CreateMerged(ret, box, ret);
+		}
+	}
+	return ret;
 }
 

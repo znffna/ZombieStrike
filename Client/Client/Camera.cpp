@@ -56,7 +56,7 @@ void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 	XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4InvProjection, XMMatrixTranspose(XMMatrixInverse(NULL, XMLoadFloat4x4(&m_xmf4x4Projection))));
 
 	// gvCameraPosition
-	//::memcpy(&m_pcbMappedCamera->m_xmf3Position, &m_xmf3Position, sizeof(XMFLOAT3));
+	::memcpy(&m_pcbMappedCamera->m_xmf3Position, &m_xmf3Position, sizeof(XMFLOAT3));
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbCamera->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_CAMERA, d3dGpuVirtualAddress);
@@ -216,7 +216,8 @@ void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 			m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Direction, fDistance);
 			OnTerrainUpdateCallback(fTimeElapsed);
 
-			SetLookAt(xmf3LookAt);
+			//SetLookAt(xmf3LookAt);
+			SetLookAt(Vector3::Add(m_xmf3Position, Vector3::TransformCoord(XMFLOAT3(0,0,1), xmf4x4Rotate)));
 
 			RegenerateViewMatrix();
 		}
@@ -239,6 +240,7 @@ void CThirdPersonCamera::OnTerrainUpdateCallback(float fTimeElapsed)
 		XMFLOAT3 xmf3Scale = pTerrain->GetScale();
 		XMFLOAT3 xmf3CameraPosition = GetPosition();
 		float fHeight = pTerrain->GetHeight(xmf3CameraPosition.x, xmf3CameraPosition.z);
+		fHeight += m_fNearZ * cos(XMConvertToRadians(m_fFovAngle / 2)); // 카메라 높이 보정
 		if (xmf3CameraPosition.y <= fHeight)
 		{
 			float dy = fHeight - xmf3CameraPosition.y;

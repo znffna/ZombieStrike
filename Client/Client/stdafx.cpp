@@ -20,6 +20,7 @@ UINT gnDsvDescriptorIncrementSize = 0;
 
 int g_nFrameCount;
 bool g_windowActive = true; // 전역 또는 멤버 변수로 상태 저장
+bool g_bDebugOutput = false; // 디버그 출력 여부
 
 // Functions
 
@@ -337,11 +338,11 @@ ComPtr<ID3D12Resource> CreateTexture2DResource(ID3D12Device* pd3dDevice, ID3D12G
 
 void SwapResourcePointer(ComPtr<ID3D12Resource>& ppd3dResourceA, ComPtr<ID3D12Resource>& ppd3dResourceB)
 {
-	{
+	/*{
 		std::string frameout = "SwapResourcePointer() : ppd3dResourceA : " + std::to_string((UINT64)ppd3dResourceA.Get()) + " - ";
 		frameout += "ppd3dResourceB : " + std::to_string((UINT64)ppd3dResourceB.Get()) + "/ Frame( " + std::to_string(g_nFrameCount) + " )\n";
 		OutputDebugStringA(frameout.c_str());
-	}
+	}*/
 	std::swap(ppd3dResourceA, ppd3dResourceB);
 }
 

@@ -6,6 +6,12 @@
 #pragma once
 #include "Scene.h"
 
+struct FIRE_INFO {
+	XMFLOAT3 xmf3Position;
+	XMFLOAT3 xmf3Velocity;
+	float fRange;
+};
+
 class CGameScene : public CScene
 {
 public:
@@ -22,13 +28,20 @@ public:
 	virtual void ReleaseUploadBuffers() override;
 
 	virtual void Update(float deltaTime) override;
+	virtual void UpdateLights() override;
 
-	virtual void OnPostRender() override;
+
+	void BuildFiredBullets();
+
+	virtual void OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList) override;
 	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 
 	virtual void ChangeMap(int nMapIndex);;
+
+	bool m_bIschambered = false; // 총알 장전 여부
+	virtual FIRE_INFO Fire(const std::shared_ptr<CPlayer>& pPlayer);
 
 	// Shader Variables
 	//void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
@@ -57,4 +70,6 @@ public:
 	};
 
 	std::shared_ptr<CBulletObject> m_pBulletObject;
+	std::shared_ptr<CCollisionChecker> m_pCollisionChecker;
+	std::vector<FIRE_INFO> m_pFireInfos;
 };

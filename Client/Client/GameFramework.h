@@ -24,7 +24,8 @@ struct CB_FRAMEWORK_INFO
 	//XMFLOAT3				m_xmf3Gravity = XMFLOAT3(0.0f, -9.8f, 0.0f);
 	//int					m_nMaxFlareType2Particles = 150;
 	UINT					m_nRenderMode;
-	float					m_nPadding;
+	float					m_fBias;
+	//float					m_nPadding;
 };
 
 class CGameFramework
@@ -72,6 +73,8 @@ public:
 	static CGameFramework* pGameFramework;
 	static ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return pGameFramework->m_pd3dCommandList[pGameFramework->m_nSwapChainBufferIndex]; }
 private:
+	bool isWorkd = true;
+
 	HINSTANCE m_hInstance;
 	HWND m_hWnd;
 
@@ -131,5 +134,7 @@ private:
 protected:
 	ComPtr<ID3D12Resource> m_pd3dcbFrameworkInfo;
 	CB_FRAMEWORK_INFO* m_pcbMappedFrameworkInfo = NULL;
+
+	float m_fBias = 0.007f; // Depth Bias  0.0001f
 };
 

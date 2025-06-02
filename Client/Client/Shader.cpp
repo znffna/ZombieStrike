@@ -5,10 +5,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "Shader.h"
 #include "Mesh.h"
+#include "Texture.h"
+#include "Scene.h"
 
-CShader::CShader()
+CShader::CShader(bool bAllowShadow)
+	: m_bAllowShadow(bAllowShadow)
 {
 }
+
 
 CShader::~CShader()
 {
@@ -17,34 +21,41 @@ CShader::~CShader()
 void CShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	// Resize Pipeline State Vector
-	m_pd3dPipelineStates.resize(1);
+	m_pd3dPipelineStates.resize(m_nPipelineStates);
 
 	// Create Pipeline State
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0);
+	for (int i = 0; i < m_nPipelineStates; ++i) CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, i, false);
+
+	if (m_bAllowShadow)
+	{
+		m_pd3dPipelineStates.resize(m_nPipelineStates + 1);
+		// Create Shadow Pipeline State
+		CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, m_nPipelineStates, true);
+	}
 }
 
-void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
+void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState, bool bDepthWrite)
 {
 	::ZeroMemory(&m_d3dPipelineStateDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
 	m_d3dPipelineStateDesc.pRootSignature = pd3dGraphicsRootSignature;
 	m_d3dPipelineStateDesc.VS = CreateVertexShader(nPipelineState);
-	m_d3dPipelineStateDesc.PS = CreatePixelShader(nPipelineState);
+	m_d3dPipelineStateDesc.PS = CreatePixelShaderBranch(nPipelineState, bDepthWrite);
 	m_d3dPipelineStateDesc.DS = CreateDomainShader(nPipelineState);
 	m_d3dPipelineStateDesc.HS = CreateHullShader(nPipelineState);
 	m_d3dPipelineStateDesc.GS = CreateGeometryShader(nPipelineState);
 	m_d3dPipelineStateDesc.StreamOutput = CreateStreamOuputState(nPipelineState);
-	m_d3dPipelineStateDesc.RasterizerState = CreateRasterizerState(nPipelineState);
+	m_d3dPipelineStateDesc.RasterizerState = CreateRasterizerStateBranch(nPipelineState, bDepthWrite);
 	m_d3dPipelineStateDesc.BlendState = CreateBlendState(nPipelineState);
-	m_d3dPipelineStateDesc.DepthStencilState = CreateDepthStencilState(nPipelineState);
+	m_d3dPipelineStateDesc.DepthStencilState = CreateDepthStencilStateBranch(nPipelineState, bDepthWrite);
 	m_d3dPipelineStateDesc.InputLayout = CreateInputLayout(nPipelineState);
 	m_d3dPipelineStateDesc.SampleMask = UINT_MAX;
 	m_d3dPipelineStateDesc.PrimitiveTopologyType = GetPrimitiveTopologyType(nPipelineState);
 	m_d3dPipelineStateDesc.NumRenderTargets = GetRenderTargetCount(nPipelineState);
 	for (UINT i = 0; i < m_d3dPipelineStateDesc.NumRenderTargets; ++i)
 	{
-		m_d3dPipelineStateDesc.RTVFormats[i] = GetRenderTargetFormat(nPipelineState, i);
+		m_d3dPipelineStateDesc.RTVFormats[i] = GetRenderTargetFormat(nPipelineState, i, bDepthWrite);
 	}
-	m_d3dPipelineStateDesc.DSVFormat = GetDepthStencilFormat(nPipelineState);
+	m_d3dPipelineStateDesc.DSVFormat = GetDepthStencilFormat(nPipelineState, bDepthWrite);
 	m_d3dPipelineStateDesc.SampleDesc = GetSampleDesc(nPipelineState);
 	m_d3dPipelineStateDesc.Flags = GetPipelineStateFlags(nPipelineState);
 
@@ -54,7 +65,7 @@ void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSi
 	if (hResult == S_OK)
 	{
 		// Output Debug Message
-		std::wstring strDebugString = GetShaderName()+ L" - " + std::to_wstring(nPipelineState) + L" Graphic Pipeline State is created successfully.\n";
+		std::wstring strDebugString = GetShaderName() + L" - " + std::to_wstring(nPipelineState) + L" Graphic Pipeline State is created successfully.\n";
 		OutputDebugString(strDebugString.data());
 		m_pd3dPipelineStates[nPipelineState]->SetName(GetShaderName().data());
 	}
@@ -198,13 +209,27 @@ D3D12_SHADER_BYTECODE CShader::CreateVertexShader(int nPipelineState)
 	return (d3dShaderByteCode);
 }
 
+D3D12_SHADER_BYTECODE CShader::CreatePixelShaderBranch(int nPipelineState, bool bDepthWrite)
+{
+	if (bDepthWrite) return CreateDepthWritePixelShader(nPipelineState);
+	return CreatePixelShader(nPipelineState);
+}
+
 D3D12_SHADER_BYTECODE CShader::CreatePixelShader(int nPipelineState)
 {
 	D3D12_SHADER_BYTECODE d3dShaderByteCode;
 	d3dShaderByteCode.BytecodeLength = 0;
 	d3dShaderByteCode.pShaderBytecode = NULL;
-
 	return (d3dShaderByteCode);
+}
+
+D3D12_SHADER_BYTECODE CShader::CreateDepthWritePixelShader(int nPipelineState)
+{
+#ifdef _COMPILE_SHADER
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSDepthWriteShader", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf()));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"PSDepthWriteShader", m_pd3dPixelShaderBlob.GetAddressOf()));
+#endif
 }
 
 D3D12_SHADER_BYTECODE CShader::CreateDomainShader(int nPipelineState)
@@ -266,6 +291,15 @@ D3D12_INPUT_LAYOUT_DESC CShader::CreateInputLayout(int nPipelineState)
 	return(d3dInputLayoutDesc);
 }
 
+D3D12_RASTERIZER_DESC CShader::CreateRasterizerStateBranch(int nPipelineState, bool bDepthWrite)
+{
+	if (bDepthWrite)
+	{
+		return CreateDepthWriteRasterizerState(nPipelineState);
+	}
+	return CreateRasterizerState(nPipelineState);
+}
+
 D3D12_RASTERIZER_DESC CShader::CreateRasterizerState(int nPipelineState)
 {
 	D3D12_RASTERIZER_DESC d3dRasterizerDesc;
@@ -277,6 +311,29 @@ D3D12_RASTERIZER_DESC CShader::CreateRasterizerState(int nPipelineState)
 	d3dRasterizerDesc.DepthBias = 0;
 	d3dRasterizerDesc.DepthBiasClamp = 0.0f;
 	d3dRasterizerDesc.SlopeScaledDepthBias = 0.0f;
+	d3dRasterizerDesc.DepthClipEnable = TRUE;
+	d3dRasterizerDesc.MultisampleEnable = FALSE;
+	d3dRasterizerDesc.AntialiasedLineEnable = FALSE;
+	d3dRasterizerDesc.ForcedSampleCount = 0;
+	d3dRasterizerDesc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+
+	return(d3dRasterizerDesc);
+}
+
+#define _WITH_RASTERIZER_DEPTH_BIAS
+
+D3D12_RASTERIZER_DESC CShader::CreateDepthWriteRasterizerState(int nPipelineState)
+{
+	D3D12_RASTERIZER_DESC d3dRasterizerDesc;
+	::ZeroMemory(&d3dRasterizerDesc, sizeof(D3D12_RASTERIZER_DESC));
+	d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
+	d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
+	d3dRasterizerDesc.FrontCounterClockwise = FALSE;
+#ifdef _WITH_RASTERIZER_DEPTH_BIAS
+	d3dRasterizerDesc.DepthBias = 250000;
+#endif
+	d3dRasterizerDesc.DepthBiasClamp = 0.0f;
+	d3dRasterizerDesc.SlopeScaledDepthBias = 1.0f;
 	d3dRasterizerDesc.DepthClipEnable = TRUE;
 	d3dRasterizerDesc.MultisampleEnable = FALSE;
 	d3dRasterizerDesc.AntialiasedLineEnable = FALSE;
@@ -306,6 +363,15 @@ D3D12_BLEND_DESC CShader::CreateBlendState(int nPipelineState)
 	return(d3dBlendDesc);
 }
 
+D3D12_DEPTH_STENCIL_DESC CShader::CreateDepthStencilStateBranch(int nPipelineState, bool bDepthWrite)
+{
+	if (bDepthWrite)
+	{
+		return CreateDepthWriteDepthStencilState(nPipelineState);
+	}
+	return CreateDepthStencilState(nPipelineState);
+}
+
 D3D12_DEPTH_STENCIL_DESC CShader::CreateDepthStencilState(int nPipelineState)
 {
 	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
@@ -328,6 +394,28 @@ D3D12_DEPTH_STENCIL_DESC CShader::CreateDepthStencilState(int nPipelineState)
 	return (d3dDepthStencilDesc);	
 }
 
+D3D12_DEPTH_STENCIL_DESC CShader::CreateDepthWriteDepthStencilState(int nPipelineState)
+{
+	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
+	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
+	d3dDepthStencilDesc.DepthEnable = TRUE;
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS; //D3D12_COMPARISON_FUNC_LESS_EQUAL
+	d3dDepthStencilDesc.StencilEnable = FALSE;
+	d3dDepthStencilDesc.StencilReadMask = 0x00;
+	d3dDepthStencilDesc.StencilWriteMask = 0x00;
+	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+
+	return(d3dDepthStencilDesc);
+}
+
 DXGI_SAMPLE_DESC CShader::GetSampleDesc(int nPipelineState)
 {
 	DXGI_SAMPLE_DESC dxgiSampleDesc;
@@ -337,16 +425,63 @@ DXGI_SAMPLE_DESC CShader::GetSampleDesc(int nPipelineState)
 	return (dxgiSampleDesc);
 }
 
-void CShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
+void CShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState, bool bDepthWrite)
 {
-	if (nPipelineState < m_pd3dPipelineStates.size())
+	if (bDepthWrite)
+	{
+		if (m_pd3dPipelineStates.back()) pd3dCommandList->SetPipelineState(m_pd3dPipelineStates.back().Get());
+	}
+	else if (nPipelineState < m_pd3dPipelineStates.size())
 	{
 		if (m_pd3dPipelineStates[nPipelineState]) pd3dCommandList->SetPipelineState(m_pd3dPipelineStates[nPipelineState].Get());
 	}
+	UpdateShaderVariables(pd3dCommandList);
 }
 
 void CShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+}
+
+void CShader::CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews)
+{
+	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
+	d3dDescriptorHeapDesc.NumDescriptors = nConstantBufferViews + nShaderResourceViews; //CBVs + SRVs 
+	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	d3dDescriptorHeapDesc.NodeMask = 0;
+	pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap);
+
+	m_pDescriptorHeap->m_d3dCbvCPUDescriptorStartHandle = m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	m_pDescriptorHeap->m_d3dCbvGPUDescriptorStartHandle = m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+	m_pDescriptorHeap->m_d3dSrvCPUDescriptorStartHandle.ptr = m_pDescriptorHeap->m_d3dCbvCPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * nConstantBufferViews);
+	m_pDescriptorHeap->m_d3dSrvGPUDescriptorStartHandle.ptr = m_pDescriptorHeap->m_d3dCbvGPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * nConstantBufferViews);
+
+	m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dCbvCPUDescriptorStartHandle;
+	m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dCbvGPUDescriptorStartHandle;
+	m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dSrvCPUDescriptorStartHandle;
+	m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dSrvGPUDescriptorStartHandle;
+}
+
+void CShader::CreateShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex)
+{
+	m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle.ptr += (::gnCbvSrvDescriptorIncrementSize * nDescriptorHeapIndex);
+	m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle.ptr += (::gnCbvSrvDescriptorIncrementSize * nDescriptorHeapIndex);
+
+	int nTextures = pTexture->GetTextures();
+	UINT nTextureType = pTexture->GetTextureType();
+	for (int i = 0; i < nTextures; i++)
+	{
+		ID3D12Resource* pShaderResource = pTexture->GetResource(i);
+		D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc = pTexture->GetShaderResourceViewDesc(i);
+		pd3dDevice->CreateShaderResourceView(pShaderResource, &d3dShaderResourceViewDesc, m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle);
+		m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+
+		pTexture->SetGpuDescriptorHandle(i, m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle);
+		m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+
+	}
+	int nRootParameters = pTexture->GetRootParameters();
+	for (int i = 0; i < nRootParameters; i++) pTexture->SetRootParameterIndex(i, nRootParameterStartIndex + i);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -400,6 +535,7 @@ D3D12_INPUT_LAYOUT_DESC CStandardShader::CreateInputLayout(int nPipelineState)
 //
 
 CSkyBoxShader::CSkyBoxShader()
+	: CShader(false)
 {
 }
 
@@ -469,15 +605,6 @@ CTerrainShader::CTerrainShader()
 
 CTerrainShader::~CTerrainShader()
 {
-}
-
-void CTerrainShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature)
-{
-	// Resize Pipeline State Vector
-	m_pd3dPipelineStates.resize(1);
-
-	// Create Pipeline State
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0);
 }
 
 D3D12_INPUT_LAYOUT_DESC CTerrainShader::CreateInputLayout(int nPipelineState)
@@ -561,6 +688,7 @@ D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreateVertexShader(int nP
 
 CColliderShader::CColliderShader()
 {
+	m_bAllowShadow = false;
 }
 
 CColliderShader::~CColliderShader()
@@ -644,30 +772,22 @@ D3D12_INPUT_LAYOUT_DESC CTexturedShader::CreateInputLayout(int nPipelineState)
 	return(d3dInputLayoutDesc);
 }
 
-D3D12_SHADER_BYTECODE CTexturedShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE CTexturedShader::CreateVertexShader(int nPipelineState)
 {
 #ifdef _COMPILE_SHADER
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTextured", "vs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTextured", "vs_5_1", m_pd3dVertexShaderBlob.GetAddressOf()));
 #else
-	return(CShader::ReadCompiledShaderFromFile(L"VSTextured", ppd3dShaderBlob));
+	return(CShader::ReadCompiledShaderFromFile(L"VSTextured", m_pd3dVertexShaderBlob.GetAddressOf()));
 #endif
 }
 
-D3D12_SHADER_BYTECODE CTexturedShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE CTexturedShader::CreatePixelShader(int nPipelineState)
 {
 #ifdef _COMPILE_SHADER
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSTextured", "ps_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSTextured", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf()));
 #else
-	return(CShader::ReadCompiledShaderFromFile(L"PSTextured", ppd3dShaderBlob));
+	return(CShader::ReadCompiledShaderFromFile(L"PSTextured", m_pd3dPixelShaderBlob.GetAddressOf()));
 #endif
-}
-
-void CTexturedShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
-{
-	m_nPipelineStates = 1;
-	m_pd3dPipelineStates.resize(m_nPipelineStates);
-
-	CShader::CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -680,21 +800,21 @@ CBillboardShader::~CBillboardShader()
 {
 }
 
-D3D12_SHADER_BYTECODE CBillboardShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE CBillboardShader::CreateVertexShader(int nPipelineState)
 {
 #ifdef _COMPILE_SHADER
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSBillboard", "vs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSBillboard", "vs_5_1", m_pd3dVertexShaderBlob.GetAddressOf()));
 #else
-	return(CShader::ReadCompiledShaderFromFile(L"VSBillboard", ppd3dShaderBlob));
+	return(CShader::ReadCompiledShaderFromFile(L"VSBillboard", m_pd3dVertexShaderBlob.GetAddressOf()));
 #endif
 }
 
-D3D12_SHADER_BYTECODE CBillboardShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE CBillboardShader::CreatePixelShader(int nPipelineState)
 {
 #ifdef _COMPILE_SHADER
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSBillboard", "ps_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSBillboard", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf()));
 #else
-	return(CShader::ReadCompiledShaderFromFile(L"PSBillboard", ppd3dShaderBlob));
+	return(CShader::ReadCompiledShaderFromFile(L"PSBillboard", m_pd3dPixelShaderBlob.GetAddressOf()));
 #endif
 }
 
@@ -861,13 +981,14 @@ D3D12_DEPTH_STENCIL_DESC CBulletShader::CreateDepthStencilState(int nPipelineSta
 D3D12_INPUT_LAYOUT_DESC CBulletShader::CreateInputLayout(int nPipelineState)
 {
 	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
-	UINT nInputElementDescs = 4;
+	UINT nInputElementDescs = 5;
 	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
 	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[1] = { "VELOCITY", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[2] = { "LIFETIME", 0, DXGI_FORMAT_R32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[3] = { "TYPE", 0, DXGI_FORMAT_R32_SINT, 0, 28, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "LASTPOSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[2] = { "VELOCITY", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[3] = { "LIFETIME", 0, DXGI_FORMAT_R32_FLOAT, 0, 36, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[4] = { "TYPE", 0, DXGI_FORMAT_R32_SINT, 0, 40, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
 	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
 	d3dInputLayoutDesc.NumElements = nInputElementDescs;
@@ -882,12 +1003,13 @@ D3D12_STREAM_OUTPUT_DESC CBulletShader::CreateStreamOuputState(int nPipelineStat
 
 	if (nPipelineState == 0)
 	{
-		UINT nStreamOutputDecls = 4;
+		UINT nStreamOutputDecls = 5;
 		D3D12_SO_DECLARATION_ENTRY* pd3dStreamOutputDecls = new D3D12_SO_DECLARATION_ENTRY[nStreamOutputDecls];
 		pd3dStreamOutputDecls[0] = { 0, "POSITION", 0, 0, 3, 0 };
-		pd3dStreamOutputDecls[1] = { 0, "VELOCITY", 0, 0, 3, 0 };
-		pd3dStreamOutputDecls[2] = { 0, "LIFETIME", 0, 0, 1, 0 };
-		pd3dStreamOutputDecls[3] = { 0, "TYPE", 0, 0, 1, 0 };
+		pd3dStreamOutputDecls[1] = { 0, "LASTPOSITION", 0, 0, 3, 0 };
+		pd3dStreamOutputDecls[2] = { 0, "VELOCITY", 0, 0, 3, 0 };
+		pd3dStreamOutputDecls[3] = { 0, "LIFETIME", 0, 0, 1, 0 };
+		pd3dStreamOutputDecls[4] = { 0, "TYPE", 0, 0, 1, 0 };
 
 		UINT* pBufferStrides = new UINT[1];
 		pBufferStrides[0] = sizeof(CBulletVertex);
@@ -907,6 +1029,895 @@ void CBulletShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* 
 	m_nPipelineStates = 2;
 	m_pd3dPipelineStates.resize(m_nPipelineStates);
 
-	CShader::CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0); //Stream Output Pipeline State
-	CShader::CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 1); //Draw Pipeline State
+	CShader::CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0, false); //Stream Output Pipeline State
+	CShader::CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 1, false); //Draw Pipeline State
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+CIlluminatedShader::CIlluminatedShader()
+{
+}
+
+CIlluminatedShader::~CIlluminatedShader()
+{
+}
+
+D3D12_INPUT_LAYOUT_DESC CIlluminatedShader::CreateInputLayout(int nPipelineState)
+{
+	UINT nInputElementDescs = 2;
+	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+
+	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+
+	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
+	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+	d3dInputLayoutDesc.NumElements = nInputElementDescs;
+
+	return(d3dInputLayoutDesc);
+}
+
+D3D12_SHADER_BYTECODE CIlluminatedShader::CreateVertexShader(int nPipelineState)
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSLighting", "vs_5_1", m_pd3dVertexShaderBlob.GetAddressOf()));
+}
+
+D3D12_SHADER_BYTECODE CIlluminatedShader::CreatePixelShader(int nPipelineState)
+{
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSLighting", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf()));
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+CDepthRenderShader::CDepthRenderShader(CScene* pScene)
+	: CSkinnedAnimationStandardShader(), m_pScene(pScene), m_pd3dcbToLightSpaces(nullptr), m_pcbMappedToLightSpaces(nullptr)
+{
+	m_bAllowShadow = false;
+
+	m_pToLightSpaces.resize(MAX_LIGHTS);
+	ZeroMemory(m_pToLightSpaces.data(), sizeof(TOLIGHTSPACEINFO) * MAX_LIGHTS);
+
+	XMFLOAT4X4 xmf4x4ToTexture = {
+		0.5f, 0.0f, 0.0f, 0.0f
+		, 0.0f, -0.5f, 0.0f, 0.0f
+		, 0.0f, 0.0f, 1.0f, 0.0f
+		, 0.5f, 0.5f, 0.0f, 1.0f };
+	m_xmProjectionToTexture = XMLoadFloat4x4(&xmf4x4ToTexture);
+
+	m_nPipelineStates = 2;
+}
+
+CDepthRenderShader::~CDepthRenderShader()
+{
+}
+
+D3D12_DEPTH_STENCIL_DESC CDepthRenderShader::CreateDepthStencilState(int nPipelineState)
+{
+	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
+	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
+	d3dDepthStencilDesc.DepthEnable = TRUE;
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS; //D3D12_COMPARISON_FUNC_LESS_EQUAL
+	d3dDepthStencilDesc.StencilEnable = FALSE;
+	d3dDepthStencilDesc.StencilReadMask = 0x00;
+	d3dDepthStencilDesc.StencilWriteMask = 0x00;
+	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+
+	return(d3dDepthStencilDesc);
+}
+
+D3D12_RASTERIZER_DESC CDepthRenderShader::CreateRasterizerState(int nPipelineState)
+{
+	D3D12_RASTERIZER_DESC d3dRasterizerDesc;
+	::ZeroMemory(&d3dRasterizerDesc, sizeof(D3D12_RASTERIZER_DESC));
+	d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
+	d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
+	d3dRasterizerDesc.FrontCounterClockwise = FALSE;
+#ifdef _WITH_RASTERIZER_DEPTH_BIAS
+	d3dRasterizerDesc.DepthBias = 250000;
+#endif
+	d3dRasterizerDesc.DepthBiasClamp = 0.0f;
+	d3dRasterizerDesc.SlopeScaledDepthBias = 1.0f;
+	d3dRasterizerDesc.DepthClipEnable = TRUE;
+	d3dRasterizerDesc.MultisampleEnable = FALSE;
+	d3dRasterizerDesc.AntialiasedLineEnable = FALSE;
+	d3dRasterizerDesc.ForcedSampleCount = 0;
+	d3dRasterizerDesc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+
+	return(d3dRasterizerDesc);
+}
+
+D3D12_SHADER_BYTECODE CDepthRenderShader::CreateVertexShader(int nPipelineState)
+{
+	if (nPipelineState == 0)
+	{
+		return CStandardShader::CreateVertexShader(nPipelineState);
+	}
+	else if (nPipelineState == 1)
+	{
+		return CSkinnedAnimationStandardShader::CreateVertexShader(nPipelineState);
+	}
+}
+
+D3D12_SHADER_BYTECODE CDepthRenderShader::CreatePixelShader(int nPipelineState)
+{
+#ifdef _COMPILE_SHADER
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSDepthWriteShader", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf()));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"PSDepthWriteShader", m_pd3dPixelShaderBlob.GetAddressOf()));
+#endif
+}
+
+void CDepthRenderShader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	UINT ncbDepthElementBytes;
+
+	ncbDepthElementBytes = ((sizeof(CB_TO_LIGHTSPACES) + 255) & ~255); //256의 배수
+	m_pd3dcbToLightSpaces = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbDepthElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	m_pd3dcbToLightSpaces->Map(0, NULL, (void**)&m_pcbMappedToLightSpaces);
+}
+
+void CDepthRenderShader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// 모든 조명에 대한 Matrix 및 위치 정보 연결
+	::memcpy(m_pcbMappedToLightSpaces, m_pToLightSpaces.data(), sizeof(CB_TO_LIGHTSPACES));
+
+	D3D12_GPU_VIRTUAL_ADDRESS d3dcbToLightGpuVirtualAddress = m_pd3dcbToLightSpaces->GetGPUVirtualAddress();
+	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_TO_LIGHT, d3dcbToLightGpuVirtualAddress);
+
+	// 그림자맵 연결
+	m_pDepthFromLightTexture->UpdateShaderVariables(pd3dCommandList);
+}
+
+void CDepthRenderShader::ReleaseShaderVariables()
+{
+	if (m_pd3dcbToLightSpaces)
+	{
+		m_pd3dcbToLightSpaces->Unmap(0, NULL);
+		m_pd3dcbToLightSpaces.Reset();
+	}
+}
+
+void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
+{
+	m_nDepthbufferWidth = WINDOW_WIDTH * 4;
+	m_nDepthbufferHeight = WINDOW_HEIGHT * 4;
+
+	// 그림자 맵 연결용 Heap 생성
+	m_pDescriptorHeap = std::make_unique<CDescirptorHeap>();
+
+	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
+	::ZeroMemory(&d3dDescriptorHeapDesc, sizeof(D3D12_DESCRIPTOR_HEAP_DESC));
+	d3dDescriptorHeapDesc.NumDescriptors = MAX_DEPTH_TEXTURES;
+	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	d3dDescriptorHeapDesc.NodeMask = 0;
+	HRESULT hResult = pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_pd3dRtvDescriptorHeap);
+
+
+	// 그림자 맵 Texture 생성(최대 조명갯수만큼 생성)
+	m_pDepthFromLightTexture = std::make_shared<CTexture>(MAX_DEPTH_TEXTURES, RESOURCE_TEXTURE2D_ARRAY, 1);
+
+	D3D12_CLEAR_VALUE d3dClearValue = { DXGI_FORMAT_R32_FLOAT, { 1.0f, 1.0f, 1.0f, 1.0f } };
+	for (UINT i = 0; i < MAX_DEPTH_TEXTURES; i++) m_pDepthFromLightTexture->CreateTexture(pd3dDevice, pd3dCommandList, i, RESOURCE_TEXTURE2D, m_nDepthbufferWidth, m_nDepthbufferHeight, 1, 0, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON, &d3dClearValue);
+	for (UINT i = 0; i < MAX_DEPTH_TEXTURES; i++) { std::wstring name = L"CDepthRenderShader::DepthFromLightTexture(Resource) - " + std::to_wstring(i); m_pDepthFromLightTexture->GetResource(i)->SetName(name.c_str()); }
+
+	// 그림자 맵을 렌더 타겟 뷰로 생성
+	D3D12_RENDER_TARGET_VIEW_DESC d3dRenderTargetViewDesc;
+	d3dRenderTargetViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+	d3dRenderTargetViewDesc.Texture2D.MipSlice = 0;
+	d3dRenderTargetViewDesc.Texture2D.PlaneSlice = 0;
+	d3dRenderTargetViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	for (UINT i = 0; i < MAX_DEPTH_TEXTURES; i++)
+	{
+		ID3D12Resource* pd3dTextureResource = m_pDepthFromLightTexture->GetResource(i);
+		pd3dDevice->CreateRenderTargetView(pd3dTextureResource, &d3dRenderTargetViewDesc, d3dRtvCPUDescriptorHandle);
+		m_pd3dRtvCPUDescriptorHandles[i] = d3dRtvCPUDescriptorHandle;
+		d3dRtvCPUDescriptorHandle.ptr += ::gnRtvDescriptorIncrementSize;
+	}
+
+	// 그림자 맵 사용시 사용할 DSV(Depth Stencil View) 담을 Heap 생성
+	d3dDescriptorHeapDesc.NumDescriptors = 1;
+	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	hResult = pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_pd3dDsvDescriptorHeap);
+
+	// 깊이 스텐실 버퍼 생성
+	D3D12_RESOURCE_DESC d3dResourceDesc;
+	d3dResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	d3dResourceDesc.Alignment = 0;
+	d3dResourceDesc.Width = m_nDepthbufferWidth;
+	d3dResourceDesc.Height = m_nDepthbufferHeight;
+	d3dResourceDesc.DepthOrArraySize = 1;
+	d3dResourceDesc.MipLevels = 1;
+	d3dResourceDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	d3dResourceDesc.SampleDesc.Count = 1;
+	d3dResourceDesc.SampleDesc.Quality = 0;
+	d3dResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	d3dResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	D3D12_HEAP_PROPERTIES d3dHeapProperties;
+	::ZeroMemory(&d3dHeapProperties, sizeof(D3D12_HEAP_PROPERTIES));
+	d3dHeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+	d3dHeapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	d3dHeapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	d3dHeapProperties.CreationNodeMask = 1;
+	d3dHeapProperties.VisibleNodeMask = 1;
+
+	d3dClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+	d3dClearValue.DepthStencil.Depth = 1.0f;
+	d3dClearValue.DepthStencil.Stencil = 0;
+
+	pd3dDevice->CreateCommittedResource(&d3dHeapProperties, D3D12_HEAP_FLAG_NONE, &d3dResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &d3dClearValue, __uuidof(ID3D12Resource), (void**)&m_pd3dDepthBuffer);
+	m_pd3dDepthBuffer->SetName(L"CDepthRenderShader::DepthBuffer(DSV)");
+
+	// 깊이 스텐실 뷰 생성
+	D3D12_DEPTH_STENCIL_VIEW_DESC d3dDepthStencilViewDesc;
+	::ZeroMemory(&d3dDepthStencilViewDesc, sizeof(D3D12_DEPTH_STENCIL_VIEW_DESC));
+	d3dDepthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	d3dDepthStencilViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	d3dDepthStencilViewDesc.Flags = D3D12_DSV_FLAG_NONE;
+
+	m_d3dDsvDescriptorCPUHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	pd3dDevice->CreateDepthStencilView(m_pd3dDepthBuffer.Get(), &d3dDepthStencilViewDesc, m_d3dDsvDescriptorCPUHandle);
+
+	// 조명에 의한 렌더링 카메라 생성
+	for (int i = 0; i < MAX_DEPTH_TEXTURES; i++)
+	{
+		m_ppDepthRenderCameras[i] = std::make_shared<CCamera>();
+		m_ppDepthRenderCameras[i]->SetViewport(0, 0, m_nDepthbufferWidth, m_nDepthbufferHeight, 0.0f, 1.0f);
+		m_ppDepthRenderCameras[i]->SetScissorRect(0, 0, m_nDepthbufferWidth, m_nDepthbufferHeight);
+		m_ppDepthRenderCameras[i]->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	// 그림자 맵(리소스이자 텍스쳐)을 바인딩 할때 사용할 Heap 생성
+	//CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, m_pDepthFromLightTexture->GetTextures());
+	//CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture.get(), 0, ROOT_PARAMETER_DEPTH_WRITE);
+	//m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->SetName(L"CDepthRenderShader::DescriptorHeap(CBV/SRV Heap)");
+	m_pScene->CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture.get(), 0, ROOT_PARAMETER_DEPTH_WRITE);
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+}
+
+void CDepthRenderShader::ReleaseObjects()
+{
+	for (int i = 0; i < MAX_DEPTH_TEXTURES; i++)
+	{
+		if (m_ppDepthRenderCameras[i])
+		{
+			m_ppDepthRenderCameras[i]->ReleaseShaderVariables();
+			m_ppDepthRenderCameras[i].reset();
+		}
+	}
+
+	if (m_pDepthFromLightTexture) m_pDepthFromLightTexture.reset();
+	if (m_pd3dDepthBuffer) m_pd3dDepthBuffer.Reset();
+
+	if (m_pd3dRtvDescriptorHeap) m_pd3dRtvDescriptorHeap.Reset();
+	if (m_pd3dDsvDescriptorHeap) m_pd3dDsvDescriptorHeap.Reset();
+}
+
+void CreateFrustumPoints(XMMATRIX& xmmtxProjection, XMVECTOR* pxmvCornerPoints)
+{
+	BoundingFrustum xmFrustrum(xmmtxProjection);
+
+	static const XMVECTORU32 vGrabY = { 0x00000000,0xFFFFFFFF,0x00000000,0x00000000 };
+	static const XMVECTORU32 vGrabX = { 0xFFFFFFFF,0x00000000,0x00000000,0x00000000 };
+
+	XMVECTORF32 vRightTop = { xmFrustrum.RightSlope, xmFrustrum.TopSlope, 1.0f, 1.0f };
+	XMVECTORF32 vLeftBottom = { xmFrustrum.LeftSlope, xmFrustrum.BottomSlope, 1.0f, 1.0f };
+	XMVECTORF32 vNear = { xmFrustrum.Near, xmFrustrum.Near, xmFrustrum.Near, 1.0f };
+	XMVECTORF32 vFar = { xmFrustrum.Far, xmFrustrum.Far, xmFrustrum.Far, 1.0f };
+	XMVECTOR vRightTopNear = XMVectorMultiply(vRightTop, vNear);
+	XMVECTOR vRightTopFar = XMVectorMultiply(vRightTop, vFar);
+	XMVECTOR vLeftBottomNear = XMVectorMultiply(vLeftBottom, vNear);
+	XMVECTOR vLeftBottomFar = XMVectorMultiply(vLeftBottom, vFar);
+
+	pxmvCornerPoints[0] = vRightTopNear;
+	pxmvCornerPoints[1] = XMVectorSelect(vRightTopNear, vLeftBottomNear, vGrabX);
+	pxmvCornerPoints[2] = vLeftBottomNear;
+	pxmvCornerPoints[3] = XMVectorSelect(vRightTopNear, vLeftBottomNear, vGrabY);
+
+	pxmvCornerPoints[4] = vRightTopFar;
+	pxmvCornerPoints[5] = XMVectorSelect(vRightTopFar, vLeftBottomFar, vGrabX);
+	pxmvCornerPoints[6] = vLeftBottomFar;
+	pxmvCornerPoints[7] = XMVectorSelect(vRightTopFar, vLeftBottomFar, vGrabY);
+}
+
+struct TRIANGLECULLING
+{
+	XMVECTOR pt[3];
+	BOOL culled;
+};
+
+void ComputeOrthographicProjectionNearAndFar(float& fNear, float& fFar, FXMVECTOR xmvLightOrthographicMin, FXMVECTOR xmvLightOrthographicMax, XMVECTOR* pxmvSceneAABBLightSpacePoints)
+{
+	fNear = FLT_MAX;
+	fFar = -FLT_MAX;
+
+	TRIANGLECULLING pxmvSceneAABBTriangles[16];
+	int nTriangles = 1;
+
+	static const int pnTriangleIndices[36] = { 0,1,2, 1,2,3, 4,5,6, 5,6,7, 0,2,4, 2,4,6, 1,3,5, 3,5,7, 0,1,4, 1,4,5, 2,3,6, 3,6,7 };
+	int nPointPassesCollision[3];
+
+	float fxOrthographicMin = XMVectorGetX(xmvLightOrthographicMin);
+	float fxOrthographicMax = XMVectorGetX(xmvLightOrthographicMax);
+	float fyOrthographicMin = XMVectorGetY(xmvLightOrthographicMin);
+	float fyOrthographicMax = XMVectorGetY(xmvLightOrthographicMax);
+
+	for (int i = 0; i < 12; i++)
+	{
+		pxmvSceneAABBTriangles[0].pt[0] = pxmvSceneAABBLightSpacePoints[pnTriangleIndices[i * 3 + 0]];
+		pxmvSceneAABBTriangles[0].pt[1] = pxmvSceneAABBLightSpacePoints[pnTriangleIndices[i * 3 + 1]];
+		pxmvSceneAABBTriangles[0].pt[2] = pxmvSceneAABBLightSpacePoints[pnTriangleIndices[i * 3 + 2]];
+		pxmvSceneAABBTriangles[0].culled = false;
+
+		nTriangles = 1;
+
+		for (int j = 0; j < 4; j++)
+		{
+			float fEdge;
+			int nComponent;
+
+			if (j == 0)
+			{
+				fEdge = fxOrthographicMin;
+				nComponent = 0;
+			}
+			else if (j == 1)
+			{
+				fEdge = fxOrthographicMax;
+				nComponent = 0;
+			}
+			else if (j == 2)
+			{
+				fEdge = fyOrthographicMin;
+				nComponent = 1;
+			}
+			else
+			{
+				fEdge = fyOrthographicMax;
+				nComponent = 1;
+			}
+
+			for (int k = 0; k < nTriangles; k++)
+			{
+				if (!pxmvSceneAABBTriangles[k].culled)
+				{
+					int nInsideVertices = 0;
+					XMVECTOR tempOrder;
+
+					if (j == 0)
+					{
+						for (int m = 0; m < 3; m++)
+						{
+							nPointPassesCollision[m] = (XMVectorGetX(pxmvSceneAABBTriangles[k].pt[m]) > XMVectorGetX(xmvLightOrthographicMin)) ? 1 : 0;
+							nInsideVertices += nPointPassesCollision[m];
+						}
+					}
+					else if (j == 1)
+					{
+						for (int m = 0; m < 3; m++)
+						{
+							nPointPassesCollision[m] = (XMVectorGetX(pxmvSceneAABBTriangles[k].pt[m]) < XMVectorGetX(xmvLightOrthographicMax)) ? 1 : 0;
+							nInsideVertices += nPointPassesCollision[m];
+						}
+					}
+					else if (j == 2)
+					{
+						for (int m = 0; m < 3; m++)
+						{
+							nPointPassesCollision[m] = (XMVectorGetY(pxmvSceneAABBTriangles[k].pt[m]) > XMVectorGetY(xmvLightOrthographicMin)) ? 1 : 0;
+							nInsideVertices += nPointPassesCollision[m];
+						}
+					}
+					else
+					{
+						for (int m = 0; m < 3; m++)
+						{
+							nPointPassesCollision[m] = (XMVectorGetY(pxmvSceneAABBTriangles[k].pt[m]) < XMVectorGetY(xmvLightOrthographicMax)) ? 1 : 0;
+							nInsideVertices += nPointPassesCollision[m];
+						}
+					}
+
+					if (nPointPassesCollision[1] && !nPointPassesCollision[0])
+					{
+						tempOrder = pxmvSceneAABBTriangles[k].pt[0];
+						pxmvSceneAABBTriangles[k].pt[0] = pxmvSceneAABBTriangles[k].pt[1];
+						pxmvSceneAABBTriangles[k].pt[1] = tempOrder;
+						nPointPassesCollision[0] = TRUE;
+						nPointPassesCollision[1] = FALSE;
+					}
+					if (nPointPassesCollision[2] && !nPointPassesCollision[1])
+					{
+						tempOrder = pxmvSceneAABBTriangles[k].pt[1];
+						pxmvSceneAABBTriangles[k].pt[1] = pxmvSceneAABBTriangles[k].pt[2];
+						pxmvSceneAABBTriangles[k].pt[2] = tempOrder;
+						nPointPassesCollision[1] = TRUE;
+						nPointPassesCollision[2] = FALSE;
+					}
+					if (nPointPassesCollision[1] && !nPointPassesCollision[0])
+					{
+						tempOrder = pxmvSceneAABBTriangles[k].pt[0];
+						pxmvSceneAABBTriangles[k].pt[0] = pxmvSceneAABBTriangles[k].pt[1];
+						pxmvSceneAABBTriangles[k].pt[1] = tempOrder;
+						nPointPassesCollision[0] = TRUE;
+						nPointPassesCollision[1] = FALSE;
+					}
+
+					if (nInsideVertices == 0)
+					{
+						pxmvSceneAABBTriangles[k].culled = true;
+					}
+					else if (nInsideVertices == 1)
+					{
+						pxmvSceneAABBTriangles[k].culled = false;
+
+						XMVECTOR vVert0ToVert1 = pxmvSceneAABBTriangles[k].pt[1] - pxmvSceneAABBTriangles[k].pt[0];
+						XMVECTOR vVert0ToVert2 = pxmvSceneAABBTriangles[k].pt[2] - pxmvSceneAABBTriangles[k].pt[0];
+
+						float fHitPointTimeRatio = fEdge - XMVectorGetByIndex(pxmvSceneAABBTriangles[k].pt[0], nComponent);
+						float fDistanceAlongVector01 = fHitPointTimeRatio / XMVectorGetByIndex(vVert0ToVert1, nComponent);
+						float fDistanceAlongVector02 = fHitPointTimeRatio / XMVectorGetByIndex(vVert0ToVert2, nComponent);
+						vVert0ToVert1 *= fDistanceAlongVector01;
+						vVert0ToVert1 += pxmvSceneAABBTriangles[k].pt[0];
+						vVert0ToVert2 *= fDistanceAlongVector02;
+						vVert0ToVert2 += pxmvSceneAABBTriangles[k].pt[0];
+
+						pxmvSceneAABBTriangles[k].pt[1] = vVert0ToVert2;
+						pxmvSceneAABBTriangles[k].pt[2] = vVert0ToVert1;
+					}
+					else if (nInsideVertices == 2)
+					{
+						pxmvSceneAABBTriangles[nTriangles] = pxmvSceneAABBTriangles[k + 1];
+
+						pxmvSceneAABBTriangles[k].culled = false;
+						pxmvSceneAABBTriangles[k + 1].culled = false;
+
+						XMVECTOR vVert2ToVert0 = pxmvSceneAABBTriangles[k].pt[0] - pxmvSceneAABBTriangles[k].pt[2];
+						XMVECTOR vVert2ToVert1 = pxmvSceneAABBTriangles[k].pt[1] - pxmvSceneAABBTriangles[k].pt[2];
+
+						float fHitPointTime_2_0 = fEdge - XMVectorGetByIndex(pxmvSceneAABBTriangles[k].pt[2], nComponent);
+						float fDistanceAlongVector_2_0 = fHitPointTime_2_0 / XMVectorGetByIndex(vVert2ToVert0, nComponent);
+						vVert2ToVert0 *= fDistanceAlongVector_2_0;
+						vVert2ToVert0 += pxmvSceneAABBTriangles[k].pt[2];
+
+						pxmvSceneAABBTriangles[k + 1].pt[0] = pxmvSceneAABBTriangles[k].pt[0];
+						pxmvSceneAABBTriangles[k + 1].pt[1] = pxmvSceneAABBTriangles[k].pt[1];
+						pxmvSceneAABBTriangles[k + 1].pt[2] = vVert2ToVert0;
+
+						float fHitPointTime_2_1 = fEdge - XMVectorGetByIndex(pxmvSceneAABBTriangles[k].pt[2], nComponent);
+						float fDistanceAlongVector_2_1 = fHitPointTime_2_1 / XMVectorGetByIndex(vVert2ToVert1, nComponent);
+						vVert2ToVert1 *= fDistanceAlongVector_2_1;
+						vVert2ToVert1 += pxmvSceneAABBTriangles[k].pt[2];
+						pxmvSceneAABBTriangles[k].pt[0] = pxmvSceneAABBTriangles[k + 1].pt[1];
+						pxmvSceneAABBTriangles[k].pt[1] = pxmvSceneAABBTriangles[k + 1].pt[2];
+						pxmvSceneAABBTriangles[k].pt[2] = vVert2ToVert1;
+
+						++nTriangles;
+						++k;
+					}
+					else
+					{
+						pxmvSceneAABBTriangles[k].culled = false;
+					}
+				}
+			}
+		}
+		for (int n = 0; n < nTriangles; n++)
+		{
+			if (!pxmvSceneAABBTriangles[n].culled)
+			{
+				for (int x = 0; x < 3; x++)
+				{
+					float z = XMVectorGetZ(pxmvSceneAABBTriangles[n].pt[x]);
+					if (fNear > z) fNear = z;
+					if (fFar < z) fFar = z;
+				}
+			}
+		}
+	}
+}
+
+#define _WITH_ORTHOGRAPHIC_PROJECT_SCENE
+//#define _WITH_ORTHOGRAPHIC_PROJECT_CAMERA_FRUSTUM
+//#define _WITH_ORTHOGRAPHIC_PROJECT_CAMERA_FRUSTUM_SCENE
+
+XMMATRIX CreateOrthographicProjectionMatrix(XMMATRIX& xmmtxLightView, CCamera* pSceneCamera, BoundingBox* pxmSceneBoundingBox)
+{
+	XMMATRIX xmmtxProjection;
+
+#ifdef _WITH_ORTHOGRAPHIC_PROJECT_SCENE
+	XMFLOAT3 pxmf3SceneAABBPoints[8];
+	pxmSceneBoundingBox->GetCorners(pxmf3SceneAABBPoints);
+
+	XMVECTOR xmvLightSpaceSceneAABBMin = g_XMFltMax;
+	XMVECTOR xmvLightSpaceSceneAABBMax = g_XMFltMin;
+
+	XMVECTOR pxmvLightSpaceSceneAABBPoints[8];
+	for (int i = 0; i < 8; i++)
+	{
+		XMFLOAT4 xmf4SceneAABBPoint = XMFLOAT4(pxmf3SceneAABBPoints[i].x, pxmf3SceneAABBPoints[i].y, pxmf3SceneAABBPoints[i].z, 1.0f);
+		pxmvLightSpaceSceneAABBPoints[i] = XMVector4Transform(XMLoadFloat4(&xmf4SceneAABBPoint), xmmtxLightView);
+		xmvLightSpaceSceneAABBMin = XMVectorMin(pxmvLightSpaceSceneAABBPoints[i], xmvLightSpaceSceneAABBMin);
+		xmvLightSpaceSceneAABBMax = XMVectorMax(pxmvLightSpaceSceneAABBPoints[i], xmvLightSpaceSceneAABBMax);
+	}
+
+	float fNearPlaneDistance = XMVectorGetZ(xmvLightSpaceSceneAABBMin);
+	float fFarPlaneDistance = XMVectorGetZ(xmvLightSpaceSceneAABBMax);
+	xmmtxProjection = XMMatrixOrthographicOffCenterLH(XMVectorGetX(xmvLightSpaceSceneAABBMin), XMVectorGetX(xmvLightSpaceSceneAABBMax), XMVectorGetY(xmvLightSpaceSceneAABBMin), XMVectorGetY(xmvLightSpaceSceneAABBMax), fNearPlaneDistance, fFarPlaneDistance);
+#endif
+
+#ifdef _WITH_ORTHOGRAPHIC_PROJECT_CAMERA_FRUSTUM
+	XMFLOAT3 pxmf3CameraFrustumPoints[8];
+	BoundingFrustum xmFrustrum(XMLoadFloat4x4(&pSceneCamera->m_xmf4x4Projection));
+	xmFrustrum.GetCorners(pxmf3CameraFrustumPoints);
+
+	XMMATRIX xmmtxInverseCameraView = XMMatrixInverse(NULL, XMLoadFloat4x4(&pSceneCamera->m_xmf4x4View));
+
+	XMVECTOR xmvLightSpaceCameraFrustumAABBMin = g_XMFltMax;
+	XMVECTOR xmvLightSpaceCameraFrustumAABBMax = g_XMFltMin;
+	XMVECTOR xmvLightSpaceCameraFrustumPoint;
+	XMVECTOR pxmvCameraFrustumPoints[8];
+	for (int i = 0; i < 8; i++)
+	{
+		XMFLOAT4 xmf4CameraFrustumPoint = XMFLOAT4(pxmf3CameraFrustumPoints[i].x, pxmf3CameraFrustumPoints[i].y, pxmf3CameraFrustumPoints[i].z, 1.0f);
+		pxmvCameraFrustumPoints[i] = XMLoadFloat4(&xmf4CameraFrustumPoint); //Camera Space
+		xmvLightSpaceCameraFrustumPoint = XMVector4Transform(XMVector4Transform(pxmvCameraFrustumPoints[i], xmmtxInverseCameraView), xmmtxLightView); //Camera Space to World space, World space to Light Space
+		xmvLightSpaceCameraFrustumAABBMin = XMVectorMin(xmvLightSpaceCameraFrustumPoint, xmvLightSpaceCameraFrustumAABBMin);
+		xmvLightSpaceCameraFrustumAABBMax = XMVectorMax(xmvLightSpaceCameraFrustumPoint, xmvLightSpaceCameraFrustumAABBMax);
+	}
+
+	float fNearPlaneDistance = XMVectorGetZ(xmvLightSpaceCameraFrustumAABBMin);
+	float fFarPlaneDistance = XMVectorGetZ(xmvLightSpaceCameraFrustumAABBMax);
+	xmmtxProjection = XMMatrixOrthographicOffCenterLH(XMVectorGetX(xmvLightSpaceCameraFrustumAABBMin), XMVectorGetX(xmvLightSpaceCameraFrustumAABBMax), XMVectorGetY(xmvLightSpaceCameraFrustumAABBMin), XMVectorGetY(xmvLightSpaceCameraFrustumAABBMax), fNearPlaneDistance, fFarPlaneDistance);
+#endif
+
+#ifdef _WITH_ORTHOGRAPHIC_PROJECT_CAMERA_FRUSTUM_SCENE
+	/*Fit to Scene*/
+	XMFLOAT3 pxmf3CameraFrustumPoints[8];
+	BoundingFrustum xmFrustrum(XMLoadFloat4x4(&pSceneCamera->m_xmf4x4Projection));
+	xmFrustrum.GetCorners(pxmf3CameraFrustumPoints);
+
+	XMMATRIX xmmtxInverseCameraView = XMMatrixInverse(NULL, XMLoadFloat4x4(&pSceneCamera->m_xmf4x4View));
+
+	XMVECTOR xmvLightSpaceCameraFrustumAABBMin = g_XMFltMax;
+	XMVECTOR xmvLightSpaceCameraFrustumAABBMax = g_XMFltMin;
+	XMVECTOR xmvLightSpaceCameraFrustumPoint;
+	XMVECTOR pxmvCameraFrustumPoints[8];
+	for (int i = 0; i < 8; i++)
+	{
+		XMFLOAT4 xmf4CameraFrustumPoint = XMFLOAT4(pxmf3CameraFrustumPoints[i].x, pxmf3CameraFrustumPoints[i].y, pxmf3CameraFrustumPoints[i].z, 1.0f);
+		pxmvCameraFrustumPoints[i] = XMLoadFloat4(&xmf4CameraFrustumPoint); //Camera Space
+		xmvLightSpaceCameraFrustumPoint = XMVector4Transform(XMVector4Transform(pxmvCameraFrustumPoints[i], xmmtxInverseCameraView), xmmtxLightView); //Camera Space to World space, World space to Light Space
+		xmvLightSpaceCameraFrustumAABBMin = XMVectorMin(xmvLightSpaceCameraFrustumPoint, xmvLightSpaceCameraFrustumAABBMin);
+		xmvLightSpaceCameraFrustumAABBMax = XMVectorMax(xmvLightSpaceCameraFrustumPoint, xmvLightSpaceCameraFrustumAABBMax);
+	}
+
+	XMVECTOR xmvLightOrthographicMin = xmvLightSpaceCameraFrustumAABBMin;
+	XMVECTOR xmvLightOrthographicMax = xmvLightSpaceCameraFrustumAABBMax;
+
+	XMVECTOR xmvDiagonal = XMVector3Length(pxmvCameraFrustumPoints[0] - pxmvCameraFrustumPoints[6]);
+	float fBound = XMVectorGetX(xmvDiagonal);
+	XMVECTOR xmvBoarderOffset = (xmvDiagonal - (xmvLightSpaceCameraFrustumAABBMax - xmvLightSpaceCameraFrustumAABBMin)) * g_XMOneHalf;
+	XMVectorSetZ(xmvBoarderOffset, 0.0f);
+	XMVectorSetW(xmvBoarderOffset, 0.0f);
+	xmvLightOrthographicMax += xmvBoarderOffset;
+	xmvLightOrthographicMin -= xmvBoarderOffset;
+
+	float fLightCameraOrthographicMinZ = XMVectorGetZ(xmvLightOrthographicMin);
+
+	///*Move Light Texel Size
+	XMVECTOR xmvUnitsPerTexel = g_XMZero;
+	float fUnitsPerTexel = fBound / (float)_DEPTH_BUFFER_HEIGHT;
+	xmvUnitsPerTexel = XMVectorSet(fUnitsPerTexel, fUnitsPerTexel, 0.0f, 0.0f);
+
+	xmvLightOrthographicMin /= xmvUnitsPerTexel;
+	xmvLightOrthographicMin = XMVectorFloor(xmvLightOrthographicMin);
+	xmvLightOrthographicMin *= xmvUnitsPerTexel;
+
+	xmvLightOrthographicMax /= xmvUnitsPerTexel;
+	xmvLightOrthographicMax = XMVectorFloor(xmvLightOrthographicMax);
+	xmvLightOrthographicMax *= xmvUnitsPerTexel;
+	//*/
+
+	XMFLOAT3 pxmf3SceneAABBPoints[8];
+	pxmSceneBoundingBox->GetCorners(pxmf3SceneAABBPoints);
+
+	XMVECTOR pxmvLightSpaceSceneAABBPoints[8];
+	for (int i = 0; i < 8; i++)
+	{
+		XMFLOAT4 xmf4SceneAABBPoint = XMFLOAT4(pxmf3SceneAABBPoints[i].x, pxmf3SceneAABBPoints[i].y, pxmf3SceneAABBPoints[i].z, 1.0f);
+		pxmvLightSpaceSceneAABBPoints[i] = XMVector4Transform(XMLoadFloat4(&xmf4SceneAABBPoint), xmmtxLightView);
+	}
+
+	float fNearPlaneDistance = 0.0f;
+	float fFarPlaneDistance = 10000.0f;
+
+	ComputeOrthographicProjectionNearAndFar(fNearPlaneDistance, fFarPlaneDistance, xmvLightOrthographicMin, xmvLightOrthographicMax, pxmvLightSpaceSceneAABBPoints);
+	if (fLightCameraOrthographicMinZ > fNearPlaneDistance) fNearPlaneDistance = fLightCameraOrthographicMinZ; //Pan Caking
+
+	xmmtxProjection = XMMatrixOrthographicOffCenterLH(XMVectorGetX(xmvLightOrthographicMin), XMVectorGetX(xmvLightOrthographicMax), XMVectorGetY(xmvLightOrthographicMin), XMVectorGetY(xmvLightOrthographicMax), fNearPlaneDistance, fFarPlaneDistance);
+#endif
+
+	return(xmmtxProjection);
+}
+
+void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (!m_pScene) return;
+
+	BoundingBox xmBoundingBox = m_pScene->CalculateBoundingBox();
+	auto pLights = m_pScene->GetLights();
+
+	for (int j = 0; j < MAX_LIGHTS; j++)
+	{
+		if (pLights[j].m_bEnable)
+		{
+			XMFLOAT3 xmf3Position = pLights[j].m_xmf3Position;
+			XMFLOAT3 xmf3Look = pLights[j].m_xmf3Direction;
+			XMFLOAT3 xmf3Up = XMFLOAT3(0.0f, +1.0f, 0.0f);
+
+			XMMATRIX xmmtxLightView = XMMatrixLookToLH(XMLoadFloat3(&xmf3Position), XMLoadFloat3(&xmf3Look), XMLoadFloat3(&xmf3Up));
+
+			XMMATRIX xmmtxProjection = XMMatrixIdentity();
+			if (pLights[j].m_nType == DIRECTIONAL_LIGHT)
+			{
+				xmmtxProjection = CreateOrthographicProjectionMatrix(xmmtxLightView, pCamera, &xmBoundingBox);
+			}
+			else if (pLights[j].m_nType == SPOT_LIGHT)
+			{
+				float fFovAngle = 60.0f; // pLights->pLights[j].m_fPhi = cos(60.0f);
+				float fAspectRatio = float(m_nDepthbufferWidth) / float(m_nDepthbufferHeight);
+				float fNearPlaneDistance = 10.0f, fFarPlaneDistance = pLights[j].m_fRange;
+
+				xmmtxProjection = XMMatrixPerspectiveFovLH(XMConvertToRadians(fFovAngle), fAspectRatio, fNearPlaneDistance, fFarPlaneDistance);
+			}
+			else if (pLights[j].m_nType == POINT_LIGHT)
+			{
+				//ShadowMap[6]
+			}
+
+			m_ppDepthRenderCameras[j]->SetPosition(xmf3Position);
+			XMStoreFloat4x4(&m_ppDepthRenderCameras[j]->m_xmf4x4View, xmmtxLightView);
+			XMStoreFloat4x4(&m_ppDepthRenderCameras[j]->m_xmf4x4Projection, xmmtxProjection);
+
+			XMMATRIX xmmtxToTexture = XMMatrixTranspose(xmmtxLightView * xmmtxProjection * m_xmProjectionToTexture);
+			XMStoreFloat4x4(&m_pToLightSpaces[j].m_pxmf4x4ToTextures, xmmtxToTexture);
+			m_pToLightSpaces[j].m_pxmf4LightPositions = XMFLOAT4(xmf3Position.x, xmf3Position.y, xmf3Position.z, 1.0f);
+
+			::SynchronizeResourceTransition(pd3dCommandList, m_pDepthFromLightTexture->GetResource(j), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+			float pfClearColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			pd3dCommandList->ClearRenderTargetView(m_pd3dRtvCPUDescriptorHandles[j], pfClearColor, 0, NULL);
+			pd3dCommandList->ClearDepthStencilView(m_d3dDsvDescriptorCPUHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, NULL);
+			pd3dCommandList->OMSetRenderTargets(1, &m_pd3dRtvCPUDescriptorHandles[j], TRUE, &m_d3dDsvDescriptorCPUHandle);
+
+			Render(pd3dCommandList, m_ppDepthRenderCameras[j].get());
+
+			::SynchronizeResourceTransition(pd3dCommandList, m_pDepthFromLightTexture->GetResource(j), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON);
+		}
+		else
+		{
+			m_pToLightSpaces[j].m_pxmf4LightPositions.w = 0.0f;
+		}
+	}
+}
+
+void CDepthRenderShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	CShader::OnPrepareRender(pd3dCommandList, 0, false);
+
+	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+	pCamera->UpdateShaderVariables(pd3dCommandList);
+
+	if (!m_pScene) return;
+
+	m_pScene->RenderDepthWrite(pd3dCommandList, pCamera);
+}
+
+std::shared_ptr<CTexture> CDepthRenderShader::GetDepthTexture()
+{ 
+	return m_pDepthFromLightTexture;
+}
+
+ID3D12Resource* CDepthRenderShader::GetDepthTextureResource(UINT nIndex)
+{
+	return(m_pDepthFromLightTexture->GetResource(nIndex)); 
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+CShadowMapShader::CShadowMapShader(CScene* pScene)
+	: CSkinnedAnimationStandardShader(), m_pScene(pScene)
+{
+}
+
+CShadowMapShader::~CShadowMapShader()
+{
+}
+
+D3D12_DEPTH_STENCIL_DESC CShadowMapShader::CreateDepthStencilState(int nPipelineState)
+{
+	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
+	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
+	d3dDepthStencilDesc.DepthEnable = TRUE;
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	d3dDepthStencilDesc.StencilEnable = FALSE;
+	d3dDepthStencilDesc.StencilReadMask = 0x00;
+	d3dDepthStencilDesc.StencilWriteMask = 0x00;
+	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+
+	return(d3dDepthStencilDesc);
+}
+
+D3D12_SHADER_BYTECODE CShadowMapShader::CreateVertexShader(int nPipelineState)
+{
+#ifdef _COMPILE_SHADER
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSShadowMapShadow", "vs_5_1", m_pd3dVertexShaderBlob.GetAddressOf()));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"VSShadowMapShadow", m_pd3dVertexShaderBlob.GetAddressOf()));
+#endif
+}
+
+D3D12_SHADER_BYTECODE CShadowMapShader::CreatePixelShader(int nPipelineState)
+{
+#ifdef _COMPILE_SHADER
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSShadowMapShadow", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf()));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"PSShadowMapShadow", m_pd3dPixelShaderBlob.GetAddressOf()));
+#endif
+}
+
+void CShadowMapShader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+}
+
+void CShadowMapShader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (m_pDepthFromLightTexture) m_pDepthFromLightTexture->UpdateShaderVariables(pd3dCommandList);
+}
+
+void CShadowMapShader::ReleaseShaderVariables()
+{
+}
+
+void CShadowMapShader::ReleaseUploadBuffers()
+{
+}
+
+void CShadowMapShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CTexture> pContext)
+{
+	m_pDepthFromLightTexture = (std::shared_ptr<CTexture>) pContext;
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+}
+
+void CShadowMapShader::ReleaseObjects()
+{
+	if (m_pDepthFromLightTexture) m_pDepthFromLightTexture.reset();
+}
+
+void CShadowMapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (!m_pScene) return;
+	CShader::Render(pd3dCommandList, pCamera);
+
+	UpdateShaderVariables(pd3dCommandList);
+
+	m_pScene->RenderDepthWrite(pd3dCommandList, pCamera);
+	//m_pObjectsShader->m_pDirectionalLight->UpdateShaderVariables(pd3dCommandList);
+	//m_pObjectsShader->m_pDirectionalLight->Render(pd3dCommandList, pCamera);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+CTextureToViewportShader::CTextureToViewportShader(CScene* pScene)
+	: CShader(), m_pScene(pScene)
+{
+	m_bAllowShadow = false;
+}
+
+CTextureToViewportShader::~CTextureToViewportShader()
+{
+}
+
+D3D12_DEPTH_STENCIL_DESC CTextureToViewportShader::CreateDepthStencilState(int nPipelineState)
+{
+	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
+	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
+	d3dDepthStencilDesc.DepthEnable = FALSE;
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	d3dDepthStencilDesc.StencilEnable = FALSE;
+	d3dDepthStencilDesc.StencilReadMask = 0x00;
+	d3dDepthStencilDesc.StencilWriteMask = 0x00;
+	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+
+	return(d3dDepthStencilDesc);
+}
+
+D3D12_SHADER_BYTECODE CTextureToViewportShader::CreateVertexShader(int nPipelineState)
+{
+#ifdef _COMPILE_SHADER
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTextureToViewport", "vs_5_1", m_pd3dVertexShaderBlob.GetAddressOf()));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"VSTextureToViewport", m_pd3dVertexShaderBlob.GetAddressOf()));
+#endif
+}
+
+D3D12_SHADER_BYTECODE CTextureToViewportShader::CreatePixelShader(int nPipelineState)
+{
+#ifdef _COMPILE_SHADER
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSTextureToViewport", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf()));
+#else
+	return(CShader::ReadCompiledShaderFromFile(L"PSTextureToViewport", m_pd3dPixelShaderBlob.GetAddressOf()));
+#endif
+}
+
+void CTextureToViewportShader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (m_pDepthFromLightTexture) m_pDepthFromLightTexture->UpdateShaderVariables(pd3dCommandList);
+}
+
+void CTextureToViewportShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CTexture> pContext)
+{
+	m_pDepthFromLightTexture = (std::shared_ptr<CTexture>) pContext;
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+}
+
+void CTextureToViewportShader::ReleaseObjects()
+{
+	m_pDepthFromLightTexture.reset();
+}
+
+void CTextureToViewportShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if(g_bRenderCollider)
+	{
+		D3D12_VIEWPORT d3dViewport = { 0.0f, 0.0f, WINDOW_WIDTH * 0.25f, WINDOW_HEIGHT * 0.25f, 0.0f, 1.0f };
+		D3D12_RECT d3dScissorRect = { 0, 0, WINDOW_WIDTH / 4, WINDOW_HEIGHT / 4 };
+		pd3dCommandList->RSSetViewports(1, &d3dViewport);
+		pd3dCommandList->RSSetScissorRects(1, &d3dScissorRect);
+
+		CShader::OnPrepareRender(pd3dCommandList);
+
+		UpdateShaderVariables(pd3dCommandList);
+
+		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		pd3dCommandList->DrawInstanced(6, 1, 0, 0);
+	}
+}
+
+

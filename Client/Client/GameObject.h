@@ -39,6 +39,7 @@ public:
 	std::string m_strFileName{};
 
 	std::shared_ptr<CGameObject> m_pModelRootObject;
+	std::shared_ptr<CGameObject> m_pAnimationRootObject;
 
 	int m_nSkinnedMeshes = 0;
 	std::vector <std::shared_ptr<CSkinnedMesh>> m_ppSkinnedMeshes; //[SkinnedMeshes], Skinned Mesh Cache
@@ -95,10 +96,16 @@ public:
 	UINT GetObjectID() { return m_nObjectID; }
 	void SetObjectID(UINT nObjectID) { m_nObjectID = nObjectID; }
 
+	// Server ID
+	UINT GetServerID() { return m_nObjectServerID; } // 서버 ID는 Object ID와 동일하게 사용
+	void SetServerID(UINT nServerID) { m_nObjectServerID = nServerID; } // 서버 ID는 Object ID와 동일하게 사용
+
+	// Object Name
 	std::string GetName() { return m_strName; }
 	void SetName(const std::string& strName);
 	virtual std::string GetDefaultName() { return "CGameObject"; }
 
+	// Layer
 	virtual void SetLayer(GAMEOBJECT_LAYER layer) { m_nLayer = layer; }
 	virtual GAMEOBJECT_LAYER GetLayer() { return m_nLayer; }
 
@@ -117,9 +124,11 @@ public:
 	// Object Update
 	virtual void Update(float fTimeElapsed);
 
+	void UpdateBBCache();
+
 	// Object Render
 	virtual void OnPrepareRender();
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr, bool bDepthWrite = false);
 
 	// Object Collision
 	virtual void OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::shared_ptr<CCollider>& pColliderA, std::shared_ptr<CCollider>& pColliderB); // Collision Event
@@ -165,7 +174,9 @@ protected:
 	static UINT m_nObjectIDCounter; // Object ID Counter
 
 	UINT m_nObjectID; // Object ID
+	UINT m_nObjectServerID; // Object Server ID
 	std::string m_strName;  // Object Name
+	std::string m_strTag = "Untagged"; // Object Tag (For Skinning)
 
 	std::shared_ptr<CMesh> m_pMesh; // Object Mesh
 
@@ -312,7 +323,7 @@ public:
 	void SetWorldMatrix(DirectX::XMFLOAT4X4 xmf4x4World) { m_pTransform->SetWorldMatrix(xmf4x4World); }
 	void SetWorldMatrix(DirectX::XMMATRIX xmf4x4World) { m_pTransform->SetWorldMatrix(xmf4x4World); }
 
-	void UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
+	virtual void UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
 	void UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix);
 	void UpdateTransform(std::shared_ptr<CGameObject>& pGameobject);
 };
@@ -380,7 +391,7 @@ public:
 	static std::shared_ptr<CSkyBox> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 
 	// Object Render
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -408,7 +419,7 @@ public:
 		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
 
 	// Object Render
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override;
 
 	//지형의 높이를 계산하는 함수이다(월드 좌표계). 높이 맵의 높이에 스케일의 y를 곱한 값이다. 
 	float GetHeight(float x, float z) {
@@ -476,15 +487,22 @@ private:
 //
 class CBulletObject : public CGameObject
 {
+	// TODO : Bullet을 전부 관리하는 Object로 변경할 예정
+	// 현황 : GPU상에서 모든 Bullet을 파티클처럼 관리 하는 중(즉, 생성만 직접하고 소멸은 GPU에서 SO를 통해 출력시 discard하는 방식)
+	// 목표 : 사격 즉시 피격위치 확정 및 GPU에 파티클 출력.
+	//      : 이떄 총알은 GPU상에서 전진되며, GPU에 파티클 생성시에 주어진 거리 비례 LifeTime을 소유.
+	//      : 즉, 총알이 날아가는 듯한 느낌만 주기 위함이며, 실제 피격효과로 인한 출력은 HitResult에 의해
+	//      : 별도 파티클 생성으로 이루어 진다.(즉, Trail과 혈흔 표현을 별도로 구현 예정)
 public:
 	CBulletObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
 	virtual ~CBulletObject();
 
 	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_BULLET; }
 
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false);
 	virtual void OnPostRender();
 
 	// method
+	void AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Velocity, float fRange);
 	void AddBullet(const CBulletVertex& pBulletVertex);
 };
