@@ -145,6 +145,20 @@ void CGameScene::Update(float deltaTime)
 	BuildFiredBullets();
 }
 
+void CGameScene::UpdateLights()
+{
+	if (m_pDepthRenderShader)
+	{
+		/*auto xmf3CameraPosition = m_pCamera->GetPosition();
+		for (int i = 1; i < 2; ++i) {
+			if (m_pLights[i].m_bEnable == false) continue;
+			if (m_pLights[i].m_nType != DIRECTIONAL_LIGHT) continue;
+			float fLightRange = m_pLights[i].m_fRange;
+			m_pLights[i].m_xmf3Position = Vector3::Add(xmf3CameraPosition, Vector3::ScalarProduct(m_pLights[i].m_xmf3Direction, -fLightRange));
+		}*/
+	}
+}
+
 void CGameScene::BuildFiredBullets()
 {
 	if (m_bIschambered) {

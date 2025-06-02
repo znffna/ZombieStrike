@@ -189,16 +189,29 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_xmf4GlobalAmbient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
 
 	// Light
-	m_pLights[0].m_bEnable = true;
-	m_pLights[0].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[0].m_fRange = 2000.0f;
-	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.2f, 0.0f, 0.0f, 1.0f);
-	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.73f, 0.73f, 0.73f, 1.0f);
-	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[0].m_xmf3Position = XMFLOAT3(513 * 1.5f, 450.0f, 0);
-	m_pLights[0].m_xmf3Direction = XMFLOAT3(-1.0f, -1.0f, 0.0f);
+	int nIndex = 0;
+	m_pLights[nIndex].m_bEnable = true;
+	m_pLights[nIndex].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[nIndex].m_fRange = 2000.0f;
+	m_pLights[nIndex].m_xmf4Ambient = XMFLOAT4(0.2f, 0.0f, 0.0f, 1.0f);
+	m_pLights[nIndex].m_xmf4Diffuse = XMFLOAT4(0.73f, 0.73f, 0.73f, 1.0f);
+	m_pLights[nIndex].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+	m_pLights[nIndex].m_xmf3Position = XMFLOAT3(513 * 1.5f, 450.0f, 0);
+	m_pLights[nIndex].m_xmf3Direction = XMFLOAT3(-1.0f, -1.0f, 0.0f);
+	nIndex++;
 
-	m_pLights[1].m_bEnable = false;
+	m_pLights[nIndex].m_bEnable = false;
+	m_pLights[nIndex].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[nIndex].m_fRange = 2000.0f;
+	m_pLights[nIndex].m_xmf4Ambient = XMFLOAT4(0.2f, 0.0f, 0.0f, 1.0f);
+	m_pLights[nIndex].m_xmf4Diffuse = XMFLOAT4(0.73f, 0.73f, 0.73f, 1.0f);
+	m_pLights[nIndex].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+	m_pLights[nIndex].m_xmf3Position = XMFLOAT3(513.0f, 450.0f, 0);
+	m_pLights[nIndex].m_xmf3Direction = XMFLOAT3(-1.0f, -1.0f, 0.0f);
+	nIndex++;
+
+
+	/*m_pLights[1].m_bEnable = false;
 	m_pLights[1].m_nType = SPOT_LIGHT;
 	m_pLights[1].m_fRange = 1000.0f;
 	m_pLights[1].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
@@ -231,7 +244,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_xmf4Diffuse = XMFLOAT4(0.83f, 0.83f, 0.83f, 1.0f);
 	m_pLights[3].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
 	m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 128.0f, 0.0f);
-	m_pLights[3].m_xmf3Direction = XMFLOAT3(+1.0f, -1.0f, 0.0f);
+	m_pLights[3].m_xmf3Direction = XMFLOAT3(+1.0f, -1.0f, 0.0f);*/
 }
 
 void CScene::AddObject(const std::shared_ptr<CGameObject>& pObject)
@@ -304,6 +317,8 @@ void CScene::Update(float deltaTime)
 
 	// Update Matrix
 	for (auto& pvecObjects : m_ppGameObjects) for (auto& pObject : pvecObjects.second)  pObject->UpdateTransform();
+
+	UpdateLights();
 
 	LateUpdate();
 }

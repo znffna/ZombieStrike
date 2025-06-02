@@ -27,6 +27,7 @@ cbuffer cbFrameworkInfo : register(b3)
     float gfCurrentTime : packoffset(c0.x);
     float gfElapsedTime : packoffset(c0.y);
     uint gnRenderMode : packoffset(c0.z);
+    float gfBias : packoffset(c0.w);
 };
 
 #include "Light.hlsl"
@@ -702,7 +703,7 @@ SamplerState gssBorder : register(s3);
 
 float4 PSTextureToViewport(VS_TEXTURED_OUTPUT input) : SV_Target
 {
-    float fDepthFromLight0 = gtxtDepthTextures[0].SampleLevel(gssBorder, input.uv, 0).r;
+    float fDepthFromLight0 = gtxtDepthTextures[gnRenderMode].SampleLevel(gssBorder, input.uv, 0).r;
 
     return ((float4) (fDepthFromLight0));
 }

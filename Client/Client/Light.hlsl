@@ -232,8 +232,9 @@ float4 Lighting(float3 vPosition, float3 vNormal, bool bShadow, float4 shadowMap
     for (int i = 0; i < gnLights; i++)
     {
 		float fShadowFactor = 1.0f;
+        float fBias = gfBias; // Bias to prevent shadow acne
 #ifdef _WITH_PCF_FILTERING
-		if (bShadow) fShadowFactor = Compute3x3ShadowFactor(shadowMapUVs[i].xy, shadowMapUVs[i].z, i);
+		if (bShadow) fShadowFactor = Compute3x3ShadowFactor(shadowMapUVs[i].xy, shadowMapUVs[i].z + fBias, i);
 #else
         if (bShadow) fShadowFactor = gtxtDepthTextures[i].SampleCmpLevelZero(gssComparisonPCFShadow, shadowMapUVs[i].xy, shadowMapUVs[i].z).r;
 #endif

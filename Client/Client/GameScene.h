@@ -28,6 +28,8 @@ public:
 	virtual void ReleaseUploadBuffers() override;
 
 	virtual void Update(float deltaTime) override;
+	virtual void UpdateLights() override;
+
 
 	void BuildFiredBullets();
 
