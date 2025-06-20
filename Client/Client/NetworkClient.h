@@ -2,6 +2,8 @@
 #include <iostream>
 #include <WS2tcpip.h>
 #include <string>
+#include <queue>
+#include <mutex>
 #include "../../protocol.h"
 #include "NetworkClient.h"
 
@@ -21,35 +23,43 @@ extern std::string GetPacketName(PKT_TYPE packetType);
 
 class NetworkingClient;
 
+struct RawPacket {
+	std::unique_ptr<char[]> buffer;
+
+    RawPacket(PacketHeader* header, DWORD size) {
+		buffer = std::make_unique<char[]>(size);
+		memcpy(buffer.get(), header, size);
+    }
+
+    PacketHeader* header() const {
+		return reinterpret_cast<PacketHeader*>(buffer.get());
+    }
+
+    template <typename T>
+    T* as() {
+		return reinterpret_cast<T*>(buffer.get());
+	}
+};
+
 class ExtentOverlapped {
 public:
 	WSAOVERLAPPED _overlapped; // overlapped의 주소가 곧 SendOverlapped의 주소
     char _buffer[1024];
 	WSABUF _wsabuf;
-    NetworkingClient* _owner;
 
+    // recv용 생성자
     ExtentOverlapped() {
 		ZeroMemory(&_overlapped, sizeof(_overlapped));
 		ZeroMemory(_buffer, sizeof(_buffer));
 		ZeroMemory(&_wsabuf, sizeof(_wsabuf));
-        _owner = nullptr;
 	}
 
-    // recv용 생성자
-    ExtentOverlapped(NetworkingClient* owner) {
-        ZeroMemory(&_overlapped, sizeof(_overlapped));
-        _wsabuf.buf = _buffer;
-        _wsabuf.len = sizeof(_buffer);
-        _owner = owner;
-    }
-
     // send용 생성자
-    ExtentOverlapped(char* packet, NetworkingClient* owner = nullptr) {
+    ExtentOverlapped(char* packet) {
         ZeroMemory(&_overlapped, sizeof(_overlapped));
         _wsabuf.buf = _buffer;
         _wsabuf.len = *(reinterpret_cast<SIZE2*>(packet));
         memcpy(_buffer, packet, _wsabuf.len);
-        _owner = owner;
     }
 };
 
@@ -71,6 +81,8 @@ public:
 
     bool is_connect = false; // 종료 여부
 	bool is_running = false; // recv loop이 수행중인지 확인
+
+    std::thread recvThread;
 
     COnlineScene* m_pScene; // Scene 포인터
 public:
@@ -102,29 +114,14 @@ public:
     // SendPacket (테스트로 구현)
     void SendLoginPacket(std::string& name);
 
-    std::string chooseServerIP() {
-        std::cout << "\n===== 서버 접속 방법 선택 =====\n";
-        std::cout << "1. 직접 입력한 서버 IP (192. ...)\n";
-        std::cout << "2. 루프백 IP (" << LOOPBACK_IP << ") 로 접속\n";
-        std::cout << "==============================" << std::endl;
-        std::cout << "선택 (1/2): ";
+    // 동기적 별도스레드 recv_Loop 제작
+	std::mutex write_lock; // 쓰기 작업을 위한 뮤텍스
+	std::queue<RawPacket> read_queue; // 수신된 패킷을 저장하는 큐
+	std::queue<RawPacket> write_queue; // 수신된 패킷을 저장하는 큐
 
-        int choice;
-        std::cin >> choice;
+    void recv_loop();    
+    void StorePacket(PacketHeader* pktHeader, DWORD size);
+	std::queue<RawPacket>& GetReadQueue();
 
-        if (choice == 1) {
-            std::string ip;
-            std::cout << "서버 IP 입력: ";
-            std::cin >> ip;
-            return ip;
-        }
-        else if (choice == 2) {
-            std::cout << (std::string("루프백 IP (") + LOOPBACK_IP + ") 로 접속");
-            return LOOPBACK_IP;
-        }
-        else {
-            std::cout << ("잘못된 선택!");
-        }
-        return "";
-    }
+    void ProcessReadQueuePacket();
 };

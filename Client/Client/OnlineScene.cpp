@@ -25,6 +25,7 @@ COnlineScene::COnlineScene()
 
 COnlineScene::~COnlineScene()
 {
+	m_NetworkClient.Logout();
 }
 
 void COnlineScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
@@ -101,6 +102,8 @@ void COnlineScene::Update(float deltaTime)
 
 bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 {
+	m_NetworkClient.ProcessReadQueuePacket();
+
 	CGameScene::ProcessInput(pBuffer, deltaTime);
 
 	if (pBuffer.pKeysBuffer[VK_ESCAPE] & 0xF0)
