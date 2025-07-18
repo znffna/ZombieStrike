@@ -206,10 +206,14 @@ void NetworkingClient::recv_loop()
             // 패킷 처리 후 남은 바이트 수
             this->remain_bytes = remain_bytes - offset;
             // 받은 버퍼에 남은 바이트를 이동 및 초기화
-            if (remain_bytes > 0) memcpy(recv_over._buffer, recv_p, this->remain_bytes);
+            if (this->remain_bytes > 0) memcpy(recv_over._buffer, recv_p, this->remain_bytes);
         }
         else {
 			// 수신된 바이트가 0인 경우, 즉 연결이 종료된 경우
+            {
+				std::string DebugOutput = "recv_bytes가 0인 경우, 즉 연결이 종료된 경우\n";
+				OutputDebugStringA(DebugOutput.c_str());
+            }
             Logout();
             break;
         }
@@ -228,11 +232,11 @@ void NetworkingClient::StorePacket(PacketHeader* pktHeader, DWORD size)
 {
     {
 		std::lock_guard<std::mutex> lock(write_lock); // 쓰기 작업을 위한 뮤텍스 잠금
-        write_queue.emplace(pktHeader, size);
+        write_queue.emplace_back(pktHeader, size);
     }
 }
 
-std::queue<RawPacket>& NetworkingClient::GetReadQueue() {
+std::vector<RawPacket>& NetworkingClient::GetReadQueue() {
     {
         std::lock_guard<std::mutex> lock(write_lock); // 쓰기 작업을 위한 뮤텍스 잠금
         std::swap(read_queue, write_queue); // 쓰기 큐와 읽기 큐를 교환
@@ -248,11 +252,11 @@ std::queue<RawPacket>& NetworkingClient::GetReadQueue() {
 void NetworkingClient::ProcessReadQueuePacket()
 {
 	auto& readQueue = GetReadQueue();
-	
-    while (false == readQueue.empty()) {
-		ProcessPacket(readQueue.front().header());
-		readQueue.pop();
+
+    for (auto& packet : readQueue) {
+		ProcessPacket(packet.header());
     }
+	readQueue.clear(); // 처리 후 읽기 큐 비우기
 }
 
 void NetworkingClient::error_display(const char* msg, int err_no)

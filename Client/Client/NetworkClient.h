@@ -116,12 +116,12 @@ public:
 
     // 동기적 별도스레드 recv_Loop 제작
 	std::mutex write_lock; // 쓰기 작업을 위한 뮤텍스
-	std::queue<RawPacket> read_queue; // 수신된 패킷을 저장하는 큐
-	std::queue<RawPacket> write_queue; // 수신된 패킷을 저장하는 큐
+	std::vector<RawPacket> read_queue; // 수신된 패킷을 저장하는 큐
+	std::vector<RawPacket> write_queue; // 수신된 패킷을 저장하는 큐
 
     void recv_loop();    
     void StorePacket(PacketHeader* pktHeader, DWORD size);
-	std::queue<RawPacket>& GetReadQueue();
+	std::vector<RawPacket>& GetReadQueue();
 
     void ProcessReadQueuePacket();
 };
