@@ -34,6 +34,8 @@ public:
 	CGameFramework();
 	~CGameFramework();
 
+	CGameFramework* GetInstance() { return pGameFramework; }
+
 	bool OnCreate(HINSTANCE hInstance, HWND hMainWnd);
 	void OnDestroy();
 
@@ -48,6 +50,8 @@ public:
 	void ChangeSwapChainState();
 
 	void BuildObjects();
+
+	void CreateSceneOnAnotherThread(std::unique_ptr<CScene>&);
 
 	void AdvanceFrame();
 	void OMSetBackBuffer();
@@ -69,9 +73,17 @@ public:
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
-
 	static CGameFramework* pGameFramework;
 	static ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return pGameFramework->m_pd3dCommandList[pGameFramework->m_nSwapChainBufferIndex]; }
+
+	void AddScene(std::unique_ptr<CScene> pScene)
+	{
+		if (pScene)
+		{
+			CreateSceneOnAnotherThread(pScene);
+		}
+	}
+
 private:
 	bool isWorkd = true;
 

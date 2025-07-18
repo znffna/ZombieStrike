@@ -60,7 +60,7 @@
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
 
 // 실행시 Shader를 Compile할 것인지 여부(안하면 CSO파일을 읽어옴)
-//#define _COMPILE_SHADER  
+#define _COMPILE_SHADER  
 
 // Network IP (명령줄 인자로 Update 가능)
 extern std::string SERVER_IP;

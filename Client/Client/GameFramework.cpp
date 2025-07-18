@@ -5,6 +5,8 @@
 /////////////////////////////////////////////////////////////////////////////
 #include "GameFramework.h"
 
+#include "TitleScene.h"
+
 bool g_bRenderCollider = false;
 
 CGameFramework* CGameFramework::pGameFramework = nullptr;
@@ -437,37 +439,11 @@ void CGameFramework::BuildObjects()
 	// 모든 씬이 공유할 요소 생성
 	CScene::InitStaticMembers(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 
-	// MainScene 생성
-	std::thread thread([this]() mutable {
-
-		//std::unique_ptr<CScene> pMainScene = std::make_unique<CGameScene>();
-		std::unique_ptr<CScene> pMainScene = std::make_unique<COnlineScene>();
-
-		// 디버그
-		//NetworkingClient* net = static_cast<COnlineScene*>(pMainScene.get())->GetClient();
-		//std::string debug = "[BuildObjects] NetworkingClient this = " + std::to_string((uintptr_t)net) + "\n";
-		//OutputDebugStringA(debug.c_str());
-
-		m_pd3dSceneMadeCommandAllocator->Reset();
-		m_pd3dSceneMadeCommandList->Reset(m_pd3dSceneMadeCommandAllocator.Get(), nullptr);
-
-		CResourceManager::GetInstance().Initialize(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get(), nullptr);
-
-		pMainScene->Init(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get());
-
-		m_pd3dSceneMadeCommandList->Close();
-
-		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dSceneMadeCommandList.Get() };
-		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
-
-		WaitGpuWithoutPresent();
-
-		if (pMainScene) pMainScene->ReleaseUploadBuffers();
-
-		pMainScene->PostInitializeObjects(nullptr, nullptr, nullptr);
-		m_Scenes.push_back(std::move(pMainScene));
-	});
-	thread.detach();
+	// Title Scene 생성
+	std::unique_ptr<CScene> pTitleScene = std::make_unique<CTitleScene>();
+	pTitleScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
+	pTitleScene->SetSceneState(SCENE_STATE_RUNNING);
+	m_Scenes.push_back(std::move(pTitleScene));
 
 	// Framework 정보 생성 (Shader에 전달할 정보)
 	CreateShaderVariables();
@@ -491,6 +467,40 @@ void CGameFramework::BuildObjects()
 
 	if (m_pLoadingScene) m_pLoadingScene->ReleaseUploadBuffers();
 
+}
+
+void CGameFramework::CreateSceneOnAnotherThread(std::unique_ptr<CScene>& pScene)
+{
+	std::thread thread([this]() mutable {
+
+		//std::unique_ptr<CScene> pCreatedScene = std::make_unique<CGameScene>();
+		std::unique_ptr<CScene> pCreatedScene = std::make_unique<COnlineScene>();
+
+		// 디버그
+		//NetworkingClient* net = static_cast<COnlineScene*>(pCreatedScene.get())->GetClient();
+		//std::string debug = "[BuildObjects] NetworkingClient this = " + std::to_string((uintptr_t)net) + "\n";
+		//OutputDebugStringA(debug.c_str());
+
+		m_pd3dSceneMadeCommandAllocator->Reset();
+		m_pd3dSceneMadeCommandList->Reset(m_pd3dSceneMadeCommandAllocator.Get(), nullptr);
+
+		CResourceManager::GetInstance().Initialize(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get(), nullptr);
+
+		pCreatedScene->Init(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get());
+
+		m_pd3dSceneMadeCommandList->Close();
+
+		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dSceneMadeCommandList.Get() };
+		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+
+		WaitGpuWithoutPresent();
+
+		if (pCreatedScene) pCreatedScene->ReleaseUploadBuffers();
+
+		pCreatedScene->PostInitializeObjects(nullptr, nullptr, nullptr);
+		m_Scenes.push_back(std::move(pCreatedScene));
+		});
+	thread.detach();
 }
 
 void CGameFramework::WaitGpuWithoutPresent()

@@ -35,7 +35,6 @@ public:
 			OutputDebugString(debugoutput.c_str());
 		}
 		m_strTextureNames.clear();
-		m_nResourceTypes.clear();
 		m_pdxgiBufferFormats.clear();
 		m_nBufferElements.clear();
 		m_nBufferStrides.clear();
@@ -67,7 +66,6 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGpuDescriptorHandle(int nIndex) { return(m_d3dSrvGpuDescriptorHandles[nIndex]); }
 	int GetRootParameter(int nIndex) { return(m_nRootParameterIndices[nIndex]); }
 
-	UINT GetTextureType(int nIndex) { return(m_nResourceTypes[nIndex]); }
 	DXGI_FORMAT GetBufferFormat(int nIndex) { return(m_pdxgiBufferFormats[nIndex]); }
 	int GetBufferElements(int nIndex) { return(m_nBufferElements[nIndex]); }
 
@@ -95,8 +93,6 @@ private:
 	std::vector<ComPtr<ID3D12Resource>> m_pd3dTextures;
 	std::vector<ComPtr<ID3D12Resource>> m_pd3dTextureUploadBuffers;
 	std::vector<std::wstring> m_strTextureNames;
-
-	std::vector<UINT> m_nResourceTypes;
 
 	std::vector<DXGI_FORMAT> m_pdxgiBufferFormats;
 	std::vector<int> m_nBufferElements;

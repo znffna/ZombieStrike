@@ -655,6 +655,8 @@ VS_TEXTURED_OUTPUT VSTextureToViewport(uint nVertexID : SV_VertexID)
         output.position = float4(-1.0f, -1.0f, 0.0f, 1.0f);
         output.uv = float2(0.0f, 1.0f);
     }
+    
+    output.position = mul(output.position, gmtxGameObject);
 
     return (output);
 }
@@ -703,7 +705,14 @@ SamplerState gssBorder : register(s3);
 
 float4 PSTextureToViewport(VS_TEXTURED_OUTPUT input) : SV_Target
 {
-    float fDepthFromLight0 = gtxtDepthTextures[0].SampleLevel(gssBorder, input.uv, 0).r;
-
-    return ((float4) (fDepthFromLight0));
+//    float fDepthFromLight0 = gtxtDepthTextures[0].SampleLevel(gssBorder, input.uv, 0).r;
+    float4 fTextureColor = gtxtAlbedoTexture.SampleLevel(gssBorder, input.uv, 0);
+    
+//    return ((float4) (fDepthFromLight0));
+    if(fTextureColor.a < 0.1f)
+    {
+        discard;
+    }
+   
+    return (fTextureColor);
 }
