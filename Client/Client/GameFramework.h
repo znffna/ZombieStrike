@@ -51,7 +51,7 @@ public:
 
 	void BuildObjects();
 
-	void CreateSceneOnAnotherThread(std::unique_ptr<CScene>&);
+	void CreateSceneOnAnotherThread(std::string);
 
 	void AdvanceFrame();
 	void OMSetBackBuffer();
@@ -76,11 +76,10 @@ public:
 	static CGameFramework* pGameFramework;
 	static ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return pGameFramework->m_pd3dCommandList[pGameFramework->m_nSwapChainBufferIndex]; }
 
-	void AddScene(std::unique_ptr<CScene> pScene)
+	void AddScene(std::string sceneName)
 	{
-		if (pScene)
 		{
-			CreateSceneOnAnotherThread(pScene);
+			CreateSceneOnAnotherThread(sceneName);
 		}
 	}
 
@@ -133,7 +132,7 @@ private:
 	CGameTimer												m_GameTimer;
 
 	// Scene
-	std::list<std::unique_ptr<CScene>>						m_Scenes;
+	std::list<std::shared_ptr<CScene>>						m_Scenes;
 	std::unique_ptr<CScene>									m_pLoadingScene;  // Loading Scene은 Stack이 비었을 경우에만 사용(이는, Render State인 Scene이 없을 때도 포함한다)
 	/*
 	Scene을 Stack으로 관리하여 가장 마지막 Scene에 대해서 Input 처리를 수행.

@@ -66,10 +66,22 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pPlayer->SetGun(pGun);
 	AddObject(pGun);
 
-	// Zombie 생성
-	/*std::shared_ptr<CZombieObject> pZombie = GetZombie();
-	pZombie->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 5.0f));
-	AddObject(pZombie);*/
+	// Sun 임시 Object
+	/*std::shared_ptr<CCubeObject> pCube = CCubeObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature);
+	pCube->SetPosition(m_pLights[0].m_xmf3Position);
+	AddObject(pCube);*/
+
+	// 임시 카메라
+	m_pFreeCamera = std::make_shared<CCamera>();
+	// Camera 생성
+	m_pFreeCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	m_pFreeCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	m_pFreeCamera->SetOffset(XMFLOAT3(1.0f, 0.7f, -2.5f));
+	m_pFreeCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	m_pFreeCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
+	m_pFreeCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	m_pFreeCamera->SetActive(true);
+
 
 	
 	// Map Load
@@ -204,6 +216,23 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
 			m_pPlayer->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
 		}
+
+		if (m_bFreeCamera) {
+			XMFLOAT3 xmf3Direction(0.0f, 0.0f, 0.0f);
+			if (dwDirection & DIR_FORWARD) xmf3Direction = Vector3::Add(xmf3Direction, m_pFreeCamera->GetLook());
+			if (dwDirection & DIR_BACKWARD) xmf3Direction = Vector3::Add(xmf3Direction, Vector3::ScalarProduct(m_pFreeCamera->GetLook(), -1.0f));
+			if (dwDirection & DIR_RIGHT) xmf3Direction = Vector3::Add(xmf3Direction, m_pFreeCamera->GetRight());
+			if (dwDirection & DIR_LEFT) xmf3Direction = Vector3::Add(xmf3Direction, Vector3::ScalarProduct(m_pFreeCamera->GetRight(), -1.0f));
+			if (dwDirection & DIR_UP) xmf3Direction = Vector3::Add(xmf3Direction, m_pFreeCamera->GetUp());
+			if (dwDirection & DIR_DOWN) xmf3Direction = Vector3::Add(xmf3Direction, Vector3::ScalarProduct(m_pFreeCamera->GetUp(), -1.0f));
+
+			xmf3Direction = Vector3::Normalize(xmf3Direction);
+			xmf3Direction = Vector3::ScalarProduct(xmf3Direction, 10.0f * deltaTime);
+
+			m_pFreeCamera->Move(xmf3Direction);
+			m_pFreeCamera->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
+			m_pFreeCamera->RegenerateViewMatrix();
+		}
 	}
 
 	m_bIschambered = m_bMouseLButtonDown;
@@ -229,16 +258,24 @@ void CGameScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wPa
 }
 void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	/*switch (nMessageID) {
+	switch (nMessageID) {
 	case WM_KEYDOWN:
 	{
 		switch (wParam)
 		{
+		case 'P':
+			m_bFreeCamera = false;
+			m_pCamera = m_pPlayer->GetComponent<CCamera>();
+			break;
+		case 'C':
+			m_bFreeCamera = true;
+			m_pCamera = m_pFreeCamera;
+			break;
 		default:
 			break;
 		}
 	}
-	}*/
+	}
 }
 
 void CGameScene::ChangeMap(int nMapIndex)

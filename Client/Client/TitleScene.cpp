@@ -118,7 +118,7 @@ void CTitleScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 	{
 		if (m_pStartButton && m_pStartButton->IsClicked(normalizedX, normalizedY))
 		{
-			CGameFramework::pGameFramework->AddScene(std::make_unique<CGameScene>());
+			CGameFramework::pGameFramework->AddScene("CGameScene");
 			SetSceneState(SCENE_STATE_PAUSING);
 		}
 		else if (m_pExitButton && m_pExitButton->IsClicked(normalizedX, normalizedY))

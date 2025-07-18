@@ -72,4 +72,7 @@ public:
 	std::shared_ptr<CBulletObject> m_pBulletObject;
 	std::shared_ptr<CCollisionChecker> m_pCollisionChecker;
 	std::vector<FIRE_INFO> m_pFireInfos;
+
+	bool m_bFreeCamera = false; // Free Camera Mode
+	std::shared_ptr<CCamera> m_pFreeCamera;
 };
