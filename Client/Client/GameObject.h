@@ -63,14 +63,14 @@ class CGameObject : public std::enable_shared_from_this<CGameObject>
 {
 public:
 	enum GAMEOBJECT_LAYER {
-		LAYER_DEFUALT = 0,
-		LAYER_SKYBOX,
+		LAYER_DEFAULT = 0,
 		LAYER_TERRAIN,
 		LAYER_ENVIRONMENT,
 		LAYER_ENEMY,
 		LAYER_PLAYER,
 		LAYER_GUN,
 		LAYER_BULLET,
+		LAYER_SKYBOX,
 		LAYER_CONTROLLER,
 		LAYER_UI,
 	};

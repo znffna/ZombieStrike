@@ -30,7 +30,6 @@ public:
 	virtual void Update(float deltaTime) override;
 	virtual void UpdateLights() override;
 
-
 	void BuildFiredBullets();
 
 	virtual void OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList) override;
@@ -75,4 +74,6 @@ public:
 
 	bool m_bFreeCamera = false; // Free Camera Mode
 	std::shared_ptr<CCamera> m_pFreeCamera;
+
+	bool m_bPrintObjectCount = false; // 디버그 출력용
 };

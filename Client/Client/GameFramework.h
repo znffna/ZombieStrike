@@ -78,9 +78,7 @@ public:
 
 	void AddScene(std::string sceneName)
 	{
-		{
-			CreateSceneOnAnotherThread(sceneName);
-		}
+		CreateSceneOnAnotherThread(sceneName);
 	}
 
 private:

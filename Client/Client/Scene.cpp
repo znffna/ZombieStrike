@@ -399,10 +399,10 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}*/
 
 	// Render SkyBox
-	if (m_pSkyBox)
+	/*if (m_pSkyBox)
 	{
 		m_pSkyBox->Render(pd3dCommandList, pCamera);
-	}
+	}*/
 
 	if (m_pShadowMapToViewport)
 	{

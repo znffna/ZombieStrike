@@ -66,11 +66,6 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pPlayer->SetGun(pGun);
 	AddObject(pGun);
 
-	// Sun 임시 Object
-	/*std::shared_ptr<CCubeObject> pCube = CCubeObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature);
-	pCube->SetPosition(m_pLights[0].m_xmf3Position);
-	AddObject(pCube);*/
-
 	// 임시 카메라
 	m_pFreeCamera = std::make_shared<CCamera>();
 	// Camera 생성
@@ -153,6 +148,32 @@ void CGameScene::ReleaseUploadBuffers()
 void CGameScene::Update(float deltaTime)
 {
 	CScene::Update(deltaTime);
+
+	static const std::map<CGameObject::GAMEOBJECT_LAYER, std::string> LayerToString = {
+	{ CGameObject::LAYER_DEFAULT, "LAYER_DEFAULT" },
+	{ CGameObject::LAYER_SKYBOX, "LAYER_SKYBOX" },
+	{ CGameObject::LAYER_TERRAIN, "LAYER_TERRAIN" },
+	{ CGameObject::LAYER_ENVIRONMENT, "LAYER_ENVIRONMENT" },
+	{ CGameObject::LAYER_ENEMY, "LAYER_ENEMY" },
+	{ CGameObject::LAYER_PLAYER, "LAYER_PLAYER" },
+	{ CGameObject::LAYER_GUN, "LAYER_GUN" },
+	{ CGameObject::LAYER_BULLET, "LAYER_BULLET" },
+	{ CGameObject::LAYER_CONTROLLER, "LAYER_CONTROLLER" },
+	{ CGameObject::LAYER_UI, "LAYER_UI" },
+	};
+
+	if (m_bPrintObjectCount) {
+		for(auto& pvecObject : m_ppGameObjects)
+		{
+			std::string debugOutput = "CGameScene::Update() - Layer: " + LayerToString.at(pvecObject.first) + ", Object Count: " + std::to_string(pvecObject.second.size()) + "\n";
+			OutputDebugStringA(debugOutput.c_str());
+		}
+
+		std::string debugOutput = "////////////////////////////////" + std::to_string(g_nFrameCount) + "////////////////////////////////\n";
+		OutputDebugStringA(debugOutput.c_str());
+
+		m_bPrintObjectCount = false;
+	}
 
 	BuildFiredBullets();
 }
@@ -270,6 +291,14 @@ void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 		case 'C':
 			m_bFreeCamera = true;
 			m_pCamera = m_pFreeCamera;
+			break;
+		case VK_F5:
+		case VK_F6:
+		case VK_F7:
+			ChangeMap(wParam - VK_F5);
+			break;
+		case VK_F1:
+			m_bPrintObjectCount = true;
 			break;
 		default:
 			break;
