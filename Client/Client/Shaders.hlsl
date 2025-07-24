@@ -577,12 +577,12 @@ struct PS_DEPTH_OUTPUT
     float fDepth : SV_Depth;
 };
 
-PS_DEPTH_OUTPUT PSDepthWriteShader(VS_LIGHTING_OUTPUT input)
+PS_DEPTH_OUTPUT PSDepthWriteShader(float4 input : SV_Position)
 {
     PS_DEPTH_OUTPUT output;
 
-    output.fzPosition = input.position.z;
-    output.fDepth = input.position.z;
+    output.fzPosition = input.z;
+    output.fDepth = input.z;
 
     return (output);
 }

@@ -496,11 +496,11 @@ void CGameFramework::CreateSceneOnAnotherThread(std::string sceneName)
 		std::shared_ptr<CScene> pCreatedScene;
 		if(sceneName == "CGameScene")
 		{
-			pCreatedScene = std::make_unique<CGameScene>();
+			pCreatedScene = std::make_shared<CGameScene>();
 		}
 		else if (sceneName == "COnlineScene")
 		{
-			pCreatedScene = std::make_unique<COnlineScene>();
+			pCreatedScene = std::make_shared<COnlineScene>();
 		}
 		else {
 			return; // 알 수 없는 씬 이름인 경우

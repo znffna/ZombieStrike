@@ -109,7 +109,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pShadowShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
 	m_pShadowShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture());
 
-	m_pShadowMapToViewport = std::make_shared<CTextureToViewportShader>(this);
+	m_pShadowMapToViewport = std::make_shared<CShadowToViewportShader>(this);
 	m_pShadowMapToViewport->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
 	m_pShadowMapToViewport->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture());
 

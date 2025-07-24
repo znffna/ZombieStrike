@@ -1028,8 +1028,15 @@ void CSkyBox::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	// pSkyBoxShader->CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 1);
+	{
+		std::string strDebugName = "Before CScene::CreateShaderResourceViews\n";
+		OutputDebugStringA(strDebugName.c_str());
+	}
 	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture.get(), 0, ROOT_PARAMETER_SKYBOX);
-
+	{
+		std::string strDebugName = "After CScene::CreateShaderResourceViews\n";
+		OutputDebugStringA(strDebugName.c_str());
+	}
 	std::shared_ptr<CMaterial> pSkyBoxMaterial = std::make_shared<CMaterial>();
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);
 	pSkyBoxMaterial->SetShader(pSkyBoxShader);
