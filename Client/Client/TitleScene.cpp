@@ -96,6 +96,24 @@ void CTitleScene::ReleaseUploadBuffers()
 
 #include "GameFramework.h"
 
+// UTF-16(wstring) → UTF-8(string)
+inline std::string WStringToString(const std::wstring& wstr) {
+	if (wstr.empty()) return {};
+	int size_needed = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), (int)wstr.size(), nullptr, 0, nullptr, nullptr);
+	std::string result(size_needed, 0);
+	WideCharToMultiByte(CP_UTF8, 0, wstr.data(), (int)wstr.size(), result.data(), size_needed, nullptr, nullptr);
+	return result;
+}
+
+// UTF-8(string) → UTF-16(wstring)
+inline std::wstring StringToWString(const std::string& str) {
+	if (str.empty()) return {};
+	int size_needed = MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), nullptr, 0);
+	std::wstring result(size_needed, 0);
+	MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), result.data(), size_needed);
+	return result;
+}
+
 void CTitleScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	// 1. 마우스 위치 (픽셀 좌표)
@@ -118,6 +136,15 @@ void CTitleScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 	{
 		if (m_pStartButton && m_pStartButton->IsClicked(normalizedX, normalizedY))
 		{
+			bool ret = NetworkingClient::Instance().Connect();
+			if (!ret)
+			{
+				//TODO : 해당 로직을 TitleScene에서 이미지를 띄우고 지우는 로직으로 변경할 예정
+				auto ip = StringToWString(USSING_IP);
+				std::wstring str = L" 서버에 연결할 수 없습니다. (" + ip + L")";
+				MessageBox(hWnd, str.c_str(), L"연결 실패", MB_OK | MB_ICONERROR);
+				return;
+			}
 			CGameFramework::pGameFramework->AddScene("CGameScene");
 			SetSceneState(SCENE_STATE_PAUSING);
 		}

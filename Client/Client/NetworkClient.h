@@ -71,7 +71,7 @@ void CALLBACK g_send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
 extern std::string GetPacketName(PKT_TYPE packetType);
 
 class NetworkingClient {
-public:
+private:
     ExtentOverlapped recv_over;
     //WSAOVERLAPPED recv_over;
     SOCKET c_socket;
@@ -84,24 +84,30 @@ public:
 
     std::thread recvThread;
 
-    COnlineScene* m_pScene; // Scene 포인터
+    void SetConnect(bool connect = true) { is_connect = connect; }
+    void SetRunning(bool running = false) { is_running = running; }
+
 public:
-	NetworkingClient(COnlineScene* pScene);
+    NetworkingClient();  
+    NetworkingClient(const NetworkingClient&) = delete; // 복사 생성자 삭제  
+    NetworkingClient& operator=(const NetworkingClient&) = delete; // 복사 할당 연산자 삭제  
 
-	// setter / getter
-    void SetConnect(bool connect) { { std::string debugOutput = "Connect = "; debugOutput += connect ? "True" : "False"; debugOutput += "\n"; OutputDebugStringA(debugOutput.c_str()); } is_connect = connect; }
-	bool IsConnect() { return is_connect; }
+    static NetworkingClient& Instance() {  
+        static NetworkingClient instance;  
+        return instance;  
+    }  
 
-	void SetRunning(bool running) { is_running = running; }
-	bool IsRunning() { return is_running; }
-
-	void CheckSocket(); // 소켓 상태 확인
+	bool IsConnect() const { return is_connect; }
+	bool IsRunning() const { return is_running; }
 
 	// 소켓 초기화 및 서버 연결
+    void CheckSocket(); // 소켓 상태 확인
 
+	// Initialize / Destroy
 	bool Connect();   // 소켓 초기화 및 서버 연결
-	bool StartRecvLoop(); // recv loop 시작
-    void Logout(); // Scene의 종료시 호출하도록 구현할 것
+    void Logout(); // 소켓의 연결 종료
+
+    bool StartRecvLoop(); // recv loop 시작
     void error_display(const char* msg, int err_no);
 
     void recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag);

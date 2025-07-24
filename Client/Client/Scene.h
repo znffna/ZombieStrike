@@ -251,7 +251,7 @@ public:
 	std::shared_ptr<CDepthRenderShader> m_pDepthRenderShader;
 
 	std::shared_ptr<CShadowMapShader> m_pShadowShader;
-	std::shared_ptr<CTextureToViewportShader> m_pShadowMapToViewport;
+	std::shared_ptr<CShadowToViewportShader> m_pShadowMapToViewport;
 
 	BoundingBox CalculateBoundingBox();
 	std::array<Light, MAX_LIGHTS> GetLights() const { return m_pLights; }

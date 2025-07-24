@@ -3,48 +3,21 @@
 
 COnlineScene::COnlineScene()
 {	
-	if(g_bNetworkDebugMode)
-	{
-		std::string debugOutput = "\nOnlineScene 생성됨";
-		debugOutput += "m_NetworkClient Address : ";
-		debugOutput += std::to_string(reinterpret_cast<uintptr_t>(&m_NetworkClient));
-		debugOutput += "\n";
-		debugOutput += "m_NetworkClient.Overlapped Address : ";
-		debugOutput += std::to_string(reinterpret_cast<uintptr_t>(&m_NetworkClient.recv_over)) + "\n";
-		OutputDebugStringA(debugOutput.c_str());
-
-		if (reinterpret_cast<uintptr_t>(&m_NetworkClient) == reinterpret_cast<uintptr_t>(&m_NetworkClient.recv_over)) {
-			OutputDebugStringA("m_NetworkClient과 m_NetworkClient.recv_over의 주소가 같습니다.\n");
-		}
-		else
-		{
-			OutputDebugStringA("m_NetworkClient과 m_NetworkClient.recv_over의 주소가 다릅니다.\n");
-		}
-	}
 }
 
 COnlineScene::~COnlineScene()
 {
-	m_NetworkClient.Logout();
+	NetworkingClient::Instance().Logout();
 }
 
 void COnlineScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	bool isComplelte = m_NetworkClient.Connect();
-	if (!isComplelte)
-	{
-		std::string debugOutput = "COnlineScene::InitializeObjects() - NetworkClient Connect 실패\n";
-		OutputDebugStringA(debugOutput.c_str());
-		exit(1);
-		return;
-	}
-
 	CGameScene::InitializeObjects(pd3dDevice, pd3dCommandList, pd3dRootSignature);
 }
 
 void COnlineScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	if (false == m_NetworkClient.IsConnect())
+	if (false == NetworkingClient::Instance().IsConnect())
 	{
 		SetSceneState(SCENE_STATE_ENDING);
 		return;
@@ -52,47 +25,21 @@ void COnlineScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12Graphic
 	SetSceneState(SCENE_STATE_READY_TO_START);
 }
 
-void COnlineScene::ReleaseObjects()
-{
-	m_NetworkClient.Logout();
-}
-
-
 void COnlineScene::ReleaseUploadBuffers()
 {
 }
 
 void COnlineScene::StartScene()
 { 
-	{
-		std::string debugOutput = "COnlineScene::StartScene() - StartRecvLoop() 호출됨\n";
-		OutputDebugStringA(debugOutput.c_str());
-	}
-	m_NetworkClient.StartRecvLoop();
-
 	CScene::StartScene();
 }
 
 void COnlineScene::Update(float deltaTime)
 {
-	#define MAX_PACKET_PER_FRAME 3
-
-	// 얼만큼 반복하나 찍어보자.
-	int count{ 0 };
-	for (int i = 0; i < MAX_PACKET_PER_FRAME; ++i)
-	{
-		// SleepEx(0, TRUE) : 네트워크 I/O 콜백 처리
-		DWORD ret = SleepEx(0, TRUE);
-		if (ret != WAIT_IO_COMPLETION) // 비동기 작업이 없다면 즉시 중단
-			break;
-		++count;
-	}
-	//SleepEx(0, TRUE); // 네트워크 I/O 콜백 처리
-
 	CGameScene::Update(deltaTime);
 
 	// Network Client Update
-	if (m_NetworkClient.IsConnect())
+	if (NetworkingClient::Instance().IsConnect())
 	{
 		// Network Client Update
 		// 즉 클라처리 결과를 서버에 보고
@@ -102,7 +49,7 @@ void COnlineScene::Update(float deltaTime)
 
 bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 {
-	m_NetworkClient.ProcessReadQueuePacket();
+	NetworkingClient::Instance().ProcessReadQueuePacket();
 
 	CGameScene::ProcessInput(pBuffer, deltaTime);
 
@@ -130,12 +77,6 @@ bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 {	
 	PKT_TYPE type = recv_p->type; // 패킷 타입  
-
-	//if (g_bNetworkDebugMode) 
-	{
-		std::string DebugOutput = "COnlineScene::ProcessPacket() - Packet Type : " + std::to_string(type) + "\n";
-		//OutputDebugStringA(DebugOutput.c_str());
-	}
 
 	switch (type) {
 	case S_C_OBJ_INFO:
@@ -275,7 +216,7 @@ void COnlineScene::SendPlayerState()
 
 		packet.hp = 100; // 체력
 
-		m_NetworkClient.send_packet((char*)&packet);
+		NetworkingClient::Instance().send_packet((char*)&packet);
 
 	}
 }
@@ -295,7 +236,7 @@ void COnlineScene::SendFirePacket(const FIRE_INFO fireInfo)
 	memcpy(&packet.bulletPos, &fireInfo.xmf3Position, sizeof(XMFLOAT3)); // 총알 위치
 	memcpy(&packet.bulletDir, &fireInfo.xmf3Velocity, sizeof(XMFLOAT3)); // 총알 방향 * 거리
 
-	m_NetworkClient.send_packet((char*)&packet);
+	NetworkingClient::Instance().send_packet((char*)&packet);
 }
 
 FIRE_INFO COnlineScene::Fire(const std::shared_ptr<CPlayer>& pPlayer)

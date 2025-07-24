@@ -7,7 +7,9 @@
 std::string SERVER_IP = "192.168.124.77";
 bool g_bNetworkDebugMode = false;
 
-NetworkingClient::NetworkingClient(COnlineScene* pScene) : m_pScene(pScene) { // recv_over(this)
+NetworkingClient::NetworkingClient()
+{
+    // recv_over(this)
 	// ZeroMemory(&recv_over, sizeof(recv_over));
     //ZeroMemory(recv_buffer, sizeof(recv_buffer));
     //ZeroMemory(&recv_wsabuf, sizeof(recv_wsabuf));
@@ -100,10 +102,6 @@ bool NetworkingClient::StartRecvLoop()
 
 void NetworkingClient::Logout()
 {
-    {
-        std::string DebugOutput = "서버와의 연결 종료\n";
-        OutputDebugStringA(DebugOutput.c_str());
-    }
 	// 1. recv loop 종료
 	SetRunning(false);    
 
@@ -371,7 +369,6 @@ void NetworkingClient::ProcessPacket(PacketHeader* recv_p)
         OutputDebugStringA(debug.c_str());
     }
     
-    m_pScene->ProcessPacket(recv_p);
 }
 
 void NetworkingClient::recv_packet()

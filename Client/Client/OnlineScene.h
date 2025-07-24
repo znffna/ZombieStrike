@@ -14,7 +14,6 @@ public:
 	// Scene Override
 	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
 	virtual void PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
-	virtual void ReleaseObjects() override;
 	virtual void ReleaseUploadBuffers() override;
 
 	virtual void StartScene();
@@ -29,12 +28,9 @@ public:
 	void SendPlayerState();
 	void SendFirePacket(const FIRE_INFO fireInfo);
 
-	NetworkingClient* GetClient() { return &m_NetworkClient; }//
-
 	virtual FIRE_INFO Fire(const std::shared_ptr<CPlayer>& pPlayer) override;
 
 private:
-	NetworkingClient m_NetworkClient{ this };
 	std::unordered_map<int, std::shared_ptr<CGameObject>> m_mapGameObjects;
 };
 
