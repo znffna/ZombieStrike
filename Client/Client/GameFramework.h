@@ -34,7 +34,7 @@ public:
 	CGameFramework();
 	~CGameFramework();
 
-	CGameFramework* GetInstance() { return pGameFramework; }
+	static CGameFramework* GetInstance() { return pGameFramework; }
 
 	bool OnCreate(HINSTANCE hInstance, HWND hMainWnd);
 	void OnDestroy();
@@ -79,6 +79,14 @@ public:
 	void AddScene(std::string sceneName)
 	{
 		CreateSceneOnAnotherThread(sceneName);
+	}
+	void PopScene()
+	{
+		if (!m_Scenes.empty())
+		{
+			WaitForGpuComplete();
+			m_Scenes.pop_back();
+		}
 	}
 
 private:

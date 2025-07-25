@@ -103,17 +103,21 @@ bool NetworkingClient::StartRecvLoop()
 void NetworkingClient::Logout()
 {
 	// 1. recv loop 종료
-	SetRunning(false);    
+	if (IsConnect() == false) return;
 
-	recvThread.join(); // recv loop 스레드가 종료될 때까지 대기
-
-    SetConnect(false);
-	while (true == IsRunning()) {
-        SleepEx(0, TRUE); // 네트워크 I/O 콜백 처리
-	}
-
+    SetRunning(false);
+    if (recvThread.joinable()) {
+        recvThread.join(); // recv loop 스레드가 종료될 때까지 대기
+        {
+            std::string debug = "recvThread.join 호출 완료\n";
+            OutputDebugStringA(debug.c_str());
+        }
+    }
+	
     closesocket(c_socket);
     WSACleanup();
+
+    SetConnect(false);
 }
 
 void NetworkingClient::SendLoginPacket(std::string& name)
@@ -159,7 +163,8 @@ void NetworkingClient::recv_loop()
             else {
                 // 오류 발생
                 error_display("WSARecv 실패 / Massage : ", WSAGetLastError());
-                Logout();
+                break;
+                //Logout();
             }
         }
 
@@ -224,6 +229,7 @@ void NetworkingClient::recv_loop()
 			break; // 루프 종료
 		}
     }
+    SetRunning(false);
 }
 
 void NetworkingClient::StorePacket(PacketHeader* pktHeader, DWORD size)

@@ -582,6 +582,9 @@ void CGameFramework::AdvanceFrame()
 	}
 
 	// Input 업데이트
+	std::shared_ptr<CScene> pCurrentScene = m_Scenes.back();
+	bool bSceneUpdate = m_Scenes.empty() == false && m_Scenes.back()->CheckWorkUpdating();
+	
 	ProcessInput();
 
 	// Command List 재사용
@@ -589,7 +592,7 @@ void CGameFramework::AdvanceFrame()
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->Reset(m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get(), nullptr);
 
 	// Update
-	if (m_Scenes.empty()== false && m_Scenes.back()->CheckWorkUpdating())
+	if (m_Scenes.empty() == false && m_Scenes.back()->CheckWorkUpdating())
 	{
 		// Scene 정보 업데이트
 		m_Scenes.back()->Update(m_GameTimer.DeltaTime());

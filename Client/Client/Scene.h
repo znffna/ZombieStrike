@@ -149,6 +149,7 @@ public:
 		}
 		m_SceneState = SceneState; 
 	}
+	virtual void PopScene();
 
 	// Object Management
 	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);

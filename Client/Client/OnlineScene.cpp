@@ -29,16 +29,20 @@ void COnlineScene::StartScene()
 	CScene::StartScene();
 }
 
+#include "GameFramework.h"
 void COnlineScene::Update(float deltaTime)
 {
 	CGameScene::Update(deltaTime);
 
 	// Network Client Update
-	if (NetworkingClient::Instance().IsConnect())
+	if (NetworkingClient::Instance().IsRunning())
 	{
 		// Network Client Update
 		// 즉 클라처리 결과를 서버에 보고
 		SendPlayerState();
+	}
+	else {
+		PopScene();
 	}
 }
 
@@ -50,7 +54,8 @@ bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 
 	if (pBuffer.pKeysBuffer[VK_ESCAPE] & 0xF0)
 	{
-		SetSceneState(SCENE_STATE_ENDING);
+		PopScene();
+		return true;
 	}
 
 	if (pBuffer.pKeysBuffer[VK_F5] & 0xF0)
@@ -72,6 +77,8 @@ bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 void COnlineScene::ProcessReadQueuePacket()
 {
 	auto& readQueue = NetworkingClient::Instance().GetReadQueue();
+
+	if (false == CheckWorkUpdating()) return;
 
 	for (auto& packet : readQueue) {
 		ProcessPacket(packet.header());

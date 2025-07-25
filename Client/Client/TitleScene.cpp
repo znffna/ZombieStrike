@@ -146,7 +146,6 @@ void CTitleScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 				return;
 			}
 			CGameFramework::pGameFramework->AddScene("COnlineScene");
-			SetSceneState(SCENE_STATE_PAUSING);
 		}
 		else if (m_pExitButton && m_pExitButton->IsClicked(normalizedX, normalizedY))
 		{

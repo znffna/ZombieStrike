@@ -243,6 +243,12 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_xmf3Direction = XMFLOAT3(+1.0f, -1.0f, 0.0f);*/
 }
 
+void CScene::PopScene()
+{
+	SetSceneState(SCENE_STATE_ENDING);
+	CGameFramework::GetInstance()->PopScene();
+}
+
 void CScene::AddObject(const std::shared_ptr<CGameObject>& pObject)
 {
 	if (pObject)

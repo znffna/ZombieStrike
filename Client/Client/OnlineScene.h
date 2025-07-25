@@ -17,6 +17,10 @@ public:
 	virtual void ReleaseUploadBuffers() override;
 
 	virtual void StartScene();
+	virtual void PopScene() {
+		NetworkingClient::Instance().Logout();
+		CScene::PopScene();
+	}
 
 	virtual void Update(float deltaTime) override;
 
