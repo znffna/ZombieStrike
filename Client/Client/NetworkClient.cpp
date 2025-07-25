@@ -242,7 +242,6 @@ std::vector<RawPacket>& NetworkingClient::GetReadQueue() {
         std::swap(read_queue, write_queue); // 쓰기 큐와 읽기 큐를 교환
 
         count = read_queue.size(); // 읽기 큐가 비어있는지 확인
-		remain_bytes = 0; // 남은 바이트 초기화
         write_queue.clear(); // 쓰기 큐 비우기
     }
 
