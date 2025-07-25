@@ -17,6 +17,7 @@ void COnlineScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 void COnlineScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
+	NetworkingClient::Instance().StartRecvLoop();
 }
 
 void COnlineScene::ReleaseUploadBuffers()
