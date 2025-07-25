@@ -571,16 +571,7 @@ void CGameFramework::AdvanceFrame()
 	// 타이머 업데이트
 	m_GameTimer.Tick(60.0f);
 
-	// Command Queue의 명령들이 모두 실행될 때까지 대기
-	WaitForGpuComplete();
-
-	if(false == m_Scenes.empty())
-	{
-		// 마지막 Scene의 PostRender 호출
-		if (m_Scenes.back()->CheckWorkRendering())
-		m_Scenes.back()->OnPostRender(nullptr);
-	}
-
+	
 	// Input 업데이트
 	std::shared_ptr<CScene> pCurrentScene = m_Scenes.back();
 	bool bSceneUpdate = m_Scenes.empty() == false && m_Scenes.back()->CheckWorkUpdating();
@@ -671,6 +662,16 @@ void CGameFramework::AdvanceFrame()
 	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList[m_nSwapChainBufferIndex].Get() };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
+	// Command Queue의 명령들이 모두 실행될 때까지 대기
+	WaitForGpuComplete();
+
+	if (false == m_Scenes.empty())
+	{
+		// 마지막 Scene의 PostRender 호출
+		if (m_Scenes.back()->CheckWorkRendering())
+			m_Scenes.back()->OnPostRender(nullptr);
+	}
+
 	// 다음 Frame으로 이동
 	MoveToNextFrame();
 
@@ -715,6 +716,7 @@ void CGameFramework::WaitForGpuComplete()
 {
 	// 현재 GPU 작업이 끝났는지 확인
 	// Fence를 사용하여 GPU의 명령이 모두 완료될 때까지 대기
+
 	if (m_pd3dFence->GetCompletedValue() < m_nFenceValueForSignal)
 	{
 		HRESULT hResult = m_pd3dFence->SetEventOnCompletion(m_nFenceValueForSignal, m_hFenceEvent);
@@ -926,4 +928,18 @@ LRESULT CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WP
 		break;
 	}
 	return(0);
+}
+
+void CGameFramework::AddScene(std::string sceneName)
+{
+	CreateSceneOnAnotherThread(sceneName);
+}
+
+void CGameFramework::PopScene()
+{
+	if (!m_Scenes.empty())
+	{
+		WaitForGpuComplete();
+		m_Scenes.pop_back();
+	}
 }

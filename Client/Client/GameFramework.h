@@ -76,18 +76,8 @@ public:
 	static CGameFramework* pGameFramework;
 	static ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return pGameFramework->m_pd3dCommandList[pGameFramework->m_nSwapChainBufferIndex]; }
 
-	void AddScene(std::string sceneName)
-	{
-		CreateSceneOnAnotherThread(sceneName);
-	}
-	void PopScene()
-	{
-		if (!m_Scenes.empty())
-		{
-			WaitForGpuComplete();
-			m_Scenes.pop_back();
-		}
-	}
+	void AddScene(std::string sceneName);
+	void PopScene();
 
 private:
 	bool isWorkd = true;

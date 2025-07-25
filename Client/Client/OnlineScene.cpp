@@ -32,6 +32,8 @@ void COnlineScene::StartScene()
 #include "GameFramework.h"
 void COnlineScene::Update(float deltaTime)
 {
+	ProcessReadQueuePacket();
+
 	CGameScene::Update(deltaTime);
 
 	// Network Client Update
@@ -48,8 +50,6 @@ void COnlineScene::Update(float deltaTime)
 
 bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 {
-	ProcessReadQueuePacket();
-
 	CGameScene::ProcessInput(pBuffer, deltaTime);
 
 	if (pBuffer.pKeysBuffer[VK_ESCAPE] & 0xF0)
