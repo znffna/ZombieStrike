@@ -259,7 +259,7 @@ void CGameFramework::CreateCommandQueueAndList()
 			OutputDebugString(L"Failed to create command list\n");
 		}
 		// Command List를 초기화
-		m_pd3dCommandList[i]->Close();
+		CloseCommandList(m_pd3dCommandList[i].Get());
 	}
 
 	// Scene 생성용 Command Allocator와 Command List 생성
@@ -273,7 +273,7 @@ void CGameFramework::CreateCommandQueueAndList()
 		if (FAILED(hResult)) {
 			OutputDebugString(L"Failed to create command list\n");
 		}
-		m_pd3dSceneMadeCommandList->Close();
+		CloseCommandList(m_pd3dSceneMadeCommandList.Get());
 	}
 
 }
@@ -439,7 +439,7 @@ void CGameFramework::BuildObjects()
 	// 모든 씬이 공유할 요소 생성
 	CScene::InitStaticMembers(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 	CResourceManager::GetInstance().Initialize(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get(), nullptr);
-
+	CResourceManager::GetInstance().SetCommandList(m_pd3dSceneMadeCommandList.Get());
 	// Title Scene 생성
 	std::shared_ptr<CScene> pTitleScene = std::make_unique<CTitleScene>();
 	pTitleScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
@@ -447,7 +447,7 @@ void CGameFramework::BuildObjects()
 	m_Scenes.push_back(std::move(pTitleScene));
 
 	// Command List에 대한 명령들을 종료
-	m_pd3dCommandList[m_nSwapChainBufferIndex]->Close();
+	CloseCommandList(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 
 	{
 		// Command Queue에 Command List를 추가
@@ -475,7 +475,7 @@ void CGameFramework::BuildObjects()
 	
 
 	// Command List에 대한 명령들을 종료
-	m_pd3dCommandList[m_nSwapChainBufferIndex]->Close();
+	CloseCommandList(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 
 	// Command Queue에 Command List를 추가
 	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList[m_nSwapChainBufferIndex].Get() };
@@ -491,6 +491,14 @@ void CGameFramework::BuildObjects()
 void CGameFramework::CreateSceneOnAnotherThread(std::string sceneName)
 {
 	std::thread thread([this, sceneName]() mutable {
+		ComPtr<ID3D12Fence>		pd3dFence;
+		UINT64					nFenceValue;
+		HANDLE					hFenceEvent;
+
+		nFenceValue = 0;
+		hFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+
+		if (SUCCEEDED(m_pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&pd3dFence)))) {}
 
 		//std::shared_ptr<CScene> pCreatedScene = std::make_unique<CGameScene>();
 		std::shared_ptr<CScene> pCreatedScene;
@@ -513,16 +521,33 @@ void CGameFramework::CreateSceneOnAnotherThread(std::string sceneName)
 
 		pCreatedScene->Init(m_pd3dDevice.Get(), m_pd3dSceneMadeCommandList.Get());
 
-		m_pd3dSceneMadeCommandList->Close();
+		{
+			std::string debugstr = "m_pd3dSceneMadeCommandList->Close\n";
+			OutputDebugStringA(debugstr.c_str());
+		}
+		CloseCommandList(m_pd3dSceneMadeCommandList.Get());
 
 		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dSceneMadeCommandList.Get() };
 		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
-		WaitGpuWithoutPresent();
+		//WaitGpuWithoutPresent();
+		++nFenceValue;
+		HRESULT hResult = m_pd3dCommandQueue->Signal(pd3dFence.Get(), nFenceValue);
+
+		if (pd3dFence->GetCompletedValue() < nFenceValue)
+		{
+			hResult = pd3dFence->SetEventOnCompletion(nFenceValue, hFenceEvent);
+			HRESULT hResult = pd3dFence->SetEventOnCompletion(nFenceValue, hFenceEvent);
+			::WaitForSingleObject(hFenceEvent, INFINITE);
+		}
+
+		CloseHandle(hFenceEvent);
+		pd3dFence.Reset();
 
 		if (pCreatedScene) pCreatedScene->ReleaseUploadBuffers();
 
 		pCreatedScene->PostInitializeObjects(nullptr, nullptr, nullptr);
+		pCreatedScene->SetSceneState(SCENE_STATE_RUNNING);
 		});
 	thread.detach();
 }
@@ -637,7 +662,7 @@ void CGameFramework::AdvanceFrame()
 	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->ResourceBarrier(1, &d3dResourceBarrier);
-	m_pd3dCommandList[m_nSwapChainBufferIndex]->Close();
+	CloseCommandList(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 
 	// Command Queue에 Command List를 추가
 	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList[m_nSwapChainBufferIndex].Get() };

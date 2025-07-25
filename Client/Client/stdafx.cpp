@@ -346,4 +346,18 @@ void SwapResourcePointer(ComPtr<ID3D12Resource>& ppd3dResourceA, ComPtr<ID3D12Re
 	std::swap(ppd3dResourceA, ppd3dResourceB);
 }
 
+#include <sstream>
+
+void CloseCommandList(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	pd3dCommandList->Close();
+
+	while(false){
+		std::ostringstream oss;
+		oss << "[TID: " << GetCurrentThreadId() << "] Reset Call: " << pd3dCommandList << "\n";
+		std::string log = oss.str();
+		OutputDebugStringA(log.c_str());
+	}
+}
+
 

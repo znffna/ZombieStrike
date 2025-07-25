@@ -51,8 +51,6 @@ void CScene::Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dComma
 
 void CScene::PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	SetSceneState(SCENE_STATE_ALLOCING);
-
 	// Create Default Lights and Materials
 	BuildDefaultLightsAndMaterials();
 
@@ -61,8 +59,6 @@ void CScene::PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 	//CreateRootSignature(pd3dRootSignature, pd3dDevice);
 	//CreateDescriptorHeap(pd3dDevice);
 	//CreateStaticShader(pd3dDevice);
-
-
 }
 
 void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)

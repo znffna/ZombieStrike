@@ -163,6 +163,7 @@ extern ComPtr<ID3D12Resource> CreateTexture2DResource(ID3D12Device* pd3dDevice, 
 
 void SwapResourcePointer(ComPtr<ID3D12Resource>& ppd3dResourceA, ComPtr<ID3D12Resource>& ppd3dResourceB);
 
+void CloseCommandList(ID3D12GraphicsCommandList* pd3dCommandList);
 
 #define EPSILON							1.0e-10f
 #define PI								3.1415927f

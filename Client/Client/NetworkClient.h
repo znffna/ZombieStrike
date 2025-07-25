@@ -122,7 +122,7 @@ public:
 
     // 동기적 별도스레드 recv_Loop 제작
 	std::mutex write_lock; // 쓰기 작업을 위한 뮤텍스
-	std::vector<RawPacket> read_queue; // 수신된 패킷을 저장하는 큐
+	std::vector<RawPacket> read_queue; // 실제 패킷처리를 하기위해 제공할 큐(직접 다루는것은 Scene에서)
 	std::vector<RawPacket> write_queue; // 수신된 패킷을 저장하는 큐
 
     void recv_loop();    

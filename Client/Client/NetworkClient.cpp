@@ -235,11 +235,18 @@ void NetworkingClient::StorePacket(PacketHeader* pktHeader, DWORD size)
 }
 
 std::vector<RawPacket>& NetworkingClient::GetReadQueue() {
+    bool is_empty = false;
+    
     {
         std::lock_guard<std::mutex> lock(write_lock); // 쓰기 작업을 위한 뮤텍스 잠금
         std::swap(read_queue, write_queue); // 쓰기 큐와 읽기 큐를 교환
+
+		is_empty = read_queue.empty(); // 읽기 큐가 비어있는지 확인
+		remain_bytes = 0; // 남은 바이트 초기화
+        write_queue.clear(); // 쓰기 큐 비우기
     }
-    {
+
+    if(!is_empty){
 		std::string debug = std::to_string(g_nFrameCount) + " :: GetReadQueue() 호출됨. 현재 읽기 큐 크기: " + std::to_string(read_queue.size()) + "\n";
 		OutputDebugStringA(debug.c_str());
     }

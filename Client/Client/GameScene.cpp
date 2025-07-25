@@ -41,19 +41,13 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	//m_pTerrain = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.bin"), _T("Terrain/terrain.raw"), 1025, 1025, 65, 65, xmf3Scale, xmf4Color);
 	AddObject(m_pTerrain);
 	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
-
+	
 	// <Store GameObjects>
 	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 100);
 	StorePlayer(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
+	
 
 	// <Initialize GameObjects>
-
-	// Cube
-	//std::shared_ptr<CGameObject> pGameObject;
-	//pGameObject = CCubeObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature);
-	//pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 10.0f));
-	//AddObject(pGameObject);
-
 	// Player »ý¼º
 	std::shared_ptr<CPlayer> pPlayer = GetPlayer();
 	//std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, 0);
@@ -77,8 +71,6 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pFreeCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	m_pFreeCamera->SetActive(true);
 
-
-	
 	// Map Load
 	auto pMap = resourceManager.GetModelInfo("Stage1");
 	pMap->m_pModelRootObject->UpdateTransform();
@@ -86,7 +78,6 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pMap->SetLayer(CGameObject::LAYER_ENVIRONMENT);
 	m_pMap->UpdateBBCache();
 	AddObject(m_pMap);
-	//AddObject(m_pMap);
 
 	// Collision Checker
 	auto pCollisionChecker = std::make_shared<CCollisionChecker>(this);
@@ -99,7 +90,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pBulletObject = pBullet;
 	CGun::m_pBulletObject = pBullet;
 	AddObject(pBullet);
-
+	
 	// Shader
 	m_pDepthRenderShader = std::make_shared<CDepthRenderShader>(this);
 	m_pDepthRenderShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
@@ -360,10 +351,13 @@ void CGameScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	m_pZombiePool.reserve(nZombieCount);
 	for (int i = 0; i < nZombieCount; ++i)
 	{
+		
 		std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, i);
+		
 		pZombie->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
 		pZombie->SetActive(false);
 		m_pZombiePool.push_back(pZombie);
+		
 	}
 }
 

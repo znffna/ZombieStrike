@@ -145,7 +145,7 @@ void CTitleScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 				MessageBox(hWnd, str.c_str(), L"연결 실패", MB_OK | MB_ICONERROR);
 				return;
 			}
-			CGameFramework::pGameFramework->AddScene("CGameScene");
+			CGameFramework::pGameFramework->AddScene("COnlineScene");
 			SetSceneState(SCENE_STATE_PAUSING);
 		}
 		else if (m_pExitButton && m_pExitButton->IsClicked(normalizedX, normalizedY))

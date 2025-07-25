@@ -38,6 +38,8 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
 
+	
+
 	// Model Info
 	SetSkinType(nSkinType);
 	SetSkin(m_nSkinType);
@@ -69,8 +71,8 @@ void CZombieObject::SetSkin(int nSkinType)
 
 	auto pZombieModel = CResourceManager::GetInstance().GetModelInfo(m_strModelName[m_nSkinType]);
 	SetChild(pZombieModel->m_pModelRootObject);
-	m_pSkinnedAnimationController->SettingByModel(pZombieModel);
 
+	m_pSkinnedAnimationController->SettingByModel(pZombieModel);
 	for (int i = 0; i < m_pSkinnedAnimationController->m_nAnimationTracks; i++)
 	{
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);

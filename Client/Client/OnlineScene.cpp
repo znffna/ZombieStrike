@@ -17,12 +17,6 @@ void COnlineScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 void COnlineScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	if (false == NetworkingClient::Instance().IsConnect())
-	{
-		SetSceneState(SCENE_STATE_ENDING);
-		return;
-	}
-	SetSceneState(SCENE_STATE_READY_TO_START);
 }
 
 void COnlineScene::ReleaseUploadBuffers()

@@ -211,7 +211,7 @@ protected:
 	static std::shared_ptr<CDescirptorHeap> m_pDescriptorHeap;
 
 	// Scene State
-	SCENE_STATE m_SceneState = SCENE_STATE_NONE;
+	SCENE_STATE m_SceneState = SCENE_STATE_ALLOCING;
 
 	// RootSignature
 	static ComPtr<ID3D12RootSignature> m_pd3dGraphicsRootSignature;
