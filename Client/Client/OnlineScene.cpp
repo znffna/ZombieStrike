@@ -44,7 +44,7 @@ void COnlineScene::Update(float deltaTime)
 
 bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 {
-	NetworkingClient::Instance().ProcessReadQueuePacket();
+	ProcessReadQueuePacket();
 
 	CGameScene::ProcessInput(pBuffer, deltaTime);
 
@@ -67,6 +67,15 @@ bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 	}
 
 	return true;
+}
+
+void COnlineScene::ProcessReadQueuePacket()
+{
+	auto& readQueue = NetworkingClient::Instance().GetReadQueue();
+
+	for (auto& packet : readQueue) {
+		ProcessPacket(packet.header());
+	}
 }
 
 void COnlineScene::ProcessPacket(PacketHeader* recv_p)

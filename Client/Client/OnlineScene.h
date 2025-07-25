@@ -23,6 +23,7 @@ public:
 	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
 
 	// Network Override
+	void ProcessReadQueuePacket();
 	virtual void ProcessPacket(PacketHeader* recv_p); // Recv 내용 처리 (m_NetworkClient로 부터	호출됨)
 
 	void SendPlayerState();

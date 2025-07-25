@@ -254,16 +254,6 @@ std::vector<RawPacket>& NetworkingClient::GetReadQueue() {
     return read_queue;
 }
 
-void NetworkingClient::ProcessReadQueuePacket()
-{
-	auto& readQueue = GetReadQueue();
-
-    for (auto& packet : readQueue) {
-		ProcessPacket(packet.header());
-    }
-	readQueue.clear(); // 처리 후 읽기 큐 비우기
-}
-
 void NetworkingClient::error_display(const char* msg, int err_no)
 {
     WCHAR* lpMsgBuf;
