@@ -48,14 +48,12 @@ public:
 
 	// 창모드 <-> 전체화면
 	void ChangeSwapChainState();
-
 	void BuildObjects();
 
 	void CreateSceneOnAnotherThread(std::string);
 
 	void AdvanceFrame();
-	void OMSetBackBuffer();
-	void ClearRtvAndDsv();
+	void AnimateObjects(CScene* pScene);
 
 	void WaitGpuWithoutPresent();
 
@@ -67,7 +65,7 @@ public:
 	void UpdateShaderVariables();
 	void ReleaseShaderVariables();
 
-	void ProcessInput();
+	void ProcessInput(CScene* pScene = nullptr);
 
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
