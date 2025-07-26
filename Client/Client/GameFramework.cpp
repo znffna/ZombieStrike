@@ -578,6 +578,28 @@ void CGameFramework::AdvanceFrame()
 	
 	ProcessInput(pCurrentScene);
 
+	// Scene Container 업데이트
+	for (auto it = m_Scenes.begin(); it != m_Scenes.end(); ) {
+		if (it->get()->GetSceneState() == SCENE_STATE_ENDING) {
+			{
+				std::string debug = typeid(*it).name();
+				debug += "[AdvanceFrame] Scene Ending\n";
+				OutputDebugStringA(debug.c_str());
+			}
+			it = m_Scenes.erase(it);  // erase는 다음 유효 반복자를 반환
+
+			if (m_Scenes.empty() == false && m_Scenes.back()->CheckWorkUpdating()) {
+				pCurrentScene = m_Scenes.back().get();
+			}
+			else {
+				pCurrentScene = m_pLoadingScene.get();
+			}
+		}
+		else {
+			++it;
+		}
+	}
+
 	// Command List 재사용
 	ID3D12CommandAllocator* pCommandAllocator = m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get();
 	ID3D12GraphicsCommandList* pd3dCommandList = m_pd3dCommandList[m_nSwapChainBufferIndex].Get();
@@ -632,25 +654,8 @@ void CGameFramework::AdvanceFrame()
 
 void CGameFramework::AnimateObjects(CScene* pScene)
 {
-
-
 	// Scene 정보 업데이트
 	pScene->Update(m_GameTimer.DeltaTime());
-
-	// Scene Container 업데이트
-	for (auto it = m_Scenes.begin(); it != m_Scenes.end(); ) {
-		if (it->get()->GetSceneState() == SCENE_STATE_ENDING) {
-			{
-				std::string debug = typeid(*it).name();
-				debug += "[AdvanceFrame] Scene Ending\n";
-				OutputDebugStringA(debug.c_str());
-			}
-			it = m_Scenes.erase(it);  // erase는 다음 유효 반복자를 반환
-		}
-		else {
-			++it;
-		}
-	}
 }
 
 void CGameFramework::WaitForGpuComplete()
@@ -884,7 +889,7 @@ void CGameFramework::PopScene()
 	if (!m_Scenes.empty())
 	{
 		m_Scenes.back()->SetSceneState(SCENE_STATE_ENDING);
-		WaitForGpuComplete();
-		m_Scenes.pop_back();
+		//WaitForGpuComplete();
+		//m_Scenes.pop_back();
 	}
 }

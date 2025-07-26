@@ -20,6 +20,7 @@ public:
 	virtual void PopScene() {
 		NetworkingClient::Instance().Logout();
 		CScene::PopScene();
+		m_mapGameObjects.clear();
 	}
 
 	virtual void Update(float deltaTime) override;

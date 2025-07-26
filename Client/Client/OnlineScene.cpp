@@ -50,6 +50,12 @@ void COnlineScene::Update(float deltaTime)
 
 bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 {
+	if(NetworkingClient::Instance().IsRunning() == false)
+	{
+		PopScene();
+		return true;
+	}
+
 	CGameScene::ProcessInput(pBuffer, deltaTime);
 
 	if (pBuffer.pKeysBuffer[VK_ESCAPE] & 0xF0)

@@ -102,10 +102,10 @@ bool NetworkingClient::StartRecvLoop()
 
 void NetworkingClient::Logout()
 {
-	// 1. recv loop 종료
-	if (IsConnect() == false) return;
-
-    SetRunning(false);
+    if (IsConnect() == false) return;
+    // 1. 소켓 종료
+    closesocket(c_socket);
+    // 2. recv loop 종료
     if (recvThread.joinable()) {
         recvThread.join(); // recv loop 스레드가 종료될 때까지 대기
         {
@@ -113,10 +113,10 @@ void NetworkingClient::Logout()
             OutputDebugStringA(debug.c_str());
         }
     }
-	
-    closesocket(c_socket);
+	// 3. WSA 종료 및 정리
+	read_queue.clear();
+	write_queue.clear();
     WSACleanup();
-
     SetConnect(false);
 }
 

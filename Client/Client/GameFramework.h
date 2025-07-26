@@ -53,6 +53,7 @@ public:
 	void CreateSceneOnAnotherThread(std::string);
 
 	void AdvanceFrame();
+	void ProcessInput(CScene* pScene = nullptr);
 	void AnimateObjects(CScene* pScene);
 
 	void WaitGpuWithoutPresent();
@@ -65,7 +66,6 @@ public:
 	void UpdateShaderVariables();
 	void ReleaseShaderVariables();
 
-	void ProcessInput(CScene* pScene = nullptr);
 
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
