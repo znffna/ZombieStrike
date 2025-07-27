@@ -3,59 +3,22 @@
 
 COnlineScene::COnlineScene()
 {	
-	if(g_bNetworkDebugMode)
-	{
-		std::string debugOutput = "\nOnlineScene 생성됨";
-		debugOutput += "m_NetworkClient Address : ";
-		debugOutput += std::to_string(reinterpret_cast<uintptr_t>(&m_NetworkClient));
-		debugOutput += "\n";
-		debugOutput += "m_NetworkClient.Overlapped Address : ";
-		debugOutput += std::to_string(reinterpret_cast<uintptr_t>(&m_NetworkClient.recv_over)) + "\n";
-		OutputDebugStringA(debugOutput.c_str());
-
-		if (reinterpret_cast<uintptr_t>(&m_NetworkClient) == reinterpret_cast<uintptr_t>(&m_NetworkClient.recv_over)) {
-			OutputDebugStringA("m_NetworkClient과 m_NetworkClient.recv_over의 주소가 같습니다.\n");
-		}
-		else
-		{
-			OutputDebugStringA("m_NetworkClient과 m_NetworkClient.recv_over의 주소가 다릅니다.\n");
-		}
-	}
 }
 
 COnlineScene::~COnlineScene()
 {
+	NetworkingClient::Instance().Logout();
 }
 
 void COnlineScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	bool isComplelte = m_NetworkClient.Connect();
-	if (!isComplelte)
-	{
-		std::string debugOutput = "COnlineScene::InitializeObjects() - NetworkClient Connect 실패\n";
-		OutputDebugStringA(debugOutput.c_str());
-		exit(1);
-		return;
-	}
-
 	CGameScene::InitializeObjects(pd3dDevice, pd3dCommandList, pd3dRootSignature);
 }
 
 void COnlineScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	if (false == m_NetworkClient.IsConnect())
-	{
-		SetSceneState(SCENE_STATE_ENDING);
-		return;
-	}
-	SetSceneState(SCENE_STATE_READY_TO_START);
+	NetworkingClient::Instance().StartRecvLoop();
 }
-
-void COnlineScene::ReleaseObjects()
-{
-	m_NetworkClient.Logout();
-}
-
 
 void COnlineScene::ReleaseUploadBuffers()
 {
@@ -63,49 +26,42 @@ void COnlineScene::ReleaseUploadBuffers()
 
 void COnlineScene::StartScene()
 { 
-	{
-		std::string debugOutput = "COnlineScene::StartScene() - StartRecvLoop() 호출됨\n";
-		OutputDebugStringA(debugOutput.c_str());
-	}
-	m_NetworkClient.StartRecvLoop();
-
 	CScene::StartScene();
 }
 
+#include "GameFramework.h"
 void COnlineScene::Update(float deltaTime)
 {
-	#define MAX_PACKET_PER_FRAME 3
-
-	// 얼만큼 반복하나 찍어보자.
-	int count{ 0 };
-	for (int i = 0; i < MAX_PACKET_PER_FRAME; ++i)
-	{
-		// SleepEx(0, TRUE) : 네트워크 I/O 콜백 처리
-		DWORD ret = SleepEx(0, TRUE);
-		if (ret != WAIT_IO_COMPLETION) // 비동기 작업이 없다면 즉시 중단
-			break;
-		++count;
-	}
-	//SleepEx(0, TRUE); // 네트워크 I/O 콜백 처리
+	ProcessReadQueuePacket();
 
 	CGameScene::Update(deltaTime);
 
 	// Network Client Update
-	if (m_NetworkClient.IsConnect())
+	if (NetworkingClient::Instance().IsRunning())
 	{
 		// Network Client Update
 		// 즉 클라처리 결과를 서버에 보고
 		SendPlayerState();
 	}
+	else {
+		PopScene();
+	}
 }
 
 bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 {
+	if(NetworkingClient::Instance().IsRunning() == false)
+	{
+		PopScene();
+		return true;
+	}
+
 	CGameScene::ProcessInput(pBuffer, deltaTime);
 
 	if (pBuffer.pKeysBuffer[VK_ESCAPE] & 0xF0)
 	{
-		SetSceneState(SCENE_STATE_ENDING);
+		PopScene();
+		return true;
 	}
 
 	if (pBuffer.pKeysBuffer[VK_F5] & 0xF0)
@@ -124,15 +80,20 @@ bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 	return true;
 }
 
+void COnlineScene::ProcessReadQueuePacket()
+{
+	auto& readQueue = NetworkingClient::Instance().GetReadQueue();
+
+	if (false == CheckWorkUpdating()) return;
+
+	for (auto& packet : readQueue) {
+		ProcessPacket(packet.header());
+	}
+}
+
 void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 {	
 	PKT_TYPE type = recv_p->type; // 패킷 타입  
-
-	//if (g_bNetworkDebugMode) 
-	{
-		std::string DebugOutput = "COnlineScene::ProcessPacket() - Packet Type : " + std::to_string(type) + "\n";
-		//OutputDebugStringA(DebugOutput.c_str());
-	}
 
 	switch (type) {
 	case S_C_OBJ_INFO:
@@ -272,7 +233,7 @@ void COnlineScene::SendPlayerState()
 
 		packet.hp = 100; // 체력
 
-		m_NetworkClient.send_packet((char*)&packet);
+		NetworkingClient::Instance().send_packet((char*)&packet);
 
 	}
 }
@@ -292,12 +253,14 @@ void COnlineScene::SendFirePacket(const FIRE_INFO fireInfo)
 	memcpy(&packet.bulletPos, &fireInfo.xmf3Position, sizeof(XMFLOAT3)); // 총알 위치
 	memcpy(&packet.bulletDir, &fireInfo.xmf3Velocity, sizeof(XMFLOAT3)); // 총알 방향 * 거리
 
-	m_NetworkClient.send_packet((char*)&packet);
+	NetworkingClient::Instance().send_packet((char*)&packet);
 }
 
 FIRE_INFO COnlineScene::Fire(const std::shared_ptr<CPlayer>& pPlayer)
 {
 	auto fireInfo = CGameScene::Fire(pPlayer);
+
+	if (fireInfo.fRange <= 0.0f) return fireInfo; // 총알이 발사되지 않은 경우
 
 	if (m_pPlayer == pPlayer) SendFirePacket(fireInfo);
 

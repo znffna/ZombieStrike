@@ -14,27 +14,29 @@ public:
 	// Scene Override
 	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
 	virtual void PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
-	virtual void ReleaseObjects() override;
 	virtual void ReleaseUploadBuffers() override;
 
 	virtual void StartScene();
+	virtual void PopScene() {
+		NetworkingClient::Instance().Logout();
+		CScene::PopScene();
+		m_mapGameObjects.clear();
+	}
 
 	virtual void Update(float deltaTime) override;
 
 	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
 
 	// Network Override
+	void ProcessReadQueuePacket();
 	virtual void ProcessPacket(PacketHeader* recv_p); // Recv 내용 처리 (m_NetworkClient로 부터	호출됨)
 
 	void SendPlayerState();
 	void SendFirePacket(const FIRE_INFO fireInfo);
 
-	NetworkingClient* GetClient() { return &m_NetworkClient; }//
-
 	virtual FIRE_INFO Fire(const std::shared_ptr<CPlayer>& pPlayer) override;
 
 private:
-	NetworkingClient m_NetworkClient{ this };
 	std::unordered_map<int, std::shared_ptr<CGameObject>> m_mapGameObjects;
 };
 

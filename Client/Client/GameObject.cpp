@@ -378,7 +378,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			{
 				// Set Pipeline State
 				if (pMaterial->m_pShader) {
-					if (pMaterial->m_pShader->GetAllowShadow() == false) continue; // 그림자 허용 여부 확인
+					//if (pMaterial->m_pShader->GetAllowShadow() == false) continue; // 그림자 허용 여부 확인
 					pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0, bDepthWrite); // Render(pd3dCommandList, pCamera);
 				}
 				// Material Update
@@ -1028,7 +1028,12 @@ void CSkyBox::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	// pSkyBoxShader->CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 1);
+	
 	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture.get(), 0, ROOT_PARAMETER_SKYBOX);
+	{
+		std::string strDebugName = "After CScene::CreateShaderResourceViews\n";
+		OutputDebugStringA(strDebugName.c_str());
+	}
 
 	std::shared_ptr<CMaterial> pSkyBoxMaterial = std::make_shared<CMaterial>();
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);

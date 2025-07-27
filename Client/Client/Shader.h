@@ -390,3 +390,21 @@ protected:
 
 	CScene* m_pScene;
 };
+
+class CShadowToViewportShader : public CTextureToViewportShader
+{
+public:
+	CShadowToViewportShader(CScene* pScene) : CTextureToViewportShader(pScene) {};
+	virtual ~CShadowToViewportShader() {};
+
+	virtual std::wstring GetShaderName() override { return L"CShadowToViewportShader"; }
+
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override
+	{
+#ifdef _COMPILE_SHADER
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSShadowToViewport", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf()));
+#else
+		return(CShader::ReadCompiledShaderFromFile(L"PSShadowToViewport", m_pd3dPixelShaderBlob.GetAddressOf()));
+#endif
+	};
+};

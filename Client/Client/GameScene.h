@@ -9,7 +9,7 @@
 struct FIRE_INFO {
 	XMFLOAT3 xmf3Position;
 	XMFLOAT3 xmf3Velocity;
-	float fRange;
+	float fRange = 0.0f;
 };
 
 class CGameScene : public CScene
@@ -29,7 +29,6 @@ public:
 
 	virtual void Update(float deltaTime) override;
 	virtual void UpdateLights() override;
-
 
 	void BuildFiredBullets();
 
@@ -72,4 +71,9 @@ public:
 	std::shared_ptr<CBulletObject> m_pBulletObject;
 	std::shared_ptr<CCollisionChecker> m_pCollisionChecker;
 	std::vector<FIRE_INFO> m_pFireInfos;
+
+	bool m_bFreeCamera = false; // Free Camera Mode
+	std::shared_ptr<CCamera> m_pFreeCamera;
+
+	bool m_bPrintObjectCount = false; // 디버그 출력용
 };

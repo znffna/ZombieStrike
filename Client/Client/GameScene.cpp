@@ -41,19 +41,13 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	//m_pTerrain = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.bin"), _T("Terrain/terrain.raw"), 1025, 1025, 65, 65, xmf3Scale, xmf4Color);
 	AddObject(m_pTerrain);
 	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
-
+	
 	// <Store GameObjects>
 	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 100);
 	StorePlayer(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
+	
 
 	// <Initialize GameObjects>
-
-	// Cube
-	//std::shared_ptr<CGameObject> pGameObject;
-	//pGameObject = CCubeObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature);
-	//pGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 10.0f));
-	//AddObject(pGameObject);
-
 	// Player 생성
 	std::shared_ptr<CPlayer> pPlayer = GetPlayer();
 	//std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, 0);
@@ -66,12 +60,17 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pPlayer->SetGun(pGun);
 	AddObject(pGun);
 
-	// Zombie 생성
-	/*std::shared_ptr<CZombieObject> pZombie = GetZombie();
-	pZombie->SetPosition(DirectX::XMFLOAT3(0.0f, 100.0f, 5.0f));
-	AddObject(pZombie);*/
+	// 임시 카메라
+	m_pFreeCamera = std::make_shared<CCamera>();
+	// Camera 생성
+	m_pFreeCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	m_pFreeCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	m_pFreeCamera->SetOffset(XMFLOAT3(1.0f, 0.7f, -2.5f));
+	m_pFreeCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	m_pFreeCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
+	m_pFreeCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	m_pFreeCamera->SetActive(true);
 
-	
 	// Map Load
 	auto pMap = resourceManager.GetModelInfo("Stage1");
 	pMap->m_pModelRootObject->UpdateTransform();
@@ -79,7 +78,6 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pMap->SetLayer(CGameObject::LAYER_ENVIRONMENT);
 	m_pMap->UpdateBBCache();
 	AddObject(m_pMap);
-	//AddObject(m_pMap);
 
 	// Collision Checker
 	auto pCollisionChecker = std::make_shared<CCollisionChecker>(this);
@@ -92,7 +90,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pBulletObject = pBullet;
 	CGun::m_pBulletObject = pBullet;
 	AddObject(pBullet);
-
+	
 	// Shader
 	m_pDepthRenderShader = std::make_shared<CDepthRenderShader>(this);
 	m_pDepthRenderShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
@@ -102,7 +100,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pShadowShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
 	m_pShadowShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture());
 
-	m_pShadowMapToViewport = std::make_shared<CTextureToViewportShader>(this);
+	m_pShadowMapToViewport = std::make_shared<CShadowToViewportShader>(this);
 	m_pShadowMapToViewport->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
 	m_pShadowMapToViewport->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture());
 
@@ -141,6 +139,32 @@ void CGameScene::ReleaseUploadBuffers()
 void CGameScene::Update(float deltaTime)
 {
 	CScene::Update(deltaTime);
+
+	static const std::map<CGameObject::GAMEOBJECT_LAYER, std::string> LayerToString = {
+	{ CGameObject::LAYER_DEFAULT, "LAYER_DEFAULT" },
+	{ CGameObject::LAYER_SKYBOX, "LAYER_SKYBOX" },
+	{ CGameObject::LAYER_TERRAIN, "LAYER_TERRAIN" },
+	{ CGameObject::LAYER_ENVIRONMENT, "LAYER_ENVIRONMENT" },
+	{ CGameObject::LAYER_ENEMY, "LAYER_ENEMY" },
+	{ CGameObject::LAYER_PLAYER, "LAYER_PLAYER" },
+	{ CGameObject::LAYER_GUN, "LAYER_GUN" },
+	{ CGameObject::LAYER_BULLET, "LAYER_BULLET" },
+	{ CGameObject::LAYER_CONTROLLER, "LAYER_CONTROLLER" },
+	{ CGameObject::LAYER_UI, "LAYER_UI" },
+	};
+
+	if (m_bPrintObjectCount) {
+		for(auto& pvecObject : m_ppGameObjects)
+		{
+			std::string debugOutput = "CGameScene::Update() - Layer: " + LayerToString.at(pvecObject.first) + ", Object Count: " + std::to_string(pvecObject.second.size()) + "\n";
+			OutputDebugStringA(debugOutput.c_str());
+		}
+
+		std::string debugOutput = "////////////////////////////////" + std::to_string(g_nFrameCount) + "////////////////////////////////\n";
+		OutputDebugStringA(debugOutput.c_str());
+
+		m_bPrintObjectCount = false;
+	}
 
 	BuildFiredBullets();
 }
@@ -204,6 +228,23 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
 			m_pPlayer->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
 		}
+
+		if (m_bFreeCamera) {
+			XMFLOAT3 xmf3Direction(0.0f, 0.0f, 0.0f);
+			if (dwDirection & DIR_FORWARD) xmf3Direction = Vector3::Add(xmf3Direction, m_pFreeCamera->GetLook());
+			if (dwDirection & DIR_BACKWARD) xmf3Direction = Vector3::Add(xmf3Direction, Vector3::ScalarProduct(m_pFreeCamera->GetLook(), -1.0f));
+			if (dwDirection & DIR_RIGHT) xmf3Direction = Vector3::Add(xmf3Direction, m_pFreeCamera->GetRight());
+			if (dwDirection & DIR_LEFT) xmf3Direction = Vector3::Add(xmf3Direction, Vector3::ScalarProduct(m_pFreeCamera->GetRight(), -1.0f));
+			if (dwDirection & DIR_UP) xmf3Direction = Vector3::Add(xmf3Direction, m_pFreeCamera->GetUp());
+			if (dwDirection & DIR_DOWN) xmf3Direction = Vector3::Add(xmf3Direction, Vector3::ScalarProduct(m_pFreeCamera->GetUp(), -1.0f));
+
+			xmf3Direction = Vector3::Normalize(xmf3Direction);
+			xmf3Direction = Vector3::ScalarProduct(xmf3Direction, 10.0f * deltaTime);
+
+			m_pFreeCamera->Move(xmf3Direction);
+			m_pFreeCamera->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
+			m_pFreeCamera->RegenerateViewMatrix();
+		}
 	}
 
 	m_bIschambered = m_bMouseLButtonDown;
@@ -229,16 +270,32 @@ void CGameScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wPa
 }
 void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	/*switch (nMessageID) {
+	switch (nMessageID) {
 	case WM_KEYDOWN:
 	{
 		switch (wParam)
 		{
+		case 'P':
+			m_bFreeCamera = false;
+			m_pCamera = m_pPlayer->GetComponent<CCamera>();
+			break;
+		case 'C':
+			m_bFreeCamera = true;
+			m_pCamera = m_pFreeCamera;
+			break;
+		case VK_F5:
+		case VK_F6:
+		case VK_F7:
+			ChangeMap(wParam - VK_F5);
+			break;
+		case VK_F1:
+			m_bPrintObjectCount = true;
+			break;
 		default:
 			break;
 		}
 	}
-	}*/
+	}
 }
 
 void CGameScene::ChangeMap(int nMapIndex)
@@ -275,7 +332,9 @@ FIRE_INFO CGameScene::Fire(const std::shared_ptr<CPlayer>& pPlayer)
 {
 	std::shared_ptr<CGun> pGun = pPlayer->GetGun();
 
-	FIRE_INFO fireInfo;
+	FIRE_INFO fireInfo{};
+	if (false == pGun->CanFire()) return fireInfo; // 총이 발사 가능한 상태가 아닐 경우
+
 	fireInfo.xmf3Velocity = pPlayer->GetComponent<CCamera>()->GetLook();
 	fireInfo.xmf3Position = pGun->FindFrame("M16_4_low")->GetPosition(); // 총구 위치
 	fireInfo.fRange = pGun->GetRange();
@@ -292,10 +351,13 @@ void CGameScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	m_pZombiePool.reserve(nZombieCount);
 	for (int i = 0; i < nZombieCount; ++i)
 	{
+		
 		std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, i);
+		
 		pZombie->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
 		pZombie->SetActive(false);
 		m_pZombiePool.push_back(pZombie);
+		
 	}
 }
 

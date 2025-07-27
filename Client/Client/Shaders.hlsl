@@ -577,12 +577,12 @@ struct PS_DEPTH_OUTPUT
     float fDepth : SV_Depth;
 };
 
-PS_DEPTH_OUTPUT PSDepthWriteShader(VS_LIGHTING_OUTPUT input)
+PS_DEPTH_OUTPUT PSDepthWriteShader(float4 input : SV_Position)
 {
     PS_DEPTH_OUTPUT output;
 
-    output.fzPosition = input.position.z;
-    output.fDepth = input.position.z;
+    output.fzPosition = input.z;
+    output.fDepth = input.z;
 
     return (output);
 }
@@ -655,6 +655,8 @@ VS_TEXTURED_OUTPUT VSTextureToViewport(uint nVertexID : SV_VertexID)
         output.position = float4(-1.0f, -1.0f, 0.0f, 1.0f);
         output.uv = float2(0.0f, 1.0f);
     }
+    
+    output.position = mul(output.position, gmtxGameObject);
 
     return (output);
 }
@@ -703,7 +705,21 @@ SamplerState gssBorder : register(s3);
 
 float4 PSTextureToViewport(VS_TEXTURED_OUTPUT input) : SV_Target
 {
-    float fDepthFromLight0 = gtxtDepthTextures[0].SampleLevel(gssBorder, input.uv, 0).r;
+//    float fDepthFromLight0 = gtxtDepthTextures[0].SampleLevel(gssBorder, input.uv, 0).r;
+    float4 fTextureColor = gtxtAlbedoTexture.SampleLevel(gssBorder, input.uv, 0);
+    
+//    return ((float4) (fDepthFromLight0));
+    if(fTextureColor.a < 0.1f)
+    {
+        discard;
+    }
+   
+    return (fTextureColor);
+}
 
+float4 PSShadowToViewport(VS_TEXTURED_OUTPUT input) : SV_Target
+{
+    float fDepthFromLight0 = gtxtDepthTextures[0].SampleLevel(gssBorder, input.uv, 0).r;
+    
     return ((float4) (fDepthFromLight0));
 }

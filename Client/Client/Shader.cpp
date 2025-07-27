@@ -1906,8 +1906,10 @@ void CTextureToViewportShader::Render(ID3D12GraphicsCommandList* pd3dCommandList
 {
 	if(g_bRenderCollider)
 	{
-		D3D12_VIEWPORT d3dViewport = { 0.0f, 0.0f, WINDOW_WIDTH * 0.25f, WINDOW_HEIGHT * 0.25f, 0.0f, 1.0f };
-		D3D12_RECT d3dScissorRect = { 0, 0, WINDOW_WIDTH / 4, WINDOW_HEIGHT / 4 };
+		/*D3D12_VIEWPORT d3dViewport = { 0.0f, 0.0f, WINDOW_WIDTH * 0.25f, WINDOW_HEIGHT * 0.25f, 0.0f, 1.0f };
+		D3D12_RECT d3dScissorRect = { 0, 0, WINDOW_WIDTH / 4, WINDOW_HEIGHT / 4 };*/
+		D3D12_VIEWPORT d3dViewport = { 0.0f, 0.0f, WINDOW_WIDTH, WINDOW_HEIGHT, 0.0f, 1.0f };
+		D3D12_RECT d3dScissorRect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
 		pd3dCommandList->RSSetViewports(1, &d3dViewport);
 		pd3dCommandList->RSSetScissorRects(1, &d3dScissorRect);
 

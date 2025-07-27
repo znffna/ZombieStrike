@@ -132,7 +132,7 @@ void CCamera::Rotate(float x, float y, float z)
 	Normalize(m_fRoll, z, -180.0f, 180.0f); // -180 ~ 180으로 조정
 
 	// 회전 적용
-	XMVECTOR qShift = XMQuaternionRotationRollPitchYaw(
+	/*XMVECTOR qShift = XMQuaternionRotationRollPitchYaw(
 		XMConvertToRadians(x),
 		XMConvertToRadians(y),
 		XMConvertToRadians(z)
@@ -153,7 +153,32 @@ void CCamera::Rotate(float x, float y, float z)
 
 	XMStoreFloat3(&m_xmf3Right, vRight);
 	XMStoreFloat3(&m_xmf3Up, vUp);
-	XMStoreFloat3(&m_xmf3Look, vLook);
+	XMStoreFloat3(&m_xmf3Look, vLook);*/
+
+	// 고정축 회전 적용
+	{
+		XMFLOAT3 xmf3Right = m_xmf3Right;
+		XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&xmf3Right), XMConvertToRadians(x));
+		m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
+		m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
+		m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
+	}
+
+	{
+		XMFLOAT3 xmf3Up = XMFLOAT3(0, 1, 0);
+		XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&xmf3Up), XMConvertToRadians(y));
+		m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
+		m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
+		m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
+	}
+
+	{
+		XMFLOAT3 xmf3Look = m_xmf3Look;
+		XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&xmf3Look), XMConvertToRadians(z));
+		m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
+		m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
+		m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -34,7 +34,9 @@ public:
 	}
 
 	void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, ID3D12RootSignature* rootsignature);
-
+	void SetCommandList(ID3D12GraphicsCommandList* commandList){
+		m_d3dGraphicsCommandList = commandList;
+	}
 	// 葛电 府家胶 秦力
 	void ReleaseResources();
 

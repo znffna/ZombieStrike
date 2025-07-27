@@ -131,14 +131,9 @@ public:
 	static ID3D12RootSignature* GetGraphicRootSignature() {return m_pd3dGraphicsRootSignature.Get();	};
 	
 	// Scene Management
-	bool CheckWorkRendering() { return (m_SceneState == SCENE_STATE_RUNNING) || (m_SceneState == SCENE_STATE_PAUSING); }
-	bool CheckWorkUpdating()
-	{
-		if (GetSceneState() == SCENE_STATE_READY_TO_START)
-			StartScene(); 
-		return (GetSceneState() == SCENE_STATE_RUNNING);
-	}
 	virtual void StartScene() { SetSceneState(SCENE_STATE_RUNNING); }
+	virtual void PopScene();
+
 	SCENE_STATE GetSceneState() { return m_SceneState; }
 	void SetSceneState(SCENE_STATE SceneState)
 	{ 
@@ -149,6 +144,10 @@ public:
 		}
 		m_SceneState = SceneState; 
 	}
+
+	bool CheckWorkRendering() { return (m_SceneState == SCENE_STATE_RUNNING) || (m_SceneState == SCENE_STATE_PAUSING); }
+	bool CheckWorkUpdating() { return (GetSceneState() == SCENE_STATE_RUNNING); }
+
 
 	// Object Management
 	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
@@ -211,7 +210,7 @@ protected:
 	static std::shared_ptr<CDescirptorHeap> m_pDescriptorHeap;
 
 	// Scene State
-	SCENE_STATE m_SceneState = SCENE_STATE_NONE;
+	SCENE_STATE m_SceneState = SCENE_STATE_ALLOCING;
 
 	// RootSignature
 	static ComPtr<ID3D12RootSignature> m_pd3dGraphicsRootSignature;
@@ -251,7 +250,7 @@ public:
 	std::shared_ptr<CDepthRenderShader> m_pDepthRenderShader;
 
 	std::shared_ptr<CShadowMapShader> m_pShadowShader;
-	std::shared_ptr<CTextureToViewportShader> m_pShadowMapToViewport;
+	std::shared_ptr<CShadowToViewportShader> m_pShadowMapToViewport;
 
 	BoundingBox CalculateBoundingBox();
 	std::array<Light, MAX_LIGHTS> GetLights() const { return m_pLights; }

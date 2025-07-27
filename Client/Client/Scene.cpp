@@ -51,8 +51,6 @@ void CScene::Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dComma
 
 void CScene::PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	SetSceneState(SCENE_STATE_ALLOCING);
-
 	// Create Default Lights and Materials
 	BuildDefaultLightsAndMaterials();
 
@@ -61,8 +59,6 @@ void CScene::PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 	//CreateRootSignature(pd3dRootSignature, pd3dDevice);
 	//CreateDescriptorHeap(pd3dDevice);
 	//CreateStaticShader(pd3dDevice);
-
-
 }
 
 void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
@@ -247,6 +243,12 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_xmf3Direction = XMFLOAT3(+1.0f, -1.0f, 0.0f);*/
 }
 
+void CScene::PopScene()
+{
+	SetSceneState(SCENE_STATE_ENDING);
+	CGameFramework::GetInstance()->PopScene();
+}
+
 void CScene::AddObject(const std::shared_ptr<CGameObject>& pObject)
 {
 	if (pObject)
@@ -399,10 +401,10 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}*/
 
 	// Render SkyBox
-	if (m_pSkyBox)
+	/*if (m_pSkyBox)
 	{
 		m_pSkyBox->Render(pd3dCommandList, pCamera);
-	}
+	}*/
 
 	if (m_pShadowMapToViewport)
 	{

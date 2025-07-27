@@ -63,14 +63,14 @@ class CGameObject : public std::enable_shared_from_this<CGameObject>
 {
 public:
 	enum GAMEOBJECT_LAYER {
-		LAYER_DEFUALT = 0,
-		LAYER_SKYBOX,
+		LAYER_DEFAULT = 0,
 		LAYER_TERRAIN,
 		LAYER_ENVIRONMENT,
 		LAYER_ENEMY,
 		LAYER_PLAYER,
 		LAYER_GUN,
 		LAYER_BULLET,
+		LAYER_SKYBOX,
 		LAYER_CONTROLLER,
 		LAYER_UI,
 	};
@@ -142,6 +142,7 @@ public:
 	BoundingBox GetMergedMeshBound(BoundingBox* pVolume = nullptr);
 	void UpdateLocalBoundingBox(const XMFLOAT4X4& pParentTransform = Matrix4x4::Identity());
 
+public:
 	// Mesh
 	void SetMesh(std::shared_ptr<CMesh> pMesh);
 	UINT GetMeshType() { return((m_pMesh) ? m_pMesh->GetType() : 0x00); }
@@ -326,6 +327,9 @@ public:
 	virtual void UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix = nullptr);
 	void UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix);
 	void UpdateTransform(std::shared_ptr<CGameObject>& pGameobject);
+
+// 2D Sprite
+	virtual void SetSize(float px, float py, float width, float height){}
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -356,7 +360,7 @@ private:
 	float m_fRotationSpeed = 90.0f; // 초당 회전 속도
 	XMFLOAT3 m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f); // 회전 축
 
-};
+};  // CRotatingObject
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -372,7 +376,7 @@ public:
 	virtual std::string GetDefaultName() override { return "CCubeObject"; }
 
 	static std::shared_ptr<CCubeObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-};
+};  // CCubeObject
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -392,7 +396,7 @@ public:
 
 	// Object Render
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override;
-};
+}; // CSkyBox
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -477,7 +481,7 @@ private:
 
 	std::vector<CTerrainVertex> m_pVertices;
 	std::vector<UINT> m_pIndices;
-};
+}; // CHeightMapTerrain
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -505,4 +509,21 @@ public:
 	// method
 	void AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Velocity, float fRange);
 	void AddBullet(const CBulletVertex& pBulletVertex);
-};
+}; // CBulletObject
+
+//class CUIObject : public CGameObject
+//{
+//public:
+//	CUIObject() {
+//		SetMesh(CResourceManager::GetInstance().GetMesh("UIMesh"));
+//	};
+//	virtual ~CUIObject() {};
+//	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_UI; }
+//	// Object Initialization
+//	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+//	virtual std::string GetDefaultName() override { return "CUIObject"; }
+//	static std::shared_ptr<CUIObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+//
+//	// Object Render
+//	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override {};
+//}; // CUIObject

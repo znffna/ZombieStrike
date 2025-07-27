@@ -34,6 +34,8 @@ public:
 	CGameFramework();
 	~CGameFramework();
 
+	static CGameFramework* GetInstance() { return pGameFramework; }
+
 	bool OnCreate(HINSTANCE hInstance, HWND hMainWnd);
 	void OnDestroy();
 
@@ -46,12 +48,13 @@ public:
 
 	// 창모드 <-> 전체화면
 	void ChangeSwapChainState();
-
 	void BuildObjects();
 
+	void CreateSceneOnAnotherThread(std::string);
+
 	void AdvanceFrame();
-	void OMSetBackBuffer();
-	void ClearRtvAndDsv();
+	void ProcessInput(CScene* pScene = nullptr);
+	void AnimateObjects(CScene* pScene);
 
 	void WaitGpuWithoutPresent();
 
@@ -63,15 +66,17 @@ public:
 	void UpdateShaderVariables();
 	void ReleaseShaderVariables();
 
-	void ProcessInput();
 
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
-
 	static CGameFramework* pGameFramework;
 	static ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return pGameFramework->m_pd3dCommandList[pGameFramework->m_nSwapChainBufferIndex]; }
+
+	void AddScene(std::string sceneName);
+	void PopScene();
+
 private:
 	bool isWorkd = true;
 
@@ -121,7 +126,7 @@ private:
 	CGameTimer												m_GameTimer;
 
 	// Scene
-	std::list<std::unique_ptr<CScene>>						m_Scenes;
+	std::list<std::shared_ptr<CScene>>						m_Scenes;
 	std::unique_ptr<CScene>									m_pLoadingScene;  // Loading Scene은 Stack이 비었을 경우에만 사용(이는, Render State인 Scene이 없을 때도 포함한다)
 	/*
 	Scene을 Stack으로 관리하여 가장 마지막 Scene에 대해서 Input 처리를 수행.

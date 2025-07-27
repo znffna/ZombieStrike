@@ -23,7 +23,7 @@ void CGun::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dC
 	CGameObject::Initialize(pd3dDevice, pd3dCommandList);
 
 	// Initialize Gun Type
-	m_nGunType = nWeaponType; // Default to Pistol
+	SetGunType(nWeaponType);
 
 	// Initialize Ammo
 	m_nCurrentAmmo = m_nMaxAmmo;
