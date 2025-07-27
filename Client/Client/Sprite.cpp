@@ -12,9 +12,9 @@ CSprite::CSprite() : CGameObject()
 // 2D Sprite
 void CSprite::SetSize(float cx, float cy, float width, float height) {
 	m_fLeft = cx - width / 2;
-	m_fTop = cy - height / 2;
-	m_fRight = cx + width / 2;
-	m_fBottom = cy + height / 2;
+	m_fBottom = cy - height / 2;
+	m_fWidth = width;
+	m_fHeight = height;
 
 	if (m_pTransform) {
 		m_pTransform->SetPosition(cx, cy, 0.0f);
@@ -45,4 +45,9 @@ void CSprite::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		pd3dCommandList->DrawInstanced(6, 1, 0, 0);
 	}
+}
+
+bool CSprite::IsClicked(float x, float y) const
+{
+	return (x >= m_fLeft && x <= m_fLeft + m_fWidth && y >= m_fBottom && y <= m_fBottom + m_fHeight);
 }

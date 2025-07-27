@@ -10,6 +10,7 @@
 cbuffer cbGameObjectInfo : register(b0)
 {
     matrix gmtxGameObject : packoffset(c0);
+    float4 gf4ObjectColor : packoffset(c4);
 };
 
 cbuffer cbCameraInfo : register(b2)
@@ -707,7 +708,7 @@ float4 PSTextureToViewport(VS_TEXTURED_OUTPUT input) : SV_Target
 {
 //    float fDepthFromLight0 = gtxtDepthTextures[0].SampleLevel(gssBorder, input.uv, 0).r;
     float4 fTextureColor = gtxtAlbedoTexture.SampleLevel(gssBorder, input.uv, 0);
-    
+    fTextureColor *= gf4ObjectColor;
 //    return ((float4) (fDepthFromLight0));
     if(fTextureColor.a < 0.1f)
     {

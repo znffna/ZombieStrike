@@ -5,6 +5,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "GameScene.h"
 #include "Sprite.h"
+#include "GaugeBar.h"
 #include "CollisionChecker.h"
 
 CGameScene::CGameScene()
@@ -116,6 +117,28 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 			float aspectRatio = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
 			pAimObject->SetSize(0.0f, 0.0f, 0.05f, 0.05f * aspectRatio);
 			AddObject(pAimObject);
+		}
+
+		{
+			std::shared_ptr<CTexture> pHealthTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
+			pHealthTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/GaugeBar.dds", RESOURCE_TEXTURE2D, 0);
+			CScene::CreateShaderResourceViews(pd3dDevice, pHealthTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+			
+			std::shared_ptr<CMaterial> pHealthMaterial = std::make_shared<CMaterial>();
+			pHealthMaterial->SetTexture(pHealthTexture);
+			pHealthMaterial->SetShader(pUIShader);
+			
+			std::shared_ptr<CGaugeBar> pHealthObject = std::make_shared<CGaugeBar>();
+			pHealthObject->Initialize(pd3dDevice, pd3dCommandList);
+			pHealthObject->SetMesh(pRectangleMesh);
+			pHealthObject->AddMaterial(pHealthMaterial);
+			pHealthObject->SetName("Health");
+			
+			float aspectRatio = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
+			pHealthObject->SetGauge(1.0f, -1.0f, -1.0f, 0.3f, 0.1f);
+
+			pPlayer->SetHealthObject(pHealthObject);
+			AddObject(pHealthObject);
 		}
 	}
 	
