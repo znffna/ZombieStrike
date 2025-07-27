@@ -4,6 +4,7 @@
 // Version : 0.1
 ///////////////////////////////////////////////////////////////////////////////
 #include "GameScene.h"
+#include "Sprite.h"
 #include "CollisionChecker.h"
 
 CGameScene::CGameScene()
@@ -90,6 +91,33 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pBulletObject = pBullet;
 	CGun::m_pBulletObject = pBullet;
 	AddObject(pBullet);
+
+	// UI Object
+	{
+		std::shared_ptr<CMesh> pRectangleMesh = CResourceManager::GetInstance().GetMesh("UI");
+
+		std::shared_ptr<CShader> pUIShader = std::make_shared<CTextureToViewportShader>(nullptr);
+		pUIShader->CreateShader(pd3dDevice, pd3dRootSignature);
+		{
+			std::shared_ptr<CTexture> pAimTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
+			pAimTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/aim_cross.dds", RESOURCE_TEXTURE2D, 0);
+			CScene::CreateShaderResourceViews(pd3dDevice, pAimTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+
+			std::shared_ptr<CMaterial> pTitleMaterial = std::make_shared<CMaterial>();
+			pTitleMaterial->SetTexture(pAimTexture);
+			pTitleMaterial->SetShader(pUIShader);
+
+			std::shared_ptr<CSprite> pAimObject = std::make_shared<CSprite>();
+			pAimObject->Initialize(pd3dDevice, pd3dCommandList);
+			pAimObject->SetMesh(pRectangleMesh);
+			pAimObject->AddMaterial(pTitleMaterial);
+			pAimObject->SetName("Aim");
+
+			float aspectRatio = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
+			pAimObject->SetSize(0.0f, 0.0f, 0.05f, 0.05f * aspectRatio);
+			AddObject(pAimObject);
+		}
+	}
 	
 	// Shader
 	m_pDepthRenderShader = std::make_shared<CDepthRenderShader>(this);

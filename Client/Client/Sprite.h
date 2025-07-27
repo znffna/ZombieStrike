@@ -11,7 +11,9 @@ class CSprite : public CGameObject
 
 public:
 	// 2D Sprite
-	virtual void SetSize(float px, float py, float width, float height) override;
+	CSprite();
+
+	virtual void SetSize(float cx, float cy, float width, float height) override;
 
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override;
 

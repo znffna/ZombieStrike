@@ -1,14 +1,23 @@
+///////////////////////////////////////////////////////////////////////////////
+// Sprite.cpp : Sprite 클래스의 구현 파일
+///////////////////////////////////////////////////////////////////////////////
+
 #include "Sprite.h"
 
+CSprite::CSprite() : CGameObject()
+{
+	SetLayer(LAYER_UI);
+}
+
 // 2D Sprite
-void CSprite::SetSize(float px, float py, float width, float height) {
-	m_fLeft = px - width / 2;
-	m_fTop = py - height / 2;
-	m_fRight = px + width / 2;
-	m_fBottom = py + height / 2;
+void CSprite::SetSize(float cx, float cy, float width, float height) {
+	m_fLeft = cx - width / 2;
+	m_fTop = cy - height / 2;
+	m_fRight = cx + width / 2;
+	m_fBottom = cy + height / 2;
 
 	if (m_pTransform) {
-		m_pTransform->SetPosition(px, py, 0.0f);
+		m_pTransform->SetPosition(cx, cy, 0.0f);
 		m_pTransform->SetScale(width, height, 1.0f);
 	}
 }

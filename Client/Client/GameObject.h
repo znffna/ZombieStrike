@@ -329,7 +329,7 @@ public:
 	void UpdateTransform(std::shared_ptr<CGameObject>& pGameobject);
 
 // 2D Sprite
-	virtual void SetSize(float px, float py, float width, float height){}
+	virtual void SetSize(float cx, float cy, float width, float height) {}
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////
