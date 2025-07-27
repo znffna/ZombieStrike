@@ -4,7 +4,6 @@
 
 //constexpr const char* LOOPBACK_IP = "127.0.0.1";
 
-std::string SERVER_IP = "192.168.124.77";
 bool g_bNetworkDebugMode = false;
 
 NetworkingClient::NetworkingClient()
@@ -38,6 +37,28 @@ void NetworkingClient::CheckSocket()
     }
 }
 
+std::string NetworkingClient::LoadIPAddress() const
+{
+    return LoadIPAddressFromFile("ip_config.txt");
+}
+
+std::string NetworkingClient::LoadIPAddressFromFile(const std::string& filename) const
+{
+    std::ifstream file(filename);
+    std::string ipAddress;
+
+    if (file.is_open()) {
+        std::getline(file, ipAddress); // 첫 줄만 읽음
+        file.close();
+    }
+    else {
+        // 실패 시 기본 IP 반환 또는 빈 문자열 반환
+        return LOOPBACK_IP;
+    }
+
+    return ipAddress;
+}
+
 bool NetworkingClient::Connect()
 {
     WSADATA wsaData;
@@ -47,7 +68,8 @@ bool NetworkingClient::Connect()
     if (c_socket == INVALID_SOCKET) error_display("소켓 생성 실패", WSAGetLastError());
 
     sockaddr_in serverAddr{};
-    std::string serverIP = USSING_IP;
+    //std::string serverIP = USSING_IP;
+    std::string serverIP = LoadIPAddress();
 
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(PORT_NUM);
@@ -251,7 +273,7 @@ std::vector<RawPacket>& NetworkingClient::GetReadQueue() {
         write_queue.clear(); // 쓰기 큐 비우기
     }
 
-    if(count > 0){
+    if(g_bDebugOutput &&count > 0){
 		std::string debug = std::to_string(g_nFrameCount) + " :: GetReadQueue() 호출됨. 현재 읽기 큐 크기: " + std::to_string(count) + "\n";
 		OutputDebugStringA(debug.c_str());
     }

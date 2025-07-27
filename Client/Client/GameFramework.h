@@ -49,23 +49,17 @@ public:
 	// 창모드 <-> 전체화면
 	void ChangeSwapChainState();
 	void BuildObjects();
-
-	void CreateSceneOnAnotherThread(std::string);
+	void CreateSceneOnAnotherThread(std::string sceneName);
 
 	void AdvanceFrame();
 	void ProcessInput(CScene* pScene = nullptr);
 	void AnimateObjects(CScene* pScene);
 
-	void WaitGpuWithoutPresent();
-
-	// MoveToNextFrame 이후 WaitForGpuComplete를 호출하는 순서.
-	void WaitForGpuComplete();
 	void MoveToNextFrame();
 
 	void CreateShaderVariables();
 	void UpdateShaderVariables();
 	void ReleaseShaderVariables();
-
 
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);

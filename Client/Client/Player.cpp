@@ -2,6 +2,7 @@
 #include "Scene.h"
 
 #include "Gun.h"
+#include "GaugeBar.h"
 
 ///////////////////////////////////////////////////////////////////////////////////
 //
@@ -116,6 +117,10 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, float deltaTime)
 void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
 	CGameObject::Render(pd3dCommandList, pCamera, bDepthWrite);
+
+	if (m_pHealthGauge) {
+		m_pHealthGauge->SetGauge(m_fHealth / m_fMaxHealth);
+	}
 
 	//if (m_pGun)	{
 	//	m_pGun->Render(pd3dCommandList, pCamera);

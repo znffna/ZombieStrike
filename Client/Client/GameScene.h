@@ -68,7 +68,7 @@ public:
 		return m_pTerrainObjects[nSkinType % (int)m_pTerrainObjects.size()];
 	};
 
-	std::shared_ptr<CBulletObject> m_pBulletObject;
+	std::shared_ptr<CBulletParticleObject> m_pBulletObject;
 	std::shared_ptr<CCollisionChecker> m_pCollisionChecker;
 	std::vector<FIRE_INFO> m_pFireInfos;
 

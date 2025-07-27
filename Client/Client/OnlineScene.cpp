@@ -161,7 +161,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		case ObjectType::BULLET:
 		{
 			// 총알 오브젝트 추가
-			/*std::shared_ptr<CGameObject> pBullet = std::make_shared<CBulletObject>();
+			/*std::shared_ptr<CGameObject> pBullet = std::make_shared<CBulletParticleObject>();
 			pBullet->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
 			m_mapGameObjects[packet->id] = pBullet;*/
 			Fire(std::dynamic_pointer_cast<CPlayer>(m_mapGameObjects[packet->id]));

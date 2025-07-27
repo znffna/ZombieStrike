@@ -1,7 +1,7 @@
 #include "Gun.h"
 
 
-std::shared_ptr<CBulletObject> CGun::m_pBulletObject; // 총알 오브젝트
+std::shared_ptr<CBulletParticleObject> CGun::m_pBulletObject; // 총알 오브젝트
 
 CGun::CGun()
 {

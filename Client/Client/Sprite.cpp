@@ -1,14 +1,23 @@
+///////////////////////////////////////////////////////////////////////////////
+// Sprite.cpp : Sprite 클래스의 구현 파일
+///////////////////////////////////////////////////////////////////////////////
+
 #include "Sprite.h"
 
+CSprite::CSprite() : CGameObject()
+{
+	SetLayer(LAYER_UI);
+}
+
 // 2D Sprite
-void CSprite::SetSize(float px, float py, float width, float height) {
-	m_fLeft = px - width / 2;
-	m_fTop = py - height / 2;
-	m_fRight = px + width / 2;
-	m_fBottom = py + height / 2;
+void CSprite::SetSize(float cx, float cy, float width, float height) {
+	m_fLeft = cx - width / 2;
+	m_fBottom = cy - height / 2;
+	m_fWidth = width;
+	m_fHeight = height;
 
 	if (m_pTransform) {
-		m_pTransform->SetPosition(px, py, 0.0f);
+		m_pTransform->SetPosition(cx, cy, 0.0f);
 		m_pTransform->SetScale(width, height, 1.0f);
 	}
 }
@@ -36,4 +45,9 @@ void CSprite::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		pd3dCommandList->DrawInstanced(6, 1, 0, 0);
 	}
+}
+
+bool CSprite::IsClicked(float x, float y) const
+{
+	return (x >= m_fLeft && x <= m_fLeft + m_fWidth && y >= m_fBottom && y <= m_fBottom + m_fHeight);
 }

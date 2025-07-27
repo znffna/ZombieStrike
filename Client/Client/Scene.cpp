@@ -327,11 +327,8 @@ void CScene::Update(float deltaTime)
 
 bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	if (false == CheckWorkRendering())
-	{
-		// Scene is not running or pausing
-		return false;
-	}
+	// Scene is not running or pausing
+	if (false == CheckWorkRendering()){	return false;}
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature.Get());
 
 	if (m_pDescriptorHeap) {
@@ -354,11 +351,8 @@ bool CScene::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (false == CheckWorkRendering())
-	{
-		// Scene is not running or pausing
-		return (false);
-	}
+	// Scene is not running or pausing
+	if (false == CheckWorkRendering())	{return (false);}
 
 	// Set Descriptor Heap
 	/*ID3D12DescriptorHeap* ppHeaps[] = { m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap.Get() };
@@ -413,6 +407,20 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	}
 
 	return (true);
+}
+
+bool CScene::RenderUI(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	auto UIObjects = m_ppGameObjects.find(CGameObject::GAMEOBJECT_LAYER::LAYER_UI);
+	if(UIObjects != m_ppGameObjects.end())
+	{
+		for (auto& pObject : UIObjects->second)
+		{
+			pObject->Render(pd3dCommandList, pCamera, false);
+		}
+		return true;
+	}
+	return false;
 }
 
 void CScene::RenderDepthWrite(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -552,10 +560,12 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 #else
 	// Object
 	pd3dRootParameters[ROOT_PARAMETER_OBJECT].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-	pd3dRootParameters[ROOT_PARAMETER_OBJECT].Constants.Num32BitValues = 16;
+	//pd3dRootParameters[ROOT_PARAMETER_OBJECT].Constants.Num32BitValues = 16;
+	pd3dRootParameters[ROOT_PARAMETER_OBJECT].Constants.Num32BitValues = 20;
 	pd3dRootParameters[ROOT_PARAMETER_OBJECT].Constants.ShaderRegister = ROOT_PARAMETER_OBJECT; // b0 : GameObject
 	pd3dRootParameters[ROOT_PARAMETER_OBJECT].Constants.RegisterSpace = 0;
-	pd3dRootParameters[ROOT_PARAMETER_OBJECT].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+	//pd3dRootParameters[ROOT_PARAMETER_OBJECT].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+	pd3dRootParameters[ROOT_PARAMETER_OBJECT].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	// Material
 	pd3dRootParameters[ROOT_PARAMETER_MATERIAL].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
 	pd3dRootParameters[ROOT_PARAMETER_MATERIAL].Constants.Num32BitValues = 17;

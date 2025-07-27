@@ -484,7 +484,10 @@ void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandLi
 	xmf4x4World = GetWorldMatrix();
 	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4World)));
 
+	XMFLOAT4 xmf4Color = XMFLOAT4(1, 1, 1, 1);
+
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 16, &xmf4x4World, 0);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 4, &xmf4Color, 16);
 }
 
 void CGameObject::ReleaseShaderVariables()
@@ -1304,7 +1307,7 @@ std::shared_ptr<CCubeObject> CCubeObject::Create(ID3D12Device* pd3dDevice, ID3D1
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-CBulletObject::CBulletObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles)
+CBulletParticleObject::CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles)
 {
 	std::shared_ptr<CBulletMesh> pMesh = std::make_shared<CBulletMesh>(pd3dDevice, pd3dCommandList, xmf3Position, xmf3Velocity, fLifetime, xmf3Acceleration, xmf3Color, xmf2Size, nMaxParticles);
 	SetMesh(pMesh);
@@ -1327,11 +1330,11 @@ CBulletObject::CBulletObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	SetMaterial(0, pMaterial);
 }
 
-CBulletObject::~CBulletObject()
+CBulletParticleObject::~CBulletParticleObject()
 {
 }
 
-void CBulletObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
+void CBulletParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
 	OnPrepareRender();
 
@@ -1359,12 +1362,12 @@ void CBulletObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* 
 	m_pMesh->Render(pd3dCommandList, 1); //Draw
 }
 
-void CBulletObject::OnPostRender()
+void CBulletParticleObject::OnPostRender()
 {
 	m_pMesh->OnPostRender(0); //Read Stream Output Buffer Filled Size
 }
 
-void CBulletObject::AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Velocity, float fRange)
+void CBulletParticleObject::AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Velocity, float fRange)
 {
 	CBulletVertex pBulletVertex;
 	pBulletVertex.m_xmf3Position = pOrigin;
@@ -1375,7 +1378,7 @@ void CBulletObject::AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Veloc
 	AddBullet(pBulletVertex);
 }
 
-void CBulletObject::AddBullet(const CBulletVertex& pBulletVertex)
+void CBulletParticleObject::AddBullet(const CBulletVertex& pBulletVertex)
 {
 	std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullet(pBulletVertex);
 }

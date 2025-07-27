@@ -1,7 +1,7 @@
 #pragma once
 #include "GameObject.h"
-
 class CGun;
+class CGaugeBar;
 
 class CPlayer : public CGameObject
 {
@@ -40,12 +40,18 @@ public:
 
 	void Fire();
 
+	// UI
+	void SetHealthObject(const std::shared_ptr<CGaugeBar>& pHealthGauge) { m_pHealthGauge = pHealthGauge; }
+
+
 private:
 	std::vector<std::string> m_ModelName{ "Ch18_nonPBR", "Ch35_nonPBR" };
 	std::vector<std::string> m_MeshBoneName{ "Ch18", "Ch35" };
 
 	std::shared_ptr<CGameObject> m_pGunSlot;
 	std::shared_ptr<CGun> m_pGun;
+
+	std::shared_ptr<CGaugeBar> m_pHealthGauge;
 
 	// Camera Offset
 	float m_fCameraLookY = 0.0f;
@@ -55,5 +61,9 @@ private:
 	float m_fRoll = 0.0f;
 
 	int m_nSkinType = 0;
+
+	// Player State
+	float m_fHealth = 100.0f; // Player Health
+	float m_fMaxHealth = 100.0f; // Max Health
 };
 

@@ -143,6 +143,7 @@
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="GameScene.h" />
     <ClInclude Include="GameTimer.h" />
+    <ClInclude Include="GaugeBar.h" />
     <ClInclude Include="Gun.h" />
     <ClInclude Include="LoadingScene.h" />
     <ClInclude Include="Material.h" />
@@ -177,6 +178,7 @@
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="GameScene.cpp" />
     <ClCompile Include="GameTimer.cpp" />
+    <ClCompile Include="GaugeBar.cpp" />
     <ClCompile Include="Gun.cpp" />
     <ClCompile Include="LoadingScene.cpp" />
     <ClCompile Include="Material.cpp" />
