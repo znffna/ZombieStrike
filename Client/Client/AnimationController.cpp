@@ -223,12 +223,12 @@ void CAnimationController::ApplyPitchToSpine(CGameObject* pRootGameObject)
 			pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
 			pSpine->SetLocalMatrix(pSpineTransform);
 		}
-		if (auto pSpine1 = pRootGameObject->FindFrame("mixamorig:Spine")) {
+		if (auto pSpine1 = pRootGameObject->FindFrame("mixamorig:Spine1")) {
 			auto pSpineTransform = pSpine1->GetLocalMatrix();
 			pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
 			pSpine1->SetLocalMatrix(pSpineTransform);
 		}
-		if (auto pSpine2 = pRootGameObject->FindFrame("mixamorig:Spine")) {
+		if (auto pSpine2 = pRootGameObject->FindFrame("mixamorig:Spine2")) {
 			auto pSpineTransform = pSpine2->GetLocalMatrix();
 			pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
 			pSpine2->SetLocalMatrix(pSpineTransform);
