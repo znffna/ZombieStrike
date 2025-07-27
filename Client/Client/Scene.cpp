@@ -327,11 +327,8 @@ void CScene::Update(float deltaTime)
 
 bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	if (false == CheckWorkRendering())
-	{
-		// Scene is not running or pausing
-		return false;
-	}
+	// Scene is not running or pausing
+	if (false == CheckWorkRendering()){	return false;}
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature.Get());
 
 	if (m_pDescriptorHeap) {
@@ -354,11 +351,8 @@ bool CScene::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (false == CheckWorkRendering())
-	{
-		// Scene is not running or pausing
-		return (false);
-	}
+	// Scene is not running or pausing
+	if (false == CheckWorkRendering())	{return (false);}
 
 	// Set Descriptor Heap
 	/*ID3D12DescriptorHeap* ppHeaps[] = { m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap.Get() };

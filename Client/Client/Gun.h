@@ -47,7 +47,7 @@ public:
 	void Fire(const XMFLOAT3& xmf3Direction);
 	void Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction);
 
-	static std::shared_ptr<CBulletObject> m_pBulletObject; // 총알 오브젝트
+	static std::shared_ptr<CBulletParticleObject> m_pBulletObject; // 총알 오브젝트
 private:
 	void SetFireTime(float fFireTimePerSecond)
 	{ 

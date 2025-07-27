@@ -88,7 +88,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	AddObject(pCollisionChecker);
 
 	// BulletObject
-	std::shared_ptr<CBulletObject> pBullet = std::make_shared<CBulletObject>(pd3dDevice, pd3dCommandList, pd3dRootSignature, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 65.0f, 0.0f), 20.0f, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(8.0f, 8.0f), MAX_BULLETS);
+	std::shared_ptr<CBulletParticleObject> pBullet = std::make_shared<CBulletParticleObject>(pd3dDevice, pd3dCommandList, pd3dRootSignature, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 65.0f, 0.0f), 20.0f, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(8.0f, 8.0f), MAX_BULLETS);
 	m_pBulletObject = pBullet;
 	CGun::m_pBulletObject = pBullet;
 	AddObject(pBullet);
