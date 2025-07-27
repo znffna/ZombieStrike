@@ -9,10 +9,7 @@
 
 #pragma comment (lib, "WS2_32.LIB")
 
-extern std::string SERVER_IP;
 constexpr const char* LOOPBACK_IP = "127.0.0.1";
-#define USSING_IP LOOPBACK_IP
-
 extern bool g_bNetworkDebugMode;
 
 // 클라이언트 네트워크 클래스
@@ -104,8 +101,12 @@ public:
     void CheckSocket(); // 소켓 상태 확인
 
 	// Initialize / Destroy
-	bool Connect();   // 소켓 초기화 및 서버 연결
+    bool Connect();   // 소켓 초기화 및 서버 연결
     void Logout(); // 소켓의 연결 종료
+
+	// IP 주소 로드 
+	std::string LoadIPAddress() const; // 
+    std::string LoadIPAddressFromFile(const std::string& filename) const;
 
     bool StartRecvLoop(); // recv loop 시작
     void error_display(const char* msg, int err_no);
