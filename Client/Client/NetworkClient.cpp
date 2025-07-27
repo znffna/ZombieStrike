@@ -251,7 +251,7 @@ std::vector<RawPacket>& NetworkingClient::GetReadQueue() {
         write_queue.clear(); // 쓰기 큐 비우기
     }
 
-    if(count > 0){
+    if(g_bDebugOutput &&count > 0){
 		std::string debug = std::to_string(g_nFrameCount) + " :: GetReadQueue() 호출됨. 현재 읽기 큐 크기: " + std::to_string(count) + "\n";
 		OutputDebugStringA(debug.c_str());
     }
