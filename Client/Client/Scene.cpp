@@ -415,6 +415,20 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	return (true);
 }
 
+bool CScene::RenderUI(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	auto UIObjects = m_ppGameObjects.find(CGameObject::GAMEOBJECT_LAYER::LAYER_UI);
+	if(UIObjects != m_ppGameObjects.end())
+	{
+		for (auto& pObject : UIObjects->second)
+		{
+			pObject->Render(pd3dCommandList, pCamera, false);
+		}
+		return true;
+	}
+	return false;
+}
+
 void CScene::RenderDepthWrite(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	std::set<CGameObject::GAMEOBJECT_LAYER> layer = {

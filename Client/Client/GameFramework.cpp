@@ -82,7 +82,7 @@ void CGameFramework::OnDestroy()
 	isWorkd = false;
 
 	// 남은 Command List가 없는지 확인
-	WaitGpuWithoutPresent();
+	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
 
 	// Shader 변수들을 해제한다.
 	ReleaseShaderVariables();
@@ -400,9 +400,8 @@ void CGameFramework::CreateDepthStencilView()
 
 void CGameFramework::ChangeSwapChainState()
 {
-	WaitGpuWithoutPresent();
-	//WaitForGpuComplete();
-
+	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
+	
 	BOOL bFullScreenState = FALSE;
 	m_pdxgiSwapChain->GetFullscreenState(&bFullScreenState, NULL);
 	m_pdxgiSwapChain->SetFullscreenState(!bFullScreenState, NULL);
@@ -455,7 +454,7 @@ void CGameFramework::BuildObjects()
 	}
 
 	// Command Queue의 명령들이 모두 실행될 때까지 대기
-	WaitGpuWithoutPresent();
+	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
 
 	m_pd3dCommandAllocator[m_nSwapChainBufferIndex]->Reset();
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->Reset(m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get(), nullptr);
@@ -481,10 +480,9 @@ void CGameFramework::BuildObjects()
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 
 	// Command Queue의 명령들이 모두 실행될 때까지 대기
-	WaitGpuWithoutPresent();
+	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
 
 	if (m_pLoadingScene) m_pLoadingScene->ReleaseUploadBuffers();
-
 }
 
 void CGameFramework::CreateSceneOnAnotherThread(std::string sceneName)
@@ -551,31 +549,18 @@ void CGameFramework::CreateSceneOnAnotherThread(std::string sceneName)
 	thread.detach();
 }
 
-void CGameFramework::WaitGpuWithoutPresent()
-{
-	const UINT64 nFenceValue = ++m_nFenceValueForSignal;
-
-	HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence.Get(), nFenceValue);
-
-	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
-	{
-		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
-		HRESULT hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
-		::WaitForSingleObject(m_hFenceEvent, INFINITE);
-	}
-}
-
 void CGameFramework::AdvanceFrame()
 {
 	// 타이머 업데이트
 	m_GameTimer.Tick(60.0f);
 
-	// Input 업데이트
+	// 이번 프레임에 작업할	Scene 결정
 	CScene* pCurrentScene{ m_pLoadingScene.get() };
 	if (m_Scenes.empty() == false && m_Scenes.back()->CheckWorkUpdating()) {
 		pCurrentScene = m_Scenes.back().get();
 	}
 	
+	// Input 업데이트
 	ProcessInput(pCurrentScene);
 
 	// Scene Container 업데이트
@@ -611,11 +596,11 @@ void CGameFramework::AdvanceFrame()
 	AnimateObjects(pCurrentScene);
 
 	pCurrentScene->PrepareRender(pd3dCommandList);
+	pCurrentScene->OnPreRender(pd3dCommandList);
 
 	// Framework 정보 업데이트
 	UpdateShaderVariables();
 
-	pCurrentScene->OnPreRender(pd3dCommandList);
 
 	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
 	::SynchronizeResourceTransition(pd3dCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -631,6 +616,10 @@ void CGameFramework::AdvanceFrame()
 
 	// Scene 렌더링
 	pCurrentScene->Render(pd3dCommandList, nullptr);
+
+	// UI 렌더링
+	pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	pCurrentScene->RenderUI(pd3dCommandList, nullptr);
 
 	// Command List에 대한 명령들을 종료
 	::SynchronizeResourceTransition(pd3dCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
@@ -656,18 +645,6 @@ void CGameFramework::AnimateObjects(CScene* pScene)
 {
 	// Scene 정보 업데이트
 	pScene->Update(m_GameTimer.DeltaTime());
-}
-
-void CGameFramework::WaitForGpuComplete()
-{
-	// 현재 GPU 작업이 끝났는지 확인
-	// Fence를 사용하여 GPU의 명령이 모두 완료될 때까지 대기
-
-	if (m_pd3dFence->GetCompletedValue() < m_nFenceValueForSignal)
-	{
-		HRESULT hResult = m_pd3dFence->SetEventOnCompletion(m_nFenceValueForSignal, m_hFenceEvent);
-		::WaitForSingleObject(m_hFenceEvent, INFINITE);
-	}
 }
 
 void CGameFramework::MoveToNextFrame()
@@ -889,7 +866,5 @@ void CGameFramework::PopScene()
 	if (!m_Scenes.empty())
 	{
 		m_Scenes.back()->SetSceneState(SCENE_STATE_ENDING);
-		//WaitForGpuComplete();
-		//m_Scenes.pop_back();
 	}
 }
