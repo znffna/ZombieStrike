@@ -145,6 +145,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+    case WM_ACTIVATE:
     case WM_SIZE:
     case WM_LBUTTONDOWN:
     case WM_LBUTTONUP:

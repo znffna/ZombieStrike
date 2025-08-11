@@ -28,6 +28,8 @@ struct CB_FRAMEWORK_INFO
 	//float					m_nPadding;
 };
 
+
+
 class CGameFramework
 {
 public:
@@ -122,18 +124,17 @@ private:
 	// Scene
 	std::list<std::shared_ptr<CScene>>						m_Scenes;
 	std::unique_ptr<CScene>									m_pLoadingScene;  // Loading Scene은 Stack이 비었을 경우에만 사용(이는, Render State인 Scene이 없을 때도 포함한다)
-	/*
-	Scene을 Stack으로 관리하여 가장 마지막 Scene에 대해서 Input 처리를 수행.
-	나머지 Scene에 대해서는 Scene의 State에 따라 Update / Render를 수행.
-	*/
 
 	POINT m_ptOldCursorPos;
-
-
 protected:
 	ComPtr<ID3D12Resource> m_pd3dcbFrameworkInfo;
 	CB_FRAMEWORK_INFO* m_pcbMappedFrameworkInfo = NULL;
 
 	float m_fBias = 0.007f; // Depth Bias  0.0001f
+
+	std::shared_ptr<CSprite> m_pCursorSprite; // Cursor Sprite
+	POINTF GetTexturePosition(int x, int y);
+	void RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList);
+
 };
 

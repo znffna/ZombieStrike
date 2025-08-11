@@ -22,6 +22,19 @@ void CSprite::SetSize(float cx, float cy, float width, float height) {
 	}
 }
 
+// SetSizeLT: Set size using left-top corner coordinates
+void CSprite::SetSizeLT(float left, float top, float width, float height) {
+	m_fLeft = left;
+	m_fBottom = top - height;
+	m_fWidth = width;
+	m_fHeight = height;
+
+	if (m_pTransform) {
+		m_pTransform->SetPosition(left + width / 2, m_fBottom + height / 2, 0.0f);
+		m_pTransform->SetScale(width, height, 1.0f);
+	}
+}
+
 void CSprite::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite) {
 
 	// Set Shader Variables

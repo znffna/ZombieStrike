@@ -585,6 +585,13 @@ void CGameFramework::AdvanceFrame()
 		}
 	}
 
+	// 현재 Scene이 없으면 종료
+	if(m_Scenes.empty())
+	{
+		PostQuitMessage(0);
+		return;
+	}
+
 	// Command List 재사용
 	ID3D12CommandAllocator* pCommandAllocator = m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get();
 	ID3D12GraphicsCommandList* pd3dCommandList = m_pd3dCommandList[m_nSwapChainBufferIndex].Get();
@@ -600,7 +607,6 @@ void CGameFramework::AdvanceFrame()
 
 	// Framework 정보 업데이트
 	UpdateShaderVariables();
-
 
 	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
 	::SynchronizeResourceTransition(pd3dCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -620,6 +626,9 @@ void CGameFramework::AdvanceFrame()
 	// UI 렌더링
 	pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 	pCurrentScene->RenderUI(pd3dCommandList, nullptr);
+
+	// 커서 렌더링
+	if (g_enableCursor) { RenderCursor(pd3dCommandList); }
 
 	// Command List에 대한 명령들을 종료
 	::SynchronizeResourceTransition(pd3dCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
@@ -645,6 +654,57 @@ void CGameFramework::AnimateObjects(CScene* pScene)
 {
 	// Scene 정보 업데이트
 	pScene->Update(m_GameTimer.DeltaTime());
+}
+
+POINTF CGameFramework::GetTexturePosition(int x, int y) {
+	POINTF pt;
+	pt.x = (float)x / (float)m_nWndClientWidth * 2.0f - 1.0f;
+	pt.y = (float)y / (float)m_nWndClientHeight * 2.0f - 1.0f;
+	{
+		std::string debug = "GetTexturePosition(" + std::to_string(x) + ", " + std::to_string(y) + ")\n";
+		OutputDebugStringA(debug.c_str());
+		debug = "Return: (" + std::to_string(pt.x) + ", " + std::to_string(pt.y) + ")\n";
+		OutputDebugStringA(debug.c_str());
+	}
+	return pt;
+}
+
+void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (!m_pCursorSprite) {
+		m_pCursorSprite = std::make_shared<CSprite>();
+		m_pCursorSprite->Initialize(m_pd3dDevice.Get(), pd3dCommandList);
+
+		std::shared_ptr<CShader> pUIShader = std::make_shared<CTextureToViewportShader>(nullptr);
+		pUIShader->CreateShader(m_pd3dDevice.Get(), CScene::GetGraphicsRootSignature().Get());
+
+		std::shared_ptr<CMesh> pRectangleMesh = CResourceManager::GetInstance().GetMesh("UI");
+
+		auto cursorTexture = CResourceManager::GetInstance().GetTexture("Cursor");
+		if(nullptr == cursorTexture)
+		{
+			cursorTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
+			cursorTexture->LoadTextureFromDDSFile(m_pd3dDevice.Get(), pd3dCommandList, L"Image/cursor.dds", RESOURCE_TEXTURE2D, 0);
+			CScene::CreateShaderResourceViews(m_pd3dDevice.Get(), cursorTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+			CResourceManager::GetInstance().SetTexture("Cursor", cursorTexture);
+		}
+
+		std::shared_ptr<CMaterial> pCursorMaterial = std::make_shared<CMaterial>();
+		pCursorMaterial->SetTexture(cursorTexture);
+		pCursorMaterial->SetShader(pUIShader);
+
+		m_pCursorSprite->SetMesh(pRectangleMesh);
+		m_pCursorSprite->MaterialResize(1);
+		m_pCursorSprite->SetMaterial(0, pCursorMaterial);
+	}
+
+	POINT ptCursorPos;
+	GetCursorPos(&ptCursorPos);
+	ScreenToClient(m_hWnd, &ptCursorPos);
+	POINTF p = GetTexturePosition(ptCursorPos.x, ptCursorPos.y);
+	m_pCursorSprite->SetSizeLT(p.x, -p.y, 0.05f, 0.05f);
+
+	m_pCursorSprite->Render(pd3dCommandList, nullptr);
 }
 
 void CGameFramework::MoveToNextFrame()
@@ -834,9 +894,15 @@ LRESULT CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WP
 	case WM_ACTIVATE:
 	{
 		if (LOWORD(wParam) == WA_INACTIVE) 
+		{
 			m_GameTimer.Stop();
+			g_windowActive = false;
+		}
 		else 
+		{
 			m_GameTimer.Start();
+			g_windowActive = true;
+		}
 		break;
 	}
 	case WM_SIZE:

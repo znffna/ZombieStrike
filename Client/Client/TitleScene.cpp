@@ -157,3 +157,23 @@ void CTitleScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 		break;
 	}
 }
+
+void CTitleScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID) {
+		case WM_KEYDOWN:
+		{
+			switch (wParam)
+			{
+			case VK_ESCAPE:
+				// ESC 키를 눌러 프로그램 종료
+				// TODO : 해당 로직을 TitleScene에서 이미지를 띄우고 지우는 로직으로 변경할 예정
+				PostQuitMessage(0);
+				break;
+			default:
+				break;
+			}
+			break;
+		}
+	}
+}

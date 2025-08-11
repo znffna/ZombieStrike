@@ -26,6 +26,7 @@ public:
 	virtual void Update(float deltaTime) override;
 
 	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
+	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 
 	// Network Override
 	void ProcessReadQueuePacket();

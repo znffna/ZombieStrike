@@ -80,6 +80,29 @@ bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 	return true;
 }
 
+void COnlineScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)
+	{
+		case WM_KEYDOWN:
+		{
+			switch (wParam)
+			{
+			case VK_F1:
+				g_bRenderCollider = !g_bRenderCollider;
+				break;
+			case VK_ESCAPE:
+				PopScene();
+				break;
+			default:
+				break;
+			}
+			break;
+		}
+		break;
+	}
+}
+
 void COnlineScene::ProcessReadQueuePacket()
 {
 	auto& readQueue = NetworkingClient::Instance().GetReadQueue();

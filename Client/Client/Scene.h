@@ -10,6 +10,7 @@
 #include "Player.h"
 #include "Gun.h"
 #include "CollisionChecker.h"
+#include "Sprite.h"
 
 #include "Camera.h"
 #include "Shader.h"
@@ -175,6 +176,8 @@ public:
 	static void CreateDescriptorHeap(ID3D12Device* pd3dDevice);
 	static void CreateStaticShader(ID3D12Device* pd3dDevice);
 	static void CreateStaticMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	static ComPtr<ID3D12RootSignature> GetGraphicsRootSignature() { return m_pd3dGraphicsRootSignature; }
 
 	// Descriptor Heap
 	static void CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews);

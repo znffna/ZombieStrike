@@ -471,3 +471,52 @@ namespace Plane
 		return XMFLOAT4(normal.x, normal.y, normal.z, d);
 	}
 }
+
+extern bool g_enableCursor;
+namespace WindowCursor
+{
+	inline void SetCursorVisibility(bool visible)
+	{
+		while (ShowCursor(visible) >= 0 && !visible);
+		while (ShowCursor(visible) < 0 && visible);
+		// 실제 커서 가시성 상태를 저장
+		g_enableCursor = visible;
+	}
+
+	inline void ConfineCursorToWindow(HWND hWnd)
+	{
+		RECT rect;
+		GetClientRect(hWnd, &rect);
+		POINT lt = { rect.left, rect.top };
+		POINT rb = { rect.right, rect.bottom };
+
+		ClientToScreen(hWnd, &lt);
+		ClientToScreen(hWnd, &rb);
+
+		rect.left = lt.x;
+		rect.top = lt.y;
+		rect.right = rb.x;
+		rect.bottom = rb.y;
+
+		ClipCursor(&rect);
+	}
+
+	inline void ReleaseCursor()
+	{
+		ClipCursor(nullptr);
+	}
+
+	inline void SetCursorLockState(HWND hWnd, bool on)
+	{
+		if (on)
+		{
+			SetCursorVisibility(false);
+			ConfineCursorToWindow(hWnd);
+		}
+		else
+		{
+			ReleaseCursor();
+			SetCursorVisibility(true);
+		}
+	}
+}
