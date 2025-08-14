@@ -906,9 +906,11 @@ void CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam,
 	switch (nMessageID)
 	{
 	case WM_LBUTTONDOWN:
+	case WM_RBUTTONDOWN:
 		m_bMouseLButtonDown = true;
 		break;
 	case WM_LBUTTONUP:
+	case WM_RBUTTONUP:
 		m_bMouseLButtonDown = false;
 		break;
 	}
