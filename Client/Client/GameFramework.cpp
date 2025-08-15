@@ -628,7 +628,7 @@ void CGameFramework::AdvanceFrame()
 	pCurrentScene->RenderUI(pd3dCommandList, nullptr);
 
 	// 커서 렌더링
-	if (g_windowActive && g_enableCursor) { RenderCursor(pd3dCommandList); }
+	if (g_bWindowActive && g_bEnableCursor) { RenderCursor(pd3dCommandList); }
 
 	// Command List에 대한 명령들을 종료
 	::SynchronizeResourceTransition(pd3dCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
@@ -763,8 +763,10 @@ void CGameFramework::ProcessInput(CScene* pScene)
 	float cxDelta = 0.0f, cyDelta = 0.0f;
 	bool bProcessedByScene = false;
 
-	if (false == g_windowActive) return;
+	if (false == g_bWindowActive) return;
 	ZeroMemory(&pKeysBuffer, sizeof(UCHAR) * 256);
+
+	pScene->SetCursor();
 
 	if(GetKeyboardState(pKeysBuffer))
 	{
@@ -776,12 +778,20 @@ void CGameFramework::ProcessInput(CScene* pScene)
 		POINT ptCursorPos;
 		if (GetCapture() == m_hWnd)
 		{
-			SetCursor(NULL);
-			GetCursorPos(&ptCursorPos);
-			cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
-			cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
+			SetCursor(NULL);			
+		}
+
+		GetCursorPos(&ptCursorPos);
+		cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
+		cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
+		if (g_bEnableCursor)
+		{
+			m_ptOldCursorPos = ptCursorPos;
+		}
+		else {
 			SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
 		}
+
 		if (nullptr != pScene) bProcessedByScene = pScene->ProcessMouseInput(cxDelta, cyDelta, m_GameTimer.DeltaTime()) ? true : false;
 	}
 
@@ -849,9 +859,8 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 {
 	bool bProcessed = false;
 	// 키보드 메시지 처리
-	for (auto& scene : m_Scenes)
-	{
-		scene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+	if(m_Scenes.size()){
+		m_Scenes.back()->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 	}
 
 	if (m_Scenes.empty() || bProcessed) {
@@ -904,13 +913,13 @@ LRESULT CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WP
 		if (LOWORD(wParam) == WA_INACTIVE) 
 		{
 			m_GameTimer.Stop();
-			g_windowActive = false;
+			g_bWindowActive = false;
 			WindowCursor::SetCursorVisibility(true);
 		}
 		else 
 		{
 			m_GameTimer.Start();
-			g_windowActive = true;
+			g_bWindowActive = true;
 			WindowCursor::SetCursorVisibility(false);
 		}
 		break;

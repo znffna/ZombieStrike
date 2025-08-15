@@ -19,8 +19,8 @@ UINT gnRtvDescriptorIncrementSize = 0;
 UINT gnDsvDescriptorIncrementSize = 0;
 
 int g_nFrameCount;
-bool g_windowActive = true; // 전역 또는 멤버 변수로 상태 저장
-bool g_enableCursor = true; // 커서 활성화 여부
+bool g_bWindowActive = true; // 전역 또는 멤버 변수로 상태 저장
+bool g_bEnableCursor = true; // 커서 활성화 여부
 bool g_bDebugOutput = false; // 디버그 출력 여부
 
 // Functions

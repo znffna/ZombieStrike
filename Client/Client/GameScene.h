@@ -27,6 +27,8 @@ public:
 	virtual void ReleaseObjects() override;
 	virtual void ReleaseUploadBuffers() override;
 
+	virtual void SetCursor() override { g_bEnableCursor = false; }
+
 	virtual void Update(float deltaTime) override;
 	virtual void UpdateLights() override;
 
@@ -34,6 +36,8 @@ public:
 
 	virtual void OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList) override;
 	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
+	virtual bool ProcessMouseInput(float cxDelta, float cyDelta, float deltaTime) override;
+	virtual bool ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaTime) override;
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 

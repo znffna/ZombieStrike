@@ -70,6 +70,7 @@ public:
 	static CGameFramework* pGameFramework;
 	static ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return pGameFramework->m_pd3dCommandList[pGameFramework->m_nSwapChainBufferIndex]; }
 
+	// Scene Management
 	void AddScene(std::string sceneName);
 	void PopScene();
 

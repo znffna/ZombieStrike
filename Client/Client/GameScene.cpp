@@ -309,6 +309,31 @@ bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
 	return true;
 }
 
+bool CGameScene::ProcessMouseInput(float cxDelta, float cyDelta, float deltaTime)
+{
+	if (cxDelta != 0.0f || cyDelta != 0.0f) {
+		m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+	}
+	return false;
+}
+
+bool CGameScene::ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaTime)
+{
+	DWORD dwDirection = 0;
+	if (pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
+	if (pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
+	if (pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
+	if (pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
+
+	if (dwDirection) {
+		if (m_pPlayer) {
+			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
+		}
+	}
+
+	return true;
+}
+
 void CGameScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	CScene::OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);

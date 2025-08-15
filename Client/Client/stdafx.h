@@ -124,7 +124,7 @@ using Microsoft::WRL::ComPtr;
 #define ROOT_PARAMETER_TO_LIGHT (ROOT_PARAMETER_DEPTH_WRITE + 1) // 16 or 10
 
 // GaneFramework
-extern bool g_windowActive; // 전역 또는 멤버 변수로 상태 저장
+extern bool g_bWindowActive; // 전역 또는 멤버 변수로 상태 저장
 extern int gnCurrentBullets;
 extern bool g_bRenderCollider;
 
@@ -472,7 +472,7 @@ namespace Plane
 	}
 }
 
-extern bool g_enableCursor;
+extern bool g_bEnableCursor;
 namespace WindowCursor
 {
 	inline void SetCursorVisibility(bool visible)
@@ -480,7 +480,6 @@ namespace WindowCursor
 		while (ShowCursor(visible) >= 0 && !visible);
 		while (ShowCursor(visible) < 0 && visible);
 		// 실제 커서 가시성 상태를 저장
-		g_enableCursor = visible;
 	}
 
 	inline void ConfineCursorToWindow(HWND hWnd)

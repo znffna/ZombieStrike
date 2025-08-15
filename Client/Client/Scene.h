@@ -149,6 +149,7 @@ public:
 	bool CheckWorkRendering() { return (m_SceneState == SCENE_STATE_RUNNING) || (m_SceneState == SCENE_STATE_PAUSING); }
 	bool CheckWorkUpdating() { return (GetSceneState() == SCENE_STATE_RUNNING); }
 
+	virtual void SetCursor() { g_bEnableCursor = true; }
 
 	// Object Management
 	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
@@ -204,6 +205,8 @@ public:
 
 	// Input Method
 	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) { return false; };
+	virtual bool ProcessMouseInput(float cxDelta, float cyDelta, float deltaTime) { return false; };
+	virtual bool ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaTime) { return false; };
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
 
