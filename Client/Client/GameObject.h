@@ -85,8 +85,7 @@ public:
 
 	// Object Initialization
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {};
-	virtual void DeepCopyFromGameObject(std::shared_ptr<CGameObject> rhs);;
-	static std::shared_ptr<CGameObject> CreateObject() { return std::make_shared<CGameObject>(); }
+	virtual void DeepCopyFromGameObject(std::shared_ptr<CGameObject> rhs);
 
 	// Active Flag
 	bool IsActive() { return m_bActive; }
@@ -184,6 +183,12 @@ protected:
 	// CMaterial
 	UINT m_nMaterials = 0;
 	std::vector<std::shared_ptr<CMaterial>> m_ppMaterials; // Object CMaterial
+
+public:
+	XMFLOAT4 m_xmf4Color = { 1.0f, 1.0f, 1.0f, 1.0f }; // Object Color
+	void SetColor(const XMFLOAT4& xmf4Color) { m_xmf4Color = xmf4Color; }
+	XMFLOAT4 GetColor() const { return m_xmf4Color; }
+
 public:
 	// Transform
 	bool m_bPitchLock = false;
@@ -486,6 +491,18 @@ private:
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
+class CBulletObject : public CGameObject
+{
+public:
+	CBulletObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size) {};
+	virtual ~CBulletObject() {};
+	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_BULLET; }
+
+	// Object Initialization
+	virtual std::string GetDefaultName() override { return "CBulletObject"; }
+
+};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

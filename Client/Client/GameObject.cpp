@@ -484,10 +484,8 @@ void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandLi
 	xmf4x4World = GetWorldMatrix();
 	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4World)));
 
-	XMFLOAT4 xmf4Color = XMFLOAT4(1, 1, 1, 1);
-
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 16, &xmf4x4World, 0);
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 4, &xmf4Color, 16);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 4, &m_xmf4Color, 16);
 }
 
 void CGameObject::ReleaseShaderVariables()

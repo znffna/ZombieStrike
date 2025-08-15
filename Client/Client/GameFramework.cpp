@@ -628,7 +628,7 @@ void CGameFramework::AdvanceFrame()
 	pCurrentScene->RenderUI(pd3dCommandList, nullptr);
 
 	// 커서 렌더링
-	if (g_enableCursor) { RenderCursor(pd3dCommandList); }
+	if (g_windowActive && g_enableCursor) { RenderCursor(pd3dCommandList); }
 
 	// Command List에 대한 명령들을 종료
 	::SynchronizeResourceTransition(pd3dCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
@@ -660,12 +660,7 @@ POINTF CGameFramework::GetTexturePosition(int x, int y) {
 	POINTF pt;
 	pt.x = (float)x / (float)m_nWndClientWidth * 2.0f - 1.0f;
 	pt.y = (float)y / (float)m_nWndClientHeight * 2.0f - 1.0f;
-	{
-		std::string debug = "GetTexturePosition(" + std::to_string(x) + ", " + std::to_string(y) + ")\n";
-		OutputDebugStringA(debug.c_str());
-		debug = "Return: (" + std::to_string(pt.x) + ", " + std::to_string(pt.y) + ")\n";
-		OutputDebugStringA(debug.c_str());
-	}
+	
 	return pt;
 }
 
@@ -702,7 +697,17 @@ void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
 	GetCursorPos(&ptCursorPos);
 	ScreenToClient(m_hWnd, &ptCursorPos);
 	POINTF p = GetTexturePosition(ptCursorPos.x, ptCursorPos.y);
-	m_pCursorSprite->SetSizeLT(p.x, -p.y, 0.05f, 0.05f);
+	m_pCursorSprite->SetSize(p.x, -p.y, 0.05f, 0.05f);
+
+	if(GetCapture() == m_hWnd)
+	{
+		// 마우스 커서가 캡처된 상태일 때
+		m_pCursorSprite->SetColor({ 0.5f, 0.5f, 0.5f, 1.0f });
+	}
+	else
+	{
+		m_pCursorSprite->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+	}
 
 	m_pCursorSprite->Render(pd3dCommandList, nullptr);
 }
@@ -754,49 +759,53 @@ void CGameFramework::ReleaseShaderVariables()
 void CGameFramework::ProcessInput(CScene* pScene)
 {
 	static INPUT_PARAMETER pInputBuffer;
+	static UCHAR pKeysBuffer[256];
+	float cxDelta = 0.0f, cyDelta = 0.0f;
 	bool bProcessedByScene = false;
 
 	if (false == g_windowActive) return;
+	ZeroMemory(&pKeysBuffer, sizeof(UCHAR) * 256);
 
-	ZeroMemory(&pInputBuffer, sizeof(INPUT_PARAMETER));
-
-	if(GetKeyboardState(pInputBuffer.pKeysBuffer))
+	if(GetKeyboardState(pKeysBuffer))
 	{
-		pInputBuffer.cxDelta = 0.0f, pInputBuffer.cyDelta = 0.0f;
+		if (nullptr != pScene) bProcessedByScene = pScene->ProcessKeyboardInput(pKeysBuffer, m_GameTimer.DeltaTime()) ? true : false;
+	}
+	
+	// 마우스 입력 처리
+	{
 		POINT ptCursorPos;
 		if (GetCapture() == m_hWnd)
 		{
 			SetCursor(NULL);
 			GetCursorPos(&ptCursorPos);
-			pInputBuffer.cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
-			pInputBuffer.cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
+			cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
+			cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
 			SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
 		}
+		if (nullptr != pScene) bProcessedByScene = pScene->ProcessMouseInput(cxDelta, cyDelta, m_GameTimer.DeltaTime()) ? true : false;
+	}
 
-		if (nullptr != pScene) bProcessedByScene = pScene->ProcessInput(pInputBuffer, m_GameTimer.DeltaTime()) ? true : false;
+	if (false == bProcessedByScene) {
+		// Keyboard 입력 처리s
+		DWORD dwDirection = 0;
+		if (pInputBuffer.pKeysBuffer[VK_UP] & 0xF0)dwDirection |= DIR_FORWARD;
+		if (pInputBuffer.pKeysBuffer[VK_DOWN] & 0xF0)dwDirection |= DIR_BACKWARD;
+		if (pInputBuffer.pKeysBuffer[VK_LEFT] & 0xF0)dwDirection |= DIR_LEFT;
+		if (pInputBuffer.pKeysBuffer[VK_RIGHT] & 0xF0)dwDirection |= DIR_RIGHT;
+		if (pInputBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
+		if (pInputBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
 
-		if (false == bProcessedByScene)	{
-			DWORD dwDirection = 0;
-			if (pInputBuffer.pKeysBuffer[VK_UP] & 0xF0)dwDirection |= DIR_FORWARD;
-			if (pInputBuffer.pKeysBuffer[VK_DOWN] & 0xF0)dwDirection |= DIR_BACKWARD;
-			if (pInputBuffer.pKeysBuffer[VK_LEFT] & 0xF0)dwDirection |= DIR_LEFT;
-			if (pInputBuffer.pKeysBuffer[VK_RIGHT] & 0xF0)dwDirection |= DIR_RIGHT;
-			if (pInputBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
-			if (pInputBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
-
-			if ((dwDirection != 0) || (pInputBuffer.cxDelta != 0.0f) || (pInputBuffer.cyDelta != 0.0f))
+		if ((dwDirection != 0) || (pInputBuffer.cxDelta != 0.0f) || (pInputBuffer.cyDelta != 0.0f))
+		{
+			/*if (pInputBuffer.cxDelta || pInputBuffer.cyDelta)
 			{
-				/*if (pInputBuffer.cxDelta || pInputBuffer.cyDelta)
-				{
-					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-						m_pPlayer->Rotate(pInputBuffer.cyDelta, 0.0f, -pInputBuffer.cxDelta);
-					else
-						m_pPlayer->Rotate(pInputBuffer.cyDelta, pInputBuffer.cxDelta, 0.0f);
-				}
-				if (dwDirection) m_pPlayer->Move(dwDirection, 50.0f * m_GameTimer.GetTimeElapsed(), true);*/
+				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+					m_pPlayer->Rotate(pInputBuffer.cyDelta, 0.0f, -pInputBuffer.cxDelta);
+				else
+					m_pPlayer->Rotate(pInputBuffer.cyDelta, pInputBuffer.cxDelta, 0.0f);
 			}
+			if (dwDirection) m_pPlayer->Move(dwDirection, 50.0f * m_GameTimer.GetTimeElapsed(), true);*/
 		}
-		
 	}
 }
 
@@ -810,15 +819,15 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 		}
 		else {
 			m_pLoadingScene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
-			return;
 		}
 	}
-
+	
 	switch (nMessageID)
 	{
 	case WM_LBUTTONDOWN:
 	case WM_RBUTTONDOWN:
 	{
+		::SetFocus(hWnd);
 		::SetCapture(hWnd);
 		::GetCursorPos(&m_ptOldCursorPos);
 		break;
@@ -834,7 +843,6 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 	default:
 		break;
 	};
-
 }
 
 void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -897,11 +905,13 @@ LRESULT CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WP
 		{
 			m_GameTimer.Stop();
 			g_windowActive = false;
+			WindowCursor::SetCursorVisibility(true);
 		}
 		else 
 		{
 			m_GameTimer.Start();
 			g_windowActive = true;
+			WindowCursor::SetCursorVisibility(false);
 		}
 		break;
 	}
