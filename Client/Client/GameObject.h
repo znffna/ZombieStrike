@@ -522,6 +522,11 @@ public:
 	void AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Look, float fRange);
 	void AddBullet(const CBulletVertex& pBulletVertex);
 
+	void AddBullets(const std::vector<CBulletVertex>& pBulletVertices)
+	{
+		std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullets(pBulletVertices);
+	}
+
 private:
 	std::vector<FIRE_INFO> m_pFireInfos;
 
@@ -529,6 +534,11 @@ public:
 	std::vector<FIRE_INFO> GetFireInfos() const {
 		return m_pFireInfos;
 	}
+
+	void UpdateBulletVertices(const std::vector<CBulletVertex>& pBulletVertices) {
+		std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullets(pBulletVertices);
+	}
+
 	void ClearFireInfos() {
 		m_pFireInfos.clear();
 	}

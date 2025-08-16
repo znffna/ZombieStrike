@@ -602,4 +602,5 @@ public:
 
 	// method
 	void AddBullet(const CBulletVertex& Bullet);
+	void AddBullets(const std::vector<CBulletVertex>& Bullets);
 };

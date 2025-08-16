@@ -241,12 +241,26 @@ void CGameScene::UpdateLights()
 
 void CGameScene::BuildFiredBullets()
 {
+	// 일단 Scene에서 하되, 나중에 BulletParticleObject로 옮길 예정
+	// Scene에서 하는 이유 : CollisionChecker가 Scene에 있기 때문(나중에 구조 수정 예정) => BulletParticleObject가 Scene에 의존성이 생김
 	auto pFireInfos = m_pBulletObject->GetFireInfos();
+
+	std::vector<CBulletVertex> pBulletVertices;
+	pBulletVertices.reserve(pFireInfos.size());
 
 	for (auto& pBullet : pFireInfos)
 	{
 		auto result = m_pCollisionChecker->CheckBulletCollision(pBullet.xmf3Position, pBullet.xmf3Look, pBullet.fRange);
 		m_pBulletObject->AddBullet(pBullet.xmf3Position, pBullet.xmf3Look, result.fImpactDistance);
+		
+		CBulletVertex pBulletVertex;
+		pBulletVertex.m_xmf3Position = pBullet.xmf3Position;
+		pBulletVertex.m_xmf3Destination = Vector3::Add(pBullet.xmf3Position, Vector3::ScalarProduct(pBullet.xmf3Look, pBullet.fRange));
+		pBulletVertex.m_xmf3Velocity = pBullet.xmf3Look;
+		// 총알 궤적 출력 시간 설정
+		pBulletVertex.m_fLifetime = 0.5f;
+		pBulletVertices.push_back(pBulletVertex);
+
 		if(g_bDebugOutput){
 			std::string debugOutput = "CGameScene::BuildFiredBullets() - Bullet Position: " + std::to_string(pBullet.xmf3Position.x) + ", " + std::to_string(pBullet.xmf3Position.y) + ", " + std::to_string(pBullet.xmf3Position.z) + "\n";
 			debugOutput += "Velocity: " + std::to_string(pBullet.xmf3Look.x) + ", " + std::to_string(pBullet.xmf3Look.y) + ", " + std::to_string(pBullet.xmf3Look.z) + "\n";
@@ -254,7 +268,7 @@ void CGameScene::BuildFiredBullets()
 			OutputDebugStringA(debugOutput.c_str());
 		}
 	}
-
+	m_pBulletObject->UpdateBulletVertices(pBulletVertices);
 	m_pBulletObject->ClearFireInfos();
 }
 
