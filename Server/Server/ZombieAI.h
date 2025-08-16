@@ -22,6 +22,9 @@ constexpr float CELL_SIZE = WORLD_WIDTH / GRID_WIDTH; // 0.488..
 static constexpr float REPATH_INTERVAL = 1.0f; // 1초마다 재탐색 허용
 constexpr float deltaTime = 1.0f / 60.0f;
 
+// 좀비 피격 스턴 시간(초)
+constexpr float ZOMBIE_HIT_STUN_SEC = 1.5f;
+
 class ZombieAI
 {
 public:
@@ -35,10 +38,22 @@ public:
     void SetTargetPosition(float x, float z);
 	void SetHP(int hp);                   // 체력 설정
 
+    // ---[Hit Stun]---
+    // 외부(서버 피격 처리)에서 스턴 부여
+    void SetStun(float seconds = ZOMBIE_HIT_STUN_SEC);
+    // 현재 스턴 상태 조회
+    bool IsStunned() const;
+
     Vec3 FindClosestPlayer(const std::vector<Vec3>& playerPositions);
     void FindPath();                      // AI 동작
 
     Vec3 AvoidPlayers(const std::vector<Vec3>& playerPositions); // 플레이어 회피
+
+    // 총알 피격 처리: damage 만큼 HP 감소 (0 하한), Dirty 플래그 자동 세팅
+    void ApplyDamage(SIZE2 damage);
+
+    // 현재 사망 상태(HP==0)인지 조회
+    bool IsDead() const;
 
     void Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime);
 
@@ -50,7 +65,7 @@ public:
     Vec3 GetPosition() const { return Vec3{ m_x, 0.0f, m_z }; }
     SIZE2 GetHP() const;
 
-    void AddDamage(SIZE2 amount); // 체력 설정
+    //void AddDamage(SIZE2 amount); // 체력 설정
     
     Object GetObjectinfo() const; // 패킷 정보 반환   
 
@@ -82,6 +97,9 @@ private:
     bool m_dirty = true;
 
     Vec3 GetNodeCenter(int x, int z) const;
+
+    // 피격 스턴 남은 시간(초)
+    float m_stun_left = 0.0f;
 };
 
 // Util 함수

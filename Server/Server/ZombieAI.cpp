@@ -9,7 +9,7 @@
 #include <memory>
 #include <conio.h> 
 
-constexpr bool DEBUG_PRINT = true;
+constexpr bool DEBUG_PRINT = false;
 #define DEBUG_LOG(msg) \
     do { if (DEBUG_PRINT) std::cout << msg << std::endl; } while (0)
 
@@ -264,11 +264,48 @@ Vec3 ZombieAI::AvoidPlayers(const std::vector<Vec3>& playerPositions)
     return avoid;
 }
 
+void ZombieAI::ApplyDamage(SIZE2 damage)
+{
+    if (m_hp == 0) return;
+    if (damage >= m_hp) m_hp = 0;
+    else                m_hp -= damage;
 
+    // 피격 시 스턴 갱신(중첩 시 남은 시간이 더 짧으면 연장)
+    m_stun_left = std::max(m_stun_left, ZOMBIE_HIT_STUN_SEC);
+
+    m_dirty = true;
+}
+
+bool ZombieAI::IsDead() const
+{
+    return m_hp == 0;
+}
+
+void ZombieAI::SetStun(float seconds)
+{
+    m_stun_left = std::max(m_stun_left, seconds);
+    m_dirty = true;
+}
+
+bool ZombieAI::IsStunned() const
+{
+    return m_stun_left > 0.0f;
+}
 
 void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime)
 {
     if (playerPositions.empty()) return;
+
+    // 스턴 상태면 이동/경로탐색 모두 중지
+    if (m_stun_left > 0.0f) {
+        m_stun_left -= deltaTime;
+        if (m_stun_left < 0.0f) m_stun_left = 0.0f;
+
+        // 멈춤 처리: 이 프레임에선 아무 것도 하지 않음(위치/속도 유지)
+        // 클라 동기화를 위해 Dirty 플래그만 유지
+        m_dirty = true;
+        return;
+    }
 
     // 1. 가장 가까운 플레이어 위치 계산
     Vec3 closest = FindClosestPlayer(playerPositions);
@@ -380,11 +417,6 @@ Vec3 ZombieAI::GetNodeCenter(int x, int z) const {
 int ZombieAI::GetID() const { return m_id; }
 SIZE2 ZombieAI::GetHP() const { return m_hp; }
 
-void ZombieAI::AddDamage(SIZE2 amount) {
-	m_hp = (std::max) (0, m_hp - amount);
-	if (m_hp < 0) m_hp = 0;
-	m_dirty = true;
-}
 
 
 bool ZombieAI::IsDirty() const { return m_dirty; }
@@ -409,7 +441,8 @@ Object ZombieAI::GetObjectinfo() const {
     info.level = 0;
     info.score = 0;
     info.damage = ZOMBIE_DAMAGE;
-    info.act_type = ActionType::ZMOVE;
+    info.act_type = (m_hp == 0) ? ActionType::DEAD
+        : (m_stun_left > 0.0f ? ActionType::HIT : ActionType::ZMOVE);
     return info;
 }
 

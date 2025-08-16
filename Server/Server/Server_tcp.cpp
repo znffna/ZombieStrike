@@ -1,4 +1,4 @@
-#include <winsock2.h>
+ï»¿#include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
 #include <iostream>
@@ -35,7 +35,7 @@ void error_display(const char* msg, int err_no) {
 }
 
 struct ShootPacket {
-    SIZE1 GunType; // ÃÑ Á¾·ù
+    SIZE1 GunType; // ì´ ì¢…ë¥˜
     float bulletPos[3];
     float bulletDir[3];
 };
@@ -47,17 +47,96 @@ struct Zombie {
     SIZE1 act_type;             
 };
 
-std::vector<ZombieAI*> g_zombies; // ZombieAI °´Ã¼¸¦ ¼­¹ö°¡ °ü¸®
+std::vector<ZombieAI*> g_zombies; // ZombieAI ê°ì²´ë¥¼ ì„œë²„ê°€ ê´€ë¦¬
 // std::vector<std::unique_ptr<ZombieAI>> g_zombies;
-std::vector<std::vector<int>> g_map; // ¸Ê µ¥ÀÌÅÍ
+std::vector<std::vector<int>> g_map; // ë§µ ë°ì´í„°
 std::mutex zombiesMutex;
+
+// ---[Bullet â†” Zombie Hit Test Only / 3D]-----------------------------
+
+static inline void normalize3(float& x, float& y, float& z)
+{
+    const float m2 = x * x + y * y + z * z;
+    if (m2 > 0.0f) {
+        const float inv = 1.0f / sqrtf(m2);
+        x *= inv; y *= inv; z *= inv;
+    }
+}
+
+// Ray(ox,oy,oz; dx,dy,dz) vs Sphere(center cx,cy,cz; radius r)
+// - out_t : ê°€ì¥ ì´ë¥¸ êµì°¨ íŒŒë¼ë¯¸í„° t(ì›ì ì—ì„œ ê±°ë¦¬)
+// - ë°˜í™˜ê°’ : êµì°¨ ì—¬ë¶€
+static bool ray3_vs_sphere(float ox, float oy, float oz,
+    float dx, float dy, float dz,
+    float cx, float cy, float cz, float r,
+    float& out_t)
+{
+    // (o + t d - c)Â·(o + t d - c) = r^2
+    const float vx = ox - cx;
+    const float vy = oy - cy;
+    const float vz = oz - cz;
+
+    const float b = 2.0f * (dx * vx + dy * vy + dz * vz);
+    const float c = (vx * vx + vy * vy + vz * vz) - r * r;
+
+    const float disc = b * b - 4.0f * c;   // a = 1 (ì •ê·œí™” ê°€ì •)
+    if (disc < 0.0f) return false;
+
+    const float sqrt_disc = sqrtf(disc);
+    const float t1 = (-b - sqrt_disc) * 0.5f;
+    const float t2 = (-b + sqrt_disc) * 0.5f;
+
+    if (t1 >= 0.0f) { out_t = t1; return true; }
+    if (t2 >= 0.0f) { out_t = t2; return true; }
+    return false;
+}
+
+// ë ˆì´ì™€ ê°€ì¥ ê°€ê¹Œìš´ â€˜ì‚´ì•„ìˆëŠ”â€™ ì¢€ë¹„(3D ìŠ¤í”¼ì–´) íƒìƒ‰
+//  - ì…ë ¥: ì´ì•Œ ì›ì /ë°©í–¥(ì •ê·œí™” ë‚´ë¶€ ì²˜ë¦¬), ìµœëŒ€ ì‚¬ê±°ë¦¬
+//  - ì¶œë ¥: ë§ì€ ì¢€ë¹„ IDì™€ t (ì—†ìœ¼ë©´ false)
+//  - ìŠ¤í”¼ì–´ ì¤‘ì‹¬ Y(cy)ëŠ” ì¼ë‹¨ 0.0f(ë§µ XZ í‰ë©´ ê¸°ì¤€). í•„ìš”ì‹œ ëª¨ë¸ í‚¤ê°’ìœ¼ë¡œ ë³´ì • ê°€ëŠ¥.
+static bool find_nearest_hit_zombie3D(float ox, float oy, float oz,
+    float dx, float dy, float dz,
+    float max_range,
+    /*out*/int& out_zid, /*out*/float& out_t)
+{
+    normalize3(dx, dy, dz);
+
+    float best_t = max_range;
+    int   best_id = -1;
+
+    std::lock_guard<std::mutex> lock(zombiesMutex);
+    for (auto* z : g_zombies) {
+        if (!z) continue;
+        if (z->IsDead()) continue;
+
+        const float cx = z->GetX();
+        const float cy = 0.0f;      // í•„ìš” ì‹œ ë†’ì´ ë³´ì •
+        const float cz = z->GetZ();
+
+        float t = 0.0f;
+        if (ray3_vs_sphere(ox, oy, oz, dx, dy, dz, cx, cy, cz, ZOMBIE_HALF_SIZE, t)) {
+            if (t < best_t) {
+                best_t = t;
+                best_id = z->GetID();
+            }
+        }
+    }
+
+    if (best_id >= 0) {
+        out_zid = best_id;
+        out_t = best_t;
+        return true;
+    }
+    return false;
+}
 
 bool serverRunning = true;
 short IN_g_player_n= 0;
 
 class SESSION;
 std::unordered_map<SIZEID, SESSION> g_users;
-// std::unordered_map<SIZEID, std::shared_ptr<SESSION>>·Î ±³Ã¼
+// std::unordered_map<SIZEID, std::shared_ptr<SESSION>>ë¡œ êµì²´
 
 void CALLBACK g_recv_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
 void CALLBACK g_send_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
@@ -114,9 +193,9 @@ public:
     void do_recv() {
         DWORD flags = 0;
         ZeroMemory(&_recv_over._over, sizeof(_recv_over._over));
-        _recv_over._over.hEvent = reinterpret_cast<HANDLE>(_id); // ¼¼¼Ç ID¸¦ ÀÌº¥Æ® ÇÚµé·Î »ç¿ë
+        _recv_over._over.hEvent = reinterpret_cast<HANDLE>(_id); // ì„¸ì…˜ IDë¥¼ ì´ë²¤íŠ¸ í•¸ë“¤ë¡œ ì‚¬ìš©
 
-        _recv_over._wsabuf[0].buf = reinterpret_cast<CHAR*>(_recv_over._buffer) + _remained;	//prev_remain ºÎºĞ¿¡ ÀÌ¾î¼­ ¼ö½ÅÇÏ±â À§ÇØ¼­
+        _recv_over._wsabuf[0].buf = reinterpret_cast<CHAR*>(_recv_over._buffer) + _remained;	//prev_remain ë¶€ë¶„ì— ì´ì–´ì„œ ìˆ˜ì‹ í•˜ê¸° ìœ„í•´ì„œ
         _recv_over._wsabuf[0].len = sizeof(_recv_over._buffer) - _remained;
 
         int ret = WSARecv(_c_socket, _recv_over._wsabuf, 1, 0, &flags, &_recv_over._over, g_recv_callback);
@@ -128,11 +207,11 @@ public:
                 g_users.erase(_id);
             }
             else {
-				DEBUG_LOG("[do_recv] WSARecv: IO_PENDING (Á¤»ó)\n");
+				DEBUG_LOG("[do_recv] WSARecv: IO_PENDING (ì •ìƒ)\n");
             }
         }
         else {
-			DEBUG_LOG("[do_recv] WSARecv: Áï½Ã ¼ö½Å ¿Ï·á (ret == 0)\n");
+			DEBUG_LOG("[do_recv] WSARecv: ì¦‰ì‹œ ìˆ˜ì‹  ì™„ë£Œ (ret == 0)\n");
         }
     }
 
@@ -160,14 +239,14 @@ public:
         rem_p.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
         rem_p.id= _id;
         for (auto& u : g_users) {
-			if (u.first != _id) // ³ª¸¦ Á¦¿ÜÇÑ »ó´ë¹æ¿¡°Ô ¾Ë¸®°í
+			if (u.first != _id) // ë‚˜ë¥¼ ì œì™¸í•œ ìƒëŒ€ë°©ì—ê²Œ ì•Œë¦¬ê³ 
 				u.second.do_send(&rem_p);
         }
 		closesocket(_c_socket);
     }
 
     void recv_callback(int num_bytes) {
-        // ----- ÆĞÅ¶ Á¶¸³ ½ÃÀÛ -----
+        // ----- íŒ¨í‚· ì¡°ë¦½ ì‹œì‘ -----
         SIZE2* p = _recv_over._buffer;
         SIZE3 total = _remained + num_bytes;
         SIZE3 offset = 0;
@@ -175,22 +254,22 @@ public:
         while (offset < total) {
             SIZE2 packetSize = *p;
 
-            if (offset + packetSize > total) break; // ¾ÆÁ÷ ÆĞÅ¶ ¿Ï¼ºÀÌ ¾È µÊ
+            if (offset + packetSize > total) break; // ì•„ì§ íŒ¨í‚· ì™„ì„±ì´ ì•ˆ ë¨
 
 			DEBUG_LOG("[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << std::endl);
 
-			process_packet(p);    // ÆĞÅ¶ Ã³¸®
-            p += (packetSize)/sizeof(SIZE2);      // ´ÙÀ½ ÆĞÅ¶À¸·Î ÀÌµ¿
+			process_packet(p);    // íŒ¨í‚· ì²˜ë¦¬
+            p += (packetSize)/sizeof(SIZE2);      // ë‹¤ìŒ íŒ¨í‚·ìœ¼ë¡œ ì´ë™
             offset += packetSize;
         }
 
-        // Á¶¸³ ¾È µÈ µ¥ÀÌÅÍ´Â ¾ÕÀ¸·Î ´ç°Ü¼­ ÀúÀå
+        // ì¡°ë¦½ ì•ˆ ëœ ë°ì´í„°ëŠ” ì•ìœ¼ë¡œ ë‹¹ê²¨ì„œ ì €ì¥
         _remained = total - offset;
 
         if (_remained > 0)
             memmove(_recv_over._buffer, p, _remained);
 
-        do_recv(); // ´ÙÀ½ ¼ö½Å
+        do_recv(); // ë‹¤ìŒ ìˆ˜ì‹ 
 	}
 
     void do_send(void* buff) {
@@ -251,7 +330,7 @@ public:
         do_send(&p_update);
     }
 
-    // ÃÑ¾Ë Ãæµ¹ Ã¼Å© ¹× µ¥¹ÌÁö Àû¿ë
+    // ì´ì•Œ ì¶©ëŒ ì²´í¬ ë° ë°ë¯¸ì§€ ì ìš©
     void check_bullet_collision(SIZEID shooter_id, const Vec3& origin, const Vec3& direction) {
         constexpr float maxDistance = 100.0f;
         constexpr float hitRadius = 1.0f;
@@ -267,7 +346,7 @@ public:
             session.do_send(&hit_packet);
 
 
-        // Á»ºñ Ãæµ¹ Ã¼Å©
+        // ì¢€ë¹„ ì¶©ëŒ ì²´í¬
         for (auto zombie : g_zombies) {
             Vec3 toTarget = zombie->GetPosition() - origin;
             float t = toTarget.Dot(normDir);
@@ -277,17 +356,17 @@ public:
             float distSqr = (closest - zombie->GetPosition()).LengthSquared();
 
             if (distSqr <= hitRadius * hitRadius) {
-                zombie->AddDamage(10); 
+                zombie->ApplyDamage(10);
 
 				if (zombie->GetHP() <= 0) {
-					// Á»ºñ°¡ Á×¾úÀ» ¶§ Ã³¸®
+					// ì¢€ë¹„ê°€ ì£½ì—ˆì„ ë•Œ ì²˜ë¦¬
 					// std::cout << "[Zombie] " << zombie->GetID() << " is dead.\n";
-					zombie->ClearDirty(); // Á»ºñ »óÅÂ ÃÊ±âÈ­ , ¿©±â¼­ ÇÏ´Â°Ô ÁÁÀº°¡?
+					zombie->ClearDirty(); // ì¢€ë¹„ ìƒíƒœ ì´ˆê¸°í™” , ì—¬ê¸°ì„œ í•˜ëŠ”ê²Œ ì¢‹ì€ê°€?
 				}
             }
         }
 
-        // ÇÃ·¹ÀÌ¾î Ãæµ¹ Ã¼Å©
+        // í”Œë ˆì´ì–´ ì¶©ëŒ ì²´í¬
      //for (auto& [id, session] : g_users) {
      //    if (id == shooter_id) continue;
      //    Vec3 toTarget = session._position - origin;
@@ -324,7 +403,7 @@ public:
             _look      = { 0.0f,0.0f, 0.0f };
             _pitch      = 0.0f;
             _hp         = PLAYER_HP;
-			_gun_type   = GunType::BULLET_PISTOL; // ÃÑ Á¾·ù
+			_gun_type   = GunType::BULLET_PISTOL; // ì´ ì¢…ë¥˜
             _level      = 1;
             _score      = 0;
             _damage     = 0;
@@ -348,11 +427,11 @@ public:
 			p_Add_P.gun_type = BULLET_PISTOL;
 
             for (auto& u : g_users) {
-                if (u.first != _id) // ³ª¸¦ Á¦¿ÜÇÑ »ó´ë¹æ¿¡°Ô ¾Ë¸®°í
+                if (u.first != _id) // ë‚˜ë¥¼ ì œì™¸í•œ ìƒëŒ€ë°©ì—ê²Œ ì•Œë¦¬ê³ 
                     u.second.do_send(&p_Add_P);
             }
 			for (auto& u : g_users) {
-				if (u.first != _id) {// ³ª¸¦ Á¦¿ÜÇÑ »ó´ë¹æÀÇ Á¤º¸¸¦ ³ª¿¡°Ô ¾Ë¸®°í
+				if (u.first != _id) {// ë‚˜ë¥¼ ì œì™¸í•œ ìƒëŒ€ë°©ì˜ ì •ë³´ë¥¼ ë‚˜ì—ê²Œ ì•Œë¦¬ê³ 
                     pkt_sc_object_add p_Add_P;
                     p_Add_P.header.size = sizeof(p_Add_P);
                     p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
@@ -367,7 +446,7 @@ public:
 				}
 			}
 
-            // Á»ºñ Á¤º¸¸¦ ¸ğµç ÇÃ·¹ÀÌ¾î¿¡°Ô Àü¼Û
+            // ì¢€ë¹„ ì •ë³´ë¥¼ ëª¨ë“  í”Œë ˆì´ì–´ì—ê²Œ ì „ì†¡
             pkt_sc_object_add packet;
             for (auto zombie : g_zombies) {
                 packet.header.size = sizeof(packet);
@@ -391,7 +470,7 @@ public:
 			pkt_cs_update* updatePacket = reinterpret_cast<pkt_cs_update*>(packet);
 
 
-            float deltaTime = 1.0f / 60.0f; // ¼­¹ö Æ½ ·¹ÀÌÆ® ±âÁØ (¿¹: 60fps)
+            float deltaTime = 1.0f / 60.0f; // ì„œë²„ í‹± ë ˆì´íŠ¸ ê¸°ì¤€ (ì˜ˆ: 60fps)
             _position = updatePacket->position;
             _velocity = updatePacket->velocity;
             _look = updatePacket->look;
@@ -403,7 +482,7 @@ public:
             _gun_type = updatePacket->gun_type;
             _act_type = updatePacket->act_type;
 
-            // ·Î±×
+            // ë¡œê·¸
             //std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
             //std::cout << "  position  = (" << _position.x << ", " << _position.y << ", " << _position.z << ")\n";
             //std::cout << "  direction = (" << _direction.x << ", " << _direction.y << ", " << _direction.z << ")\n";
@@ -436,7 +515,7 @@ public:
             auto* p = reinterpret_cast<pkt_cs_score_info*>(packet);
 
             if (!validate_score_info(p)) {
-                std::cout << "[SCORE_INFO] À¯È¿ÇÏÁö ¾ÊÀº Á¡¼ö ¹«½Ã\n";
+                std::cout << "[SCORE_INFO] ìœ íš¨í•˜ì§€ ì•Šì€ ì ìˆ˜ ë¬´ì‹œ\n";
                 break;
             }
 
@@ -456,7 +535,7 @@ public:
             auto* p = reinterpret_cast<pkt_cs_stage_info*>(packet);
 
             if (!validate_stage_info(p)) {
-                std::cout << "[STAGE_INFO] À¯È¿ÇÏÁö ¾ÊÀº °ª ¹«½Ã\n";
+                std::cout << "[STAGE_INFO] ìœ íš¨í•˜ì§€ ì•Šì€ ê°’ ë¬´ì‹œ\n";
                 break;
             }
 
@@ -476,14 +555,58 @@ public:
         case PKT_TYPE::C_S_SHOOT:
         {
             auto* p = reinterpret_cast<pkt_cs_shoot*>(packet);
-            Vec3 origin = { p->bulletPos[0], p->bulletPos[1], p->bulletPos[2] };
-            Vec3 direction = { p->bulletDir[0], p->bulletDir[1], p->bulletDir[2] };
 
-            // ·¹ÀÌÄ³½ºÆ® Ãæµ¹ Ã³¸® ÇÔ¼ö È£Ãâ
-            check_bullet_collision(_id, origin, direction);
+            // XYZ ê·¸ëŒ€ë¡œ ì‚¬ìš©
+            float ox = p->bulletPos[0];
+            float oy = p->bulletPos[1];
+            float oz = p->bulletPos[2];
 
+            float dx = p->bulletDir[0];
+            float dy = p->bulletDir[1];
+            float dz = p->bulletDir[2];
+
+            constexpr float MAX_RANGE = 60.0f; // ì„ì‹œ ì‚¬ê±°ë¦¬
+
+            int   hit_zid = -1;
+            float hit_t = 0.0f;
+
+            if (find_nearest_hit_zombie3D(ox, oy, oz, dx, dy, dz, MAX_RANGE, hit_zid, hit_t)) {
+                DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id
+                    << " hit_zid=" << hit_zid << " t=" << hit_t);
+
+                // !! ë°ë¯¸ì§€ + ë¸Œë¡œë“œìºìŠ¤íŠ¸
+                constexpr SIZE2 DAMAGE = 10;   // ì„ì‹œ ê³ ì • ëŒ€ë¯¸ì§€(ì´ê¸°ë³„ í…Œì´ë¸”ì€ ì´í›„ì— ì—°ê²°)
+
+                SIZE2 hp_after = 0;
+                {
+                    std::lock_guard<std::mutex> lock(zombiesMutex);
+                    ZombieAI* hitZ = nullptr;
+                    for (auto* z : g_zombies) {
+                        if (z && z->GetID() == hit_zid) { hitZ = z; break; }
+                    }
+                    if (hitZ) {
+                        hitZ->ApplyDamage(DAMAGE);
+                        hp_after = hitZ->GetHP();
+                    }
+                }
+
+                pkt_sc_hit_result resp{};
+                resp.header.size = sizeof(resp);
+                resp.header.type = PKT_TYPE::S_C_HIT_RESULT;
+                resp.shooterId = _id;
+                resp.zombieId = hit_zid;
+                resp.zombieHp = hp_after;
+
+                for (auto& [id, session] : g_users)
+                    session.do_send(&resp);
+            }
+            else {
+                DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id << " miss");
+            }
             break;
         }
+
+
 
 
         default:
@@ -527,7 +650,7 @@ void SpawnZombies(int count) {
         zombie->SetHP(ZOMBIE_HP);
         g_zombies.push_back(zombie);
 
-        // Á»ºñ Á¤º¸¸¦ ¸ğµç ÇÃ·¹ÀÌ¾î¿¡°Ô Àü¼Û
+        // ì¢€ë¹„ ì •ë³´ë¥¼ ëª¨ë“  í”Œë ˆì´ì–´ì—ê²Œ ì „ì†¡
         pkt_sc_object_add p;
         p.header.size = sizeof(p);
         p.header.type = PKT_TYPE::S_C_OBJECT_ADD;
@@ -550,7 +673,7 @@ void ZombieAIThread() {
         auto now = std::chrono::steady_clock::now();
         std::chrono::duration<float> dt = now - lastTick;
         lastTick = now;
-        float deltaTime = dt.count();  // ÃÊ ´ÜÀ§
+        float deltaTime = dt.count();  // ì´ˆ ë‹¨ìœ„
 
         std::vector<Vec3> playerPositions;
         for (auto& [id, session] : g_users) {
@@ -596,7 +719,7 @@ void serverControl() {
         char cmd;
         std::cin >> cmd;
         if (cmd == 'q') {
-            std::cout << "¼­¹ö Á¾·á ¸í·É\n";
+            std::cout << "ì„œë²„ ì¢…ë£Œ ëª…ë ¹\n";
             serverRunning = false;
             break;
         }
@@ -655,7 +778,7 @@ int main() {
         clientId++;
     }
 
-    std::cout << "¼­¹ö Á¾·á Áß...\n";
+    std::cout << "ì„œë²„ ì¢…ë£Œ ì¤‘...\n";
     closesocket(s_socket);
     WSACleanup();
 }

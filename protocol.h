@@ -36,10 +36,12 @@ enum ObjectType : SIZE1 {
 // 공격 종류 정의
 enum ActionType : SIZE1 {
     NONE = 0,   // 배회
-    ZMOVE = 1,   // 좀비 이동
-    ATTACK = 2,   // 근접
-    RANGED = 3,   // 원거리
-    POISON = 4,   // 독
+    ZMOVE = 1,  // 좀비 이동
+    ATTACK = 2,  // 근접
+    RANGED = 3,  // 원거리
+    DEAD = 4,    // 독
+    HIT = 5,    
+
 
 };
 
@@ -97,7 +99,8 @@ inline const char* ToString(ActionType action) {
     case ZMOVE:  return "ZMOVE";
     case ATTACK: return "ATTACK";
     case RANGED: return "RANGED";
-    case POISON: return "POISON";
+    case DEAD:   return "DEAD";
+    case HIT:    return "HIT";
     default:     return "UNKNOWN";
     }
 }
@@ -252,7 +255,7 @@ struct pkt_cs_login {
 
 // 플레이어 업데이트 패킷
 struct pkt_cs_update {
-    PacketHeader header{sizeof(*this), PKT_TYPE::C_S_UPDATE };
+    PacketHeader header{ sizeof(*this), PKT_TYPE::C_S_UPDATE };
     Vec3 position;              // 위치
     Vec3 velocity;              // 방향 * 속도
     Vec3 look;                  // 보는방향
@@ -291,9 +294,8 @@ struct pkt_cs_hit {
 struct pkt_sc_hit_result {
     PacketHeader header{sizeof(*this), PKT_TYPE::S_C_HIT_RESULT };
     SIZEID shooterId;               // 누가 쐈는지
-    //SIZEID zombieId;
-   //  SIZE2 zombieHp;
-    //uint8_t damage;               // 얼마나 깎였는지
+    SIZEID zombieId;
+    SIZE2 zombieHp;
 };
 struct ZombieHit {
     SIZEID zombieId;
