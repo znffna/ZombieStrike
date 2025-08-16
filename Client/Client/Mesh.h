@@ -92,6 +92,7 @@ public:
 	XMFLOAT3						m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	float							m_fLifetime = 0.0f;
 	int								m_nBulletType = 0;	
+	int 							m_nHitObjectType = 0;
 
 public:
 	CBulletVertex() {}

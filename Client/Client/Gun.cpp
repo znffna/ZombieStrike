@@ -94,9 +94,17 @@ bool CGun::Fire(const XMFLOAT3& xmf3Direction, FIRE_INFO* pFireInfo)
 	FIRE_INFO fireInfo;
 	fireInfo.xmf3Position = position;
 	fireInfo.xmf3Look = direction;
-	fireInfo.fRange = m_fBulletRange;
 	fireInfo.nBulletType = m_nGunType; // 총알 타입 설정
+	fireInfo.fRange = GetRange();
+	fireInfo.fspeed = GetSpeed();
 	m_pBulletObject->AddFireInfo(fireInfo);
+
+	{
+		std::string debug = "Gun Fire \n";
+		debug += "Position: " + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + "\n";
+		debug += "Direction: " + std::to_string(direction.x) + ", " + std::to_string(direction.y) + ", " + std::to_string(direction.z) + "\n";
+		OutputDebugStringA(debug.c_str());
+	}
 
 	if (pFireInfo) {
 		*pFireInfo = fireInfo; // 발사 정보 전달

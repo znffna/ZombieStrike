@@ -105,6 +105,16 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 	xmv3Direction = XMVector3Normalize(xmv3Direction);
 
 	float tempRange;
+
+	/*
+	auto& pTerrain = ppObjects[CGameObject::LAYER_TERRAIN];
+	for(auto& pTerrainObject : pTerrain)
+	{
+		std::vector<std::shared_ptr<CCollider>> pColliders = pTerrainObject->m_pCachesColliders;
+		
+	}
+	*/
+
 	for (auto& pObject : pMaps)
 	{
 		std::vector<std::shared_ptr<CCollider>> pColliders = pObject->m_pCachesColliders;
@@ -113,6 +123,7 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 				isCollided = true;
 				if (tempRange < fImpactDistance) {
 					fImpactDistance = tempRange;
+					resultRaycast.nHitObjectType = 1; // Environment
 				}
 			}
 		}
@@ -125,6 +136,7 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 				isCollided = true;
 				if (tempRange < fImpactDistance) {
 					fImpactDistance = tempRange;
+					resultRaycast.nHitObjectType = 2; // Enemy
 				}
 			}
 		}

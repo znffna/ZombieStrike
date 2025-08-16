@@ -1307,7 +1307,7 @@ void CBulletMesh::PostRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPi
 {
 }
 
-//#define _WITH_DEBUG_STREAM_OUTPUT_VERTICES
+#define _WITH_DEBUG_STREAM_OUTPUT_VERTICES
 
 void CBulletMesh::OnPostRender(int nPipelineState)
 {
@@ -1383,5 +1383,5 @@ void CBulletMesh::AddBullets(const std::vector<CBulletVertex>& Bullets)
 	m_pd3dUploadDrawBuffer->Unmap(0, NULL);
 
 	// 정점 갯수를 증가시킨다.
-	::gnCurrentBullets = (m_nVertices + Bullets.size());
+	::gnCurrentBullets = m_nVertices = (m_nVertices + Bullets.size());
 }

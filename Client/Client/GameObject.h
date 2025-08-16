@@ -495,6 +495,7 @@ struct FIRE_INFO {
 	XMFLOAT3 xmf3Look;
 	int nBulletType = 0; // √—æÀ ≈∏¿‘(0: ¿œπ›, 1: ªÍ≈∫√— µÓ)
 	float fRange = 0.0f;
+	float fspeed = 0.0f; // √—æÀ º”µµ
 };
 
 class CBulletParticleObject : public CGameObject
@@ -515,10 +516,6 @@ public:
 	virtual void OnPostRender();
 
 	// method
-	void AddFireInfo(const FIRE_INFO& fireInfo) {
-		m_pFireInfos.push_back(fireInfo);
-	}
-
 	void AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Look, float fRange);
 	void AddBullet(const CBulletVertex& pBulletVertex);
 
@@ -531,6 +528,10 @@ private:
 	std::vector<FIRE_INFO> m_pFireInfos;
 
 public:
+	void AddFireInfo(const FIRE_INFO& fireInfo) {
+		m_pFireInfos.push_back(fireInfo);
+	}
+
 	std::vector<FIRE_INFO> GetFireInfos() const {
 		return m_pFireInfos;
 	}

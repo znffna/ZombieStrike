@@ -33,19 +33,9 @@ public:
 	// Methods
 	bool CanFire() {
 		if (m_fCoolTime > 0.0f) {			
-			{
-				std::string debug = typeid(*this).name();
-				debug += " / [CGun::CanFire] CoolTime = " + std::to_string(m_fCoolTime) + "\n";
-				OutputDebugStringA(debug.c_str());
-			}
 			return false; // 발사 실패
 		}
 		if (m_nCurrentAmmo <= 0) {
-			{
-				std::string debug = typeid(*this).name();
-				debug += " / [CGun::CanFire] No Ammo Left\n";
-				OutputDebugStringA(debug.c_str());
-			}
 			return false; // 발사 실패
 		}
 		return true; // 발사 성공
@@ -75,7 +65,7 @@ private:
 	float m_fFireTimePerSecond = 10.0f; // 초당 발사 횟수
 	float m_fFireRate = 1.0f / 10.0f; // 발당 시간 (초당 발사 횟수의 역수)
 	float m_fCoolTime = 0.0f; // 발사 대기 시간
-	float m_fBulletSpeed = 300.0f; // 총알 속도 (미터/초)
+	float m_fBulletSpeed = 10.0f; // 총알 속도 (미터/초)
 	float m_fBulletRange = 300.0f; // 총알 최대 사거리
 	float m_fReloadTime = 2.0f; // 재장전 시간
 	int m_nMaxAmmo = 30; // 최대 탄약 수
