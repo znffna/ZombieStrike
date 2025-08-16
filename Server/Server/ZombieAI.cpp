@@ -141,7 +141,9 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
             if (closedList.find(nextKey) != closedList.end()) continue;
 
             Node* neighbor = new Node{ nx, nz };
-            neighbor->gCost = current->gCost + my_gCost;
+            float stepCost = (dir < 4) ? 1.0f : 1.41421356f;  // // A* 직/대각 비용
+            neighbor->gCost = current->gCost + stepCost;      // // A* 누적 gCost 갱신
+
             neighbor->hCost = Heuristic(nx, nz, endX, endZ);
             neighbor->parent = current;
             openList.push(neighbor);
@@ -286,8 +288,19 @@ bool ZombieAI::IsStunned() const
     return m_stun_left > 0.0f;
 }
 
+void ZombieAI::MarkRemoved() noexcept {
+    m_removed = true;
+    m_dirty = true;
+}
+
+bool ZombieAI::IsRemoved() const noexcept {
+    return m_removed;
+}
+
 void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime)
 {
+    if (IsRemoved()) return;
+
     if (playerPositions.empty()) return;
 
     if (m_attack_cd > 0.0f) { m_attack_cd -= deltaTime; if (m_attack_cd < 0.0f) m_attack_cd = 0.0f; }
@@ -351,6 +364,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     if (m_path.empty() || m_pathIndex >= m_path.size()) return;
     auto& targetNode = m_path[m_pathIndex];
     Vec3 targetPos = GetNodeCenter(targetNode.first, targetNode.second);
+
     Vec3 currentPos(m_x, 0, m_z);
     Vec3 toTarget = targetPos - currentPos;
     float distance = toTarget.Length();
@@ -366,7 +380,6 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         m_pathIndex++;
         return;
     }
-
     Vec3 moveDir = toTarget.Normalize();
     Vec3 nextPos = currentPos + moveDir * Z_move_speed;
 
@@ -474,6 +487,30 @@ Object ZombieAI::GetObjectinfo() const {
     return info;
 }
 
+bool IsAreaClear(const std::vector<std::vector<int>>& map, int x, int z, int radius)
+{
+    const int H = static_cast<int>(map.size());
+    if (H == 0) return false;
+    const int W = static_cast<int>(map[0].size());
+
+    // 중심칸 자체가 벽이면 바로 실패
+    if (x < 0 || x >= W || z < 0 || z >= H) return false;
+    if (map[z][x] != 0) return false;
+
+    const int xmin = std::max(0, x - radius);
+    const int xmax = std::min(W - 1, x + radius);
+    const int zmin = std::max(0, z - radius);
+    const int zmax = std::min(H - 1, z + radius);
+
+    // 네모 반경(맨해튼이 아니라 사각 반경) 검사
+    for (int zz = zmin; zz <= zmax; ++zz) {
+        for (int xx = xmin; xx <= xmax; ++xx) {
+            if (map[zz][xx] != 0) return false;
+        }
+    }
+    return true;
+}
+
 // ------------------- 맵 로딩 & 랜덤 위치 -----------------------
 
 std::vector<std::vector<int>> LoadMapBin(const std::string& filename)
@@ -494,9 +531,9 @@ std::vector<std::vector<int>> LoadMapBin(const std::string& filename)
 				DEBUG_LOG("[ERROR] 파일 끝에 도달했습니다. 크기가 너무 작습니다.");
                 exit(1);
             }
-            int flippedZ = GRID_WIDTH - 1 - z; // z축반전 위애래
-            map[flippedZ][x] = (value == 0) ? 0 : 1;
-            //map[z][x] = (value == 0) ? 0 : 1; // 0 = 길, 1 = 장애물
+            //int flippedZ = GRID_WIDTH - 1 - z; // z축반전 위애래
+            //map[flippedZ][x] = (value == 0) ? 0 : 1;
+            map[z][x] = (value == 0) ? 0 : 1; // 0 = 길, 1 = 장애물
         }
     }
 	DEBUG_LOG("[OK] 512x512 맵 로드 완료");
@@ -505,26 +542,40 @@ std::vector<std::vector<int>> LoadMapBin(const std::string& filename)
 
 std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map)
 {
+    const int H = static_cast<int>(map.size());
+    if (H == 0) {
+        DEBUG_LOG("[ERROR] 맵이 비어있습니다.");
+        exit(1);
+    }
+    const int W = static_cast<int>(map[0].size());
+
     static std::random_device rd;
     static std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distX(100, 150);
+    //    std::uniform_int_distribution<> distX(0, W - 1); // 전체 맵에서 시도
+    std::uniform_int_distribution<> distX(100, 150);   
     std::uniform_int_distribution<> distZ(100, 150);
 
-    //while (true) {
-    //    int x = distX(gen), z = distZ(gen);
-    //    if (map[z][x] == 0) return { x, z };
-    //}
-
-    int attempts = 0;
-    while (attempts < 100) {
-        int x = distX(gen), z = distZ(gen);
-        if (map[z][x] == 0) return { x, z };
-        ++attempts;
+    // 1차: 랜덤 시도
+    const int MAX_ATTEMPTS = 1000; // 시도 횟수 
+    for (int attempts = 0; attempts < MAX_ATTEMPTS; ++attempts) {
+        const int x = distX(gen);
+        const int z = distZ(gen);
+        if (IsAreaClear(map, x, z, 4)) {               //  반경 4칸 검사
+            return { x, z };
+        }
     }
 
-    DEBUG_LOG("[ERROR] 좀비 위치 찾기 실패 (장애물로 꽉 찼을 수 있음)");
-    exit(1);
+    // 2차: 폴백 스캔(확실한 자리를 보장)
+    for (int z = 0; z < H; ++z) {
+        for (int x = 0; x < W; ++x) {
+            if (IsAreaClear(map, x, z, 4)) {
+                return { x, z };
+            }
+        }
+    }
 
+    DEBUG_LOG("[ERROR] 스폰 가능한 위치를 찾지 못했습니다. (반경 4칸 조건 과엄 가능)");
+    exit(1);
 }
 
 std::pair<int, int> GetRandomPlayerPosition(const std::vector<std::vector<int>>& map)
@@ -545,6 +596,8 @@ std::pair<int, int> GetRandomPlayerPosition(const std::vector<std::vector<int>>&
     exit(1);
 
 }
+
+
 
 // ======================== 맵 그려보는 용 ========================
 void PrintMap2(

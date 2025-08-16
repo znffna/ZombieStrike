@@ -16,7 +16,7 @@ constexpr int MAX_NAME_SIZE = 20;
 constexpr int MAX_USER = 5000;          // 서버의 최대 세션 수
 constexpr short MAX_PLAYER_COUNT = 3;   // 최대 플레이어 수
 
-constexpr short MAX_ZOMBIE_COUNT = 10;  // 최대 좀비 수
+constexpr short MAX_ZOMBIE_COUNT = 30;  // 최대 좀비 수
 
 constexpr int W_WIDTH = 250;            // 맵의 크기 정의
 constexpr int W_HEIGHT = 250;
@@ -279,12 +279,12 @@ struct pkt_cs_shoot {
     float bulletDir[3];
 };
 
-// 총알 명중 패킷
-struct pkt_cs_hit {
-    PacketHeader header{sizeof(*this),PKT_TYPE::C_S_SHOOT };
-    SIZEID shooterId;               // 누가 쐈는지
-    SIZEID zombieId;                // 맞은 좀비 ID
-};
+//// 총알 명중 패킷
+//struct pkt_cs_hit {
+//    PacketHeader header{sizeof(*this),PKT_TYPE::pkt_cs_hit };
+//    SIZEID shooterId;               // 누가 쐈는지
+//    SIZEID zombieId;                // 맞은 좀비 ID
+//};
 
 
 // --------------------------

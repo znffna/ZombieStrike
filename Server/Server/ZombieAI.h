@@ -67,6 +67,10 @@ public:
     // 현재 사망 상태(HP==0)인지 조회
     bool IsDead() const;
 
+    // 제거 상태 제어
+    void MarkRemoved() noexcept;      // // ZombieAI::MarkRemoved - 사망 브로드캐스트 후 호출
+    bool IsRemoved() const noexcept;  // // ZombieAI::IsRemoved - 업데이트/충돌 제외 판단
+
     void Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime);
 
 
@@ -116,11 +120,16 @@ private:
 
     // 피격 스턴 남은 시간(초)
     float m_stun_left = 0.0f;
+
+    // 사망 후 제거 브로드캐스트 중복 방지
+    bool m_removed = false;           // // ZombieAI::m_removed - 제거된 개체는 true
 };
 
 // Util 함수
 std::vector<std::vector<int>> LoadMapBin(const std::string& filename);
 std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map);
 
+// 스폰 후보 타일이 반경 r 칸 내에 장애물이 없는지 확인
+bool IsAreaClear(const std::vector<std::vector<int>>&map, int x, int z, int radius = 4); // // IsAreaClear
 
 

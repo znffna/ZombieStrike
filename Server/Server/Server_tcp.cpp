@@ -446,7 +446,7 @@ public:
 				}
 			}
 
-            // 좀비 정보를 모든 플레이어에게 전송
+            // [C_S_LOGIN] 기존 좀비 스냅샷은 "신규 접속자(나)"에게만 유니캐스트
             pkt_sc_object_add packet;
             for (auto zombie : g_zombies) {
                 packet.header.size = sizeof(packet);
@@ -457,10 +457,10 @@ public:
                 strcpy_s(packet.name, "Zombie");
                 packet.startposition = zombie->GetPosition();
                 packet.starthp = zombie->GetHP();
+                packet.gun_type = GunType::BULLET_MAX; // [추가] 누락 보정(좀비는 총 안씀)
 
-                for (auto& [id, session] : g_users) {
-                    session.do_send(&packet);
-                }
+                // 나(this 세션)에게만 전송
+                this->do_send(&packet);
             }
 
             break;
@@ -590,15 +590,36 @@ public:
                     }
                 }
 
+                // (기존) 히트 결과 먼저 브로드캐스트
                 pkt_sc_hit_result resp{};
                 resp.header.size = sizeof(resp);
                 resp.header.type = PKT_TYPE::S_C_HIT_RESULT;
                 resp.shooterId = _id;
                 resp.zombieId = hit_zid;
                 resp.zombieHp = hp_after;
+                for (auto& [id, session] : g_users) session.do_send(&resp);
 
-                for (auto& [id, session] : g_users)
-                    session.do_send(&resp);
+                // [추가] HP가 0이면 즉시 제거 패킷 (중복 방지: MarkRemoved)
+                if (hp_after == 0) {
+                    ZombieAI* hitZ = nullptr;
+                    {
+                        std::lock_guard<std::mutex> lock(zombiesMutex);
+                        for (auto* z : g_zombies) {
+                            if (z && z->GetID() == hit_zid) { hitZ = z; break; }
+                        }
+                    }
+                    if (hitZ && !hitZ->IsRemoved()) {
+                        hitZ->MarkRemoved(); // // ZombieAI::MarkRemoved - 서버 틱/충돌 제외
+
+                        pkt_sc_object_remove rem{};
+                        rem.header.size = sizeof(rem);
+                        rem.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
+                        rem.id = hit_zid;
+
+                        for (auto& [id, session] : g_users)
+                            session.do_send(&rem);
+                    }
+                }
             }
             else {
                 DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id << " miss");
@@ -683,29 +704,44 @@ void ZombieAIThread() {
 
         for (auto& zombie : g_zombies) {
             zombie->Update(playerPositions, g_zombies, deltaTime);
+            // ZombieAIThread - 제거 플래그면 완전 스킵
+            if (zombie->IsRemoved()) continue;
+
+            zombie->Update(playerPositions, g_zombies, deltaTime);
 
             if (zombie->IsDirty()) {
-                Object info = zombie->GetObjectinfo();
+                // 프레임 경합 방어: DEAD 상태면 업데이트 대신 제거 패킷
+                if (zombie->IsDead()) {
+                    zombie->MarkRemoved();
 
-                pkt_sc_object_update p;
+                    pkt_sc_object_remove rem{};
+                    rem.header.size = sizeof(rem);
+                    rem.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
+                    rem.id = zombie->GetID();
+                    for (auto& [id, session] : g_users) session.do_send(&rem);
+
+                    zombie->ClearDirty();
+                    continue;
+                }
+
+                // 일반 업데이트 브로드캐스트
+                Object info = zombie->GetObjectinfo();
+                pkt_sc_object_update p{};
                 p.header.size = sizeof(p);
                 p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
                 p.id = zombie->GetID();
-				p.act_type = info.act_type;
-				p.position = info.position;
-				p.velocity = info.velocity;
-				p.look = info.look;
-				p.pitch = info.pitch;
-				p.hp = info.hp;
-				p.gun_type = info.gun_type;
-				p.level = info.level;
-				p.score = info.score;
-				p.damage = info.damage;
-				p.act_type = info.act_type;
+                p.position = info.position;
+                p.velocity = info.velocity;
+                p.look = info.look;
+                p.pitch = info.pitch;
+                p.hp = info.hp;
+                p.gun_type = info.gun_type;
+                p.level = info.level;
+                p.score = info.score;
+                p.damage = info.damage;
+                p.act_type = info.act_type;
 
-                for (auto& [id, session] : g_users)
-                    session.do_send(&p);
-
+                for (auto& [id, session] : g_users) session.do_send(&p);
                 zombie->ClearDirty();
             }
         }
