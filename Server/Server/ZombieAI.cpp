@@ -32,7 +32,17 @@ bool IsTooClose(float x1, float z1, float x2, float z2, float minDist)
     float dz = z1 - z2;
     return (dx * dx + dz * dz) < (minDist * minDist);
 }
-// -------------------- A* 내부 클래스 -----------------------
+// -----------------------------
+// A* Pathfinding 내부 클래스
+// -----------------------------
+struct Node
+{
+    int x, z;
+    float gCost, hCost;
+    float fCost() const { return gCost + hCost; }
+    Node* parent = nullptr;
+};
+
 class ZombieAI::AStar
 {
 public:
@@ -46,21 +56,13 @@ private:
     int m_width = 0;
     int m_height = 0;
 
-	// 대각선 비용을 고려한 휴리스틱 함수
+    // 대각선 비용을 고려한 휴리스틱 함수
     float Heuristic(int x1, int z1, int x2, int z2) {
         int dx = std::abs(x1 - x2);
         int dz = std::abs(z1 - z2);
         return (float)(dx + dz - std::min(dx, dz));
         //return 1.414f * std::min(dx, dz) + std::abs(dx - dz); 
     }
-};
-
-struct Node
-{
-    int x, z;
-    float gCost, hCost;
-    float fCost() const { return gCost + hCost; }
-    Node* parent = nullptr;
 };
 
 std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int startZ, int endX, int endZ)
@@ -80,7 +82,7 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
     Node* startNode = new Node{ startX, startZ, 0.0f, Heuristic(startX, startZ, endX, endZ) };
     if (!startNode)
     {
-		DEBUG_LOG("[ERROR] Failed to allocate startNode");
+        DEBUG_LOG("[ERROR] Failed to allocate startNode");
         return {};
     }
     openList.push(startNode);
@@ -110,17 +112,30 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
             delete current;
             break;
         }
-        // 4 방향 탐색
-        const int dirX[4] = { 1, -1,  0,  0 };
-        const int dirZ[4] = { 0,  0,  1, -1 };
 
-        for (int dir = 0; dir < 4; ++dir)
+        // 8방향 탐색
+        const int dirX[8] = { 1, -1,  0,  0,  1,  1, -1, -1 };
+        const int dirZ[8] = { 0,  0,  1, -1,  1, -1,  1, -1 };
+
+        for (int dir = 0; dir < 8; ++dir)
         {
             int nx = current->x + dirX[dir];
             int nz = current->z + dirZ[dir];
 
             if (nx < 0 || nx >= m_width || nz < 0 || nz >= m_height) continue;
             if (m_map[nz][nx] != 0) continue;
+
+            // 대각선 진입 시, 양쪽 인접칸 중 하나라도 벽이면 skip
+            if (dir >= 4)
+            {
+                int adj1_x = current->x + dirX[dir];
+                int adj1_z = current->z;
+                int adj2_x = current->x;
+                int adj2_z = current->z + dirZ[dir];
+
+                if (m_map[adj1_z][adj1_x] != 0 || m_map[adj2_z][adj2_x] != 0)
+                    continue;
+            }
 
             int nextKey = nz * m_width + nx;
             if (closedList.find(nextKey) != closedList.end()) continue;
@@ -131,38 +146,6 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
             neighbor->parent = current;
             openList.push(neighbor);
         }
-
-		//// 8방향 탐색
-  //      const int dirX[8] = { 1, -1,  0,  0,  1,  1, -1, -1 };
-  //      const int dirZ[8] = { 0,  0,  1, -1,  1, -1,  1, -1 };
-  //      for (int dir = 0; dir < 8; ++dir)
-  //      {
-  //          int nx = current->x + dirX[dir];
-  //          int nz = current->z + dirZ[dir];
-  //          if (nx < 0 || nx >= m_width || nz < 0 || nz >= m_height) continue;
-  //          if (m_map[nz][nx] != 0) continue;
-  //
-  //          // 대각선 진입 시, 양쪽 인접칸 중 하나라도 벽이면 skip
-  //          if (dir >= 4)
-  //          {
-  //              int adj1_x = current->x + dirX[dir];
-  //              int adj1_z = current->z;
-  //              int adj2_x = current->x;
-  //              int adj2_z = current->z + dirZ[dir];
-  //
-  //              if (m_map[adj1_z][adj1_x] != 0 || m_map[adj2_z][adj2_x] != 0)
-  //                  continue;
-  //          }
-  //
-  //          int nextKey = nz * m_width + nx;
-  //          if (closedList.find(nextKey) != closedList.end()) continue;
-  //
-  //          Node* neighbor = new Node{ nx, nz };
-  //          neighbor->gCost = current->gCost + my_gCost;
-  //          neighbor->hCost = Heuristic(nx, nz, endX, endZ);
-  //          neighbor->parent = current;
-  //          openList.push(neighbor);
-  //      }
     }
 
     return path;
@@ -199,6 +182,7 @@ void ZombieAI::SetTargetPosition(float x, float z) {
 std::vector<std::pair<int, int>> ZombieAI::FindPathToPlayer() {
     return m_astar->FindPath((int)m_x, (int)m_z, (int)m_targetX, (int)m_targetZ);
 }
+
 void ZombieAI::FindPath() {
     //m_path = m_astar->FindPath((int)m_x, (int)m_z, (int)m_playerX, (int)m_playerZ);
     if (!m_astar)
@@ -212,11 +196,8 @@ void ZombieAI::FindPath() {
     int endX = static_cast<int>(m_targetX / CELL_SIZE);
     int endZ = static_cast<int>(m_targetZ / CELL_SIZE);
 
-    m_path = m_astar->FindPath(
-        static_cast<int>(m_x / CELL_SIZE),
-        static_cast<int>(m_z / CELL_SIZE),
-        static_cast<int>(m_targetX / CELL_SIZE),
-        static_cast<int>(m_targetZ / CELL_SIZE));
+    m_path = m_astar->FindPath(startX, startZ, endX, endZ);
+
     m_pathIndex = 1;
 }
 
@@ -264,6 +245,19 @@ Vec3 ZombieAI::AvoidPlayers(const std::vector<Vec3>& playerPositions)
     return avoid;
 }
 
+void ZombieAI::TriggerAttack(float animTime)
+{
+    // 공격 모션 시간 설정, 쿨다운 갱신
+    m_attack_left = std::max(m_attack_left, animTime);
+    m_attack_cd = std::max(m_attack_cd, Z_ATTACK_COOLDOWN);
+    m_dirty = true;
+}
+
+bool ZombieAI::IsAttacking() const
+{
+    return m_attack_left > 0.0f;
+}
+
 void ZombieAI::ApplyDamage(SIZE2 damage)
 {
     if (m_hp == 0) return;
@@ -296,6 +290,9 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
 {
     if (playerPositions.empty()) return;
 
+    if (m_attack_cd > 0.0f) { m_attack_cd -= deltaTime; if (m_attack_cd < 0.0f) m_attack_cd = 0.0f; }
+    if (m_attack_left > 0.0f) { m_attack_left -= deltaTime; if (m_attack_left < 0.0f) m_attack_left = 0.0f; }
+
     // 스턴 상태면 이동/경로탐색 모두 중지
     if (m_stun_left > 0.0f) {
         m_stun_left -= deltaTime;
@@ -309,6 +306,21 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
 
     // 1. 가장 가까운 플레이어 위치 계산
     Vec3 closest = FindClosestPlayer(playerPositions);
+
+    // 공격 트리거: 일정 거리 이내 + 쿨다운 끝 + 스턴 아님
+    {
+        Vec3 myPos(m_x, 0, m_z);
+        float dx = closest.x - myPos.x;
+        float dz = closest.z - myPos.z;
+        float dist = std::sqrt(dx * dx + dz * dz);
+
+        if (dist <= Z_ATTACK_RANGE && m_attack_cd <= 0.0f && m_stun_left <= 0.0f)
+        {
+            TriggerAttack();
+            // 공격 프레임에선 이동을 멈춰 '들이치기' 모션처럼 보이게 할 수도 있음.
+            // 여기서는 이동 로직을 계속 타되, act_type으로 모션을 표현 (GetObjectinfo에서 처리)
+        }
+    }
 
     // 2. 타겟 위치 설정 및 경로 재계산
     Vec3 newTarget = closest;
@@ -334,6 +346,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         m_repath_timer += deltaTime;
     }
 
+
     // 3. 이동 처리 (경로 따라 이동)
     if (m_path.empty() || m_pathIndex >= m_path.size()) return;
     auto& targetNode = m_path[m_pathIndex];
@@ -357,20 +370,30 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     Vec3 moveDir = toTarget.Normalize();
     Vec3 nextPos = currentPos + moveDir * Z_move_speed;
 
+    // [REPLACE] 4. 좀비↔좀비 분리력(Separation force) 계산
+    Vec3 separation(0, 0, 0);
+    {
+        for (auto* other : allZombies) {
+            if (!other || other->GetID() == m_id) continue;
+            float ox = other->GetX();
+            float oz = other->GetZ();
 
-    // 4. 거리 기반 충돌 제한
-    bool tooClose = false;
-    for (auto* other : allZombies) {
-        if (other->GetID() == m_id) continue;
-        if (IsTooClose(nextPos.x, nextPos.z, other->GetX(), other->GetZ(), 0.8f)) {
-            tooClose = true;
-            break;
+            float sx = m_x - ox;
+            float sz = m_z - oz;
+            float d2 = sx * sx + sz * sz;
+
+            // 반지름 안에 있으면 반발력 추가 (가까울수록 강하게)
+            const float r = Z_SEPARATION_RADIUS;
+            const float r2 = r * r;
+            if (d2 > 0.0001f && d2 < r2) {
+                float d = std::sqrt(d2);
+                float strength = (r - d) / r; // 0~1
+                separation.x += (sx / d) * strength;
+                separation.z += (sz / d) * strength;
+            }
         }
-    }
-    for (const auto& pos : playerPositions) {
-        if (IsTooClose(nextPos.x, nextPos.z, pos.x, pos.z, 2.0f)) {
-            tooClose = true;
-            break;
+        if (separation.LengthSquared() > 0.0f) {
+            separation = separation.Normalize() * Z_SEPARATION_FORCE;
         }
     }
 
@@ -393,9 +416,13 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         }
     }
 
-    // 6. 최종 이동
-    if (!tooClose ) {
-        Vec3 finalMove = moveDir * Z_move_speed + wallPush;
+    // 6. 최종 이동 (분리력 + 벽밀기 반영)
+    {
+        Vec3 finalMove = moveDir * Z_move_speed + wallPush + separation;
+
+        // 공격 애니 중에는 약간 이동을 줄이고 싶다면 스케일 조정도 가능:
+        // if (IsAttacking()) finalMove = finalMove * 0.5f;
+
         m_x += finalMove.x;
         m_z += finalMove.z;
         m_dirty = true;
@@ -411,7 +438,7 @@ Vec3 ZombieAI::GetLookVectorToPlayer() const {
 }
 
 Vec3 ZombieAI::GetNodeCenter(int x, int z) const {
-    return Vec3(x * CELL_SIZE + 0.5f, 0, z * CELL_SIZE + 0.5f);
+    return Vec3((x + 0.5f) * CELL_SIZE, 0, (z + 0.5f) * CELL_SIZE);
 
 }
 int ZombieAI::GetID() const { return m_id; }
@@ -442,7 +469,8 @@ Object ZombieAI::GetObjectinfo() const {
     info.score = 0;
     info.damage = ZOMBIE_DAMAGE;
     info.act_type = (m_hp == 0) ? ActionType::DEAD
-        : (m_stun_left > 0.0f ? ActionType::HIT : ActionType::ZMOVE);
+        : (m_stun_left > 0.0f ? ActionType::HIT
+            : (m_attack_left > 0.0f ? ActionType::ATTACK : ActionType::ZMOVE));
     return info;
 }
 

@@ -22,6 +22,14 @@ constexpr float CELL_SIZE = WORLD_WIDTH / GRID_WIDTH; // 0.488..
 static constexpr float REPATH_INTERVAL = 1.0f; // 1초마다 재탐색 허용
 constexpr float deltaTime = 1.0f / 60.0f;
 
+constexpr float Z_ATTACK_RANGE = 1.2f;          // 월드 단위 (CELL_SIZE에 맞춰 조정 가능)
+constexpr float Z_ATTACK_COOLDOWN = 1.0f;       // 초
+constexpr float Z_ATTACK_ANIM_TIME = 0.35f;     // 공격 모션 유지 시간(초)
+
+// [ADD] 좀비-좀비 분리력 파라미터
+constexpr float Z_SEPARATION_RADIUS = 1.2f;     // 이 거리 안에 들어오면 서로 밀어냄
+constexpr float Z_SEPARATION_FORCE = 0.12f;     // 프레임당 추가 이동량 스케일
+
 // 좀비 피격 스턴 시간(초)
 constexpr float ZOMBIE_HIT_STUN_SEC = 1.5f;
 
@@ -37,6 +45,10 @@ public:
 
     void SetTargetPosition(float x, float z);
 	void SetHP(int hp);                   // 체력 설정
+
+    // ---[Attack]---
+    void TriggerAttack(float animTime = Z_ATTACK_ANIM_TIME);
+    bool IsAttacking() const;
 
     // ---[Hit Stun]---
     // 외부(서버 피격 처리)에서 스턴 부여
@@ -97,6 +109,10 @@ private:
     bool m_dirty = true;
 
     Vec3 GetNodeCenter(int x, int z) const;
+
+    // 공격 쿨다운 및 공격 애니 타이머(초)
+    float m_attack_cd = 0.0f;
+    float m_attack_left = 0.0f;
 
     // 피격 스턴 남은 시간(초)
     float m_stun_left = 0.0f;
