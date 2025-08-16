@@ -259,6 +259,7 @@ void CGameScene::BuildFiredBullets()
 		pBulletVertex.m_xmf3Velocity = pBullet.xmf3Look;
 		// 총알 궤적 출력 시간 설정
 		pBulletVertex.m_fLifetime = 0.5f;
+		pBulletVertex.m_nBulletType = pBullet.nBulletType;
 		pBulletVertices.push_back(pBulletVertex);
 
 		if(g_bDebugOutput){

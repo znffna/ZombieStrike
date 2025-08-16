@@ -565,8 +565,11 @@ public:
 	enum BULLET_TYPE : int
 	{
 		BULLET_TYPE_MAINTAIN = -1,
-		BULLET_TYPE_ASSAULT,
-		BULLET_TYPE_SHOTGUN,
+		BULLET_TYPE_EMIT_ASSAULT, // ¶óÀÌÇÃ ÃÑ¾Ë
+		BULLET_TYPE_EMIT_SHOTGUN, // ¼¦°Ç ÃÑ¾Ë
+		BULLET_TYPE_TRAIL,  // ÃÑ¾Ë ±ËÀû
+		BULLET_TYPE_MUZZLE_SPARK,  // ÃÑ±¸ È­¿°
+		BULLET_TYPE_FRAGMENT // ÆÄÆí
 	};
 
 	bool								m_bStart = true;

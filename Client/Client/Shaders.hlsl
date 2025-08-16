@@ -407,6 +407,12 @@ float4 PSCollider(VS_COLLIDER_OUTPUT input) : SV_TARGET
 //
 
 #define BULLET_MAINTAIN -1 // uint 가 type이기에 최대값을 가진다.
+#define BULLET_TYPE_EMIT_ASSAULT 0
+#define BULLET_TYPE_EMIT_SHOTGUN 1
+#define BULLET_TYPE_TRAIL 2
+#define BULLET_TYPE_MUZZLE_SPARK 3
+#define BULLET_TYPE_FRAGMENT 4
+
 
 struct VS_BULLET_INPUT
 {
@@ -422,30 +428,70 @@ VS_BULLET_INPUT VSBulletStreamOutput(VS_BULLET_INPUT input)
     return (input);
 }
 
+// 라이플 총알 생성
+void EmmitAssaultBullet(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT> output)
+{
+    input.type = BULLET_TYPE_MUZZLE_SPARK;
+    output.Append(input);
+        
+    input.type = BULLET_TYPE_TRAIL;
+    output.Append(input);
+}
+
+// 샷건 총알 생성
+void EmmitShotgunBullet(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT> output)
+{
+    input.type = BULLET_TYPE_MUZZLE_SPARK;
+    output.Append(input);
+        
+    input.type = BULLET_TYPE_TRAIL;
+    output.Append(input);
+}
+
+
+// 총알 궤적 생성
+void OutputTrailParticles(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT> output)
+{
+    float fBeforeTime = input.lifetime;
+    input.lifetime -= gfElapsedTime;
+    float dt = input.lifetime < 0.0f ? gfElapsedTime + input.lifetime : gfElapsedTime;
+    if (fBeforeTime > 0.0f)
+    {
+        output.Append(input);
+    }
+}
+
+void OutputSparkParticles(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT> output)
+{
+    input.lifetime -= gfElapsedTime;
+    if (input.lifetime > 0.0f)
+    {
+        output.Append(input);
+    }
+}
 
 [maxvertexcount(64)]
 void GSBulletStreamOutput(point VS_BULLET_INPUT input[1], inout PointStream<VS_BULLET_INPUT> output)
 {
     VS_BULLET_INPUT particle = input[0];
-
-    if (particle.type == BULLET_MAINTAIN)
+    float3 gf3Gravity = float3(0.0f, -9.81f, 0.0f); // 중력 벡터
+    
+    if (particle.type == BULLET_MAINTAIN) output.Append(particle);
+    else if (particle.type == BULLET_TYPE_EMIT_ASSAULT) EmmitAssaultBullet(particle, output);
+    else if (particle.type == BULLET_TYPE_EMIT_SHOTGUN) EmmitShotgunBullet(particle, output);
+    else if (particle.type == BULLET_TYPE_TRAIL) OutputTrailParticles(particle, output);
+    else if (particle.type == BULLET_TYPE_MUZZLE_SPARK) OutputSparkParticles(particle, output);
+    else if (particle.type == BULLET_TYPE_FRAGMENT)
     {
-        output.Append(particle);
-    }
-    else
-    {
-        float fBeforeTime = particle.lifetime;
+        particle.position += particle.velocity * gfElapsedTime;
+        particle.velocity += gf3Gravity * gfElapsedTime;
         particle.lifetime -= gfElapsedTime;
-        float dt = particle.lifetime < 0.0f ? gfElapsedTime + particle.lifetime : gfElapsedTime;
-        //particle.lastposition = particle.position;
-        //particle.position += particle.velocity * dt;
-        
-        //if (particle.lifetime > 0.0f)
-        if (fBeforeTime > 0.0f)
+        if (particle.lifetime > 0.0f)
         {
             output.Append(particle);
         }
     }
+
 }
 
 //////////////////////////////////////////////////////////////////////////////////
