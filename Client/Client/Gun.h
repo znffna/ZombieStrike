@@ -65,7 +65,7 @@ private:
 	float m_fFireTimePerSecond = 10.0f; // 초당 발사 횟수
 	float m_fFireRate = 1.0f / 10.0f; // 발당 시간 (초당 발사 횟수의 역수)
 	float m_fCoolTime = 0.0f; // 발사 대기 시간
-	float m_fBulletSpeed = 10.0f; // 총알 속도 (미터/초)
+	float m_fBulletSpeed = 100.0f; // 총알 속도 (미터/초)
 	float m_fBulletRange = 300.0f; // 총알 최대 사거리
 	float m_fReloadTime = 2.0f; // 재장전 시간
 	int m_nMaxAmmo = 30; // 최대 탄약 수

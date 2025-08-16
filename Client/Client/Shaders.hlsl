@@ -573,7 +573,7 @@ void GSBulletDraw(point VS_BULLET_DRAW_OUTPUT input[1], inout TriangleStream<GS_
         float3 dir = normalize(halfPos - cameraPos);
         dir = cross(dir, normalize(input[0].velocity));
     
-        float height = 0.5f;
+        float height = 5.0f;
         
         float3 gf3RectPositions[4] = { float3(start + dir * height), float3(end + dir * height), float3(start - dir * height), float3(end - dir * height) };
     
