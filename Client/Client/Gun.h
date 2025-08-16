@@ -32,20 +32,32 @@ public:
 
 	// Methods
 	bool CanFire() {
-		if (m_fCoolTime <= 0.0f && m_nCurrentAmmo > 0) {
-			m_fCoolTime = m_fFireRate;
+		if (m_fCoolTime > 0.0f) {			
 			{
-				std::string debug = "CGun::CanFire() - Gun Type: " + std::to_string(m_nGunType) + ", Ammo: " + std::to_string(m_nCurrentAmmo) + "\n";
+				std::string debug = typeid(*this).name();
+				debug += " / [CGun::CanFire] CoolTime = " + std::to_string(m_fCoolTime) + "\n";
 				OutputDebugStringA(debug.c_str());
 			}
-			//m_nCurrentAmmo--; 일단 Reload 없이 총 발사 간격만 적용.
-			return true; // 발사 성공
+			return false; // 발사 실패
 		}
-		return false; // 발사 실패
+		if (m_nCurrentAmmo <= 0) {
+			{
+				std::string debug = typeid(*this).name();
+				debug += " / [CGun::CanFire] No Ammo Left\n";
+				OutputDebugStringA(debug.c_str());
+			}
+			return false; // 발사 실패
+		}
+		return true; // 발사 성공
 	}
 	
-	void Fire(const XMFLOAT3& xmf3Direction);
-	void Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction);
+	// BulletParticleObject에 등록
+	bool Fire(const XMFLOAT3& xmf3Direction, FIRE_INFO* pFireInfo);
+
+// ----------------------------------------------
+// 미사용(나중에 제거 예정)
+	bool Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction);
+// ----------------------------------------------
 
 	static std::shared_ptr<CBulletParticleObject> m_pBulletObject; // 총알 오브젝트
 private:
@@ -56,6 +68,7 @@ private:
 	}
 
 	const std::vector<std::string> m_strGunName{ "M16" }; // 총 이름
+	const std::vector<std::string> m_strMuzzleName{ "M16_4_low" }; // 총구 이름
 
 	int m_nGunType = 0; // 0: Assault Rifle, 1: Shotgun
 

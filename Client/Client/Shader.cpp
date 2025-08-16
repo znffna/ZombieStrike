@@ -1913,6 +1913,10 @@ void CTextureToViewportShader::Render(ID3D12GraphicsCommandList* pd3dCommandList
 		pd3dCommandList->RSSetViewports(1, &d3dViewport);
 		pd3dCommandList->RSSetScissorRects(1, &d3dScissorRect);
 
+		XMFLOAT4X4 xmf4x4Identity = Matrix4x4::Identity();
+
+		pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 16, &xmf4x4Identity, 0);
+
 		CShader::OnPrepareRender(pd3dCommandList);
 
 		UpdateShaderVariables(pd3dCommandList);

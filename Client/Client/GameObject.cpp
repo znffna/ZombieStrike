@@ -1305,9 +1305,9 @@ std::shared_ptr<CCubeObject> CCubeObject::Create(ID3D12Device* pd3dDevice, ID3D1
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-CBulletParticleObject::CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles)
+CBulletParticleObject::CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Look, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles)
 {
-	std::shared_ptr<CBulletMesh> pMesh = std::make_shared<CBulletMesh>(pd3dDevice, pd3dCommandList, xmf3Position, xmf3Velocity, fLifetime, xmf3Acceleration, xmf3Color, xmf2Size, nMaxParticles);
+	std::shared_ptr<CBulletMesh> pMesh = std::make_shared<CBulletMesh>(pd3dDevice, pd3dCommandList, xmf3Position, xmf3Look, fLifetime, xmf3Acceleration, xmf3Color, xmf2Size, nMaxParticles);
 	SetMesh(pMesh);
 
 	std::shared_ptr<CTexture> pParticleTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
@@ -1365,13 +1365,15 @@ void CBulletParticleObject::OnPostRender()
 	m_pMesh->OnPostRender(0); //Read Stream Output Buffer Filled Size
 }
 
-void CBulletParticleObject::AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Velocity, float fRange)
+void CBulletParticleObject::AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Look, float fRange)
 {
 	CBulletVertex pBulletVertex;
 	pBulletVertex.m_xmf3Position = pOrigin;
-	pBulletVertex.m_xmf3LastPosition = pOrigin;
-	pBulletVertex.m_xmf3Velocity = xmf3Velocity;
-	pBulletVertex.m_fLifetime = fRange / Vector3::Length(xmf3Velocity);
+	pBulletVertex.m_xmf3Destination = Vector3::Add(pOrigin, Vector3::ScalarProduct(xmf3Look, fRange));
+	pBulletVertex.m_xmf3Velocity = xmf3Look;
+	// ÃÑ¾Ë ±ËÀû Ãâ·Â ½Ã°£ ¼³Á¤
+	pBulletVertex.m_fLifetime = 0.5f;
+	//pBulletVertex.m_fLifetime = fRange / Vector3::Length(xmf3Look);
 
 	AddBullet(pBulletVertex);
 }

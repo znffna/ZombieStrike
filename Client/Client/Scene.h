@@ -204,7 +204,6 @@ public:
 	virtual void ReleaseShaderVariables();
 
 	// Input Method
-	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) { return false; };
 	virtual bool ProcessMouseInput(float cxDelta, float cyDelta, float deltaTime) { return false; };
 	virtual bool ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaTime) { return false; };
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);

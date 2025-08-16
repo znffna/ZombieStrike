@@ -789,6 +789,7 @@ void CGameFramework::ProcessInput(CScene* pScene)
 			m_ptOldCursorPos = ptCursorPos;
 		}
 		else {
+			m_ptOldCursorPos = WindowCursor::GetClientCenter(m_hWnd);
 			SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
 		}
 

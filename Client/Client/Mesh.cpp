@@ -1159,13 +1159,13 @@ CSphereMesh::~CSphereMesh()
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-CBulletMesh::CBulletMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles) : CMesh(pd3dDevice, pd3dCommandList)
+CBulletMesh::CBulletMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Look, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles) : CMesh(pd3dDevice, pd3dCommandList)
 {
-	CreateVertexBuffer(pd3dDevice, pd3dCommandList, xmf3Position, xmf3Velocity, fLifetime, xmf3Acceleration, xmf3Color, xmf2Size);
+	CreateVertexBuffer(pd3dDevice, pd3dCommandList, xmf3Position, xmf3Look, fLifetime, xmf3Acceleration, xmf3Color, xmf2Size);
 	CreateStreamOutputBuffer(pd3dDevice, pd3dCommandList, nMaxParticles);
 }
 
-void CBulletMesh::CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size)
+void CBulletMesh::CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Look, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size)
 {
 	m_nVertices = 1;
 	m_nStride = sizeof(CBulletVertex);
@@ -1173,7 +1173,7 @@ void CBulletMesh::CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	CBulletVertex pVertices[1];
 
-	pVertices[0].m_xmf3LastPosition = XMFLOAT3{ 0,0,0 };
+	pVertices[0].m_xmf3Destination = XMFLOAT3{ 0,0,0 };
 	pVertices[0].m_xmf3Position = XMFLOAT3{ 0,0,0 };
 	pVertices[0].m_xmf3Velocity = XMFLOAT3{ 0,0,0 };
 	pVertices[0].m_fLifetime = 0.0f;

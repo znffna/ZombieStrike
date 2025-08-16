@@ -518,4 +518,15 @@ namespace WindowCursor
 			SetCursorVisibility(true);
 		}
 	}
+
+	inline POINT GetClientCenter(HWND hWnd)
+	{
+		RECT rc{};
+		if (!GetClientRect(hWnd, &rc)) return POINT{ 0, 0 };
+
+		// GetClientRect´Â º¸Åë (0,0) ~ (width,height)
+		const LONG cx = (rc.right - rc.left) / 2;
+		const LONG cy = (rc.bottom - rc.top) / 2;
+		return POINT{ cx, cy };
+	}
 }

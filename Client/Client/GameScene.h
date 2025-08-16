@@ -6,11 +6,7 @@
 #pragma once
 #include "Scene.h"
 
-struct FIRE_INFO {
-	XMFLOAT3 xmf3Position;
-	XMFLOAT3 xmf3Velocity;
-	float fRange = 0.0f;
-};
+
 
 class CGameScene : public CScene
 {
@@ -20,6 +16,7 @@ public:
 
 	// Scene Initialization / Release
 	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
+	void CreateFreeCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
 	
 	virtual void CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
@@ -32,10 +29,8 @@ public:
 	virtual void Update(float deltaTime) override;
 	virtual void UpdateLights() override;
 
-	void BuildFiredBullets();
 
 	virtual void OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList) override;
-	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
 	virtual bool ProcessMouseInput(float cxDelta, float cyDelta, float deltaTime) override;
 	virtual bool ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaTime) override;
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
@@ -44,7 +39,7 @@ public:
 	virtual void ChangeMap(int nMapIndex);;
 
 	bool m_bIschambered = false; // 총알 장전 여부
-	virtual FIRE_INFO Fire(const std::shared_ptr<CPlayer>& pPlayer);
+	virtual bool Fire(const std::shared_ptr<CPlayer>& pPlayer, FIRE_INFO* pFireInfo);
 
 	// Shader Variables
 	//void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
@@ -74,7 +69,7 @@ public:
 
 	std::shared_ptr<CBulletParticleObject> m_pBulletObject;
 	std::shared_ptr<CCollisionChecker> m_pCollisionChecker;
-	std::vector<FIRE_INFO> m_pFireInfos;
+	void BuildFiredBullets();
 
 	bool m_bFreeCamera = false; // Free Camera Mode
 	std::shared_ptr<CCamera> m_pFreeCamera;

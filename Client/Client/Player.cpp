@@ -83,21 +83,21 @@ void CPlayer::Update(float fTimeElapsed)
 
 void CPlayer::UpdateUnderAnimation()
 {
-	XMFLOAT3 xmf3Velocity = GetComponent<CRigidBody>()->GetVelocity();
-	if (Vector3::IsZero(xmf3Velocity))
+	XMFLOAT3 xmf3Look = GetComponent<CRigidBody>()->GetVelocity();
+	if (Vector3::IsZero(xmf3Look))
 	{
 		m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::IDLE);
 		return;
 	}
 
 	// 현재 Look 방향(x,z평면 기준)기준 Right, Forward 벡터를 구한다.
-	float fRight = Vector3::DotProduct(m_pTransform->GetRight(), xmf3Velocity);
-	float fForward = Vector3::DotProduct(m_pTransform->GetLook(), xmf3Velocity);
+	float fRight = Vector3::DotProduct(m_pTransform->GetRight(), xmf3Look);
+	float fForward = Vector3::DotProduct(m_pTransform->GetLook(), xmf3Look);
 	float angle = atan2(fForward, fRight);
 	if (angle < 0.0f) angle += XM_PI * 2.0f; // 각도를 [-PI,PI) 에서 [0, 2PI)로 변환
 	float degree = XMConvertToDegrees(angle); // degree로 변환[0 ~ 2Pi) => [0, 360)
 	int nDirection = (int)CAnimationController::ANIMATION_STATE::WALK_RIGHT + static_cast<int>(round(degree / 45.0f)) % 8; // 8방향으로 나누기
-	float fLength = sqrtf(xmf3Velocity.x * xmf3Velocity.x + xmf3Velocity.z * xmf3Velocity.z);
+	float fLength = sqrtf(xmf3Look.x * xmf3Look.x + xmf3Look.z * xmf3Look.z);
 	if (false == ::IsZero(fLength))
 	{
 		m_pSkinnedAnimationController->ChangeState(nDirection);
@@ -161,13 +161,14 @@ void CPlayer::SetSkin(int nSkinType)
 	UpdateTransform();
 }
 
-void CPlayer::Fire()
+bool CPlayer::Fire(FIRE_INFO* pFireInfo)
 { 
 	if (m_pGun) {
 		UpdateTransform();
 		m_pGun->UpdateTransform(m_pGunSlot->GetWorldMatrix());
-		m_pGun->Fire(GetComponent<CCamera>()->GetLook()); 
+		return m_pGun->Fire(GetComponent<CCamera>()->GetLook(), pFireInfo);
 	} 
+	return false;
 }
 
 void CPlayer::Rotate(float x, float y, float z)

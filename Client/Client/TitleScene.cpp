@@ -136,16 +136,19 @@ void CTitleScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 	{
 		if (m_pStartButton && m_pStartButton->IsClicked(normalizedX, normalizedY))
 		{
-			bool ret = NetworkingClient::Instance().Connect();
-			if (!ret)
-			{
-				//TODO : 해당 로직을 TitleScene에서 이미지를 띄우고 지우는 로직으로 변경할 예정
-				auto ip = StringToWString(NetworkingClient::Instance().LoadIPAddress());
-				std::wstring str = L" 서버에 연결할 수 없습니다. (" + ip + L")";
-				MessageBox(hWnd, str.c_str(), L"연결 실패", MB_OK | MB_ICONERROR);
-				return;
-			}
-			CGameFramework::pGameFramework->AddScene("COnlineScene");
+			std::thread connectThread([&]() {
+				bool ret = NetworkingClient::Instance().Connect();
+				if (!ret)
+				{
+					//TODO : 해당 로직을 TitleScene에서 이미지를 띄우고 지우는 로직으로 변경할 예정
+					auto ip = StringToWString(NetworkingClient::Instance().LoadIPAddress());
+					std::wstring str = L" 서버에 연결할 수 없습니다. (" + ip + L")";
+					MessageBox(hWnd, str.c_str(), L"연결 실패", MB_OK | MB_ICONERROR);
+					return;
+				}
+				CGameFramework::pGameFramework->AddScene("COnlineScene");
+			});
+			connectThread.detach();  // 비동기 연결
 		}
 		else if (m_pExitButton && m_pExitButton->IsClicked(normalizedX, normalizedY))
 		{

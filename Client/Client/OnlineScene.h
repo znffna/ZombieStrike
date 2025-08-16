@@ -25,7 +25,8 @@ public:
 
 	virtual void Update(float deltaTime) override;
 
-	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override;
+	virtual bool ProcessMouseInput(float cxDelta, float cyDelta, float deltaTime) override;
+	virtual bool ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaTime) override;
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 
 	// Network Override
@@ -35,7 +36,8 @@ public:
 	void SendPlayerState();
 	void SendFirePacket(const FIRE_INFO fireInfo);
 
-	virtual FIRE_INFO Fire(const std::shared_ptr<CPlayer>& pPlayer) override;
+	virtual bool Fire(const std::shared_ptr<CPlayer>& pPlayer, FIRE_INFO* pFireInfo) override;
+	virtual bool Fire(const std::shared_ptr<CPlayer>& pPlayer);
 
 private:
 	std::unordered_map<int, std::shared_ptr<CGameObject>> m_mapGameObjects;

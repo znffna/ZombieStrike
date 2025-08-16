@@ -81,33 +81,51 @@ void CGun::UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
 	}
 }
 
-void CGun::Fire(const XMFLOAT3& xmf3Direction)
+bool CGun::Fire(const XMFLOAT3& xmf3Direction, FIRE_INFO* pFireInfo)
 {
-	XMFLOAT3 direction = xmf3Direction;
-	XMFLOAT3 position = FindFrame("M16_4_low")->GetPosition(); // 총구 위치
+	if (CanFire() == false) return false; // 총이 발사 가능한 상태가 아닐 경우
 
-	Fire(position, Vector3::ScalarProduct(direction, m_fBulletRange, false));
+	m_fCoolTime = m_fFireRate;
+	m_nCurrentAmmo--; //일단 Reload 없이 총 발사 간격만 적용.
+
+	XMFLOAT3 direction = xmf3Direction;
+	XMFLOAT3 position = FindFrame(m_strMuzzleName[m_nGunType])->GetPosition(); // 총구 위치
+
+	FIRE_INFO fireInfo;
+	fireInfo.xmf3Position = position;
+	fireInfo.xmf3Look = direction;
+	fireInfo.fRange = m_fBulletRange;
+	fireInfo.nBulletType = m_nGunType; // 총알 타입 설정
+	m_pBulletObject->AddFireInfo(fireInfo);
+
+	if (pFireInfo) {
+		*pFireInfo = fireInfo; // 발사 정보 전달
+	}
+
+	return true;
+	//return Fire(position, Vector3::ScalarProduct(direction, m_fBulletRange, false));
 }
 
-void CGun::Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction)
+// ----------------------------------------------
+// 아래 Fire는 책임 이전 -> Gun이 아닌 BulletParticleObject에서 사용
+// ----------------------------------------------
+bool CGun::Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction)
 {
-	while (m_fCoolTime < 0.0f)
+	if (CanFire() == false) return false; // 총이 발사 가능한 상태가 아닐 경우
+
+	CBulletVertex pBulletVertice;
+	pBulletVertice.m_xmf3Position = xmf3Position;
+	pBulletVertice.m_xmf3Velocity = xmf3Direction;
+	pBulletVertice.m_fLifetime = 0.6f;
+	pBulletVertice.m_nBulletType = m_nGunType;
+
+	CGun::m_pBulletObject->AddBullet(pBulletVertice);
+
 	{
-		m_fCoolTime += m_fFireRate;
-
-		CBulletVertex pBulletVertice;
-		pBulletVertice.m_xmf3Position = xmf3Position;
-		pBulletVertice.m_xmf3Velocity = xmf3Direction;
-		pBulletVertice.m_fLifetime = 0.6f;
-		pBulletVertice.m_nBulletType = m_nGunType;
-
-		CGun::m_pBulletObject->AddBullet(pBulletVertice);
-
-		{
-			std::string debug = "Gun Fire \n";
-			debug += "Position: " + std::to_string(xmf3Position.x) + ", " + std::to_string(xmf3Position.y) + ", " + std::to_string(xmf3Position.z) + "\n";
-			debug += "Direction: " + std::to_string(xmf3Direction.x) + ", " + std::to_string(xmf3Direction.y) + ", " + std::to_string(xmf3Direction.z) + "\n";
-			OutputDebugStringA(debug.c_str());
-		}
+		std::string debug = "Gun Fire \n";
+		debug += "Position: " + std::to_string(xmf3Position.x) + ", " + std::to_string(xmf3Position.y) + ", " + std::to_string(xmf3Position.z) + "\n";
+		debug += "Direction: " + std::to_string(xmf3Direction.x) + ", " + std::to_string(xmf3Direction.y) + ", " + std::to_string(xmf3Direction.z) + "\n";
+		OutputDebugStringA(debug.c_str());
 	}
+	return true; // 발사 성공
 }

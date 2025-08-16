@@ -488,24 +488,15 @@ private:
 	std::vector<UINT> m_pIndices;
 }; // CHeightMapTerrain
 
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-
-class CBulletObject : public CGameObject
-{
-public:
-	CBulletObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size) {};
-	virtual ~CBulletObject() {};
-	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_BULLET; }
-
-	// Object Initialization
-	virtual std::string GetDefaultName() override { return "CBulletObject"; }
-
+struct FIRE_INFO {
+	XMFLOAT3 xmf3Position;
+	XMFLOAT3 xmf3Look;
+	int nBulletType = 0; // 총알 타입(0: 일반, 1: 산탄총 등)
+	float fRange = 0.0f;
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
 class CBulletParticleObject : public CGameObject
 {
 	// TODO : Bullet을 전부 관리하는 Object로 변경할 예정
@@ -515,7 +506,7 @@ class CBulletParticleObject : public CGameObject
 	//      : 즉, 총알이 날아가는 듯한 느낌만 주기 위함이며, 실제 피격효과로 인한 출력은 HitResult에 의해
 	//      : 별도 파티클 생성으로 이루어 진다.(즉, Trail과 혈흔 표현을 별도로 구현 예정)
 public:
-	CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
+	CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Look, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
 	virtual ~CBulletParticleObject();
 
 	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_BULLET; }
@@ -524,8 +515,24 @@ public:
 	virtual void OnPostRender();
 
 	// method
-	void AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Velocity, float fRange);
+	void AddFireInfo(const FIRE_INFO& fireInfo) {
+		m_pFireInfos.push_back(fireInfo);
+	}
+
+	void AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Look, float fRange);
 	void AddBullet(const CBulletVertex& pBulletVertex);
+
+private:
+	std::vector<FIRE_INFO> m_pFireInfos;
+
+public:
+	std::vector<FIRE_INFO> GetFireInfos() const {
+		return m_pFireInfos;
+	}
+	void ClearFireInfos() {
+		m_pFireInfos.clear();
+	}
+
 }; // CBulletParticleObject
 
 //class CUIObject : public CGameObject
