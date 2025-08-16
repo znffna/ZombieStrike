@@ -260,6 +260,20 @@ bool ZombieAI::IsAttacking() const
     return m_attack_left > 0.0f;
 }
 
+// 근접 시 잠깐 멈춤
+void ZombieAI::TriggerPause(float dur)
+{
+    if (dur <= 0.0f) return;
+    m_pause_left = std::max(m_pause_left, dur);
+    m_pause_cd = std::max(m_pause_cd, Z_PAUSE_COOLDOWN);
+    m_dirty = true;
+}
+
+bool ZombieAI::IsPausing() const
+{
+    return m_pause_left > 0.0f;
+}
+
 void ZombieAI::ApplyDamage(SIZE2 damage)
 {
     if (m_hp == 0) return;
@@ -306,6 +320,11 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     if (m_attack_cd > 0.0f) { m_attack_cd -= deltaTime; if (m_attack_cd < 0.0f) m_attack_cd = 0.0f; }
     if (m_attack_left > 0.0f) { m_attack_left -= deltaTime; if (m_attack_left < 0.0f) m_attack_left = 0.0f; }
 
+    //  일시정지(pause) 타이머/쿨다운 감소
+    if (m_pause_cd > 0.0f) { m_pause_cd -= deltaTime; if (m_pause_cd < 0.0f) m_pause_cd = 0.0f; }
+    if (m_pause_left > 0.0f) { m_pause_left -= deltaTime; if (m_pause_left < 0.0f) m_pause_left = 0.0f; }
+
+
     // 스턴 상태면 이동/경로탐색 모두 중지
     if (m_stun_left > 0.0f) {
         m_stun_left -= deltaTime;
@@ -320,12 +339,29 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     // 1. 가장 가까운 플레이어 위치 계산
     Vec3 closest = FindClosestPlayer(playerPositions);
 
+    // 근접 시 길따라가기를 잠깐 멈춤(공격과 별개)
+    {
+        Vec3 myPos(m_x, 0, m_z);
+        float dx = closest.x - myPos.x;
+        float dz = closest.z - myPos.z;
+        float dist = std::sqrt(dx * dx + dz * dz);
+
+        if (dist <= Z_PAUSE_RANGE && m_pause_cd <= 0.0f && !IsAttacking()) {
+            TriggerPause();        // 잠깐 정지
+            // m_dirty는 TriggerPause 내에서 true로 설정됨
+        }
+    }
+
     // 공격 트리거: 일정 거리 이내 + 쿨다운 끝 + 스턴 아님
     {
         Vec3 myPos(m_x, 0, m_z);
         float dx = closest.x - myPos.x;
         float dz = closest.z - myPos.z;
         float dist = std::sqrt(dx * dx + dz * dz);
+
+        // [추가] 맵 셀 크기를 고려한 최소 공격거리 보정(너무 타이트하면 못 멈출 수 있음)
+        const float ATTACK_RANGE_FLOOR = CELL_SIZE * 2.0f; // 셀 2칸 이내면 충분히 근접
+        const float effectiveAttackRange = std::max(Z_ATTACK_RANGE, ATTACK_RANGE_FLOOR);
 
         if (dist <= Z_ATTACK_RANGE && m_attack_cd <= 0.0f && m_stun_left <= 0.0f)
         {
@@ -338,25 +374,28 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     // 2. 타겟 위치 설정 및 경로 재계산
     Vec3 newTarget = closest;
 
-    bool needRepath =
-        (int)(newTarget.x) != (int)(m_targetX) ||
-        (int)(newTarget.z) != (int)(m_targetZ) ||
-        m_path.empty() ||
-        m_pathIndex >= m_path.size() ||
-        m_repath_timer > REPATH_INTERVAL;
-
-    if (needRepath) {
-        //DEBUG_LOG("[ZombieAI::Update] ID = " << m_id << " -> 타겟 변경 또는 재계산 필요");
-        if (m_id == 10000) {
-            //std::cout << "[ZombieAI::Update] ID = " << m_id << " -> 타겟 변경 또는 재계산 필요" << std::endl;
-        }
-
-        SetTargetPosition(newTarget.x, newTarget.z);
-        FindPath();
-        m_repath_timer = 0;
+    // 일시정지(pause) 중이면 경로 재계산/타겟 세팅을 잠깐 멈춘다
+    if (IsPausing()) {                          // // ZombieAI::Update - pause 중
+        m_repath_timer += deltaTime;            // // 일단 타이머만 누적 → 해제 후 즉시 재탐색 유도
+        // SetTargetPosition / FindPath 호출 안 함
     }
     else {
-        m_repath_timer += deltaTime;
+        bool needRepath =
+            (int)(newTarget.x) != (int)(m_targetX) ||
+            (int)(newTarget.z) != (int)(m_targetZ) ||
+            m_path.empty() ||
+            m_pathIndex >= m_path.size() ||
+            m_repath_timer > REPATH_INTERVAL;
+
+        if (needRepath) {
+            //DEBUG_LOG("[ZombieAI::Update] ID = %d -> 타겟 변경 또는 재계산 필요", m_id);
+            SetTargetPosition(newTarget.x, newTarget.z);   
+            FindPath();                                    
+            m_repath_timer = 0;                           
+        }
+        else {
+            m_repath_timer += deltaTime;                  
+        }
     }
 
 
@@ -377,9 +416,19 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
 
 
     if (distance < 0.1f) {
-        m_pathIndex++;
+        // 공격 모션 중이면 제자리에서 멈춰 때리기 → pathIndex 증가 금지
+        if (IsAttacking()) {
+            m_dirty = true;          // 상태 브로드캐스트 유지
+            return;                  // 이동·인덱스 진행 모두 중단
+        }
+        m_pathIndex++;               // 평상시에는 다음 노드로 진행
         return;
     }
+    if (IsPausing()) {
+        // 경로는 그대로 두고, 정지 시간 끝나면 다시 같은 노드로 이어서 추격
+        // (여기서 return으로 빠져도 되고, 아래 이동 단계에서 finalMove=0이라 멈춘다)
+    }
+
     Vec3 moveDir = toTarget.Normalize();
     Vec3 nextPos = currentPos + moveDir * Z_move_speed;
 
@@ -429,16 +478,18 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         }
     }
 
-    // 6. 최종 이동 (분리력 + 벽밀기 반영)
+    // 6. 최종 이동 (공격 중 잠깐 정지 → 다시 추격)
     {
         Vec3 finalMove = moveDir * Z_move_speed + wallPush + separation;
 
-        // 공격 애니 중에는 약간 이동을 줄이고 싶다면 스케일 조정도 가능:
-        // if (IsAttacking()) finalMove = finalMove * 0.5f;
+        // 공격 중 이동량 배율 적용 (기본 0.0f → 완전 정지)
+        if (IsAttacking()) {
+            finalMove = finalMove * Z_ATTACK_MOVE_SCALE;   // // 공격중 이동 억제
+        }
 
         m_x += finalMove.x;
         m_z += finalMove.z;
-        m_dirty = true;
+        m_dirty = true; // // 상태 변경 브로드캐스트
     }
 
 }
@@ -481,9 +532,12 @@ Object ZombieAI::GetObjectinfo() const {
     info.level = 0;
     info.score = 0;
     info.damage = ZOMBIE_DAMAGE;
-    info.act_type = (m_hp == 0) ? ActionType::DEAD
-        : (m_stun_left > 0.0f ? ActionType::HIT
-            : (m_attack_left > 0.0f ? ActionType::ATTACK : ActionType::ZMOVE));
+    info.act_type =
+        (m_hp == 0) ? ActionType::DEAD :
+        (m_stun_left > 0.0f) ? ActionType::HIT :   // 스턴 표현은 HIT 재사용
+        ((m_attack_left > 0.0f) || (m_pause_left > 0.0f)) ? ActionType::ATTACK : // 일시정지 중에도 공격 준비 모션처럼 표시
+        ActionType::ZMOVE;
+
     return info;
 }
 

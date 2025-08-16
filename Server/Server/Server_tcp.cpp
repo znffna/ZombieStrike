@@ -79,7 +79,7 @@ static bool ray3_vs_sphere(float ox, float oy, float oz,
     const float b = 2.0f * (dx * vx + dy * vy + dz * vz);
     const float c = (vx * vx + vy * vy + vz * vz) - r * r;
 
-    const float disc = b * b - 4.0f * c;   // a = 1 (정규화 가정)
+    const float disc = b * b - 4.0f * c;   // a = 1 (정규화)
     if (disc < 0.0f) return false;
 
     const float sqrt_disc = sqrtf(disc);
@@ -89,6 +89,69 @@ static bool ray3_vs_sphere(float ox, float oy, float oz,
     if (t1 >= 0.0f) { out_t = t1; return true; }
     if (t2 >= 0.0f) { out_t = t2; return true; }
     return false;
+}
+
+// Ray vs Vertical Capsule(Y-axis)
+// 캡슐 정의: 세로축(Y) 정렬 캡슐. 바닥점 y0, 머리점 y1, 반지름 r.
+// 좀비는 (cx, cz) 수평 위치에 세움. 바닥 y0=0, 머리 y1=ZOMBIE_HEIGHT 가정.
+// 반환: 교차 시 가장 작은 양의 t를 out_t에 기록.
+static bool ray3_vs_capsule_y(
+    float ox, float oy, float oz,
+    float dx, float dy, float dz,   // d는 정규화 
+    float cx, float cz,             // 캡슐 수직축의 x,z (y축 정렬)
+    float y0, float y1,             // 바닥 y0, 머리 y1
+    float r,
+    float& out_t)
+{
+    // 1) 원기둥(무한 높이 아님, 유한 높이) 구간과 레이 교차
+    //   평면투영(XZ)에서 원 반지름 r로 빗겨가는지 체크 후, 높이(y) 범위 교차인지 확인
+    //   수학적으로: (o_perp + t d_perp - c_perp)^2 = r^2, 그리고 y(t) ∈ [y0, y1]
+    const float vx = ox - cx;
+    const float vz = oz - cz;
+
+    // d_perp = (dx, dz)
+    const float A = dx * dx + dz * dz;        // 원기둥 측면 교차용(A=0이면 수직 레이)
+    const float B = 2.0f * (dx * vx + dz * vz);
+    const float C = (vx * vx + vz * vz) - r * r;
+
+    float best_t = FLT_MAX;
+    bool  hit = false;
+
+    if (A > 1e-6f) {
+        const float disc = B * B - 4.0f * A * C;
+        if (disc >= 0.0f) {
+            const float s = sqrtf(disc);
+            const float t1 = (-B - s) / (2.0f * A);
+            const float t2 = (-B + s) / (2.0f * A);
+
+            auto accept_cylinder_t = [&](float t) {
+                if (t < 0.0f) return;
+                float y = oy + t * dy;
+                if (y >= y0 && y <= y1) {
+                    if (t < best_t) { best_t = t; hit = true; }
+                }
+                };
+            accept_cylinder_t(t1);
+            accept_cylinder_t(t2);
+        }
+    }
+    else {
+        // 레이가 y축 거의 평행(수직) → 측면 원기둥 교차는 불능. 상/하 구에만 의존.
+    }
+
+    // 2) 끝구(hemisphere) 교차: 바닥/머리의 구체와 각각 레이 교차
+    auto ray_sphere = [&](float scy) {
+        float t;
+        if (ray3_vs_sphere(ox, oy, oz, dx, dy, dz, cx, scy, cz, r, t)) {
+            // 구체는 반구여야 하지만, 측면에서 이미 걸러줬으므로 그대로 사용 가능
+            if (t >= 0.0f && t < best_t) { best_t = t; hit = true; }
+        }
+        };
+    ray_sphere(y0); // 바닥 반구(센터 y=y0)
+    ray_sphere(y1); // 머리 반구(센터 y=y1)
+
+    if (hit) { out_t = best_t; }
+    return hit;
 }
 
 // 레이와 가장 가까운 ‘살아있는’ 좀비(3D 스피어) 탐색
@@ -111,16 +174,30 @@ static bool find_nearest_hit_zombie3D(float ox, float oy, float oz,
         if (z->IsDead()) continue;
 
         const float cx = z->GetX();
-        const float cy = 0.0f;      // 필요 시 높이 보정
+        //const float cy = 0.0f;      // 필요 시 높이 보정
         const float cz = z->GetZ();
 
         float t = 0.0f;
-        if (ray3_vs_sphere(ox, oy, oz, dx, dy, dz, cx, cy, cz, ZOMBIE_HALF_SIZE, t)) {
+        if (ray3_vs_capsule_y(
+            ox, oy, oz,
+            dx, dy, dz,
+            cx, cz,
+            /*y0*/ 0.0f,
+            /*y1*/ ZOMBIE_HEIGHT,
+            /*r */ ZOMBIE_RADIUS,
+            t))
+        {
             if (t < best_t) {
                 best_t = t;
                 best_id = z->GetID();
             }
         }
+        //if (ray3_vs_sphere(ox, oy, oz, dx, dy, dz, cx, cy, cz, ZOMBIE_HALF_SIZE, t)) {
+        //    if (t < best_t) {
+        //        best_t = t;
+        //        best_id = z->GetID();
+        //    }
+        //}
     }
 
     if (best_id >= 0) {
