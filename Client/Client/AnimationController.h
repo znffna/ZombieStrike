@@ -141,9 +141,10 @@ public:
 	void AdvanceTime(float fElapsedTime, CGameObject* pRootGameObject);
 	void ApplyPitchToSpine(CGameObject* pRootGameObject);
 
-	void ChangeState(int state) { ChangeState((ANIMATION_STATE)state); };
-	void ChangeState(ANIMATION_STATE state);
-	void ChangeState(ANIMATION_STATE state, float fPosition);
+	bool ChangeState(int state) { return ChangeState((ANIMATION_STATE)state); };
+	bool ChangeState(ANIMATION_STATE state);
+	bool ChangeState(ANIMATION_STATE state, float fPosition);
+	int GetState() const { return static_cast<int>(state); }
 
 public:
 	bool m_bRootMotion = false;

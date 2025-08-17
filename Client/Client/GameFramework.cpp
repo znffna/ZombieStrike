@@ -921,13 +921,13 @@ LRESULT CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WP
 	{
 		if (LOWORD(wParam) == WA_INACTIVE) 
 		{
-			m_GameTimer.Stop();
+			//m_GameTimer.Stop();
 			g_bWindowActive = false;
 			WindowCursor::SetCursorVisibility(true);
 		}
 		else 
 		{
-			m_GameTimer.Start();
+			//m_GameTimer.Start();
 			g_bWindowActive = true;
 			WindowCursor::SetCursorVisibility(false);
 		}

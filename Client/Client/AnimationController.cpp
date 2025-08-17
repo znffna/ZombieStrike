@@ -175,6 +175,12 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 			{
 				std::shared_ptr<CAnimationSet> pAnimationSet = m_pAnimationSets->m_pAnimationSets[m_pAnimationTracks[k].m_nAnimationSet];
 				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fElapsedTime, pAnimationSet->m_fLength);
+				
+				if(pRootGameObject->GetLayer() == CGameObject::LAYER_PLAYER){
+					std::string debugString = pRootGameObject->GetName() + ": Animation Track: " + std::to_string(k) + " Position: " + std::to_string(fPosition) + "\n";
+					OutputDebugStringA(debugString.c_str());
+				}
+
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 				{
 #ifdef _WITH_OBJECT_TRANSFORM
@@ -236,24 +242,24 @@ void CAnimationController::ApplyPitchToSpine(CGameObject* pRootGameObject)
 	}
 }
 
-void CAnimationController::ChangeState(ANIMATION_STATE state)
+bool CAnimationController::ChangeState(ANIMATION_STATE state)
 {
-	if (state == this->state) return; // 현재 상태와 같으면 변경하지 않음
+	return ChangeState(state, 0.0f);
+}
+
+bool CAnimationController::ChangeState(ANIMATION_STATE state, float fPosition)
+{
+	if (state == this->state) return false; // 현재 상태와 같으면 변경하지 않음
 	beforeState = this->state;
 	this->state = state;
 
 	/*{
-		std::string debugString = "Change Animation State: " + std::to_string(static_cast<int>(beforeState)) + " to " + std::to_string(static_cast<int>(state)) +"\n";
+		std::string debugString = "Change Animation State: " + std::to_string(static_cast<int>(beforeState)) + " to " + std::to_string(static_cast<int>(state)) + "\n";
 		OutputDebugStringA(debugString.c_str());
 	}*/
 
 	SetTrackEnable(beforeState, false);
 	SetTrackEnable(state, true);
-	SetTrackPosition(state, 0.0f);
-}
-
-void CAnimationController::ChangeState(ANIMATION_STATE state, float fPosition)
-{
-	ChangeState(state);
 	SetTrackPosition(state, fPosition);
+	return true;
 }

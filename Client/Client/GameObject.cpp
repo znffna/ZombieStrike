@@ -256,11 +256,11 @@ void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::share
 	std::shared_ptr<CRigidBody> rigidBody = GetComponent<CRigidBody>();
 	std::shared_ptr<CRigidBody> pOtherRigidBody = pObjectB->GetComponent<CRigidBody>();
 	
-	{
+	/*{
 		std::string debugoutput = "Collision Root Object Occured: " + GetName() + " - " + pObjectB->GetName() + " / ";
 		debugoutput += "Collision Collider Object Occured: " + pColliderA->gameObject->GetName() + " - " + pColliderB->gameObject->GetName() + "\n";
 		OutputDebugStringA(debugoutput.c_str());
-	}
+	}*/
 
 	// 최소 거리 측정
 	XMFLOAT3 mtv = pColliderA->GetCorrectionVector(pColliderB);

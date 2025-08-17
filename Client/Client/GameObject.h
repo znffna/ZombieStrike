@@ -109,7 +109,18 @@ public:
 	virtual GAMEOBJECT_LAYER GetLayer() { return m_nLayer; }
 
 	void SetState(int state) {
-		if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->ChangeState(state);
+		if (m_pSkinnedAnimationController) {
+			if (m_pSkinnedAnimationController->ChangeState(state)) {
+				if (GetLayer() == LAYER_PLAYER) {
+					std::string debugString = std::to_string(GetServerID()) + " Player : Change Animation State to " + std::to_string(static_cast<int>(state)) + "\n";
+					OutputDebugStringA(debugString.c_str());
+				}
+			}
+		}
+	}
+	int GetState() {
+		if (m_pSkinnedAnimationController) return m_pSkinnedAnimationController->GetState();
+		return -1;
 	}
 
 	// 상속 관계

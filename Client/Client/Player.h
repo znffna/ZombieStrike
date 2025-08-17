@@ -44,7 +44,6 @@ public:
 	// UI
 	void SetHealthObject(const std::shared_ptr<CGaugeBar>& pHealthGauge) { m_pHealthGauge = pHealthGauge; }
 
-
 private:
 	std::vector<std::string> m_ModelName{ "Ch18_nonPBR", "Ch35_nonPBR" };
 	std::vector<std::string> m_MeshBoneName{ "Ch18", "Ch35" };
@@ -66,6 +65,7 @@ private:
 	// Player State
 	float m_fHealth = 100.0f; // Player Health
 	float m_fMaxHealth = 100.0f; // Max Health
+	float m_fMoveSpeed = 10.0f; // Player Move Speed
 
 	// Player Move Input
 private:

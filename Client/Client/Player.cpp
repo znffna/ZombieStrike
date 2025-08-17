@@ -67,18 +67,15 @@ void CPlayer::Update(float fTimeElapsed)
 {
 	CGameObject::Update(fTimeElapsed);
 
+	//Move(m_nMoveInput, m_fMoveSpeed, fTimeElapsed);
+
 	if(auto pCamera = GetComponent<CCamera>()) pCamera->Update(GetPosition(), fTimeElapsed);
 	//if(auto pCamera = GetComponent<CCamera>()) pCamera->Update(Vector3::Add( GetPosition(), XMFLOAT3(0, m_fCameraLookY,0)), fTimeElapsed);
 
 	if (m_pGun) {
 		//m_pGun->Update(fTimeElapsed);
 		m_pGun->UpdateTransform(m_pGunSlot->GetWorldMatrix());
-	}
-
-	if (m_pSkinnedAnimationController)
-	{
-		UpdateUnderAnimation();
-	}
+	}	
 }
 
 int GetAnimationIndex(char nMoveInput)
@@ -124,28 +121,28 @@ int GetAnimationIndex(char nMoveInput)
 
 void CPlayer::UpdateUnderAnimation()
 {
-	if(false) {// 현재 Look과 Velocity를 비교하여 애니메이션 상태 변경
-		XMFLOAT3 xmf3Look = GetComponent<CRigidBody>()->GetVelocity();
-		if (Vector3::IsZero(xmf3Look))
-		{
-			m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::IDLE);
-			return;
-		}
+	//if(false) {// 현재 Look과 Velocity를 비교하여 애니메이션 상태 변경
+	//	XMFLOAT3 xmf3Look = GetComponent<CRigidBody>()->GetVelocity();
+	//	if (Vector3::IsZero(xmf3Look))
+	//	{
+	//		m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::IDLE);
+	//		return;
+	//	}
 
-		// 현재 Look 방향(x,z평면 기준)기준 Right, Forward 벡터를 구한다.
-		float fRight = Vector3::DotProduct(m_pTransform->GetRight(), xmf3Look);
-		float fForward = Vector3::DotProduct(m_pTransform->GetLook(), xmf3Look);
-		float angle = atan2(fForward, fRight);
-		if (angle < 0.0f) angle += XM_PI * 2.0f; // 각도를 [-PI,PI) 에서 [0, 2PI)로 변환
-		float degree = XMConvertToDegrees(angle); // degree로 변환[0 ~ 2Pi) => [0, 360)
-		int nDirection = (int)CAnimationController::ANIMATION_STATE::WALK_RIGHT + static_cast<int>(round(degree / 45.0f)) % 8; // 8방향으로 나누기
-		float fLength = sqrtf(xmf3Look.x * xmf3Look.x + xmf3Look.z * xmf3Look.z);
+	//	// 현재 Look 방향(x,z평면 기준)기준 Right, Forward 벡터를 구한다.
+	//	float fRight = Vector3::DotProduct(m_pTransform->GetRight(), xmf3Look);
+	//	float fForward = Vector3::DotProduct(m_pTransform->GetLook(), xmf3Look);
+	//	float angle = atan2(fForward, fRight);
+	//	if (angle < 0.0f) angle += XM_PI * 2.0f; // 각도를 [-PI,PI) 에서 [0, 2PI)로 변환
+	//	float degree = XMConvertToDegrees(angle); // degree로 변환[0 ~ 2Pi) => [0, 360)
+	//	int nDirection = (int)CAnimationController::ANIMATION_STATE::WALK_RIGHT + static_cast<int>(round(degree / 45.0f)) % 8; // 8방향으로 나누기
+	//	float fLength = sqrtf(xmf3Look.x * xmf3Look.x + xmf3Look.z * xmf3Look.z);
 
-		if (false == ::IsZero(fLength))
-		{
-			m_pSkinnedAnimationController->ChangeState(nDirection);
-		}
-	}
+	//	if (false == ::IsZero(fLength))
+	//	{
+	//		m_pSkinnedAnimationController->ChangeState(nDirection);
+	//	}
+	//}
 
 	int nDirection = GetAnimationIndex(m_nMoveInput);
 	m_pSkinnedAnimationController->ChangeState(nDirection);
@@ -155,6 +152,10 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, float deltaTime)
 {
 	if(dwDirection) CGameObject::Move(dwDirection, fDistance, deltaTime);
 	SetMoveInput((char)dwDirection);
+	if (m_pSkinnedAnimationController)
+	{
+		UpdateUnderAnimation();
+	}
 }
 
 void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
