@@ -682,7 +682,7 @@ public:
                 resp.zombieHp = hp_after;
                 for (auto& [id, session] : g_users) session.do_send(&resp);
 
-                // [추가] HP가 0이면 즉시 제거 패킷 (중복 방지: MarkRemoved)
+                //  HP가 0이면 즉시 제거 패킷 (중복 방지: MarkRemoved)
                 if (hp_after == 0) {
                     ZombieAI* hitZ = nullptr;
                     {
@@ -709,8 +709,6 @@ public:
             }
             break;
         }
-
-
 
 
         default:
@@ -779,14 +777,19 @@ void ZombieAIThread() {
         lastTick = now;
         float deltaTime = dt.count();  // 초 단위
 
+        // 플레이어 스냅샷: ID와 위치 동시 수집
         std::vector<Vec3> playerPositions;
+        std::vector<std::pair<SIZEID, Vec3>> playerList;  // // ZombieAIThread - ID 포함
         for (auto& [id, session] : g_users) {
-            if (session._obj_type == ObjectType::PLAYER)
+            if (session._obj_type == ObjectType::PLAYER) {
                 playerPositions.push_back(session._position);
+                playerList.emplace_back(id, session._position);
+            }
         }
 
         for (auto& zombie : g_zombies) {
             if (zombie->IsRemoved()) continue;
+
             zombie->Update(playerPositions, g_zombies, deltaTime);
             // ZombieAIThread - 제거 플래그면 완전 스킵
 

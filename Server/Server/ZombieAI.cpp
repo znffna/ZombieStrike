@@ -631,8 +631,10 @@ std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map)
     static std::random_device rd;
     static std::mt19937 gen(rd());
     //    std::uniform_int_distribution<> distX(0, W - 1); // 전체 맵에서 시도
-    std::uniform_int_distribution<> distX(100, 150);   
-    std::uniform_int_distribution<> distZ(100, 150);
+    //std::uniform_int_distribution<> distX(100, 130);   
+    //std::uniform_int_distribution<> distZ(100, 110);
+    std::uniform_int_distribution<> distX(60, 70);
+    std::uniform_int_distribution<> distZ(95, 100);
 
     // 1차: 랜덤 시도
     const int MAX_ATTEMPTS = 1000; // 시도 횟수 
