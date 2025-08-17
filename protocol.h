@@ -70,8 +70,10 @@ enum PKT_TYPE : SIZE1 {
 
     C_S_LOGIN = 1,
     C_S_UPDATE,
+
     C_S_SHOOT,
     C_S_HIT,
+    S_C_SHOOT,
 
     //S_C_LOGIN_OK = 14,
     //S_C_LOGIN_FAIL = 15,
@@ -128,6 +130,7 @@ inline const char* ToString(PKT_TYPE type) {
     case C_S_UPDATE:        return "C_S_UPDATE";
     case C_S_SHOOT:         return "C_S_SHOOT";
     case C_S_HIT:           return "C_S_HIT";
+    case S_C_SHOOT:         return "S_C_SHOOT";
     case S_C_OBJ_INFO:      return "S_C_OBJ_INFO";
     case S_C_OBJECT_ADD:    return "S_C_OBJECT_ADD";
     case S_C_OBJECT_UPDATE: return "S_C_OBJECT_UPDATE";
@@ -304,11 +307,21 @@ struct ZombieHit {
     SIZE2 hp;
     SIZE2 damage;
 };
+
 struct pkt_sc_hit_multi_result {
     PacketHeader header;
     uint8_t hitCount;
     ZombieHit hits[10];             // 최대 10마리 좀비 피격 처리
 };
+
+struct pkt_sc_shoot {
+    PacketHeader header{ sizeof(*this), PKT_TYPE::S_C_SHOOT }; 
+    SIZEID shooterId;      // 누가 쐈는지
+    GunType gun_type;      // 총 종류(이펙트/사운드)
+    float bulletPos[3];    // 발사 원점
+    float bulletDir[3];    // 정규화 방향
+};
+
 // 로그인 결과 패킷
 struct pkt_sc_obj_info {
     PacketHeader header{ sizeof(*this), PKT_TYPE::S_C_OBJ_INFO };

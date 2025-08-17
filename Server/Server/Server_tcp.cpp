@@ -648,6 +648,22 @@ public:
             float dy = p->bulletDir[1];
             float dz = p->bulletDir[2];
 
+            // [SESSION::process_packet] 변경: 발사 브로드캐스트(S_C_SHOOT) 
+            {
+                pkt_sc_shoot b{};
+                b.header.size = sizeof(b);
+                b.header.type = PKT_TYPE::S_C_SHOOT;
+                b.shooterId = _id;
+                b.gun_type = _gun_type;            // 서버 관점에서 신뢰 가능한 총기 타입
+                b.bulletPos[0] = ox; b.bulletPos[1] = oy; b.bulletPos[2] = oz;
+                b.bulletDir[0] = dx; b.bulletDir[1] = dy; b.bulletDir[2] = dz;
+
+                for (auto& [id, session] : g_users) {
+                    if (id == _id) continue;         // 사수에게는 재전송 불필요
+                    session.do_send(&b);
+                }
+            }
+
             constexpr float MAX_RANGE = 60.0f; // 임시 사거리
 
             int   hit_zid = -1;
