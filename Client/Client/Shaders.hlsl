@@ -529,6 +529,7 @@ struct GS_BULLET_DRAW_OUTPUT
     float4 position : SV_Position;
     float4 color : COLOR;
     float2 uv : TEXTURE;
+    int type : TYPE;
 };
 
 VS_BULLET_DRAW_OUTPUT VSBulletDraw(VS_BULLET_INPUT input)
@@ -552,6 +553,7 @@ static float2 gf2QuadUVs[4] = { float2(0.0f, 0.0f), float2(1.0f, 0.0f), float2(0
 void GSBulletDraw(point VS_BULLET_DRAW_OUTPUT input[1], inout TriangleStream<GS_BULLET_DRAW_OUTPUT> outputStream)
 {
     GS_BULLET_DRAW_OUTPUT output = (GS_BULLET_DRAW_OUTPUT) 0;
+    output.type = input[0].type;
     
     if (input[0].type == BULLET_MAINTAIN)
     {
@@ -559,7 +561,6 @@ void GSBulletDraw(point VS_BULLET_DRAW_OUTPUT input[1], inout TriangleStream<GS_
         output.color = input[0].color;
         output.uv = float2(0.5f, 0.5f);
         outputStream.Append(output);
-        return;
     }
     else if (input[0].type == BULLET_TYPE_TRAIL)
     {
@@ -593,7 +594,15 @@ void GSBulletDraw(point VS_BULLET_DRAW_OUTPUT input[1], inout TriangleStream<GS_
 
 float4 PSBulletDraw(GS_BULLET_DRAW_OUTPUT input) : SV_TARGET
 {
-    float4 cColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
+    float4 cColor = float4(0,0,0,0);
+    if (input.type == BULLET_TYPE_TRAIL)
+        cColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
+    else if (input.type == BULLET_TYPE_MUZZLE_SPARK)
+        cColor = gtxtNormalTexture.Sample(gssWrap, input.uv);
+    else if (input.type == BULLET_TYPE_FRAGMENT)
+        cColor = gtxtMetallicTexture.Sample(gssWrap, input.uv);
+    
+    // 색상 별도 적용(기본은 흰색으로 텍스쳐 색상만 적용)
     cColor *= input.color;
 
     return (cColor);
