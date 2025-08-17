@@ -38,6 +38,11 @@ public:
 // Animation Set마다 Track을 연결.
 // Track에선 실행 속도, 현재 시간, 그리고 가중치를 가지고 있음.
 // Track 모음은 AnimationController에서 관리.
+
+#define ANIMATION_MASK_UPPER 0x01
+#define ANIMATION_MASK_LOWER 0x02
+#define ANIMATION_MASK_FULL  ANIMATION_MASK_UPPER | ANIMATION_MASK_LOWER
+
 class CAnimationTrack
 {
 public:
@@ -46,6 +51,7 @@ public:
 
 public:
 	BOOL 							m_bEnable = true;
+	UINT 							m_nMaskFlag = ANIMATION_MASK_FULL; // 0x01 = Upper, 0x02 = Lower, 0x03 = Both Upper and Lower
 
 	float 							m_fSpeed = 1.0f;
 	float 							m_fPosition = -ANIMATION_CALLBACK_EPSILON;
@@ -60,16 +66,13 @@ public:
 
 	std::shared_ptr<CAnimationCallbackHandler> m_pAnimationCallbackHandler;
 
-	std::string						m_strTag = "None"; // None(Both Upper and Lower), Upper, Lower
-
-	void SetTag(const std::string& strTag) { m_strTag = strTag; }
-	std::string GetTag() const { return m_strTag; }
 	bool CheckTag(const std::string& strTag) const;
 
 public:
 	void SetAnimationSet(int nAnimationSet) { m_nAnimationSet = nAnimationSet; }
 
 	void SetEnable(bool bEnable) { m_bEnable = bEnable; }
+	void SetMask(UINT nMaskFlag, bool bEnable) { bEnable ? m_nMaskFlag |= nMaskFlag : m_nMaskFlag &= ~nMaskFlag; (m_nMaskFlag)? SetEnable(true) : SetEnable(false); }
 	void SetSpeed(float fSpeed) { m_fSpeed = fSpeed; }
 	void SetWeight(float fWeight) { m_fWeight = fWeight; }
 
@@ -82,6 +85,8 @@ public:
 
 	void HandleCallback();;
 };
+
+
 
 // Animation Set과 Animation Track을 모아놓는 클래스
 class CAnimationController
@@ -115,7 +120,10 @@ public:
 		ZOMBIE_DEATH,
 		ZOMBIE_SCREAM,
 		ZOMBIE_HIT,
+		
 	};
+
+	void Print();
 
 	CAnimationController();
 	~CAnimationController();
@@ -147,7 +155,11 @@ public:
 
 	void SetTrackAnimationSet(int nAnimationTrack, int nAnimationSet) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].m_nAnimationSet = nAnimationSet; };
 
+private:
 	void SetTrackEnable(int nAnimationTrack, bool bEnable) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetEnable(bEnable); };
+	
+public:
+	void SetTrackMask(int nAnimationTrack, UINT nFlag, bool bEnable) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetMask(nFlag, bEnable); };
 	void SetTrackPosition(int nAnimationTrack, float fPosition) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetPosition(fPosition); };
 	void SetTrackSpeed(int nAnimationTrack, float fSpeed) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetSpeed(fSpeed); };
 	void SetTrackWeight(int nAnimationTrack, float fWeight) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetWeight(fWeight); };
@@ -162,8 +174,8 @@ public:
 	bool ChangeState(int state) { return ChangeState((ANIMATION_STATE)state); };
 	bool ChangeState(ANIMATION_STATE state);
 	bool ChangeState(ANIMATION_STATE state, float fPosition);
-	void SetLowerState(int state) { LowerState = (ANIMATION_STATE)state; }
-	int GetState() const { return static_cast<int>(state); }
+	void SetLowerState(int state);
+	int GetUpperState() const { return static_cast<int>(state); }
 
 public:
 	bool m_bRootMotion = false;

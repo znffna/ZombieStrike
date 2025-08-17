@@ -76,7 +76,7 @@ void CZombieObject::SetSkin(int nSkinType)
 	for (int i = 0; i < m_pSkinnedAnimationController->m_nAnimationTracks; i++)
 	{
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
-		if (i != 0) m_pSkinnedAnimationController->SetTrackEnable(i, false);
+		if (i != 0) m_pSkinnedAnimationController->SetTrackMask(i, ANIMATION_MASK_FULL, false);
 	}
 
 	//auto pCollider = GetComponent<COBBCollider>();

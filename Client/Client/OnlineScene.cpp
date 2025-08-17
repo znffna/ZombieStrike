@@ -278,7 +278,7 @@ void COnlineScene::SendPlayerState()
 		packet.score = 0; // 점수
 		packet.damage = 0; // 공격력
 		packet.move_input = m_pPlayer->GetMoveInput(); // 이동 입력
-		packet.act_type = m_pPlayer->GetState();
+		packet.act_type = m_pPlayer->GetUpperState();
 
 		XMFLOAT3 position = m_pPlayer->GetPosition();
 		XMFLOAT3 velocity = m_pPlayer->GetComponent<CRigidBody>()->GetVelocity();

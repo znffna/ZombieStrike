@@ -65,6 +65,8 @@ std::shared_ptr<CPlayer> CPlayer::Create(ID3D12Device* pd3dDevice, ID3D12Graphic
 
 void CPlayer::Update(float fTimeElapsed)
 {
+	if (m_pSkinnedAnimationController) UpdateLowerAnimation();
+
 	CGameObject::Update(fTimeElapsed);
 
 	if(m_bReload)
@@ -73,6 +75,7 @@ void CPlayer::Update(float fTimeElapsed)
 		if (m_fReloadTime >= 1.0f) {
 			if (m_pGun) m_pGun->Reload();
 			m_fReloadTime = 0.0f;
+			SetState(CAnimationController::ANIMATION_STATE::IDLE);
 		}
 	}
 
@@ -161,10 +164,8 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, float deltaTime)
 {
 	if(dwDirection) CGameObject::Move(dwDirection, fDistance, deltaTime);
 	SetMoveInput((char)dwDirection);
-	if (m_pSkinnedAnimationController)
-	{
-		UpdateLowerAnimation();
-	}
+
+	
 }
 
 void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
@@ -190,7 +191,7 @@ void CPlayer::SetSkin(int nSkinType)
 	for (int i = 0; i < m_pSkinnedAnimationController->m_nAnimationTracks; i++)
 	{
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
-		if(i != 0) m_pSkinnedAnimationController->SetTrackEnable(i, false);
+		if(i != 0) m_pSkinnedAnimationController->SetTrackMask(i, ANIMATION_MASK_FULL, false);
 	}
 
 	// ¹Ù²ï Model¿¡ ¸ÂÃç Component º¯°æ

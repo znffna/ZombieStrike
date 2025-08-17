@@ -23,7 +23,7 @@ public:
 
 	// Object Update
 	virtual void Update(float fTimeElapsed) override;
-	void UpdateUnderAnimation();
+	void UpdateLowerAnimation();
 	virtual void Move(DWORD dwDirection, float fDistance, float deltaTime) override;
 
 	// Object Render

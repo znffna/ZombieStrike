@@ -118,8 +118,8 @@ public:
 			}
 		}
 	}
-	int GetState() {
-		if (m_pSkinnedAnimationController) return m_pSkinnedAnimationController->GetState();
+	int GetUpperState() {
+		if (m_pSkinnedAnimationController) return m_pSkinnedAnimationController->GetUpperState();
 		return -1;
 	}
 
@@ -187,7 +187,11 @@ protected:
 	UINT m_nObjectID; // Object ID
 	UINT m_nObjectServerID; // Object Server ID
 	std::string m_strName;  // Object Name
-	std::string m_strTag = "Untagged"; // Object Tag (For Skinning)
+
+public:
+	std::string m_strTag = "None"; // Object Tag (For Skinning)
+	std::string GetTag() const { return m_strTag; }
+
 
 	std::shared_ptr<CMesh> m_pMesh; // Object Mesh
 
