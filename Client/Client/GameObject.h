@@ -191,6 +191,16 @@ protected:
 public:
 	std::string m_strTag = "None"; // Object Tag (For Skinning)
 	std::string GetTag() const { return m_strTag; }
+	
+	float GetBoneUpperWeight() const
+	{ 
+		if (m_strName == "mixamorig:Hips") return 0.25f;
+		else if (m_strName == "mixamorig:Spine") return 0.55f;
+		else if (m_strName == "mixamorig:Spine1") return 0.75f;
+		else if (m_strName == "mixamorig:Spine2") return 0.9f;
+		else if (m_strTag == "Upper") return 1.0f;
+		else return 0.0f;
+	}
 
 
 	std::shared_ptr<CMesh> m_pMesh; // Object Mesh
