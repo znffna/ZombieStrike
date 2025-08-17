@@ -16,7 +16,7 @@ constexpr int MAX_NAME_SIZE = 20;
 constexpr int MAX_USER = 5000;          // 서버의 최대 세션 수
 constexpr short MAX_PLAYER_COUNT = 3;   // 최대 플레이어 수
 
-constexpr short MAX_ZOMBIE_COUNT = 10;  // 최대 좀비 수
+constexpr short MAX_ZOMBIE_COUNT = 30;  // 최대 좀비 수
 
 constexpr int W_WIDTH = 250;            // 맵의 크기 정의
 constexpr int W_HEIGHT = 250;
@@ -36,10 +36,12 @@ enum ObjectType : SIZE1 {
 // 공격 종류 정의
 enum ActionType : SIZE1 {
     NONE = 0,   // 배회
-    ZMOVE = 1,   // 좀비 이동
-    ATTACK = 2,   // 근접
-    RANGED = 3,   // 원거리
-    POISON = 4,   // 독
+    ZMOVE = 1,  // 좀비 이동
+    ATTACK = 2,  // 근접
+    RANGED = 3,  // 원거리
+    DEAD = 4,    // 독
+    HIT = 5,    
+
 
 };
 
@@ -97,7 +99,8 @@ inline const char* ToString(ActionType action) {
     case ZMOVE:  return "ZMOVE";
     case ATTACK: return "ATTACK";
     case RANGED: return "RANGED";
-    case POISON: return "POISON";
+    case DEAD:   return "DEAD";
+    case HIT:    return "HIT";
     default:     return "UNKNOWN";
     }
 }
@@ -184,6 +187,11 @@ struct Vec3 {
     float LengthSquared() const {
         return x * x + y * y + z * z;
     }
+    // 내적
+    float Dot(const Vec3& rhs) const {
+        return x * rhs.x + y * rhs.y + z * rhs.z;
+    }
+
 };
 
 constexpr Vec3 START_POSITIONS[3] = {
@@ -247,7 +255,7 @@ struct pkt_cs_login {
 
 // 플레이어 업데이트 패킷
 struct pkt_cs_update {
-    PacketHeader header{sizeof(*this), PKT_TYPE::C_S_UPDATE };
+    PacketHeader header{ sizeof(*this), PKT_TYPE::C_S_UPDATE };
     Vec3 position;              // 위치
     Vec3 velocity;              // 방향 * 속도
     Vec3 look;                  // 보는방향
@@ -264,19 +272,19 @@ struct pkt_cs_update {
 // 총알 발사 패킷
 struct pkt_cs_shoot {
     PacketHeader header{sizeof(*this), PKT_TYPE::C_S_SHOOT };
-	SIZEID id;                      // 누가 쐈는지
-    SIZE1 GunType;                  // 총 종류
-    //int hitZombieId;
+	//SIZEID id;                      // 누가 쐈는지
+ //   SIZE1 GunType;                  // 총 종류
+ //   //int hitZombieId;
     float bulletPos[3];
     float bulletDir[3];
 };
 
-// 총알 명중 패킷
-struct pkt_cs_hit {
-    PacketHeader header{sizeof(*this),PKT_TYPE::C_S_SHOOT };
-    SIZEID shooterId;               // 누가 쐈는지
-    SIZEID zombieId;                // 맞은 좀비 ID
-};
+//// 총알 명중 패킷
+//struct pkt_cs_hit {
+//    PacketHeader header{sizeof(*this),PKT_TYPE::pkt_cs_hit };
+//    SIZEID shooterId;               // 누가 쐈는지
+//    SIZEID zombieId;                // 맞은 좀비 ID
+//};
 
 
 // --------------------------
@@ -288,7 +296,6 @@ struct pkt_sc_hit_result {
     SIZEID shooterId;               // 누가 쐈는지
     SIZEID zombieId;
     SIZE2 zombieHp;
-    //uint8_t damage;               // 얼마나 깎였는지
 };
 struct ZombieHit {
     SIZEID zombieId;
