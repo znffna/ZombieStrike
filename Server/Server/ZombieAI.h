@@ -10,7 +10,7 @@
 constexpr float my_gCost = 1.0f;             // 이동 비용
 constexpr float ZOMBIE_HALF_SIZE = 0.4f;     // 좀비 AABB 반 사이즈
 constexpr SIZE2 ZOMBIE_HP = 500;             // 좀비 초기 체력
-constexpr float ZOMBIE_DAMAGE = 10;          // 좀비 초기 체력
+constexpr float ZOMBIE_DAMAGE = 10;          // 좀비 초기 공격력 
 constexpr float Z_move_speed = 0.03f;         // 좀비 
 
 constexpr float WORLD_WIDTH = 250.0f;
@@ -119,7 +119,7 @@ private:
     int m_id;
     float m_x, m_z;
     float m_targetX, m_targetZ;
-    SIZE2 m_hp;  
+    SIZE2 m_hp = ZOMBIE_HP;
     std::vector<std::pair<int, int>> m_path;
 
     const std::vector<std::vector<int>>& m_map;
@@ -146,6 +146,11 @@ private:
 // Util 함수
 std::vector<std::vector<int>> LoadMapBin(const std::string& filename);
 std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map);
+std::pair<int, int> GetSpawnPointByIndexN(
+    const std::vector<std::vector<int>>& map,
+    const std::vector<std::pair<int, int>>& points,
+    int spawn_index,
+    int total_spawns);
 
 // 스폰 후보 타일이 반경 r 칸 내에 장애물이 없는지 확인
 bool IsAreaClear(const std::vector<std::vector<int>>&map, int x, int z, int radius = 4); // // IsAreaClear

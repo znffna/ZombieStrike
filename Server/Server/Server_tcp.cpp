@@ -682,7 +682,7 @@ public:
                 resp.zombieHp = hp_after;
                 for (auto& [id, session] : g_users) session.do_send(&resp);
 
-                // [추가] HP가 0이면 즉시 제거 패킷 (중복 방지: MarkRemoved)
+                //  HP가 0이면 즉시 제거 패킷 (중복 방지: MarkRemoved)
                 if (hp_after == 0) {
                     ZombieAI* hitZ = nullptr;
                     {
@@ -709,8 +709,6 @@ public:
             }
             break;
         }
-
-
 
 
         default:
@@ -746,15 +744,45 @@ void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
 
 auto lastTick = std::chrono::steady_clock::now();
 
+// 요구했던 두 포인트 + 예시 포인트 1~2개 더 (원하는 만큼 2~4개만 채워서 사용)
+std::vector<std::pair<int, int>> spawnPoints = {
+    {150, 180},  // 포인트 A
+    {150, 100},  // 포인트 B
+    // {200, 300},  // 포인트 C (원하면 활성화)
+    // {400, 420},  // 포인트 D (원하면 활성화)
+};
+
+
+// // SpawnZombies: N등분 스폰 적용 (GetSpawnPointByIndexN)
 void SpawnZombies(int count) {
+    // // SpawnZombies: 방어 코드 – 스폰 포인트 미설정 시 기본 포인트 두 개로 세팅
+    if (spawnPoints.empty()) {                                 
+        spawnPoints = { {150,180}, {150,100} };                
+    }
+
     for (int i = 0; i < count; ++i) {
-        auto [x, z] = GetRandomPosition(g_map);
+        // // SpawnZombies: 균등 분할로 i번째 스폰 좌표 선택
+        auto [sx, sz] = GetSpawnPointByIndexN(g_map, spawnPoints, i, count);  
+
+        // // SpawnZombies: 좌표계 선택
+        // 프로젝트가 '셀 인덱스' 좌표를 SetPosition에 기대하면 아래 1줄 사용:
+        float zx = static_cast<float>(sx);                          
+        float zz = static_cast<float>(sz);                         
+
+        // 월드 좌표(CELL_SIZE 배수)를 SetPosition에 기대한다면 위 2줄 대신 아래 2줄 사용:
+        // float zx = static_cast<float>(sx) * CELL_SIZE;          
+        // float zz = static_cast<float>(sz) * CELL_SIZE;           
+
         ZombieAI* zombie = new ZombieAI(g_map, 10000 + i);
-        zombie->SetPosition((float)x, (float)z);
+        zombie->SetPosition(zx, zz);                                
         zombie->SetHP(ZOMBIE_HP);
         g_zombies.push_back(zombie);
 
-        // 좀비 정보를 모든 플레이어에게 전송
+        // // SpawnZombies: 생성 즉시 대상 지정/경로 탐색을 원하면 필요 시 활성화
+        // zombie->SetTargetPosition(player_x, player_z);          
+        // zombie->FindPath();                                      
+
+        // 좀비 정보를 모든 플레이어에게 전송 (기존 유지)
         pkt_sc_object_add p;
         p.header.size = sizeof(p);
         p.header.type = PKT_TYPE::S_C_OBJECT_ADD;
@@ -779,14 +807,19 @@ void ZombieAIThread() {
         lastTick = now;
         float deltaTime = dt.count();  // 초 단위
 
+        // 플레이어 스냅샷: ID와 위치 동시 수집
         std::vector<Vec3> playerPositions;
+        std::vector<std::pair<SIZEID, Vec3>> playerList;  // // ZombieAIThread - ID 포함
         for (auto& [id, session] : g_users) {
-            if (session._obj_type == ObjectType::PLAYER)
+            if (session._obj_type == ObjectType::PLAYER) {
                 playerPositions.push_back(session._position);
+                playerList.emplace_back(id, session._position);
+            }
         }
 
         for (auto& zombie : g_zombies) {
             if (zombie->IsRemoved()) continue;
+
             zombie->Update(playerPositions, g_zombies, deltaTime);
             // ZombieAIThread - 제거 플래그면 완전 스킵
 

@@ -235,6 +235,7 @@ struct Object {
     SIZE2 score;                // 점수
     SIZE2 damage;               // 공격력
     SIZE1 act_type;             // NONE, Player, ZMOVE, ATTACK, ...
+    SIZE1 move_input;           // 이동 입력
 };
 
 
@@ -339,6 +340,7 @@ struct pkt_sc_object_add {
     SIZE2 starthp;              // 체력
     GunType gun_type;           // 총 종류
 	SIZE1 act_type;			    // NONE, Player, ZMOVE, ATTACK, ...
+    SIZE1 move_input;           // 이동 입력
 };
 
 // 객체 업데이트
