@@ -82,7 +82,8 @@ class CAnimationController
 public:
 	enum ANIMATION_STATE
 	{
-		// IDLE
+		/// Player Animation States
+		// IDLE(Aiming)
 		IDLE = 0,
 		// WALK
 		WALK_RIGHT,
@@ -97,6 +98,16 @@ public:
 		FIRE,
 		// Reload
 		RELOAD,
+		// Hitted
+		HITTED,
+
+		/// Zombie Animation States
+		ZOMBIE_IDLE = 0,
+		ZOMBIE_RUNNING,
+		ZOMBIE_ATTACK,
+		ZOMBIE_DEATH,
+		ZOMBIE_SCREAM,
+		ZOMBIE_HIT,
 	};
 
 	CAnimationController();

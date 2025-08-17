@@ -199,7 +199,37 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			pRigidBody->SetVelocity(updatePkt->velocity.x, updatePkt->velocity.y, updatePkt->velocity.z);
 		}
 
-		m_mapGameObjects[updatePkt->id]->SetState(updatePkt->act_type);
+		if(auto pPlayer = std::dynamic_pointer_cast<CPlayer>(m_mapGameObjects[updatePkt->id]))
+		{
+			m_mapGameObjects[updatePkt->id]->SetState(updatePkt->act_type);
+		}
+		else if (auto pZombie = std::dynamic_pointer_cast<CZombieObject>(m_mapGameObjects[updatePkt->id]))
+		{
+			switch (updatePkt->act_type)
+			{
+			case ActionType::ZMOVE:
+				pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_RUNNING);
+				break;
+			case ActionType::ATTACK:
+				pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_ATTACK);
+				break;
+			case ActionType::RANGED:
+				pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_ATTACK);
+				break;
+			case ActionType::DEAD:
+				pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_DEATH);
+				break;
+			case ActionType::HIT:
+				pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_HIT);
+				break;
+			default:
+				pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_IDLE);
+				break;
+			}
+		}
+		else {
+			m_mapGameObjects[updatePkt->id]->SetState(updatePkt->act_type);
+		}
 
 		float fPitch = updatePkt->pitch;
 		if(auto pCamera = m_mapGameObjects[updatePkt->id]->GetComponent<CCamera>()) pCamera->SetPitch(fPitch);
