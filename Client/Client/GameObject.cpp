@@ -64,6 +64,7 @@ CGameObject::~CGameObject()
 	std::string debugoutput = "Object Name: " + GetName() + " has Destroyed\n";
 	OutputDebugStringA(debugoutput.c_str());
 #endif // _DEBUG
+
 }
 
 void CGameObject::Init()
