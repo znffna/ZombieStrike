@@ -46,6 +46,7 @@ public:
 
 public:
 	BOOL 							m_bEnable = true;
+
 	float 							m_fSpeed = 1.0f;
 	float 							m_fPosition = -ANIMATION_CALLBACK_EPSILON;
 	float 							m_fWeight = 1.0f;
@@ -58,6 +59,12 @@ public:
 	std::vector<CALLBACKKEY> m_pCallbackKeys;
 
 	std::shared_ptr<CAnimationCallbackHandler> m_pAnimationCallbackHandler;
+
+	std::string						m_strTag = "None"; // None(Both Upper and Lower), Upper, Lower
+
+	void SetTag(const std::string& strTag) { m_strTag = strTag; }
+	std::string GetTag() const { return m_strTag; }
+	bool CheckTag(const std::string& strTag) const;
 
 public:
 	void SetAnimationSet(int nAnimationSet) { m_nAnimationSet = nAnimationSet; }
@@ -80,7 +87,7 @@ public:
 class CAnimationController
 {
 public:
-	enum ANIMATION_STATE
+	enum ANIMATION_STATE // Number == Animation Track Index
 	{
 		/// Player Animation States
 		// IDLE(Aiming)
@@ -119,7 +126,7 @@ public:
 public:
 	// State
 	ANIMATION_STATE state = IDLE;
-	ANIMATION_STATE beforeState = IDLE;
+	ANIMATION_STATE LowerState = IDLE; // Lower Body Animation State
 
 	// Animation 
 	float 							m_fTime = 0.0f;
@@ -155,6 +162,7 @@ public:
 	bool ChangeState(int state) { return ChangeState((ANIMATION_STATE)state); };
 	bool ChangeState(ANIMATION_STATE state);
 	bool ChangeState(ANIMATION_STATE state, float fPosition);
+	void SetLowerState(int state) { LowerState = (ANIMATION_STATE)state; }
 	int GetState() const { return static_cast<int>(state); }
 
 public:

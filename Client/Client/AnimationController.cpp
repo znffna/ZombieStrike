@@ -12,6 +12,13 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
+inline bool CAnimationTrack::CheckTag(const std::string& strTag) const {
+	if (strTag == "None") return true;
+	else if (strTag == "Upper") return (m_strTag != "Lower");
+	else if (strTag == "Lower") return (m_strTag != "Upper");
+	return true;
+}
+
 float CAnimationTrack::UpdatePosition(float fTrackPosition, float fElapsedTime, float fAnimationLength)
 {
 	float fTrackElapsedTime = fElapsedTime * m_fSpeed;
@@ -250,7 +257,7 @@ bool CAnimationController::ChangeState(ANIMATION_STATE state)
 bool CAnimationController::ChangeState(ANIMATION_STATE state, float fPosition)
 {
 	if (state == this->state) return false; // 현재 상태와 같으면 변경하지 않음
-	beforeState = this->state;
+	ANIMATION_STATE beforeState = this->state;
 	this->state = state;
 
 	/*{
