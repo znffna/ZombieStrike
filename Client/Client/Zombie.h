@@ -26,10 +26,28 @@ public:
 	virtual std::string GetDefaultName() override { return "CZombieObject"; }
 	virtual GAMEOBJECT_LAYER GetLayer() { return m_nLayer = LAYER_ENEMY; }
 
+	virtual void Update(float fTimeElapsed) override;
+
 	// Skin State
 	void SetSkinType(int nSkinType);
 	int GetSkinType() const;
 	void SetSkin(int nSkinType);
+
+	// Died
+	bool m_bDied = false; // 좀비가 죽었는지 여부
+	float m_fDeathTime = 0.0f; // 죽은 시간
+	float m_fMaxDeathTime = 5.0f; // 최대 죽은 시간
+	void Died()
+	{
+		if(false == m_bDied)
+		{
+			if (m_pSkinnedAnimationController)
+			{
+				SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_DEATH);
+			}
+			m_bDied = true;
+		}
+	}
 private:
 	std::vector<std::string> m_strModelName{ "PoliceZombie", "Yaku_J_Ignite", "Zombiegirl_W_Kurniawan"};
 	std::vector<std::string> m_strMeshBoneName{ "FuzZombie", "Yaku_zombie", "ZombieGirl_Body"};

@@ -218,6 +218,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 				break;
 			case ActionType::DEAD:
 				pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_DEATH);
+				//pZombie->Died();
 				break;
 			case ActionType::HIT:
 				pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_HIT);

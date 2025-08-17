@@ -1,5 +1,6 @@
 #include "Zombie.h"
 #include "Scene.h"
+#include "GameFramework.h"
 
 CZombieCAnimationController::CZombieCAnimationController()
 	: CAnimationController()
@@ -55,6 +56,22 @@ std::shared_ptr<CZombieObject> CZombieObject::Create(ID3D12Device* pd3dDevice, I
 	return pZombie;
 }
 
+void CZombieObject::Update(float fTimeElapsed)
+{
+	CGameObject::Update(fTimeElapsed);
+
+	if(m_bDied)
+	{
+		m_fDeathTime += fTimeElapsed;
+		if (m_fDeathTime > m_fMaxDeathTime)
+		{
+			m_bDied = false; // 좀비가 죽은 상태를 초기화
+			m_fDeathTime = 0.0f; // 죽은 시간 초기화
+			CGameFramework::pGameFramework->GetCurrentScene()->RemoveObject(shared_from_this());
+		}
+	}
+}
+
 // Skin State
 void CZombieObject::SetSkinType(int nSkinType)
 {
@@ -78,6 +95,8 @@ void CZombieObject::SetSkin(int nSkinType)
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 		if (i != 0) m_pSkinnedAnimationController->SetTrackMask(i, ANIMATION_MASK_FULL, false);
 	}
+
+	m_fMaxDeathTime = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[(int)CAnimationController::ANIMATION_STATE::ZOMBIE_DEATH]->m_fLength + 3.0f; // 좀비가 죽은 후 사라지기까지의 시간
 
 	//auto pCollider = GetComponent<COBBCollider>();
 	//pCollider->SetCollider(FindFrame(m_strMeshBoneName[m_nSkinType])->GetMeshBound());
