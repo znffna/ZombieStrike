@@ -404,9 +404,9 @@ struct pkt_cs_score_info {
 struct pkt_sc_score_info {
     PacketHeader header{sizeof(*this),PKT_TYPE::S_C_SCORE_INFO };
     SIZE2 stage_score;      // 스테이지 점수
-    SIZE2 alive;            // 생존자 수
     SIZE2 total_spawned;;   // 스폰 좀비 수 
     SIZE2 total_killed;     // 죽인 좀비 수
+    SIZE2 alive;            // 남아있는 좀비 수
 };  
 
 #pragma pack (pop)
