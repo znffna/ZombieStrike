@@ -275,6 +275,19 @@ void CGameScene::BuildFiredBullets()
 			std::string debugOutput = "CGameScene::BuildFiredBullets() - Bullet Position: " + std::to_string(pBullet.xmf3Position.x) + ", " + std::to_string(pBullet.xmf3Position.y) + ", " + std::to_string(pBullet.xmf3Position.z) + "\n";
 			debugOutput += "Velocity: " + std::to_string(pBulletVertex.m_xmf3Velocity.x) + ", " + std::to_string(pBulletVertex.m_xmf3Velocity.y) + ", " + std::to_string(pBulletVertex.m_xmf3Velocity.z) + "\n";
 			debugOutput += "Impact Distance: " + std::to_string(pBullet.fRange) + "\n";
+			debugOutput += "Hit Object Type: ";
+			switch (pBulletVertex.m_nHitObjectType) {
+				case HIT_TYPE_NONE:
+					debugOutput += "None";
+					break;
+				case HIT_TYPE_ENVIRONMENT:
+					debugOutput += "Environment";
+					break;
+				case HIT_TYPE_ENEMY:
+					debugOutput += "Enemy";
+					break;
+			}
+			debugOutput += "\n";
 			
 			OutputDebugStringA(debugOutput.c_str());
 		}

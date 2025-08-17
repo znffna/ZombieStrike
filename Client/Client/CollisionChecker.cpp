@@ -94,6 +94,7 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 	bool& isCollided = resultRaycast.isCollided;
 	float& fImpactDistance = resultRaycast.fImpactDistance;
 	resultRaycast.fImpactDistance = fRange;
+	resultRaycast.nHitObjectType = HIT_TYPE_NONE; // 초기값은 충돌 없음
 
 	// 총알 충돌 체크
 	auto& ppObjects = m_pScene->GetObjects();
