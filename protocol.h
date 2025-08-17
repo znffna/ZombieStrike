@@ -21,8 +21,6 @@ constexpr short MAX_ZOMBIE_COUNT = 30;  // 최대 좀비 수
 constexpr int W_WIDTH = 250;            // 맵의 크기 정의
 constexpr int W_HEIGHT = 250;
 
-
-
 constexpr SIZE2 PLAYER_HP = 500;            // 플레이어 체력  
 constexpr SIZE2 GUN_DAMAGE = 300;           // 총기 데미지 - 일단 2방에 죽나 tset용  
 constexpr SIZE2 ZOMBIE_HP = 500;            // 좀비 초기 체력
@@ -404,8 +402,11 @@ struct pkt_cs_score_info {
 };
 struct pkt_sc_score_info {
     PacketHeader header{sizeof(*this),PKT_TYPE::S_C_SCORE_INFO };
-    SIZE2 stage_score;
-};
+    SIZE2 stage_score;      // 스테이지 점수
+    SIZE2 alive;            // 생존자 수
+    SIZE2 total_spawned;;   // 스폰 좀비 수 
+    SIZE2 total_killed;     // 죽인 좀비 수
+};  
 
 #pragma pack (pop)
 
