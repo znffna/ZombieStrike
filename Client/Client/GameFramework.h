@@ -73,6 +73,7 @@ public:
 	// Scene Management
 	void AddScene(std::string sceneName);
 	void PopScene();
+	std::shared_ptr<CScene> GetCurrentScene() { if(m_Scenes.size()) return m_Scenes.back(); }
 
 private:
 	bool isWorkd = true;

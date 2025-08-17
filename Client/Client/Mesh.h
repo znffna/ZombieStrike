@@ -557,6 +557,9 @@ public:
 //
 #define MAX_BULLETS				9000000
 
+#define HIT_TYPE_ENVIRONMENT 0
+#define HIT_TYPE_ENEMY 1
+
 class CBulletMesh : public CMesh
 {
 public:
