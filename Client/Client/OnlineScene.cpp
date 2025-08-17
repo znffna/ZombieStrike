@@ -63,6 +63,8 @@ bool COnlineScene::ProcessMouseInput(float cxDelta, float cyDelta, float deltaTi
 bool COnlineScene::ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaTime)
 {
 	CGameScene::ProcessKeyboardInput(pKeysBuffer, deltaTime);
+
+
 	return false;
 }
 
@@ -237,6 +239,7 @@ void COnlineScene::SendPlayerState()
 		packet.level = 1; // 레벨
 		packet.score = 0; // 점수
 		packet.damage = 0; // 공격력
+		packet.move_input = m_pPlayer->GetMoveInput(); // 이동 입력
 
 		XMFLOAT3 position = m_pPlayer->GetPosition();
 		XMFLOAT3 velocity = m_pPlayer->GetComponent<CRigidBody>()->GetVelocity();
@@ -250,7 +253,6 @@ void COnlineScene::SendPlayerState()
 		packet.hp = 100; // 체력
 
 		NetworkingClient::Instance().send_packet((char*)&packet);
-
 	}
 }
 
