@@ -14,7 +14,7 @@ struct CollisionInfo {
 struct RESULT_RAYCAST {
 	bool isCollided;
 	float fImpactDistance;
-	int nHitObjectType; // 0: None, 1: Terrain, 2: Zombie, 3: Player
+	int nHitObjectType; 
 };
 
 class CCollisionChecker : public CGameObject

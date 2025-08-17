@@ -123,7 +123,7 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 				isCollided = true;
 				if (tempRange < fImpactDistance) {
 					fImpactDistance = tempRange;
-					resultRaycast.nHitObjectType = 1; // Environment
+					resultRaycast.nHitObjectType = HIT_TYPE_ENVIRONMENT; // Environment
 				}
 			}
 		}
@@ -136,7 +136,7 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 				isCollided = true;
 				if (tempRange < fImpactDistance) {
 					fImpactDistance = tempRange;
-					resultRaycast.nHitObjectType = 2; // Enemy
+					resultRaycast.nHitObjectType = HIT_TYPE_ENEMY; // Enemy
 				}
 			}
 		}
