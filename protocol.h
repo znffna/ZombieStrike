@@ -325,6 +325,7 @@ struct pkt_sc_obj_info {
     SIZE2 damage;               // 공격력
     GunType gun_type;           // 총 종류
     SIZE1 act_type;             // NONE, Player, ZMOVE, ATTACK, ...
+    SIZE1 move_input;           // 이동 입력
 };
 
 // --- Object 관리 패킷 ---
@@ -355,6 +356,7 @@ struct pkt_sc_object_update {
     SIZE2 score;                // 점수
     SIZE2 damage;               // 공격력
     SIZE1 act_type;             // NONE, Player, ZMOVE, ATTACK, ...
+    SIZE1 move_input;           // 이동 입력
 };
 // 객체 삭제
 struct pkt_sc_object_remove {
