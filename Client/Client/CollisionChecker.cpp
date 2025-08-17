@@ -69,12 +69,6 @@ void CCollisionChecker::CollisionCheckFromLayers(std::vector<std::pair<CGameObje
 	}
 	for (auto& ppCollisionInfo : ppCollidedPairs)
 	{
-		// TODO : 이떄 UpdateTransform을 하지 않고, Model이 가진 모든 BB를 가져와서 복사할당후, 변위값만으로 갱신시키는 코드 작성 필요.
-		// TODO : 충돌처리시 TransformUpdate를 계속 호출시 많은 부하 발생(실제 좀비렌더링에 렉도 충돌체크때문임을 체크.
-		// TODO : 즉, UpdateTransform은 충돌체크전 1번, 렌더링 전 1번 으로 한프레임에 2번만으로 바꾸어야 함.
-		//ppCollisionInfo.pObjectA->UpdateTransform();
-		//ppCollisionInfo.pObjectB->UpdateTransform();
-
 		ppCollisionInfo.pObjectA->OnCollision(ppCollisionInfo.pObjectB, ppCollisionInfo.pColliderA, ppCollisionInfo.pColliderB);
 	}
 }
@@ -111,6 +105,16 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 	xmv3Direction = XMVector3Normalize(xmv3Direction);
 
 	float tempRange;
+
+	/*
+	auto& pTerrain = ppObjects[CGameObject::LAYER_TERRAIN];
+	for(auto& pTerrainObject : pTerrain)
+	{
+		std::vector<std::shared_ptr<CCollider>> pColliders = pTerrainObject->m_pCachesColliders;
+		
+	}
+	*/
+
 	for (auto& pObject : pMaps)
 	{
 		std::vector<std::shared_ptr<CCollider>> pColliders = pObject->m_pCachesColliders;
@@ -119,6 +123,7 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 				isCollided = true;
 				if (tempRange < fImpactDistance) {
 					fImpactDistance = tempRange;
+					resultRaycast.nHitObjectType = 1; // Environment
 				}
 			}
 		}
@@ -131,6 +136,7 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 				isCollided = true;
 				if (tempRange < fImpactDistance) {
 					fImpactDistance = tempRange;
+					resultRaycast.nHitObjectType = 2; // Enemy
 				}
 			}
 		}

@@ -48,36 +48,50 @@ void COnlineScene::Update(float deltaTime)
 	}
 }
 
-bool COnlineScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
+bool COnlineScene::ProcessMouseInput(float cxDelta, float cyDelta, float deltaTime)
 {
-	if(NetworkingClient::Instance().IsRunning() == false)
+	if (NetworkingClient::Instance().IsRunning() == false)
 	{
 		PopScene();
 		return true;
 	}
 
-	CGameScene::ProcessInput(pBuffer, deltaTime);
+	CGameScene::ProcessMouseInput(cxDelta, cyDelta, deltaTime);
+	return false;
+}
 
-	if (pBuffer.pKeysBuffer[VK_ESCAPE] & 0xF0)
-	{
-		PopScene();
-		return true;
-	}
+bool COnlineScene::ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaTime)
+{
+	CGameScene::ProcessKeyboardInput(pKeysBuffer, deltaTime);
+	return false;
+}
 
-	if (pBuffer.pKeysBuffer[VK_F5] & 0xF0)
+void COnlineScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)
 	{
-		ChangeMap(0);
+		case WM_KEYDOWN:
+		{
+			switch (wParam)
+			{
+			case VK_F1:
+				g_bRenderCollider = !g_bRenderCollider;
+				break;
+			case VK_F5:
+			case VK_F6:
+			case VK_F7:
+				ChangeMap(wParam - VK_F5);
+				break;
+			case VK_ESCAPE:
+				PopScene();
+				break;
+			default:
+				break;
+			}
+			break;
+		}
+		break;
 	}
-	else if (pBuffer.pKeysBuffer[VK_F6] & 0xF0)
-	{
-		ChangeMap(1);
-	}
-	else if (pBuffer.pKeysBuffer[VK_F7] & 0xF0)
-	{
-		ChangeMap(2);
-	}
-
-	return true;
 }
 
 void COnlineScene::ProcessReadQueuePacket()
@@ -163,8 +177,10 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			// 총알 오브젝트 추가
 			/*std::shared_ptr<CGameObject> pBullet = std::make_shared<CBulletParticleObject>();
 			pBullet->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
-			m_mapGameObjects[packet->id] = pBullet;*/
-			Fire(std::dynamic_pointer_cast<CPlayer>(m_mapGameObjects[packet->id]));
+			m_mapGameObjects[packet->id] = pBullet;
+			*/
+			auto pPlayer = std::dynamic_pointer_cast<CPlayer>(m_mapGameObjects[packet->id]);
+			if(pPlayer) Fire(pPlayer);
 			break;
 		}
 		}
@@ -251,18 +267,31 @@ void COnlineScene::SendFirePacket(const FIRE_INFO fireInfo)
 
 	pkt_cs_shoot packet{};
 	memcpy(&packet.bulletPos, &fireInfo.xmf3Position, sizeof(XMFLOAT3)); // 총알 위치
-	memcpy(&packet.bulletDir, &fireInfo.xmf3Velocity, sizeof(XMFLOAT3)); // 총알 방향 * 거리
+	memcpy(&packet.bulletDir, &fireInfo.xmf3Look, sizeof(XMFLOAT3)); // 총알 방향 * 거리
 
 	NetworkingClient::Instance().send_packet((char*)&packet);
 }
 
-FIRE_INFO COnlineScene::Fire(const std::shared_ptr<CPlayer>& pPlayer)
+bool COnlineScene::Fire(const std::shared_ptr<CPlayer>& pPlayer, FIRE_INFO* pFireInfo)
 {
-	auto fireInfo = CGameScene::Fire(pPlayer);
+	FIRE_INFO fireInfo{};
+	auto ret = CGameScene::Fire(pPlayer, &fireInfo);
 
-	if (fireInfo.fRange <= 0.0f) return fireInfo; // 총알이 발사되지 않은 경우
+	// 로컬 정보였을 경우
+	if (ret && m_pPlayer == pPlayer) {
+		SendFirePacket(fireInfo);
+		if(m_pPlayer->GetGun()->GetCurrentAmmo() <= 0)
+		{
+			m_pPlayer->Reload();
 
-	if (m_pPlayer == pPlayer) SendFirePacket(fireInfo);
+		}
+	}
 
-	return fireInfo;
+	return ret;
+}
+
+bool COnlineScene::Fire(const std::shared_ptr<CPlayer>& pPlayer)
+{
+	auto ret = Fire(pPlayer, nullptr);
+	return ret;
 }

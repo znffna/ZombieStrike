@@ -585,6 +585,13 @@ void CGameFramework::AdvanceFrame()
 		}
 	}
 
+	// 현재 Scene이 없으면 종료
+	if(m_Scenes.empty())
+	{
+		PostQuitMessage(0);
+		return;
+	}
+
 	// Command List 재사용
 	ID3D12CommandAllocator* pCommandAllocator = m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get();
 	ID3D12GraphicsCommandList* pd3dCommandList = m_pd3dCommandList[m_nSwapChainBufferIndex].Get();
@@ -600,7 +607,6 @@ void CGameFramework::AdvanceFrame()
 
 	// Framework 정보 업데이트
 	UpdateShaderVariables();
-
 
 	// Swap Chain의 Back Buffer를 렌더 타겟으로 사용
 	::SynchronizeResourceTransition(pd3dCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -620,6 +626,9 @@ void CGameFramework::AdvanceFrame()
 	// UI 렌더링
 	pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 	pCurrentScene->RenderUI(pd3dCommandList, nullptr);
+
+	// 커서 렌더링
+	if (g_bWindowActive && g_bEnableCursor) { RenderCursor(pd3dCommandList); }
 
 	// Command List에 대한 명령들을 종료
 	::SynchronizeResourceTransition(pd3dCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
@@ -645,6 +654,62 @@ void CGameFramework::AnimateObjects(CScene* pScene)
 {
 	// Scene 정보 업데이트
 	pScene->Update(m_GameTimer.DeltaTime());
+}
+
+POINTF CGameFramework::GetTexturePosition(int x, int y) {
+	POINTF pt;
+	pt.x = (float)x / (float)m_nWndClientWidth * 2.0f - 1.0f;
+	pt.y = (float)y / (float)m_nWndClientHeight * 2.0f - 1.0f;
+	
+	return pt;
+}
+
+void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (!m_pCursorSprite) {
+		m_pCursorSprite = std::make_shared<CSprite>();
+		m_pCursorSprite->Initialize(m_pd3dDevice.Get(), pd3dCommandList);
+
+		std::shared_ptr<CShader> pUIShader = std::make_shared<CTextureToViewportShader>(nullptr);
+		pUIShader->CreateShader(m_pd3dDevice.Get(), CScene::GetGraphicsRootSignature().Get());
+
+		std::shared_ptr<CMesh> pRectangleMesh = CResourceManager::GetInstance().GetMesh("UI");
+
+		auto cursorTexture = CResourceManager::GetInstance().GetTexture("Cursor");
+		if(nullptr == cursorTexture)
+		{
+			cursorTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
+			cursorTexture->LoadTextureFromDDSFile(m_pd3dDevice.Get(), pd3dCommandList, L"Image/cursor.dds", RESOURCE_TEXTURE2D, 0);
+			CScene::CreateShaderResourceViews(m_pd3dDevice.Get(), cursorTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+			CResourceManager::GetInstance().SetTexture("Cursor", cursorTexture);
+		}
+
+		std::shared_ptr<CMaterial> pCursorMaterial = std::make_shared<CMaterial>();
+		pCursorMaterial->SetTexture(cursorTexture);
+		pCursorMaterial->SetShader(pUIShader);
+
+		m_pCursorSprite->SetMesh(pRectangleMesh);
+		m_pCursorSprite->MaterialResize(1);
+		m_pCursorSprite->SetMaterial(0, pCursorMaterial);
+	}
+
+	POINT ptCursorPos;
+	GetCursorPos(&ptCursorPos);
+	ScreenToClient(m_hWnd, &ptCursorPos);
+	POINTF p = GetTexturePosition(ptCursorPos.x, ptCursorPos.y);
+	m_pCursorSprite->SetSize(p.x, -p.y, 0.05f, 0.05f);
+
+	if(GetCapture() == m_hWnd)
+	{
+		// 마우스 커서가 캡처된 상태일 때
+		m_pCursorSprite->SetColor({ 0.5f, 0.5f, 0.5f, 1.0f });
+	}
+	else
+	{
+		m_pCursorSprite->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+	}
+
+	m_pCursorSprite->Render(pd3dCommandList, nullptr);
 }
 
 void CGameFramework::MoveToNextFrame()
@@ -694,49 +759,64 @@ void CGameFramework::ReleaseShaderVariables()
 void CGameFramework::ProcessInput(CScene* pScene)
 {
 	static INPUT_PARAMETER pInputBuffer;
+	static UCHAR pKeysBuffer[256];
+	float cxDelta = 0.0f, cyDelta = 0.0f;
 	bool bProcessedByScene = false;
 
-	if (false == g_windowActive) return;
+	if (false == g_bWindowActive) return;
+	ZeroMemory(&pKeysBuffer, sizeof(UCHAR) * 256);
 
-	ZeroMemory(&pInputBuffer, sizeof(INPUT_PARAMETER));
+	pScene->SetCursor();
 
-	if(GetKeyboardState(pInputBuffer.pKeysBuffer))
+	if(GetKeyboardState(pKeysBuffer))
 	{
-		pInputBuffer.cxDelta = 0.0f, pInputBuffer.cyDelta = 0.0f;
+		if (nullptr != pScene) bProcessedByScene = pScene->ProcessKeyboardInput(pKeysBuffer, m_GameTimer.DeltaTime()) ? true : false;
+	}
+	
+	// 마우스 입력 처리
+	{
 		POINT ptCursorPos;
 		if (GetCapture() == m_hWnd)
 		{
-			SetCursor(NULL);
-			GetCursorPos(&ptCursorPos);
-			pInputBuffer.cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
-			pInputBuffer.cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
+			SetCursor(NULL);			
+		}
+
+		GetCursorPos(&ptCursorPos);
+		cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
+		cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
+		if (g_bEnableCursor)
+		{
+			m_ptOldCursorPos = ptCursorPos;
+		}
+		else {
+			m_ptOldCursorPos = WindowCursor::GetClientCenter(m_hWnd);
 			SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
 		}
 
-		if (nullptr != pScene) bProcessedByScene = pScene->ProcessInput(pInputBuffer, m_GameTimer.DeltaTime()) ? true : false;
+		if (nullptr != pScene) bProcessedByScene = pScene->ProcessMouseInput(cxDelta, cyDelta, m_GameTimer.DeltaTime()) ? true : false;
+	}
 
-		if (false == bProcessedByScene)	{
-			DWORD dwDirection = 0;
-			if (pInputBuffer.pKeysBuffer[VK_UP] & 0xF0)dwDirection |= DIR_FORWARD;
-			if (pInputBuffer.pKeysBuffer[VK_DOWN] & 0xF0)dwDirection |= DIR_BACKWARD;
-			if (pInputBuffer.pKeysBuffer[VK_LEFT] & 0xF0)dwDirection |= DIR_LEFT;
-			if (pInputBuffer.pKeysBuffer[VK_RIGHT] & 0xF0)dwDirection |= DIR_RIGHT;
-			if (pInputBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
-			if (pInputBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
+	if (false == bProcessedByScene) {
+		// Keyboard 입력 처리s
+		DWORD dwDirection = 0;
+		if (pInputBuffer.pKeysBuffer[VK_UP] & 0xF0)dwDirection |= DIR_FORWARD;
+		if (pInputBuffer.pKeysBuffer[VK_DOWN] & 0xF0)dwDirection |= DIR_BACKWARD;
+		if (pInputBuffer.pKeysBuffer[VK_LEFT] & 0xF0)dwDirection |= DIR_LEFT;
+		if (pInputBuffer.pKeysBuffer[VK_RIGHT] & 0xF0)dwDirection |= DIR_RIGHT;
+		if (pInputBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
+		if (pInputBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
 
-			if ((dwDirection != 0) || (pInputBuffer.cxDelta != 0.0f) || (pInputBuffer.cyDelta != 0.0f))
+		if ((dwDirection != 0) || (pInputBuffer.cxDelta != 0.0f) || (pInputBuffer.cyDelta != 0.0f))
+		{
+			/*if (pInputBuffer.cxDelta || pInputBuffer.cyDelta)
 			{
-				/*if (pInputBuffer.cxDelta || pInputBuffer.cyDelta)
-				{
-					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-						m_pPlayer->Rotate(pInputBuffer.cyDelta, 0.0f, -pInputBuffer.cxDelta);
-					else
-						m_pPlayer->Rotate(pInputBuffer.cyDelta, pInputBuffer.cxDelta, 0.0f);
-				}
-				if (dwDirection) m_pPlayer->Move(dwDirection, 50.0f * m_GameTimer.GetTimeElapsed(), true);*/
+				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+					m_pPlayer->Rotate(pInputBuffer.cyDelta, 0.0f, -pInputBuffer.cxDelta);
+				else
+					m_pPlayer->Rotate(pInputBuffer.cyDelta, pInputBuffer.cxDelta, 0.0f);
 			}
+			if (dwDirection) m_pPlayer->Move(dwDirection, 50.0f * m_GameTimer.GetTimeElapsed(), true);*/
 		}
-		
 	}
 }
 
@@ -750,15 +830,15 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 		}
 		else {
 			m_pLoadingScene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
-			return;
 		}
 	}
-
+	
 	switch (nMessageID)
 	{
 	case WM_LBUTTONDOWN:
 	case WM_RBUTTONDOWN:
 	{
+		::SetFocus(hWnd);
 		::SetCapture(hWnd);
 		::GetCursorPos(&m_ptOldCursorPos);
 		break;
@@ -774,16 +854,14 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 	default:
 		break;
 	};
-
 }
 
 void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	bool bProcessed = false;
 	// 키보드 메시지 처리
-	for (auto& scene : m_Scenes)
-	{
-		scene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+	if(m_Scenes.size()){
+		m_Scenes.back()->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 	}
 
 	if (m_Scenes.empty() || bProcessed) {
@@ -834,9 +912,17 @@ LRESULT CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WP
 	case WM_ACTIVATE:
 	{
 		if (LOWORD(wParam) == WA_INACTIVE) 
+		{
 			m_GameTimer.Stop();
+			g_bWindowActive = false;
+			WindowCursor::SetCursorVisibility(true);
+		}
 		else 
+		{
 			m_GameTimer.Start();
+			g_bWindowActive = true;
+			WindowCursor::SetCursorVisibility(false);
+		}
 		break;
 	}
 	case WM_SIZE:

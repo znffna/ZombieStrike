@@ -407,11 +407,17 @@ float4 PSCollider(VS_COLLIDER_OUTPUT input) : SV_TARGET
 //
 
 #define BULLET_MAINTAIN -1 // uint 가 type이기에 최대값을 가진다.
+#define BULLET_TYPE_EMIT_ASSAULT 0
+#define BULLET_TYPE_EMIT_SHOTGUN 1
+#define BULLET_TYPE_TRAIL 2
+#define BULLET_TYPE_MUZZLE_SPARK 3
+#define BULLET_TYPE_FRAGMENT 4
+
 
 struct VS_BULLET_INPUT
 {
     float3 position : POSITION;
-    float3 lastposition : LASTPOSITION;
+    float3 endposition : LASTPOSITION;
     float3 velocity : VELOCITY;
     float lifetime : LIFETIME;
     int type : TYPE;
@@ -422,30 +428,87 @@ VS_BULLET_INPUT VSBulletStreamOutput(VS_BULLET_INPUT input)
     return (input);
 }
 
+void GenerateSparkParticles(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT> output)
+{
+    input.type = BULLET_TYPE_MUZZLE_SPARK;
+    output.Append(input);
+}
+
+
+// 라이플 총알 생성
+void EmmitAssaultBullet(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT> output)
+{
+    // 총구 머즐 스파크
+    GenerateSparkParticles(input, output);
+        
+    input.type = BULLET_TYPE_TRAIL;
+    output.Append(input);
+}
+
+// 샷건 총알 생성
+void EmmitShotgunBullet(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT> output)
+{
+    // 총구 머즐 스파크
+    GenerateSparkParticles(input, output);
+        
+    input.type = BULLET_TYPE_TRAIL;
+    output.Append(input);
+}
+
+
+// 총알 궤적 생성
+void OutputTrailParticles(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT> output)
+{
+    const float3 toEnd = input.endposition - input.position;
+    const float distLeft = length(toEnd);
+    const float moveLen = length(input.velocity) * gfElapsedTime;
+    
+    float adv = min(moveLen, distLeft); 
+    input.position += normalize(input.velocity) * adv;
+    
+    const bool reachedEnd = (distLeft <= moveLen + 1e-6); 
+    
+    float fBeforeTime = input.lifetime;
+    input.lifetime -= gfElapsedTime;
+    
+    if (!reachedEnd && fBeforeTime > 0.0f)
+    {
+        output.Append(input);
+    }
+}
+
+// 총구 스파크 갱신
+void OutputSparkParticles(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT> output)
+{
+    input.lifetime -= gfElapsedTime;
+    if (input.lifetime > 0.0f)
+    {
+        output.Append(input);
+    }
+}
 
 [maxvertexcount(64)]
 void GSBulletStreamOutput(point VS_BULLET_INPUT input[1], inout PointStream<VS_BULLET_INPUT> output)
 {
     VS_BULLET_INPUT particle = input[0];
-
-    if (particle.type == BULLET_MAINTAIN)
+    float3 gf3Gravity = float3(0.0f, -9.81f, 0.0f); // 중력 벡터
+    
+    if (particle.type == BULLET_MAINTAIN) output.Append(particle);
+    else if (particle.type == BULLET_TYPE_EMIT_ASSAULT) EmmitAssaultBullet(particle, output);
+    else if (particle.type == BULLET_TYPE_EMIT_SHOTGUN) EmmitShotgunBullet(particle, output);
+    else if (particle.type == BULLET_TYPE_TRAIL) OutputTrailParticles(particle, output);
+    else if (particle.type == BULLET_TYPE_MUZZLE_SPARK) OutputSparkParticles(particle, output);
+    else if (particle.type == BULLET_TYPE_FRAGMENT)
     {
-        output.Append(particle);
-    }
-    else
-    {
-        float fBeforeTime = particle.lifetime;
+        particle.position += particle.velocity * gfElapsedTime;
+        particle.velocity += gf3Gravity * gfElapsedTime;
         particle.lifetime -= gfElapsedTime;
-        float dt = particle.lifetime < 0.0f ? gfElapsedTime + particle.lifetime : gfElapsedTime;
-        particle.lastposition = particle.position;
-        particle.position += particle.velocity * dt;
-        
-        //if (particle.lifetime > 0.0f)
-        if (fBeforeTime > 0.0f)
+        if (particle.lifetime > 0.0f)
         {
             output.Append(particle);
         }
     }
+
 }
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -454,7 +517,7 @@ void GSBulletStreamOutput(point VS_BULLET_INPUT input[1], inout PointStream<VS_B
 struct VS_BULLET_DRAW_OUTPUT
 {
     float3 position : POSITION;
-    float3 lastposition : LASTPOSITION;
+    float3 endposition : LASTPOSITION;
     float3 velocity : VELOCITY;
     float lifetime : LIFETIME;
     int type : TYPE;
@@ -466,6 +529,7 @@ struct GS_BULLET_DRAW_OUTPUT
     float4 position : SV_Position;
     float4 color : COLOR;
     float2 uv : TEXTURE;
+    int type : TYPE;
 };
 
 VS_BULLET_DRAW_OUTPUT VSBulletDraw(VS_BULLET_INPUT input)
@@ -473,7 +537,7 @@ VS_BULLET_DRAW_OUTPUT VSBulletDraw(VS_BULLET_INPUT input)
     VS_BULLET_DRAW_OUTPUT output = (VS_BULLET_DRAW_OUTPUT) 0;
 
     output.position = input.position;
-    output.lastposition = input.lastposition;
+    output.endposition = input.endposition;
     output.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
     output.velocity = input.velocity;
     output.lifetime = input.lifetime;
@@ -489,6 +553,7 @@ static float2 gf2QuadUVs[4] = { float2(0.0f, 0.0f), float2(1.0f, 0.0f), float2(0
 void GSBulletDraw(point VS_BULLET_DRAW_OUTPUT input[1], inout TriangleStream<GS_BULLET_DRAW_OUTPUT> outputStream)
 {
     GS_BULLET_DRAW_OUTPUT output = (GS_BULLET_DRAW_OUTPUT) 0;
+    output.type = input[0].type;
     
     if (input[0].type == BULLET_MAINTAIN)
     {
@@ -496,39 +561,48 @@ void GSBulletDraw(point VS_BULLET_DRAW_OUTPUT input[1], inout TriangleStream<GS_
         output.color = input[0].color;
         output.uv = float2(0.5f, 0.5f);
         outputStream.Append(output);
-        return;
     }
-
-    float3 cameraPos = GetCameraPosition();
-    
-    float3 start = input[0].position;
-    float3 end = input[0].lastposition;
-    
-    float3 halfPos = (end + start) * 0.5f;
-    
-    float3 dir = normalize(halfPos - cameraPos);
-    dir = cross(dir, normalize(input[0].velocity));
-    
-    float height = 0.1f;
-    
-    float3 gf3RectPositions[4] = { float3(start + dir * height), float3(end + dir * height), float3(start - dir * height), float3(end - dir * height) };
-    
-    for (int i = 0; i < 4; i++)
+    else if (input[0].type == BULLET_TYPE_TRAIL)
     {
-        //float3 positionW = mul(gf3Positions[i], (float3x3) gmtxInvView) + input[0].position;
-        float3 positionW = gf3RectPositions[i];
-        output.position = mul(mul(float4(positionW, 1.0f), gmtxView), gmtxProjection);
-        output.uv = gf2QuadUVs[i];
-        output.color = input[0].color;
+        float3 cameraPos = GetCameraPosition();
+    
+        float3 start = input[0].position;
+        float3 end = input[0].endposition;
+    
+        float3 halfPos = (end + start) * 0.5f;
+    
+        float3 dir = normalize(halfPos - cameraPos);
+        dir = cross(dir, normalize(input[0].velocity));
+    
+        float height = 5.0f;
+        
+        float3 gf3RectPositions[4] = { float3(start + dir * height), float3(end + dir * height), float3(start - dir * height), float3(end - dir * height) };
+    
+        for (int i = 0; i < 4; i++)
+        {
+            //float3 positionW = mul(gf3Positions[i], (float3x3) gmtxInvView) + input[0].position;
+            float3 positionW = gf3RectPositions[i];
+            output.position = mul(mul(float4(positionW, 1.0f), gmtxView), gmtxProjection);
+            output.uv = gf2QuadUVs[i];
+            output.color = input[0].color;
 
-        outputStream.Append(output);
+            outputStream.Append(output);
+        }
     }
     
 }
 
 float4 PSBulletDraw(GS_BULLET_DRAW_OUTPUT input) : SV_TARGET
 {
-    float4 cColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
+    float4 cColor = float4(0,0,0,0);
+    if (input.type == BULLET_TYPE_TRAIL)
+        cColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
+    else if (input.type == BULLET_TYPE_MUZZLE_SPARK)
+        cColor = gtxtNormalTexture.Sample(gssWrap, input.uv);
+    else if (input.type == BULLET_TYPE_FRAGMENT)
+        cColor = gtxtMetallicTexture.Sample(gssWrap, input.uv);
+    
+    // 색상 별도 적용(기본은 흰색으로 텍스쳐 색상만 적용)
     cColor *= input.color;
 
     return (cColor);

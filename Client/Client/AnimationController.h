@@ -96,7 +96,7 @@ public:
 		// FIRE
 		FIRE,
 		// Reload
-		//RELOAD,
+		RELOAD,
 	};
 
 	CAnimationController();

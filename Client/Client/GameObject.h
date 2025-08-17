@@ -85,8 +85,7 @@ public:
 
 	// Object Initialization
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {};
-	virtual void DeepCopyFromGameObject(std::shared_ptr<CGameObject> rhs);;
-	static std::shared_ptr<CGameObject> CreateObject() { return std::make_shared<CGameObject>(); }
+	virtual void DeepCopyFromGameObject(std::shared_ptr<CGameObject> rhs);
 
 	// Active Flag
 	bool IsActive() { return m_bActive; }
@@ -184,6 +183,12 @@ protected:
 	// CMaterial
 	UINT m_nMaterials = 0;
 	std::vector<std::shared_ptr<CMaterial>> m_ppMaterials; // Object CMaterial
+
+public:
+	XMFLOAT4 m_xmf4Color = { 1.0f, 1.0f, 1.0f, 1.0f }; // Object Color
+	void SetColor(const XMFLOAT4& xmf4Color) { m_xmf4Color = xmf4Color; }
+	XMFLOAT4 GetColor() const { return m_xmf4Color; }
+
 public:
 	// Transform
 	bool m_bPitchLock = false;
@@ -483,12 +488,16 @@ private:
 	std::vector<UINT> m_pIndices;
 }; // CHeightMapTerrain
 
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+struct FIRE_INFO {
+	XMFLOAT3 xmf3Position;
+	XMFLOAT3 xmf3Look;
+	int nBulletType = 0; // 총알 타입(0: 일반, 1: 산탄총 등)
+	float fRange = 0.0f;
+	float fspeed = 0.0f; // 총알 속도
+};
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
 class CBulletParticleObject : public CGameObject
 {
 	// TODO : Bullet을 전부 관리하는 Object로 변경할 예정
@@ -498,7 +507,7 @@ class CBulletParticleObject : public CGameObject
 	//      : 즉, 총알이 날아가는 듯한 느낌만 주기 위함이며, 실제 피격효과로 인한 출력은 HitResult에 의해
 	//      : 별도 파티클 생성으로 이루어 진다.(즉, Trail과 혈흔 표현을 별도로 구현 예정)
 public:
-	CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
+	CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Look, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
 	virtual ~CBulletParticleObject();
 
 	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_BULLET; }
@@ -507,8 +516,34 @@ public:
 	virtual void OnPostRender();
 
 	// method
-	void AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Velocity, float fRange);
+	void AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Look, float fRange);
 	void AddBullet(const CBulletVertex& pBulletVertex);
+
+	void AddBullets(const std::vector<CBulletVertex>& pBulletVertices)
+	{
+		std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullets(pBulletVertices);
+	}
+
+private:
+	std::vector<FIRE_INFO> m_pFireInfos;
+
+public:
+	void AddFireInfo(const FIRE_INFO& fireInfo) {
+		m_pFireInfos.push_back(fireInfo);
+	}
+
+	std::vector<FIRE_INFO> GetFireInfos() const {
+		return m_pFireInfos;
+	}
+
+	void UpdateBulletVertices(const std::vector<CBulletVertex>& pBulletVertices) {
+		std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullets(pBulletVertices);
+	}
+
+	void ClearFireInfos() {
+		m_pFireInfos.clear();
+	}
+
 }; // CBulletParticleObject
 
 //class CUIObject : public CGameObject

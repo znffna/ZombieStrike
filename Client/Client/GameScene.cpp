@@ -62,16 +62,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_pPlayer->SetGun(pGun);
 	AddObject(pGun);
 
-	// 임시 카메라
-	m_pFreeCamera = std::make_shared<CCamera>();
-	// Camera 생성
-	m_pFreeCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	m_pFreeCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	m_pFreeCamera->SetOffset(XMFLOAT3(1.0f, 0.7f, -2.5f));
-	m_pFreeCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
-	m_pFreeCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
-	m_pFreeCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	m_pFreeCamera->SetActive(true);
+	CreateFreeCamera(pd3dDevice, pd3dCommandList);
 
 	// Map Load
 	auto pMap = resourceManager.GetModelInfo("Stage1");
@@ -162,6 +153,20 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	}
 }
 
+void CGameScene::CreateFreeCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// 임시 카메라
+	m_pFreeCamera = std::make_shared<CCamera>();
+	// Camera 생성
+	m_pFreeCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	m_pFreeCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	m_pFreeCamera->SetOffset(XMFLOAT3(1.0f, 0.7f, -2.5f));
+	m_pFreeCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	m_pFreeCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
+	m_pFreeCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	m_pFreeCamera->SetActive(true);
+}
+
 void CGameScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
 	SetSceneState(SCENE_STATE_READY_TO_START);
@@ -236,24 +241,46 @@ void CGameScene::UpdateLights()
 
 void CGameScene::BuildFiredBullets()
 {
-	if (m_bIschambered) {
-		if (m_pPlayer && m_pBulletObject)
-		{
-			Fire(m_pPlayer);
-		}
-	}
-	for (auto& pBullet : m_pFireInfos)
+	// 일단 Scene에서 하되, 나중에 BulletParticleObject로 옮길 예정
+	// Scene에서 하는 이유 : CollisionChecker가 Scene에 있기 때문(나중에 구조 수정 예정) => BulletParticleObject가 Scene에 의존성이 생김
+	auto pFireInfos = m_pBulletObject->GetFireInfos();
+
+	if(pFireInfos.empty())
 	{
-		auto result = m_pCollisionChecker->CheckBulletCollision(pBullet.xmf3Position, pBullet.xmf3Velocity, pBullet.fRange);
-		m_pBulletObject->AddBullet(pBullet.xmf3Position, pBullet.xmf3Velocity, result.fImpactDistance);
-		if(g_bDebugOutput){
+		// 총알 발사 정보가 없으면 아무것도 하지 않음
+		return;
+	}
+
+	std::vector<CBulletVertex> pBulletVertices;
+	pBulletVertices.reserve(pFireInfos.size());
+
+	for (auto& pBullet : pFireInfos)
+	{
+		auto result = m_pCollisionChecker->CheckBulletCollision(pBullet.xmf3Position, pBullet.xmf3Look, pBullet.fRange);
+		//m_pBulletObject->AddBullet(pBullet.xmf3Position, pBullet.xmf3Look, result.fImpactDistance);
+		
+		CBulletVertex pBulletVertex;
+		pBulletVertex.m_xmf3Position = pBullet.xmf3Position;
+		pBulletVertex.m_xmf3Destination = Vector3::Add(pBullet.xmf3Position, Vector3::ScalarProduct(pBullet.xmf3Look, pBullet.fRange));
+		pBulletVertex.m_xmf3Velocity = Vector3::ScalarProduct(pBullet.xmf3Look, pBullet.fspeed);
+		
+		// 총알 궤적 출력 시간 설정
+		pBulletVertex.m_fLifetime = 1.0f;
+		pBulletVertex.m_nBulletType = pBullet.nBulletType;
+		pBulletVertex.m_nHitObjectType = result.nHitObjectType;
+		pBulletVertices.push_back(pBulletVertex);
+
+		//if(g_bDebugOutput)
+		{
 			std::string debugOutput = "CGameScene::BuildFiredBullets() - Bullet Position: " + std::to_string(pBullet.xmf3Position.x) + ", " + std::to_string(pBullet.xmf3Position.y) + ", " + std::to_string(pBullet.xmf3Position.z) + "\n";
-			debugOutput += "Velocity: " + std::to_string(pBullet.xmf3Velocity.x) + ", " + std::to_string(pBullet.xmf3Velocity.y) + ", " + std::to_string(pBullet.xmf3Velocity.z) + "\n";
-			debugOutput += "Impact Distance: " + std::to_string(result.fImpactDistance) + "\n";
+			debugOutput += "Velocity: " + std::to_string(pBulletVertex.m_xmf3Velocity.x) + ", " + std::to_string(pBulletVertex.m_xmf3Velocity.y) + ", " + std::to_string(pBulletVertex.m_xmf3Velocity.z) + "\n";
+			debugOutput += "Impact Distance: " + std::to_string(pBullet.fRange) + "\n";
+			
 			OutputDebugStringA(debugOutput.c_str());
 		}
 	}
-	m_pFireInfos.clear();
+	m_pBulletObject->UpdateBulletVertices(pBulletVertices);
+	m_pBulletObject->ClearFireInfos();
 }
 
 void CGameScene::OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList)
@@ -261,50 +288,35 @@ void CGameScene::OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList)
 	if(m_pBulletObject) m_pBulletObject->OnPostRender();
 }
 
-bool CGameScene::ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime)
+bool CGameScene::ProcessMouseInput(float cxDelta, float cyDelta, float deltaTime)
 {
-	// 키보드 입력의 정보 압축
-	DWORD dwDirection = 0;
-	if (pBuffer.pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
-	if (pBuffer.pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
-	if (pBuffer.pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
-	if (pBuffer.pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
-	//if (pBuffer.pKeysBuffer[VK_PRIOR] & 0xF0)dwDirection |= DIR_UP;
-	//if (pBuffer.pKeysBuffer[VK_NEXT] & 0xF0)dwDirection |= DIR_DOWN;
-
-	if (dwDirection || pBuffer.cxDelta != 0.0f || pBuffer.cyDelta != 0.0f)
-	{
-		if (m_pPlayer)
-		{
-			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
-			m_pPlayer->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
-		}
-
-		if (m_bFreeCamera) {
-			XMFLOAT3 xmf3Direction(0.0f, 0.0f, 0.0f);
-			if (dwDirection & DIR_FORWARD) xmf3Direction = Vector3::Add(xmf3Direction, m_pFreeCamera->GetLook());
-			if (dwDirection & DIR_BACKWARD) xmf3Direction = Vector3::Add(xmf3Direction, Vector3::ScalarProduct(m_pFreeCamera->GetLook(), -1.0f));
-			if (dwDirection & DIR_RIGHT) xmf3Direction = Vector3::Add(xmf3Direction, m_pFreeCamera->GetRight());
-			if (dwDirection & DIR_LEFT) xmf3Direction = Vector3::Add(xmf3Direction, Vector3::ScalarProduct(m_pFreeCamera->GetRight(), -1.0f));
-			if (dwDirection & DIR_UP) xmf3Direction = Vector3::Add(xmf3Direction, m_pFreeCamera->GetUp());
-			if (dwDirection & DIR_DOWN) xmf3Direction = Vector3::Add(xmf3Direction, Vector3::ScalarProduct(m_pFreeCamera->GetUp(), -1.0f));
-
-			xmf3Direction = Vector3::Normalize(xmf3Direction);
-			xmf3Direction = Vector3::ScalarProduct(xmf3Direction, 10.0f * deltaTime);
-
-			m_pFreeCamera->Move(xmf3Direction);
-			m_pFreeCamera->Rotate(pBuffer.cyDelta, pBuffer.cxDelta, 0.0f);
-			m_pFreeCamera->RegenerateViewMatrix();
-		}
+	if (cxDelta != 0.0f || cyDelta != 0.0f) {
+		m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 	}
 
-	m_bIschambered = m_bMouseLButtonDown;
-	//if (m_bMouseLButtonDown) {
-	//	if (m_pPlayer && m_pBulletObject)
-	//	{
-	//		this->Fire();
-	//	}
-	//}
+	if(m_bMouseLButtonDown)
+	{
+		if (m_pPlayer && m_pPlayer->GetGun())
+		{
+			Fire(m_pPlayer, nullptr);
+		}
+	}
+	return false;
+}
+
+bool CGameScene::ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaTime)
+{
+	DWORD dwDirection = 0;
+	if (pKeysBuffer['W'] & 0xF0) dwDirection |= DIR_FORWARD;
+	if (pKeysBuffer['S'] & 0xF0) dwDirection |= DIR_BACKWARD;
+	if (pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
+	if (pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
+
+	if (dwDirection) {
+		if (m_pPlayer) {
+			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
+		}
+	}
 
 	return true;
 }
@@ -333,11 +345,6 @@ void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 		case 'C':
 			m_bFreeCamera = true;
 			m_pCamera = m_pFreeCamera;
-			break;
-		case VK_F5:
-		case VK_F6:
-		case VK_F7:
-			ChangeMap(wParam - VK_F5);
 			break;
 		case VK_F1:
 			m_bPrintObjectCount = true;
@@ -379,22 +386,10 @@ void CGameScene::ChangeMap(int nMapIndex)
 	AddObject(m_pMap);
 }
 
-FIRE_INFO CGameScene::Fire(const std::shared_ptr<CPlayer>& pPlayer)
+bool CGameScene::Fire(const std::shared_ptr<CPlayer>& pPlayer, FIRE_INFO* pFireInfo)
 {
-	std::shared_ptr<CGun> pGun = pPlayer->GetGun();
-
-	FIRE_INFO fireInfo{};
-	if (false == pGun->CanFire()) return fireInfo; // 총이 발사 가능한 상태가 아닐 경우
-
-	fireInfo.xmf3Velocity = pPlayer->GetComponent<CCamera>()->GetLook();
-	fireInfo.xmf3Position = pGun->FindFrame("M16_4_low")->GetPosition(); // 총구 위치
-	fireInfo.fRange = pGun->GetRange();
-	float gunSpeed = pGun->GetSpeed();
-
-	fireInfo.xmf3Velocity = Vector3::ScalarProduct(fireInfo.xmf3Velocity, gunSpeed, false);
-
-	m_pFireInfos.push_back(fireInfo);
-	return fireInfo;
+	bool ret = pPlayer->Fire(pFireInfo);
+	return ret;
 }
 
 void CGameScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)
@@ -402,9 +397,7 @@ void CGameScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	m_pZombiePool.reserve(nZombieCount);
 	for (int i = 0; i < nZombieCount; ++i)
 	{
-		
 		std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, i);
-		
 		pZombie->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
 		pZombie->SetActive(false);
 		m_pZombiePool.push_back(pZombie);

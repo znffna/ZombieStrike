@@ -15,9 +15,9 @@ public:
 	virtual void ReleaseUploadBuffers() override;
 
 	// UI Interaction
-	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) override { return false; };
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
-	
+	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
+
 private:
 	std::shared_ptr<CSprite> m_pBackgroundObject;
 	std::shared_ptr<CSprite> m_pStartButton;

@@ -234,7 +234,7 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(int nPipelineState) override;
 	virtual D3D12_SHADER_BYTECODE CreateGeometryShader(int nPipelineState) override;
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override;
-	virtual D3D12_STREAM_OUTPUT_DESC CreateStreamOuputState(int nPipelineState)override;
+	virtual D3D12_STREAM_OUTPUT_DESC CreateStreamOuputState(int nPipelineState) override;
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState) override;
 	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState) override;

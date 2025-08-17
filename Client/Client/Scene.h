@@ -10,6 +10,7 @@
 #include "Player.h"
 #include "Gun.h"
 #include "CollisionChecker.h"
+#include "Sprite.h"
 
 #include "Camera.h"
 #include "Shader.h"
@@ -148,6 +149,7 @@ public:
 	bool CheckWorkRendering() { return (m_SceneState == SCENE_STATE_RUNNING) || (m_SceneState == SCENE_STATE_PAUSING); }
 	bool CheckWorkUpdating() { return (GetSceneState() == SCENE_STATE_RUNNING); }
 
+	virtual void SetCursor() { g_bEnableCursor = true; }
 
 	// Object Management
 	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
@@ -176,6 +178,8 @@ public:
 	static void CreateStaticShader(ID3D12Device* pd3dDevice);
 	static void CreateStaticMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
+	static ComPtr<ID3D12RootSignature> GetGraphicsRootSignature() { return m_pd3dGraphicsRootSignature; }
+
 	// Descriptor Heap
 	static void CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews);
 	static void CreateConstantBufferViews(ID3D12Device* pd3dDevice, int nConstantBufferViews, ID3D12Resource* pd3dConstantBuffers, UINT nStride);
@@ -200,7 +204,8 @@ public:
 	virtual void ReleaseShaderVariables();
 
 	// Input Method
-	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) { return false; };
+	virtual bool ProcessMouseInput(float cxDelta, float cyDelta, float deltaTime) { return false; };
+	virtual bool ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaTime) { return false; };
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
 

@@ -124,7 +124,7 @@ using Microsoft::WRL::ComPtr;
 #define ROOT_PARAMETER_TO_LIGHT (ROOT_PARAMETER_DEPTH_WRITE + 1) // 16 or 10
 
 // GaneFramework
-extern bool g_windowActive; // 전역 또는 멤버 변수로 상태 저장
+extern bool g_bWindowActive; // 전역 또는 멤버 변수로 상태 저장
 extern int gnCurrentBullets;
 extern bool g_bRenderCollider;
 
@@ -469,5 +469,64 @@ namespace Plane
 
 		// 결과를 XMFLOAT4로 반환 (a, b, c, d)
 		return XMFLOAT4(normal.x, normal.y, normal.z, d);
+	}
+}
+
+extern bool g_bEnableCursor;
+namespace WindowCursor
+{
+	inline void SetCursorVisibility(bool visible)
+	{
+		while (ShowCursor(visible) >= 0 && !visible);
+		while (ShowCursor(visible) < 0 && visible);
+		// 실제 커서 가시성 상태를 저장
+	}
+
+	inline void ConfineCursorToWindow(HWND hWnd)
+	{
+		RECT rect;
+		GetClientRect(hWnd, &rect);
+		POINT lt = { rect.left, rect.top };
+		POINT rb = { rect.right, rect.bottom };
+
+		ClientToScreen(hWnd, &lt);
+		ClientToScreen(hWnd, &rb);
+
+		rect.left = lt.x;
+		rect.top = lt.y;
+		rect.right = rb.x;
+		rect.bottom = rb.y;
+
+		ClipCursor(&rect);
+	}
+
+	inline void ReleaseCursor()
+	{
+		ClipCursor(nullptr);
+	}
+
+	inline void SetCursorLockState(HWND hWnd, bool on)
+	{
+		if (on)
+		{
+			SetCursorVisibility(false);
+			ConfineCursorToWindow(hWnd);
+		}
+		else
+		{
+			ReleaseCursor();
+			SetCursorVisibility(true);
+		}
+	}
+
+	inline POINT GetClientCenter(HWND hWnd)
+	{
+		RECT rc{};
+		if (!GetClientRect(hWnd, &rc)) return POINT{ 0, 0 };
+
+		// GetClientRect는 보통 (0,0) ~ (width,height)
+		const LONG cx = (rc.right - rc.left) / 2;
+		const LONG cy = (rc.bottom - rc.top) / 2;
+		return POINT{ cx, cy };
 	}
 }
