@@ -395,6 +395,7 @@ struct pkt_sc_stage_info {
     SIZE2 totalStages;
     SIZE3 timeLeft;
 };
+
 // SCORE Á¤º¸
 struct pkt_cs_score_info {
     PacketHeader header{ sizeof(*this),PKT_TYPE::C_S_SCORE_INFO };

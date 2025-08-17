@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <queue>
 #include <print>
+#include <atomic>
 
 #include "../../protocol.h"
 #include "ZombieAI.h" 
@@ -46,6 +47,10 @@ struct Zombie {
     SIZE2 damage;               
     SIZE1 act_type;             
 };
+// ---- 전역 카운터 ----
+std::atomic<int> g_totalSpawnedZombies{ 0 };  // // Server_tcp.cpp: 총 스폰 수
+std::atomic<int> g_totalKilledZombies{ 0 };   // // Server_tcp.cpp: 제거 완료 수
+
 
 std::vector<ZombieAI*> g_zombies; // ZombieAI 객체를 서버가 관리
 // std::vector<std::unique_ptr<ZombieAI>> g_zombies;
@@ -207,6 +212,9 @@ static bool find_nearest_hit_zombie3D(float ox, float oy, float oz,
     }
     return false;
 }
+
+
+
 
 bool serverRunning = true;
 short IN_g_player_n= 0;
@@ -450,6 +458,7 @@ public:
      //}
     //}
 
+
 	void process_packet(SIZE2* packet) {
 
 		const unsigned char packet_type = packet[1];
@@ -514,6 +523,16 @@ public:
 					do_send(&p_Add_P);
 				}
 			}
+
+            {
+                pkt_sc_score_info st{};
+                st.header.size = sizeof(st);
+                st.header.type = PKT_TYPE::S_C_SCORE_INFO;
+                st.total_spawned = g_totalSpawnedZombies.load(std::memory_order_relaxed);
+                st.total_killed = g_totalKilledZombies.load(std::memory_order_relaxed);
+                st.alive = st.total_spawned - st.total_killed;
+                this->do_send(&st);
+            }
 
             // [C_S_LOGIN] 기존 좀비 스냅샷은 "신규 접속자(나)"에게만 유니캐스트
             pkt_sc_object_add packet;
@@ -727,8 +746,32 @@ public:
 
 };
 
+// ---- 브로드캐스트 함수 ----
+static inline void BroadcastSCORE() {
+    static int last_spawned = -1;
+    static int last_killed = -1;
 
+    const int spawned = g_totalSpawnedZombies.load(std::memory_order_relaxed);
+    const int killed = g_totalKilledZombies.load(std::memory_order_relaxed);
 
+    if (spawned == last_spawned && killed == last_killed) return; // 변화 없으면 전송 안 함
+    last_spawned = spawned;
+    last_killed = killed;
+
+    pkt_sc_score_info st{};
+    st.header.size = sizeof(st);
+    st.header.type = PKT_TYPE::S_C_SCORE_INFO;
+    st.total_spawned = spawned;
+    st.total_killed = killed;
+    st.alive = spawned - killed;
+
+    std::cout << "[STATS][BCAST] spawned=" << st.total_spawned
+        << " killed=" << st.total_killed
+        << " alive=" << st.alive
+        << " recipients=" << g_users.size() << "\n";
+
+    for (auto& [id, session] : g_users) session.do_send(&st);
+}
 
 
 void CALLBACK g_send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
@@ -786,6 +829,9 @@ void SpawnZombies(int count) {
         zombie->SetHP(ZOMBIE_HP);
         g_zombies.push_back(zombie);
 
+        g_totalSpawnedZombies.fetch_add(1, std::memory_order_relaxed);   // // SpawnZombies: 스폰 수 증가
+
+
         // // SpawnZombies: 생성 즉시 대상 지정/경로 탐색을 원하면 필요 시 활성화
         // zombie->SetTargetPosition(player_x, player_z);          
         // zombie->FindPath();                                      
@@ -805,6 +851,8 @@ void SpawnZombies(int count) {
         for (auto& [id, session] : g_users)
             session.do_send(&p);
     }
+
+    BroadcastSCORE();
 }
 
 
@@ -920,20 +968,29 @@ void ZombieAIThread() {
 
         // // 틱 끝에서 실제 삭제: IsRemoved() && !IsDirty() 개체 정리
         {
+            int removedCount = 0;
+
             auto it = std::remove_if(g_zombies.begin(), g_zombies.end(),
-                [](ZombieAI* z) {
+                [&](ZombieAI* z) {
                     if (z == nullptr) return true;  // // ZombieAIThread: 방어
 
                     if (z->IsRemoved() && !z->IsDirty()) {
                         if (z->WasRemoveNotified()) {     // // ZombieAIThread:  REMOVE 송신 확인
                             delete z;                      // // ZombieAIThread: 실제 메모리 해제
+                            ++removedCount;
                             return true;                   // // ZombieAIThread: 컨테이너에서 제거
                         }
                         // // ZombieAIThread: REMOVE 미통지면 남겨두고 다음 틱 재확인
                     }
                     return false;
                 });
-            g_zombies.erase(it, g_zombies.end());          // // ZombieAIThread: 컨테이너 정리
+
+            g_zombies.erase(it, g_zombies.end());
+
+            if (removedCount > 0) {
+                g_totalKilledZombies.fetch_add(removedCount, std::memory_order_relaxed);
+                BroadcastSCORE();  
+            }
         }
 
         std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(FRAME_INTERVAL_MS));
