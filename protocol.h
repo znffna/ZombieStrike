@@ -24,6 +24,7 @@ constexpr int W_HEIGHT = 250;
 
 
 constexpr SIZE2 PLAYER_HP = 500;           // 플레이어 체력  
+constexpr SIZE2 GUN_DAMAGE = 300;          // 총기 데미지 - 일단 2방에 죽나 tset용  
 
 enum ObjectType : SIZE1 {
     PLAYER = 1,
