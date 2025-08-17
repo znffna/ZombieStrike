@@ -283,6 +283,11 @@ void ZombieAI::ApplyDamage(SIZE2 damage)
     // 피격 시 스턴 갱신(중첩 시 남은 시간이 더 짧으면 연장)
     m_stun_left = std::max(m_stun_left, ZOMBIE_HIT_STUN_SEC);
 
+    if (m_hp == 0) {
+        m_attack_left = 0.0f;   // // ApplyDamage: 사망 즉시 행동 차단
+        m_pause_left = 0.0f;    // // ApplyDamage: 사망 즉시 정지 해제
+    }
+
     m_dirty = true;
 }
 
