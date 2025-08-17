@@ -41,5 +41,7 @@ public:
 
 private:
 	std::unordered_map<int, std::shared_ptr<CGameObject>> m_mapGameObjects;
+
+	char m_nMoveInput;
 };
 

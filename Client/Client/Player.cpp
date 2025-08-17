@@ -107,6 +107,8 @@ void CPlayer::UpdateUnderAnimation()
 void CPlayer::Move(DWORD dwDirection, float fDistance, float deltaTime)
 {
 	CGameObject::Move(dwDirection, fDistance, deltaTime);
+	SetMoveInput((char)dwDirection);
+
 	if (dwDirection)
 	{
 		//m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::WALK_RIGHT);

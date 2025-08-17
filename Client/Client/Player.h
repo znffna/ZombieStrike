@@ -66,5 +66,12 @@ private:
 	// Player State
 	float m_fHealth = 100.0f; // Player Health
 	float m_fMaxHealth = 100.0f; // Max Health
+
+	// Player Move Input
+private:
+	char m_nMoveInput;
+public:
+	void SetMoveInput(char nMoveInput) { m_nMoveInput = nMoveInput; }
+	char GetMoveInput() { return m_nMoveInput; }
 };
 
