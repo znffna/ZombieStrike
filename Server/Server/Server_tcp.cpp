@@ -411,41 +411,29 @@ public:
     }
 
     // 총알 충돌 체크 및 데미지 적용
-    void check_bullet_collision(SIZEID shooter_id, const Vec3& origin, const Vec3& direction) {
-        constexpr float maxDistance = 100.0f;
-        constexpr float hitRadius = 1.0f;
-
-        Vec3 normDir = direction.Normalize();
-        Vec3 endPos = origin + normDir * maxDistance;
-
-        pkt_sc_hit_result hit_packet;
-        hit_packet.header.size = sizeof(hit_packet);
-        hit_packet.header.type = PKT_TYPE::S_C_HIT_RESULT;
-        hit_packet.shooterId = shooter_id;
-        for (auto& [id, session] : g_users)
-            session.do_send(&hit_packet);
-
-
-        // 좀비 충돌 체크
-        for (auto zombie : g_zombies) {
-            Vec3 toTarget = zombie->GetPosition() - origin;
-            float t = toTarget.Dot(normDir);
-            if (t < 0 || t > maxDistance) continue;
-
-            Vec3 closest = origin + normDir * t;
-            float distSqr = (closest - zombie->GetPosition()).LengthSquared();
-
-            if (distSqr <= hitRadius * hitRadius) {
-                zombie->ApplyDamage(GUN_DAMAGE);
-
-				if (zombie->GetHP() <= 0) {
-					// 좀비가 죽었을 때 처리
-					// std::cout << "[Zombie] " << zombie->GetID() << " is dead.\n";
-					zombie->ClearDirty(); // 좀비 상태 초기화 , 여기서 하는게 좋은가?
-				}
-            }
-        }
-
+    //void check_bullet_collision(SIZEID shooter_id, const Vec3& origin, const Vec3& direction) {
+    //    constexpr float maxDistance = 100.0f;
+    //    constexpr float hitRadius = 1.0f;
+    //    Vec3 normDir = direction.Normalize();
+    //    Vec3 endPos = origin + normDir * maxDistance;
+    //    pkt_sc_hit_result hit_packet;
+    //    hit_packet.header.size = sizeof(hit_packet);
+    //    hit_packet.header.type = PKT_TYPE::S_C_HIT_RESULT;
+    //    hit_packet.shooterId = shooter_id;
+    //    for (auto& [id, session] : g_users)
+    //        session.do_send(&hit_packet);
+    //    // 좀비 충돌 체크
+    //    for (auto zombie : g_zombies) {
+    //        Vec3 toTarget = zombie->GetPosition() - origin;
+    //        float t = toTarget.Dot(normDir);
+    //        if (t < 0 || t > maxDistance) continue;
+    //        Vec3 closest = origin + normDir * t;
+    //        float distSqr = (closest - zombie->GetPosition()).LengthSquared();
+    //        if (distSqr <= hitRadius * hitRadius) {
+    //            zombie->ApplyDamage(GUN_DAMAGE); // // check_bullet_collision: 데미지만 적용
+    //            // 죽음 연출 및 제거 패킷은 ZombieAIThread() 경로에서만 처리
+    //        }
+    //    }
         // 플레이어 충돌 체크
      //for (auto& [id, session] : g_users) {
      //    if (id == shooter_id) continue;
@@ -460,7 +448,7 @@ public:
      //        session.send_object_update();
      //    }
      //}
-    }
+    //}
 
 	void process_packet(SIZE2* packet) {
 
@@ -698,27 +686,31 @@ public:
                 resp.zombieHp = hp_after;
                 for (auto& [id, session] : g_users) session.do_send(&resp);
 
+                //  HP==0이어도 즉시 REMOVE 금지
+                //  → 죽음 연출은 ZombieAI::Update()의 m_death_left가 0이 될 때까지 유지
+                //  → 최종 REMOVE 송출은 ZombieAIThread()에서 IsRemoved()==true 시점 단일 경로 처리
+
                 //  HP가 0이면 즉시 제거 패킷 (중복 방지: MarkRemoved)
-                if (hp_after == 0) {
-                    ZombieAI* hitZ = nullptr;
-                    {
-                        std::lock_guard<std::mutex> lock(zombiesMutex);
-                        for (auto* z : g_zombies) {
-                            if (z && z->GetID() == hit_zid) { hitZ = z; break; }
-                        }
-                    }
-                    if (hitZ && !hitZ->IsRemoved()) {
-                        hitZ->MarkRemoved(); // // ZombieAI::MarkRemoved - 서버 틱/충돌 제외
+                //if (hp_after == 0) {
+                //    ZombieAI* hitZ = nullptr;
+                //    {
+                //        std::lock_guard<std::mutex> lock(zombiesMutex);
+                //        for (auto* z : g_zombies) {
+                //            if (z && z->GetID() == hit_zid) { hitZ = z; break; }
+                //        }
+                //    }
+                //    if (hitZ && !hitZ->IsRemoved()) {
+                //        hitZ->MarkRemoved(); // // ZombieAI::MarkRemoved - 서버 틱/충돌 제외
 
-                        pkt_sc_object_remove rem{};
-                        rem.header.size = sizeof(rem);
-                        rem.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
-                        rem.id = hit_zid;
+                //        pkt_sc_object_remove rem{};
+                //        rem.header.size = sizeof(rem);
+                //        rem.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
+                //        rem.id = hit_zid;
 
-                        for (auto& [id, session] : g_users)
-                            session.do_send(&rem);
-                    }
-                }
+                //        for (auto& [id, session] : g_users)
+                //            session.do_send(&rem);
+                //    }
+                //}
             }
             else {
                 DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id << " miss");
@@ -825,7 +817,7 @@ void ZombieAIThread() {
 
         // 플레이어 스냅샷: ID와 위치 동시 수집
         std::vector<Vec3> playerPositions;
-        std::vector<std::pair<SIZEID, Vec3>> playerList;  // // ZombieAIThread - ID 포함
+        std::vector<std::pair<SIZEID, Vec3>> playerList;  // // (참고) ID 포함 스냅샷
         for (auto& [id, session] : g_users) {
             if (session._obj_type == ObjectType::PLAYER) {
                 playerPositions.push_back(session._position);
@@ -833,29 +825,33 @@ void ZombieAIThread() {
             }
         }
 
+        // 업데이트 & 네트워크 송출
         for (auto& zombie : g_zombies) {
-            if (zombie->IsRemoved()) continue;
-
-            zombie->Update(playerPositions, g_zombies, deltaTime);
-            // ZombieAIThread - 제거 플래그면 완전 스킵
-
-            if (zombie->IsDirty()) {
-                // 프레임 경합 방어: DEAD 상태면 업데이트 대신 제거 패킷
-                if (zombie->IsDead()) {
-                    zombie->MarkRemoved();
-
+            // // [ZombieAIThread] 제거 조건: IsRemoved() && IsDirty()일 때 '딱 1회' REMOVE 송출
+            if (zombie->IsRemoved()) {
+                if (!zombie->WasRemoveNotified()) {
                     pkt_sc_object_remove rem{};
                     rem.header.size = sizeof(rem);
                     rem.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
                     rem.id = zombie->GetID();
+
+                    // std::cout << "[REMOVE][SEND-A] zid=" << rem.id << " (begin-of-frame)\n"; // DEBUG
+
                     for (auto& [id, session] : g_users) session.do_send(&rem);
 
-                    zombie->ClearDirty();
-                    continue;
+                    zombie->MarkRemoveNotified();   // REMOVE 보냄
                 }
+                zombie->ClearDirty();               // 제거 상태는 UPDATE 송출 금지
+                continue;                           // 제거 대상 업데이트 금지
+            }
 
-                // 일반 업데이트 브로드캐스트
+            // // 일반 업데이트
+            zombie->Update(playerPositions, g_zombies, deltaTime);
+
+            // ZombieAIThread: 상태 변경 시 스냅샷 송출 (DEAD/HIT/ATTACK/ZMOVE 포함)
+            if (zombie->IsDirty()) {
                 Object info = zombie->GetObjectinfo();
+
                 pkt_sc_object_update p{};
                 p.header.size = sizeof(p);
                 p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
@@ -869,11 +865,31 @@ void ZombieAIThread() {
                 p.level = info.level;
                 p.score = info.score;
                 p.damage = info.damage;
-                p.act_type = info.act_type;
+                p.act_type = info.act_type;    // DEAD/HIT/ATTACK/ZMOVE 반영
+                p.move_input = info.move_input;
 
                 for (auto& [id, session] : g_users) session.do_send(&p);
+
                 zombie->ClearDirty();
             }
+        }
+
+        // // 틱 끝에서 실제 삭제: IsRemoved() && !IsDirty() 개체 정리
+        {
+            auto it = std::remove_if(g_zombies.begin(), g_zombies.end(),
+                [](ZombieAI* z) {
+                    if (z == nullptr) return true;  // // ZombieAIThread: 방어
+
+                    if (z->IsRemoved() && !z->IsDirty()) {
+                        if (z->WasRemoveNotified()) {     // // ZombieAIThread:  REMOVE 송신 확인
+                            delete z;                      // // ZombieAIThread: 실제 메모리 해제
+                            return true;                   // // ZombieAIThread: 컨테이너에서 제거
+                        }
+                        // // ZombieAIThread: REMOVE 미통지면 남겨두고 다음 틱 재확인
+                    }
+                    return false;
+                });
+            g_zombies.erase(it, g_zombies.end());          // // ZombieAIThread: 컨테이너 정리
         }
 
         std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(FRAME_INTERVAL_MS));

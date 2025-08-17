@@ -163,6 +163,7 @@ ZombieAI::ZombieAI(const std::vector<std::vector<int>>& map, int id)
     m_astar = std::make_unique<AStar>(map);
     //m_astar = new AStar(map);
 }
+ZombieAI::~ZombieAI() = default;
 
 void ZombieAI::SetPosition(float x, float z) {
     if (std::abs(m_x - x) > 0.01f || std::abs(m_z - z) > 0.01f)
@@ -218,6 +219,7 @@ Vec3  ZombieAI::FindClosestPlayer(const std::vector<Vec3>& playerPositions)
 
         if (distanceSq < minDistanceSq)
         {
+
             minDistanceSq = distanceSq;
             closestPlayer = playerPos;
         }
@@ -284,8 +286,9 @@ void ZombieAI::ApplyDamage(SIZE2 damage)
     m_stun_left = std::max(m_stun_left, ZOMBIE_HIT_STUN_SEC);
 
     if (m_hp == 0) {
-        m_attack_left = 0.0f;   // // ApplyDamage: 사망 즉시 행동 차단
-        m_pause_left = 0.0f;    // // ApplyDamage: 사망 즉시 정지 해제
+        m_attack_left = 0.0f;                   // // ApplyDamage: 사망 즉시 행동 차단
+        m_pause_left = 0.0f;                    // // ApplyDamage: 사망 즉시 정지 해제
+        m_death_left = Z_DEATH_DESPAWN_SEC;     // // ApplyDamage: 죽음 연출 시작
     }
 
     m_dirty = true;
@@ -316,24 +319,46 @@ bool ZombieAI::IsRemoved() const noexcept {
     return m_removed;
 }
 
+bool ZombieAI::WasRemoveNotified() const noexcept {
+    return m_remove_notified;
+}
+void ZombieAI::MarkRemoveNotified() noexcept {
+    m_remove_notified = true;
+}
+
 void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime)
 {
     if (IsRemoved()) return;
 
+    // ----- 죽음 연출 타이머 처리 -----
+    if (IsDead()) {
+        if (m_death_left > 0.0f) {
+            m_death_left -= deltaTime;
+            if (m_death_left < 0.0f) m_death_left = 0.0f;
+            // 죽음 애니메이션 재생 중: 상태 브로드캐스트만
+            m_dirty = true;
+            return;                 // // Update: 이 프레임 이동/AI 중지
+        }
+        else {
+            // 연출 완료 → 제거 플래그
+            MarkRemoved();          // // Update: 타 스레드에서 제거 패킷 송출
+            m_dirty = true;
+            return;
+        }
+    }
+
     if (playerPositions.empty()) return;
 
-    if (m_attack_cd > 0.0f) { m_attack_cd -= deltaTime; if (m_attack_cd < 0.0f) m_attack_cd = 0.0f; }
-    if (m_attack_left > 0.0f) { m_attack_left -= deltaTime; if (m_attack_left < 0.0f) m_attack_left = 0.0f; }
-
-    //  일시정지(pause) 타이머/쿨다운 감소
-    if (m_pause_cd > 0.0f) { m_pause_cd -= deltaTime; if (m_pause_cd < 0.0f) m_pause_cd = 0.0f; }
-    if (m_pause_left > 0.0f) { m_pause_left -= deltaTime; if (m_pause_left < 0.0f) m_pause_left = 0.0f; }
+    //  공격(attack), 일시정지(pause) 타이머/쿨다운 감소
+    if (m_attack_cd     > 0.0f) { m_attack_cd = std::max(0.0f, m_attack_cd - deltaTime); }
+    if (m_attack_left   > 0.0f) { m_attack_left = std::max(0.0f, m_attack_left - deltaTime); }
+    if (m_pause_cd      > 0.0f) { m_pause_cd = std::max(0.0f, m_pause_cd - deltaTime); }
+    if (m_pause_left    > 0.0f) { m_pause_left = std::max(0.0f, m_pause_left - deltaTime); }
 
 
     // 스턴 상태면 이동/경로탐색 모두 중지
     if (m_stun_left > 0.0f) {
-        m_stun_left -= deltaTime;
-        if (m_stun_left < 0.0f) m_stun_left = 0.0f;
+        m_stun_left = std::max(0.0f, m_stun_left - deltaTime);
 
         // 멈춤 처리: 이 프레임에선 아무 것도 하지 않음(위치/속도 유지)
         // 클라 동기화를 위해 Dirty 플래그만 유지
@@ -537,11 +562,25 @@ Object ZombieAI::GetObjectinfo() const {
     info.level = 0;
     info.score = 0;
     info.damage = ZOMBIE_DAMAGE;
+
+    // --- 상태 플래그 산정 ---
+    const bool isDeadOrDying = (m_hp == 0) || (m_death_left > 0.0f);      // // GetObjectinfo: 사망 연출 포함
+    const bool isStunned = (m_stun_left > 0.0f);
+    const bool isAttacking = (m_attack_left > 0.0f);
+    const bool isPausing = (m_pause_left > 0.0f);
+
+    // --- act_type 결정 ---
     info.act_type =
-        (m_hp == 0) ? ActionType::DEAD :
-        (m_stun_left > 0.0f) ? ActionType::HIT :   // 스턴 표현은 HIT 재사용
-        ((m_attack_left > 0.0f) || (m_pause_left > 0.0f)) ? ActionType::ATTACK : // 일시정지 중에도 공격 준비 모션처럼 표시
-        ActionType::ZMOVE;
+        isDeadOrDying   ? ActionType::DEAD :
+        isStunned       ? ActionType::HIT :
+        isAttacking     ? ActionType::ATTACK :
+        isPausing       ? ActionType::ATTACK :   // 멈춤 연출을 ATTACK 루프에 맞춤
+        ActionType::ZMOVE;     // 기본 이동
+
+    // --- 속도/입력 결정 ---
+    const bool frozen = isDeadOrDying || isStunned || isAttacking || isPausing;
+    info.velocity = frozen ? Vec3(0, 0, 0) : (info.look * Z_move_speed); // // GetObjectinfo: 상태별 속도
+    info.move_input = frozen ? 0 : 1;                                      // // GetObjectinfo: 클라 애니 전이 안정화
 
     return info;
 }
