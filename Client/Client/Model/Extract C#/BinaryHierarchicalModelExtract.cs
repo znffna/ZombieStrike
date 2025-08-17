@@ -587,6 +587,7 @@ public class BinaryHierarchicalModelExtract : MonoBehaviour
     {
         int nTextures = GetTexturesCount(current);
         WriteObjectName("<Frame>:", m_nFrames++, nTextures, current.gameObject);
+        WriteObjectTag("<Tag>:", current);
 
         WriteTransform("<Transform>:", current);
         WriteLocalMatrix("<TransformMatrix>:", current);
@@ -614,6 +615,12 @@ public class BinaryHierarchicalModelExtract : MonoBehaviour
                 if (materials.Length > 0) WriteMaterials(materials);
             }
         }
+    }
+
+    private void WriteObjectTag(string strHeader, Transform current)
+    {
+        binaryWriter.Write(strHeader);
+        binaryWriter.Write((current.gameObject) ? string.Copy(current.gameObject.name).Replace(" ", "_") : "null");
     }
 
     private void WriteCollider(string strHeader, Transform current)

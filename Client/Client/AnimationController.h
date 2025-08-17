@@ -82,8 +82,21 @@ class CAnimationController
 public:
 	enum ANIMATION_STATE
 	{
+		// IDLE
 		IDLE = 0,
-		WALK
+		// WALK
+		WALK_RIGHT,
+		WALK_FORWARD_RIGHT,
+		WALK_FORWARD,
+		WALK_FORWARD_LEFT,
+		WALK_LEFT,
+		WALK_BACKWARD_LEFT,
+		WALK_BACKWARD,
+		WALK_BACKWARD_RIGHT,
+		// FIRE
+		FIRE,
+		// Reload
+		RELOAD,
 	};
 
 	CAnimationController();
@@ -93,8 +106,11 @@ public:
 	void SettingByModel(std::shared_ptr<CLoadedModelInfo>& pModel, int nAnimationTracks = -1);
 
 public:
-	
+	// State
 	ANIMATION_STATE state = IDLE;
+	ANIMATION_STATE beforeState = IDLE;
+
+	// Animation 
 	float 							m_fTime = 0.0f;
 
 	int 							m_nAnimationTracks = 0;

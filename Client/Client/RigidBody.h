@@ -22,7 +22,7 @@ public:
 
 	virtual std::shared_ptr<CComponent> Clone() const {	return std::make_shared<CRigidBody>(*this);};
 
-	void SetVelocity(const XMFLOAT3& xmf3Velocity) { m_xmf3Velocity = xmf3Velocity; }
+	void SetVelocity(const XMFLOAT3& xmf3Look) { m_xmf3Velocity = xmf3Look; }
 	void SetVelocity(float x, float y, float z) { m_xmf3Velocity = XMFLOAT3(x, y, z); }
 	void SetGravity(const XMFLOAT3& xmf3Gravity) { m_xmf3Gravity = xmf3Gravity; }
 	void SetGravity(float x, float y, float z) { m_xmf3Gravity = XMFLOAT3(x, y, z); }
@@ -54,7 +54,7 @@ public:
 	XMFLOAT3 GetForce() { return m_xmf3Force; }
 	XMFLOAT3 GetTorque() { return m_xmf3Torque; }
 
-	void AddVelocity(const XMFLOAT3& xmf3Velocity) {m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Velocity);}
+	void AddVelocity(const XMFLOAT3& xmf3Look) {m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Look);}
 	void AddVelocity(float x, float y, float z) { AddVelocity(XMFLOAT3(x, y, z)); }
 	void AddGravity(const XMFLOAT3& xmf3Gravity) { m_xmf3Gravity = Vector3::Add(m_xmf3Gravity, xmf3Gravity); }
 	void AddGravity(float x, float y, float z) { AddGravity(XMFLOAT3(x, y, z)); }
@@ -77,7 +77,6 @@ public:
 
 private:
 	std::shared_ptr<CTransform> m_pTransform;
-	std::shared_ptr<CCollider> m_pCollider;
 
 private:
 	float 		 				m_fMass = 1.0f;

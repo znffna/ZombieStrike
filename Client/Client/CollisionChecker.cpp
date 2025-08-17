@@ -26,10 +26,10 @@ void CCollisionChecker::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 void CCollisionChecker::Update(float fTimeElapsed)
 {
 	// Collision Check
-	CollisonCheckFromLayers(m_ppObjectLayerPairs);
+	CollisionCheckFromLayers(m_ppObjectLayerPairs);
 }
 
-void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObject::GAMEOBJECT_LAYER, CGameObject::GAMEOBJECT_LAYER>>& ppObjectLayerPairs)
+void CCollisionChecker::CollisionCheckFromLayers(std::vector<std::pair<CGameObject::GAMEOBJECT_LAYER, CGameObject::GAMEOBJECT_LAYER>>& ppObjectLayerPairs)
 {
 	auto& ppObjects = m_pScene->GetObjects();	
 
@@ -38,10 +38,10 @@ void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObjec
 		auto& pObjectsA = ppObjects[ppLayerPair.first];
 		auto& pObjectsB = ppObjects[ppLayerPair.second];
 		for (auto& pObjectA : pObjectsA) {
-			pObjectA->UpdateTransform();
+			//pObjectA->UpdateTransform();
 			for (auto& pObjectB : pObjectsB) {
 				// 여기서의 Object는 RootObject임을 기억.
-				pObjectB->UpdateTransform();
+				//pObjectB->UpdateTransform();
 
 				// 먼저 model Bound AABB로 체크
 				auto pMergedA = pObjectA->GetMergedMeshBound();
@@ -69,17 +69,11 @@ void CCollisionChecker::CollisonCheckFromLayers(std::vector<std::pair<CGameObjec
 	}
 	for (auto& ppCollisionInfo : ppCollidedPairs)
 	{
-		// TODO : 이떄 UpdateTransform을 하지 않고, Model이 가진 모든 BB를 가져와서 복사할당후, 변위값만으로 갱신시키는 코드 작성 필요.
-		// TODO : 충돌처리시 TransformUpdate를 계속 호출시 많은 부하 발생(실제 좀비렌더링에 렉도 충돌체크때문임을 체크.
-		// TODO : 즉, UpdateTransform은 충돌체크전 1번, 렌더링 전 1번 으로 한프레임에 2번만으로 바꾸어야 함.
-		//ppCollisionInfo.pObjectA->UpdateTransform();
-		//ppCollisionInfo.pObjectB->UpdateTransform();
-
 		ppCollisionInfo.pObjectA->OnCollision(ppCollisionInfo.pObjectB, ppCollisionInfo.pColliderA, ppCollisionInfo.pColliderB);
 	}
 }
 
-void CCollisionChecker::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CCollisionChecker::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
 }
 
@@ -91,6 +85,64 @@ bool CCollisionChecker::IsCollided(std::shared_ptr<CCollider>& colliderA, std::s
 bool CCollisionChecker::IsCollided(CCollider& colliderA, CCollider& colliderB)
 {
 	return colliderA.IsCollided(&colliderB);
+}
+
+RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction, float fRange)
+{
+	// return 값
+	RESULT_RAYCAST resultRaycast;
+	bool& isCollided = resultRaycast.isCollided;
+	float& fImpactDistance = resultRaycast.fImpactDistance;
+	resultRaycast.fImpactDistance = fRange;
+
+	// 총알 충돌 체크
+	auto& ppObjects = m_pScene->GetObjects();
+	auto& pMaps = ppObjects[CGameObject::LAYER_ENVIRONMENT];
+	auto& pEnemies = ppObjects[CGameObject::LAYER_ENEMY];
+
+	XMVECTOR xmv3Position = XMLoadFloat3(&xmf3Position);
+	XMVECTOR xmv3Direction = XMLoadFloat3(&xmf3Direction);
+	xmv3Direction = XMVector3Normalize(xmv3Direction);
+
+	float tempRange;
+
+	/*
+	auto& pTerrain = ppObjects[CGameObject::LAYER_TERRAIN];
+	for(auto& pTerrainObject : pTerrain)
+	{
+		std::vector<std::shared_ptr<CCollider>> pColliders = pTerrainObject->m_pCachesColliders;
+		
+	}
+	*/
+
+	for (auto& pObject : pMaps)
+	{
+		std::vector<std::shared_ptr<CCollider>> pColliders = pObject->m_pCachesColliders;
+		for (auto& pCollider : pColliders) {
+			if (auto result = pCollider->RayCast(xmv3Position, xmv3Direction, tempRange)) {
+				isCollided = true;
+				if (tempRange < fImpactDistance) {
+					fImpactDistance = tempRange;
+					resultRaycast.nHitObjectType = 1; // Environment
+				}
+			}
+		}
+	}
+
+	for (auto& pEnemy : pEnemies) {
+		std::vector<std::shared_ptr<CCollider>> pColliders = pEnemy->m_pCachesColliders;
+		for (auto& pCollider : pColliders) {
+			if (auto result = pCollider->RayCast(xmv3Position, xmv3Direction, tempRange)) {
+				isCollided = true;
+				if (tempRange < fImpactDistance) {
+					fImpactDistance = tempRange;
+					resultRaycast.nHitObjectType = 2; // Enemy
+				}
+			}
+		}
+	}
+	
+	return resultRaycast;
 }
 
 

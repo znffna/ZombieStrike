@@ -19,7 +19,9 @@ UINT gnRtvDescriptorIncrementSize = 0;
 UINT gnDsvDescriptorIncrementSize = 0;
 
 int g_nFrameCount;
-bool g_windowActive = true; // 전역 또는 멤버 변수로 상태 저장
+bool g_bWindowActive = true; // 전역 또는 멤버 변수로 상태 저장
+bool g_bEnableCursor = true; // 커서 활성화 여부
+bool g_bDebugOutput = false; // 디버그 출력 여부
 
 // Functions
 
@@ -86,14 +88,28 @@ void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, I
 
 void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ComPtr<ID3D12Resource> pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter)
 {
-	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
-	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	d3dResourceBarrier.Transition.pResource = pd3dResource.Get();
-	d3dResourceBarrier.Transition.StateBefore = d3dStateBefore;
-	d3dResourceBarrier.Transition.StateAfter = d3dStateAfter;
-	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+	SynchronizeResourceTransition(pd3dCommandList, pd3dResource.Get(), d3dStateBefore, d3dStateAfter);
+}
+
+void WaitForGpuComplete(ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent)
+{
+	HRESULT hResult = pd3dCommandQueue->Signal(pd3dFence, nFenceValue);
+
+	if (pd3dFence->GetCompletedValue() < nFenceValue)
+	{
+		hResult = pd3dFence->SetEventOnCompletion(nFenceValue, hFenceEvent);
+		::WaitForSingleObject(hFenceEvent, INFINITE);
+	}
+}
+
+void ExecuteCommandList(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent)
+{
+	CloseCommandList(pd3dCommandList);
+
+	ID3D12CommandList* ppd3dCommandLists[] = { pd3dCommandList };
+	pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+
+	::WaitForGpuComplete(pd3dCommandQueue, pd3dFence, nFenceValue, hFenceEvent);
 }
 
 ComPtr<ID3D12Resource> CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, ID3D12Resource** ppd3dUploadBuffer)
@@ -337,12 +353,25 @@ ComPtr<ID3D12Resource> CreateTexture2DResource(ID3D12Device* pd3dDevice, ID3D12G
 
 void SwapResourcePointer(ComPtr<ID3D12Resource>& ppd3dResourceA, ComPtr<ID3D12Resource>& ppd3dResourceB)
 {
-	{
+	/*{
 		std::string frameout = "SwapResourcePointer() : ppd3dResourceA : " + std::to_string((UINT64)ppd3dResourceA.Get()) + " - ";
 		frameout += "ppd3dResourceB : " + std::to_string((UINT64)ppd3dResourceB.Get()) + "/ Frame( " + std::to_string(g_nFrameCount) + " )\n";
 		OutputDebugStringA(frameout.c_str());
-	}
+	}*/
 	std::swap(ppd3dResourceA, ppd3dResourceB);
+}
+
+#include <sstream>
+void CloseCommandList(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	pd3dCommandList->Close();
+
+	if (g_bDebugOutput) {
+		std::ostringstream oss;
+		oss << "[TID: " << GetCurrentThreadId() << "] Reset Call: " << pd3dCommandList << "\n";
+		std::string log = oss.str();
+		OutputDebugStringA(log.c_str());
+	}
 }
 
 

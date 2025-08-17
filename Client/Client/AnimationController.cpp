@@ -122,6 +122,7 @@ void CAnimationController::SettingByModel(std::shared_ptr<CLoadedModelInfo>& pMo
 		m_nAnimationTracks = m_pAnimationSets->m_nAnimationSets;
 	else m_nAnimationTracks = nAnimationTracks;
 
+	m_pRootMotionObject = pModel->m_pAnimationRootObject;
 
 	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256의 배수
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
@@ -195,12 +196,13 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 
 		ApplyPitchToSpine(pRootGameObject);
 
-		if (auto pBone = m_pModelRootObject->FindFrame("mixamorig:Hips")) {
-			auto pTransform = pBone->GetLocalMatrix();
-			//pTransform._41 = 0.0f;
-			//pTransform._42 = 0.0f;
+		if (m_pRootMotionObject) {
+			auto pTransform = m_pRootMotionObject->GetLocalMatrix();
+			// Position의 이동을 사용하지 않음
+			pTransform._41 = 0.0f;
+			//pTransform._42 = 0.0f; y축은 기본 pivot이 발바닥 가운데이기에 y축 이동을 통해 캐릭터를 땅위로 끌어올림.
 			pTransform._43 = 0.0f;
-			pBone->SetLocalMatrix(pTransform);
+			m_pRootMotionObject->SetLocalMatrix(pTransform);
 		}
 
 		pRootGameObject->UpdateTransform(NULL);
@@ -221,12 +223,12 @@ void CAnimationController::ApplyPitchToSpine(CGameObject* pRootGameObject)
 			pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
 			pSpine->SetLocalMatrix(pSpineTransform);
 		}
-		if (auto pSpine1 = pRootGameObject->FindFrame("mixamorig:Spine")) {
+		if (auto pSpine1 = pRootGameObject->FindFrame("mixamorig:Spine1")) {
 			auto pSpineTransform = pSpine1->GetLocalMatrix();
 			pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
 			pSpine1->SetLocalMatrix(pSpineTransform);
 		}
-		if (auto pSpine2 = pRootGameObject->FindFrame("mixamorig:Spine")) {
+		if (auto pSpine2 = pRootGameObject->FindFrame("mixamorig:Spine2")) {
 			auto pSpineTransform = pSpine2->GetLocalMatrix();
 			pSpineTransform = Matrix4x4::Multiply(rotateMatrix, pSpineTransform);
 			pSpine2->SetLocalMatrix(pSpineTransform);
@@ -236,14 +238,19 @@ void CAnimationController::ApplyPitchToSpine(CGameObject* pRootGameObject)
 
 void CAnimationController::ChangeState(ANIMATION_STATE state)
 {
-	ANIMATION_STATE before = this->state;
+	if (state == this->state) return; // 현재 상태와 같으면 변경하지 않음
+	beforeState = this->state;
 	this->state = state;
 
-	SetTrackEnable(before, false);
+	/*{
+		std::string debugString = "Change Animation State: " + std::to_string(static_cast<int>(beforeState)) + " to " + std::to_string(static_cast<int>(state)) +"\n";
+		OutputDebugStringA(debugString.c_str());
+	}*/
+
+	SetTrackEnable(beforeState, false);
 	SetTrackEnable(state, true);
+	SetTrackPosition(state, 0.0f);
 }
-
-
 
 void CAnimationController::ChangeState(ANIMATION_STATE state, float fPosition)
 {

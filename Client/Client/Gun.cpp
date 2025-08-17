@@ -1,7 +1,7 @@
 #include "Gun.h"
 
 
-std::shared_ptr<CBulletObject> CGun::m_pBulletObject; // 총알 오브젝트
+std::shared_ptr<CBulletParticleObject> CGun::m_pBulletObject; // 총알 오브젝트
 
 CGun::CGun()
 {
@@ -23,7 +23,7 @@ void CGun::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dC
 	CGameObject::Initialize(pd3dDevice, pd3dCommandList);
 
 	// Initialize Gun Type
-	m_nGunType = nWeaponType; // Default to Pistol
+	SetGunType(nWeaponType);
 
 	// Initialize Ammo
 	m_nCurrentAmmo = m_nMaxAmmo;
@@ -39,9 +39,9 @@ void CGun::Update(float fTimeElapsed)
 	m_fCoolTime -= fTimeElapsed;
 }
 
-void CGun::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CGun::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
-	CGameObject::Render(pd3dCommandList, pCamera);
+	CGameObject::Render(pd3dCommandList, pCamera, bDepthWrite);
 }
 
 // Getters and Setters
@@ -52,11 +52,11 @@ void CGun::SetGunType(int type)
 	switch (m_nGunType)
 	{
 	case 0: // Assault Rifle
-		m_fFireRate = 1.0f / 12.5f;
+		SetFireTime(12.5f); // 초당 12.5발
 		m_fBulletRange = 200.0f;
 		break;
 	case 1: // Shotgun
-		m_fFireRate = 1.0f / 5.0f;
+		SetFireTime(1.2f); // 초당 12.5발
 		m_fBulletRange = 100.0f;
 		break;
 	}
@@ -65,31 +65,75 @@ void CGun::SetGunType(int type)
 	DeepCopyFromModel(pModel);
 }
 
-void CGun::Fire(const XMFLOAT3& xmf3Direction)
+void CGun::UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
 {
-	XMFLOAT3 direction = xmf3Direction;
-	XMFLOAT3 position = FindFrame("M16_4_low")->GetPosition(); // 총구 위치
-	Fire(position, Vector3::ScalarProduct(direction, m_fBulletRange, false));
-}
+	if (nullptr == xmf4x4ParentMatrix) return;
 
-void CGun::Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction)
-{
-	if (m_fCoolTime < 0.0f)
-	{
-		CBulletVertex pBulletVertice;
-		pBulletVertice.m_xmf3Position = xmf3Position;
-		pBulletVertice.m_xmf3Velocity = xmf3Direction;
-		pBulletVertice.m_fLifetime = 0.6f;
-		pBulletVertice.m_nBulletType = m_nGunType;
+	CGameObject::UpdateTransform(xmf4x4ParentMatrix);
 
-		CGun::m_pBulletObject->AddBullet(pBulletVertice);
-		m_fCoolTime = m_fFireRate;
-
-		{
-			std::string debug = "Gun Fire \n";
-			debug += "Position: " + std::to_string(xmf3Position.x) + ", " + std::to_string(xmf3Position.y) + ", " + std::to_string(xmf3Position.z) + "\n";
-			debug += "Direction: " + std::to_string(xmf3Direction.x) + ", " + std::to_string(xmf3Direction.y) + ", " + std::to_string(xmf3Direction.z) + "\n";
-			OutputDebugStringA(debug.c_str());
+	if(g_bDebugOutput){
+		std::string debug = "Gun UpdateTransform \n";
+		debug += "Position: " + std::to_string(GetPosition().x) + ", " + std::to_string(GetPosition().y) + ", " + std::to_string(GetPosition().z) + "\n";
+		OutputDebugStringA(debug.c_str());
+		if (GetPosition().x + GetPosition().y + GetPosition().z < 1.0f) {
+			std::cout << 1;
 		}
 	}
+}
+
+bool CGun::Fire(const XMFLOAT3& xmf3Direction, FIRE_INFO* pFireInfo)
+{
+	if (CanFire() == false) return false; // 총이 발사 가능한 상태가 아닐 경우
+
+	m_fCoolTime = m_fFireRate;
+	m_nCurrentAmmo--; //일단 Reload 없이 총 발사 간격만 적용.
+
+	XMFLOAT3 direction = xmf3Direction;
+	XMFLOAT3 position = FindFrame(m_strMuzzleName[m_nGunType])->GetPosition(); // 총구 위치
+
+	FIRE_INFO fireInfo;
+	fireInfo.xmf3Position = position;
+	fireInfo.xmf3Look = direction;
+	fireInfo.nBulletType = m_nGunType; // 총알 타입 설정
+	fireInfo.fRange = GetRange();
+	fireInfo.fspeed = GetSpeed();
+	m_pBulletObject->AddFireInfo(fireInfo);
+
+	{
+		std::string debug = "Gun Fire \n";
+		debug += "Position: " + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + "\n";
+		debug += "Direction: " + std::to_string(direction.x) + ", " + std::to_string(direction.y) + ", " + std::to_string(direction.z) + "\n";
+		OutputDebugStringA(debug.c_str());
+	}
+
+	if (pFireInfo) {
+		*pFireInfo = fireInfo; // 발사 정보 전달
+	}
+
+	return true;
+	//return Fire(position, Vector3::ScalarProduct(direction, m_fBulletRange, false));
+}
+
+// ----------------------------------------------
+// 아래 Fire는 책임 이전 -> Gun이 아닌 BulletParticleObject에서 사용
+// ----------------------------------------------
+bool CGun::Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction)
+{
+	if (CanFire() == false) return false; // 총이 발사 가능한 상태가 아닐 경우
+
+	CBulletVertex pBulletVertice;
+	pBulletVertice.m_xmf3Position = xmf3Position;
+	pBulletVertice.m_xmf3Velocity = xmf3Direction;
+	pBulletVertice.m_fLifetime = 0.6f;
+	pBulletVertice.m_nBulletType = m_nGunType;
+
+	CGun::m_pBulletObject->AddBullet(pBulletVertice);
+
+	{
+		std::string debug = "Gun Fire \n";
+		debug += "Position: " + std::to_string(xmf3Position.x) + ", " + std::to_string(xmf3Position.y) + ", " + std::to_string(xmf3Position.z) + "\n";
+		debug += "Direction: " + std::to_string(xmf3Direction.x) + ", " + std::to_string(xmf3Direction.y) + ", " + std::to_string(xmf3Direction.z) + "\n";
+		OutputDebugStringA(debug.c_str());
+	}
+	return true; // 발사 성공
 }

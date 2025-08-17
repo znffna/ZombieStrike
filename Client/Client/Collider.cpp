@@ -117,6 +117,13 @@ void CSphereCollider::Move(const XMFLOAT3& xmf3Shift)
 	m_xmWorldBoundingSphere.Center.z += xmf3Shift.z;
 }
 
+bool CSphereCollider::RayCast(const XMVECTOR& xmf3Position, const XMVECTOR& xmf3Direction, float& fRange)
+{
+	return m_xmWorldBoundingSphere.Intersects(xmf3Position, xmf3Direction, fRange);
+}
+
+
+
 XMFLOAT4X4 CSphereCollider::GetColliderMatrix()
 {
 	XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
@@ -222,6 +229,11 @@ void CAABBCollider::Move(const XMFLOAT3& xmf3Shift)
 	m_xmWorldBoundingBox.Center.z += xmf3Shift.z;
 }
 
+bool CAABBCollider::RayCast(const XMVECTOR& xmf3Position, const XMVECTOR& xmf3Direction, float& fRange)
+{
+	return m_xmWorldBoundingBox.Intersects(xmf3Position, xmf3Direction, fRange);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 
@@ -297,6 +309,11 @@ void COBBCollider::Move(const XMFLOAT3& xmf3Shift)
 	m_xmWorldBoundingOrientedBox.Center.x += xmf3Shift.x;
 	m_xmWorldBoundingOrientedBox.Center.y += xmf3Shift.y;
 	m_xmWorldBoundingOrientedBox.Center.z += xmf3Shift.z;
+}
+
+bool COBBCollider::RayCast(const XMVECTOR& xmf3Position, const XMVECTOR& xmf3Direction, float& fRange)
+{
+	return m_xmWorldBoundingOrientedBox.Intersects(xmf3Position, xmf3Direction, fRange);
 }
 
 XMFLOAT4X4 COBBCollider::GetColliderMatrix()

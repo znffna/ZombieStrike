@@ -13,27 +13,27 @@ constexpr bool DEBUG_PRINT = false;
 #define DEBUG_LOG(msg) \
     do { if (DEBUG_PRINT) std::cout << msg << std::endl; } while (0)
 
-// test , ÇÃ·¹ÀÌ¾î, Á»ºñ ½ÃÀÛ À§Ä¡
+// test , í”Œë ˆì´ì–´, ì¢€ë¹„ ì‹œì‘ ìœ„ì¹˜
 constexpr int ZOMBIE_START_X = 2;
 constexpr int ZOMBIE_START_Z = 2;
 constexpr int PLAYER_START_X = 580;
 constexpr int PLAYER_START_Z = 545;
-constexpr int NUM_ZOMBIES = 50; // Ãß°¡: »ı¼ºÇÒ Á»ºñ ¼ö
+constexpr int NUM_ZOMBIES = 50; // ì¶”ê°€: ìƒì„±í•  ì¢€ë¹„ ìˆ˜
 
 static bool IsAABBCollision(float x1, float z1, float x2, float z2, float half, float tolerance = 1.0f)
-{   // °ãÄ§ ÆÇ´Ü
+{   // ê²¹ì¹¨ íŒë‹¨
     float range = half * tolerance * 2.0f;
     return (std::abs(x1 - x2) < range) && (std::abs(z1 - z2) < range);
 }
 
 bool IsTooClose(float x1, float z1, float x2, float z2, float minDist)
-{   // Á¢±Ù Á¦ÇÑ, °Å¸® À¯Áö 
+{   // ì ‘ê·¼ ì œí•œ, ê±°ë¦¬ ìœ ì§€ 
     float dx = x1 - x2;
     float dz = z1 - z2;
     return (dx * dx + dz * dz) < (minDist * minDist);
 }
 // -----------------------------
-// A* Pathfinding ³»ºÎ Å¬·¡½º
+// A* Pathfinding ë‚´ë¶€ í´ë˜ìŠ¤
 // -----------------------------
 struct Node
 {
@@ -56,7 +56,7 @@ private:
     int m_width = 0;
     int m_height = 0;
 
-    // ´ë°¢¼± ºñ¿ëÀ» °í·ÁÇÑ ÈŞ¸®½ºÆ½ ÇÔ¼ö
+    // ëŒ€ê°ì„  ë¹„ìš©ì„ ê³ ë ¤í•œ íœ´ë¦¬ìŠ¤í‹± í•¨ìˆ˜
     float Heuristic(int x1, int z1, int x2, int z2) {
         int dx = std::abs(x1 - x2);
         int dz = std::abs(z1 - z2);
@@ -72,7 +72,7 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
         endX >= m_width || endZ >= m_height)
     {
         DEBUG_LOG("[AStar::FindPath] Invalid coordinates: start(%d, %d), end(%d, %d)", startX, startZ, endX, endZ);
-        return {}; // ºó °æ·Î ¹İÈ¯
+        return {}; // ë¹ˆ ê²½ë¡œ ë°˜í™˜
     }
 
     auto cmp = [](Node* a, Node* b) { return a->fCost() > b->fCost(); };
@@ -113,7 +113,7 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
             break;
         }
 
-        // 8¹æÇâ Å½»ö
+        // 8ë°©í–¥ íƒìƒ‰
         const int dirX[8] = { 1, -1,  0,  0,  1,  1, -1, -1 };
         const int dirZ[8] = { 0,  0,  1, -1,  1, -1,  1, -1 };
 
@@ -125,7 +125,7 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
             if (nx < 0 || nx >= m_width || nz < 0 || nz >= m_height) continue;
             if (m_map[nz][nx] != 0) continue;
 
-            // ´ë°¢¼± ÁøÀÔ ½Ã, ¾çÂÊ ÀÎÁ¢Ä­ Áß ÇÏ³ª¶óµµ º®ÀÌ¸é skip
+            // ëŒ€ê°ì„  ì§„ì… ì‹œ, ì–‘ìª½ ì¸ì ‘ì¹¸ ì¤‘ í•˜ë‚˜ë¼ë„ ë²½ì´ë©´ skip
             if (dir >= 4)
             {
                 int adj1_x = current->x + dirX[dir];
@@ -141,8 +141,8 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
             if (closedList.find(nextKey) != closedList.end()) continue;
 
             Node* neighbor = new Node{ nx, nz };
-            float stepCost = (dir < 4) ? 1.0f : 1.41421356f;  // // A* Á÷/´ë°¢ ºñ¿ë
-            neighbor->gCost = current->gCost + stepCost;      // // A* ´©Àû gCost °»½Å
+            float stepCost = (dir < 4) ? 1.0f : 1.41421356f;  // // A* ì§/ëŒ€ê° ë¹„ìš©
+            neighbor->gCost = current->gCost + stepCost;      // // A* ëˆ„ì  gCost ê°±ì‹ 
 
             neighbor->hCost = Heuristic(nx, nz, endX, endZ);
             neighbor->parent = current;
@@ -153,7 +153,7 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
     return path;
 }
 
-// ------------------- ZombieAI ±¸Çö -----------------------
+// ------------------- ZombieAI êµ¬í˜„ -----------------------
 
 ZombieAI::ZombieAI(const std::vector<std::vector<int>>& map, int id)
     : m_map(map), m_astar(nullptr), m_pathIndex(0),
@@ -178,7 +178,7 @@ void ZombieAI::SetHP(int hp) {
 
 void ZombieAI::SetTargetPosition(float x, float z) {
     m_targetX = x; m_targetZ = z;
-    // look °è»ê
+    // look ê³„ì‚°
 }
 
 std::vector<std::pair<int, int>> ZombieAI::FindPathToPlayer() {
@@ -249,7 +249,7 @@ Vec3 ZombieAI::AvoidPlayers(const std::vector<Vec3>& playerPositions)
 
 void ZombieAI::TriggerAttack(float animTime)
 {
-    // °ø°İ ¸ğ¼Ç ½Ã°£ ¼³Á¤, Äğ´Ù¿î °»½Å
+    // ê³µê²© ëª¨ì…˜ ì‹œê°„ ì„¤ì •, ì¿¨ë‹¤ìš´ ê°±ì‹ 
     m_attack_left = std::max(m_attack_left, animTime);
     m_attack_cd = std::max(m_attack_cd, Z_ATTACK_COOLDOWN);
     m_dirty = true;
@@ -260,7 +260,7 @@ bool ZombieAI::IsAttacking() const
     return m_attack_left > 0.0f;
 }
 
-// ±ÙÁ¢ ½Ã Àá±ñ ¸ØÃã
+// ê·¼ì ‘ ì‹œ ì ê¹ ë©ˆì¶¤
 void ZombieAI::TriggerPause(float dur)
 {
     if (dur <= 0.0f) return;
@@ -280,7 +280,7 @@ void ZombieAI::ApplyDamage(SIZE2 damage)
     if (damage >= m_hp) m_hp = 0;
     else                m_hp -= damage;
 
-    // ÇÇ°İ ½Ã ½ºÅÏ °»½Å(ÁßÃ¸ ½Ã ³²Àº ½Ã°£ÀÌ ´õ ÂªÀ¸¸é ¿¬Àå)
+    // í”¼ê²© ì‹œ ìŠ¤í„´ ê°±ì‹ (ì¤‘ì²© ì‹œ ë‚¨ì€ ì‹œê°„ì´ ë” ì§§ìœ¼ë©´ ì—°ì¥)
     m_stun_left = std::max(m_stun_left, ZOMBIE_HIT_STUN_SEC);
 
     m_dirty = true;
@@ -320,26 +320,26 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     if (m_attack_cd > 0.0f) { m_attack_cd -= deltaTime; if (m_attack_cd < 0.0f) m_attack_cd = 0.0f; }
     if (m_attack_left > 0.0f) { m_attack_left -= deltaTime; if (m_attack_left < 0.0f) m_attack_left = 0.0f; }
 
-    //  ÀÏ½ÃÁ¤Áö(pause) Å¸ÀÌ¸Ó/Äğ´Ù¿î °¨¼Ò
+    //  ì¼ì‹œì •ì§€(pause) íƒ€ì´ë¨¸/ì¿¨ë‹¤ìš´ ê°ì†Œ
     if (m_pause_cd > 0.0f) { m_pause_cd -= deltaTime; if (m_pause_cd < 0.0f) m_pause_cd = 0.0f; }
     if (m_pause_left > 0.0f) { m_pause_left -= deltaTime; if (m_pause_left < 0.0f) m_pause_left = 0.0f; }
 
 
-    // ½ºÅÏ »óÅÂ¸é ÀÌµ¿/°æ·ÎÅ½»ö ¸ğµÎ ÁßÁö
+    // ìŠ¤í„´ ìƒíƒœë©´ ì´ë™/ê²½ë¡œíƒìƒ‰ ëª¨ë‘ ì¤‘ì§€
     if (m_stun_left > 0.0f) {
         m_stun_left -= deltaTime;
         if (m_stun_left < 0.0f) m_stun_left = 0.0f;
 
-        // ¸ØÃã Ã³¸®: ÀÌ ÇÁ·¹ÀÓ¿¡¼± ¾Æ¹« °Íµµ ÇÏÁö ¾ÊÀ½(À§Ä¡/¼Óµµ À¯Áö)
-        // Å¬¶ó µ¿±âÈ­¸¦ À§ÇØ Dirty ÇÃ·¡±×¸¸ À¯Áö
+        // ë©ˆì¶¤ ì²˜ë¦¬: ì´ í”„ë ˆì„ì—ì„  ì•„ë¬´ ê²ƒë„ í•˜ì§€ ì•ŠìŒ(ìœ„ì¹˜/ì†ë„ ìœ ì§€)
+        // í´ë¼ ë™ê¸°í™”ë¥¼ ìœ„í•´ Dirty í”Œë˜ê·¸ë§Œ ìœ ì§€
         m_dirty = true;
         return;
     }
 
-    // 1. °¡Àå °¡±î¿î ÇÃ·¹ÀÌ¾î À§Ä¡ °è»ê
+    // 1. ê°€ì¥ ê°€ê¹Œìš´ í”Œë ˆì´ì–´ ìœ„ì¹˜ ê³„ì‚°
     Vec3 closest = FindClosestPlayer(playerPositions);
 
-    // ±ÙÁ¢ ½Ã ±æµû¶ó°¡±â¸¦ Àá±ñ ¸ØÃã(°ø°İ°ú º°°³)
+    // ê·¼ì ‘ ì‹œ ê¸¸ë”°ë¼ê°€ê¸°ë¥¼ ì ê¹ ë©ˆì¶¤(ê³µê²©ê³¼ ë³„ê°œ)
     {
         Vec3 myPos(m_x, 0, m_z);
         float dx = closest.x - myPos.x;
@@ -347,37 +347,37 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         float dist = std::sqrt(dx * dx + dz * dz);
 
         if (dist <= Z_PAUSE_RANGE && m_pause_cd <= 0.0f && !IsAttacking()) {
-            TriggerPause();        // Àá±ñ Á¤Áö
-            // m_dirty´Â TriggerPause ³»¿¡¼­ true·Î ¼³Á¤µÊ
+            TriggerPause();        // ì ê¹ ì •ì§€
+            // m_dirtyëŠ” TriggerPause ë‚´ì—ì„œ trueë¡œ ì„¤ì •ë¨
         }
     }
 
-    // °ø°İ Æ®¸®°Å: ÀÏÁ¤ °Å¸® ÀÌ³» + Äğ´Ù¿î ³¡ + ½ºÅÏ ¾Æ´Ô
+    // ê³µê²© íŠ¸ë¦¬ê±°: ì¼ì • ê±°ë¦¬ ì´ë‚´ + ì¿¨ë‹¤ìš´ ë + ìŠ¤í„´ ì•„ë‹˜
     {
         Vec3 myPos(m_x, 0, m_z);
         float dx = closest.x - myPos.x;
         float dz = closest.z - myPos.z;
         float dist = std::sqrt(dx * dx + dz * dz);
 
-        // [Ãß°¡] ¸Ê ¼¿ Å©±â¸¦ °í·ÁÇÑ ÃÖ¼Ò °ø°İ°Å¸® º¸Á¤(³Ê¹« Å¸ÀÌÆ®ÇÏ¸é ¸ø ¸ØÃâ ¼ö ÀÖÀ½)
-        const float ATTACK_RANGE_FLOOR = CELL_SIZE * 2.0f; // ¼¿ 2Ä­ ÀÌ³»¸é ÃæºĞÈ÷ ±ÙÁ¢
+        // [ì¶”ê°€] ë§µ ì…€ í¬ê¸°ë¥¼ ê³ ë ¤í•œ ìµœì†Œ ê³µê²©ê±°ë¦¬ ë³´ì •(ë„ˆë¬´ íƒ€ì´íŠ¸í•˜ë©´ ëª» ë©ˆì¶œ ìˆ˜ ìˆìŒ)
+        const float ATTACK_RANGE_FLOOR = CELL_SIZE * 2.0f; // ì…€ 2ì¹¸ ì´ë‚´ë©´ ì¶©ë¶„íˆ ê·¼ì ‘
         const float effectiveAttackRange = std::max(Z_ATTACK_RANGE, ATTACK_RANGE_FLOOR);
 
         if (dist <= Z_ATTACK_RANGE && m_attack_cd <= 0.0f && m_stun_left <= 0.0f)
         {
             TriggerAttack();
-            // °ø°İ ÇÁ·¹ÀÓ¿¡¼± ÀÌµ¿À» ¸ØÃç 'µéÀÌÄ¡±â' ¸ğ¼ÇÃ³·³ º¸ÀÌ°Ô ÇÒ ¼öµµ ÀÖÀ½.
-            // ¿©±â¼­´Â ÀÌµ¿ ·ÎÁ÷À» °è¼Ó Å¸µÇ, act_typeÀ¸·Î ¸ğ¼ÇÀ» Ç¥Çö (GetObjectinfo¿¡¼­ Ã³¸®)
+            // ê³µê²© í”„ë ˆì„ì—ì„  ì´ë™ì„ ë©ˆì¶° 'ë“¤ì´ì¹˜ê¸°' ëª¨ì…˜ì²˜ëŸ¼ ë³´ì´ê²Œ í•  ìˆ˜ë„ ìˆìŒ.
+            // ì—¬ê¸°ì„œëŠ” ì´ë™ ë¡œì§ì„ ê³„ì† íƒ€ë˜, act_typeìœ¼ë¡œ ëª¨ì…˜ì„ í‘œí˜„ (GetObjectinfoì—ì„œ ì²˜ë¦¬)
         }
     }
 
-    // 2. Å¸°Ù À§Ä¡ ¼³Á¤ ¹× °æ·Î Àç°è»ê
+    // 2. íƒ€ê²Ÿ ìœ„ì¹˜ ì„¤ì • ë° ê²½ë¡œ ì¬ê³„ì‚°
     Vec3 newTarget = closest;
 
-    // ÀÏ½ÃÁ¤Áö(pause) ÁßÀÌ¸é °æ·Î Àç°è»ê/Å¸°Ù ¼¼ÆÃÀ» Àá±ñ ¸ØÃá´Ù
-    if (IsPausing()) {                          // // ZombieAI::Update - pause Áß
-        m_repath_timer += deltaTime;            // // ÀÏ´Ü Å¸ÀÌ¸Ó¸¸ ´©Àû ¡æ ÇØÁ¦ ÈÄ Áï½Ã ÀçÅ½»ö À¯µµ
-        // SetTargetPosition / FindPath È£Ãâ ¾È ÇÔ
+    // ì¼ì‹œì •ì§€(pause) ì¤‘ì´ë©´ ê²½ë¡œ ì¬ê³„ì‚°/íƒ€ê²Ÿ ì„¸íŒ…ì„ ì ê¹ ë©ˆì¶˜ë‹¤
+    if (IsPausing()) {                          // // ZombieAI::Update - pause ì¤‘
+        m_repath_timer += deltaTime;            // // ì¼ë‹¨ íƒ€ì´ë¨¸ë§Œ ëˆ„ì  â†’ í•´ì œ í›„ ì¦‰ì‹œ ì¬íƒìƒ‰ ìœ ë„
+        // SetTargetPosition / FindPath í˜¸ì¶œ ì•ˆ í•¨
     }
     else {
         bool needRepath =
@@ -388,7 +388,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
             m_repath_timer > REPATH_INTERVAL;
 
         if (needRepath) {
-            //DEBUG_LOG("[ZombieAI::Update] ID = %d -> Å¸°Ù º¯°æ ¶Ç´Â Àç°è»ê ÇÊ¿ä", m_id);
+            //DEBUG_LOG("[ZombieAI::Update] ID = %d -> íƒ€ê²Ÿ ë³€ê²½ ë˜ëŠ” ì¬ê³„ì‚° í•„ìš”", m_id);
             SetTargetPosition(newTarget.x, newTarget.z);   
             FindPath();                                    
             m_repath_timer = 0;                           
@@ -399,7 +399,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     }
 
 
-    // 3. ÀÌµ¿ Ã³¸® (°æ·Î µû¶ó ÀÌµ¿)
+    // 3. ì´ë™ ì²˜ë¦¬ (ê²½ë¡œ ë”°ë¼ ì´ë™)
     if (m_path.empty() || m_pathIndex >= m_path.size()) return;
     auto& targetNode = m_path[m_pathIndex];
     Vec3 targetPos = GetNodeCenter(targetNode.first, targetNode.second);
@@ -416,23 +416,23 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
 
 
     if (distance < 0.1f) {
-        // °ø°İ ¸ğ¼Ç ÁßÀÌ¸é Á¦ÀÚ¸®¿¡¼­ ¸ØÃç ¶§¸®±â ¡æ pathIndex Áõ°¡ ±İÁö
+        // ê³µê²© ëª¨ì…˜ ì¤‘ì´ë©´ ì œìë¦¬ì—ì„œ ë©ˆì¶° ë•Œë¦¬ê¸° â†’ pathIndex ì¦ê°€ ê¸ˆì§€
         if (IsAttacking()) {
-            m_dirty = true;          // »óÅÂ ºê·ÎµåÄ³½ºÆ® À¯Áö
-            return;                  // ÀÌµ¿¡¤ÀÎµ¦½º ÁøÇà ¸ğµÎ Áß´Ü
+            m_dirty = true;          // ìƒíƒœ ë¸Œë¡œë“œìºìŠ¤íŠ¸ ìœ ì§€
+            return;                  // ì´ë™Â·ì¸ë±ìŠ¤ ì§„í–‰ ëª¨ë‘ ì¤‘ë‹¨
         }
-        m_pathIndex++;               // Æò»ó½Ã¿¡´Â ´ÙÀ½ ³ëµå·Î ÁøÇà
+        m_pathIndex++;               // í‰ìƒì‹œì—ëŠ” ë‹¤ìŒ ë…¸ë“œë¡œ ì§„í–‰
         return;
     }
     if (IsPausing()) {
-        // °æ·Î´Â ±×´ë·Î µÎ°í, Á¤Áö ½Ã°£ ³¡³ª¸é ´Ù½Ã °°Àº ³ëµå·Î ÀÌ¾î¼­ Ãß°İ
-        // (¿©±â¼­ returnÀ¸·Î ºüÁ®µµ µÇ°í, ¾Æ·¡ ÀÌµ¿ ´Ü°è¿¡¼­ finalMove=0ÀÌ¶ó ¸ØÃá´Ù)
+        // ê²½ë¡œëŠ” ê·¸ëŒ€ë¡œ ë‘ê³ , ì •ì§€ ì‹œê°„ ëë‚˜ë©´ ë‹¤ì‹œ ê°™ì€ ë…¸ë“œë¡œ ì´ì–´ì„œ ì¶”ê²©
+        // (ì—¬ê¸°ì„œ returnìœ¼ë¡œ ë¹ ì ¸ë„ ë˜ê³ , ì•„ë˜ ì´ë™ ë‹¨ê³„ì—ì„œ finalMove=0ì´ë¼ ë©ˆì¶˜ë‹¤)
     }
 
     Vec3 moveDir = toTarget.Normalize();
     Vec3 nextPos = currentPos + moveDir * Z_move_speed;
 
-    // [REPLACE] 4. Á»ºñ¡êÁ»ºñ ºĞ¸®·Â(Separation force) °è»ê
+    // [REPLACE] 4. ì¢€ë¹„â†”ì¢€ë¹„ ë¶„ë¦¬ë ¥(Separation force) ê³„ì‚°
     Vec3 separation(0, 0, 0);
     {
         for (auto* other : allZombies) {
@@ -444,7 +444,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
             float sz = m_z - oz;
             float d2 = sx * sx + sz * sz;
 
-            // ¹İÁö¸§ ¾È¿¡ ÀÖÀ¸¸é ¹İ¹ß·Â Ãß°¡ (°¡±î¿ï¼ö·Ï °­ÇÏ°Ô)
+            // ë°˜ì§€ë¦„ ì•ˆì— ìˆìœ¼ë©´ ë°˜ë°œë ¥ ì¶”ê°€ (ê°€ê¹Œìš¸ìˆ˜ë¡ ê°•í•˜ê²Œ)
             const float r = Z_SEPARATION_RADIUS;
             const float r2 = r * r;
             if (d2 > 0.0001f && d2 < r2) {
@@ -459,7 +459,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         }
     }
 
-    // 5. Àå¾Ö¹° Ãæµ¹ °Ë»ç
+    // 5. ì¥ì• ë¬¼ ì¶©ëŒ ê²€ì‚¬
     Vec3 wallPush(0, 0, 0);
     for (int dz = -1; dz <= 1; ++dz) {
         for (int dx = -1; dx <= 1; ++dx) {
@@ -478,18 +478,18 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         }
     }
 
-    // 6. ÃÖÁ¾ ÀÌµ¿ (°ø°İ Áß Àá±ñ Á¤Áö ¡æ ´Ù½Ã Ãß°İ)
+    // 6. ìµœì¢… ì´ë™ (ê³µê²© ì¤‘ ì ê¹ ì •ì§€ â†’ ë‹¤ì‹œ ì¶”ê²©)
     {
         Vec3 finalMove = moveDir * Z_move_speed + wallPush + separation;
 
-        // °ø°İ Áß ÀÌµ¿·® ¹èÀ² Àû¿ë (±âº» 0.0f ¡æ ¿ÏÀü Á¤Áö)
+        // ê³µê²© ì¤‘ ì´ë™ëŸ‰ ë°°ìœ¨ ì ìš© (ê¸°ë³¸ 0.0f â†’ ì™„ì „ ì •ì§€)
         if (IsAttacking()) {
-            finalMove = finalMove * Z_ATTACK_MOVE_SCALE;   // // °ø°İÁß ÀÌµ¿ ¾ïÁ¦
+            finalMove = finalMove * Z_ATTACK_MOVE_SCALE;   // // ê³µê²©ì¤‘ ì´ë™ ì–µì œ
         }
 
         m_x += finalMove.x;
         m_z += finalMove.z;
-        m_dirty = true; // // »óÅÂ º¯°æ ºê·ÎµåÄ³½ºÆ®
+        m_dirty = true; // // ìƒíƒœ ë³€ê²½ ë¸Œë¡œë“œìºìŠ¤íŠ¸
     }
 
 }
@@ -524,18 +524,18 @@ float ZombieAI::GetPlayerZ() const { return m_targetZ; }
 Object ZombieAI::GetObjectinfo() const {
     Object info{};
     info.position = Vec3(m_x, 0, m_z);
-    info.velocity = Vec3(0, 0, 1); // ÇöÀç ¹æÇâ ÁöÁ¤ ¾ÈÇÔ
+    info.velocity = Vec3(0, 0, 1); // í˜„ì¬ ë°©í–¥ ì§€ì • ì•ˆí•¨
 	info.look = GetLookVectorToPlayer();
     info.hp = m_hp;
     info.pitch = 0.1f;
-    info.gun_type = GunType::BULLET_MAX; // Á»ºñ´Â ÃÑ ¾È¾¸
+    info.gun_type = GunType::BULLET_MAX; // ì¢€ë¹„ëŠ” ì´ ì•ˆì”€
     info.level = 0;
     info.score = 0;
     info.damage = ZOMBIE_DAMAGE;
     info.act_type =
         (m_hp == 0) ? ActionType::DEAD :
-        (m_stun_left > 0.0f) ? ActionType::HIT :   // ½ºÅÏ Ç¥ÇöÀº HIT Àç»ç¿ë
-        ((m_attack_left > 0.0f) || (m_pause_left > 0.0f)) ? ActionType::ATTACK : // ÀÏ½ÃÁ¤Áö Áß¿¡µµ °ø°İ ÁØºñ ¸ğ¼ÇÃ³·³ Ç¥½Ã
+        (m_stun_left > 0.0f) ? ActionType::HIT :   // ìŠ¤í„´ í‘œí˜„ì€ HIT ì¬ì‚¬ìš©
+        ((m_attack_left > 0.0f) || (m_pause_left > 0.0f)) ? ActionType::ATTACK : // ì¼ì‹œì •ì§€ ì¤‘ì—ë„ ê³µê²© ì¤€ë¹„ ëª¨ì…˜ì²˜ëŸ¼ í‘œì‹œ
         ActionType::ZMOVE;
 
     return info;
@@ -547,7 +547,7 @@ bool IsAreaClear(const std::vector<std::vector<int>>& map, int x, int z, int rad
     if (H == 0) return false;
     const int W = static_cast<int>(map[0].size());
 
-    // Áß½ÉÄ­ ÀÚÃ¼°¡ º®ÀÌ¸é ¹Ù·Î ½ÇÆĞ
+    // ì¤‘ì‹¬ì¹¸ ìì²´ê°€ ë²½ì´ë©´ ë°”ë¡œ ì‹¤íŒ¨
     if (x < 0 || x >= W || z < 0 || z >= H) return false;
     if (map[z][x] != 0) return false;
 
@@ -556,7 +556,7 @@ bool IsAreaClear(const std::vector<std::vector<int>>& map, int x, int z, int rad
     const int zmin = std::max(0, z - radius);
     const int zmax = std::min(H - 1, z + radius);
 
-    // ³×¸ğ ¹İ°æ(¸ÇÇØÆ°ÀÌ ¾Æ´Ï¶ó »ç°¢ ¹İ°æ) °Ë»ç
+    // ë„¤ëª¨ ë°˜ê²½(ë§¨í•´íŠ¼ì´ ì•„ë‹ˆë¼ ì‚¬ê° ë°˜ê²½) ê²€ì‚¬
     for (int zz = zmin; zz <= zmax; ++zz) {
         for (int xx = xmin; xx <= xmax; ++xx) {
             if (map[zz][xx] != 0) return false;
@@ -565,70 +565,91 @@ bool IsAreaClear(const std::vector<std::vector<int>>& map, int x, int z, int rad
     return true;
 }
 
-// ------------------- ¸Ê ·Îµù & ·£´ı À§Ä¡ -----------------------
+// ------------------- ë§µ ë¡œë”© & ëœë¤ ìœ„ì¹˜ -----------------------
 
 std::vector<std::vector<int>> LoadMapBin(const std::string& filename)
 {
     std::vector<std::vector<int>> map(GRID_WIDTH, std::vector<int>(GRID_WIDTH, 0));
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open()) {
-		DEBUG_LOG("[ERROR] obstacle_mask.bin ¿­±â ½ÇÆĞ!");
+		DEBUG_LOG("[ERROR] obstacle_mask.bin ì—´ê¸° ì‹¤íŒ¨!");
         exit(1);
     }
 
     for (int z = 0; z < GRID_WIDTH; ++z) {
         for (int x = 0; x < GRID_WIDTH; ++x) {
-            // °¢ 2x2 ºí·ÏÀÇ Æò±Õ or ´ëÇ¥°ª (¿ŞÂÊ À§ ÇÈ¼¿ ±âÁØ)
+            // ê° 2x2 ë¸”ë¡ì˜ í‰ê·  or ëŒ€í‘œê°’ (ì™¼ìª½ ìœ„ í”½ì…€ ê¸°ì¤€)
             char value;
             file.read(&value, 1);
             if (file.eof()) {
-				DEBUG_LOG("[ERROR] ÆÄÀÏ ³¡¿¡ µµ´ŞÇß½À´Ï´Ù. Å©±â°¡ ³Ê¹« ÀÛ½À´Ï´Ù.");
+				DEBUG_LOG("[ERROR] íŒŒì¼ ëì— ë„ë‹¬í–ˆìŠµë‹ˆë‹¤. í¬ê¸°ê°€ ë„ˆë¬´ ì‘ìŠµë‹ˆë‹¤.");
                 exit(1);
             }
-            //int flippedZ = GRID_WIDTH - 1 - z; // zÃà¹İÀü À§¾Ö·¡
+
+            // zì¶•ë°˜ì „ ìœ„ì• ë˜
+            //int flippedZ = GRID_WIDTH - 1 - z;
             //map[flippedZ][x] = (value == 0) ? 0 : 1;
-            map[z][x] = (value == 0) ? 0 : 1; // 0 = ±æ, 1 = Àå¾Ö¹°
+            map[z][x] = (value == 0) ? 0 : 1; // 0 = ê¸¸, 1 = ì¥ì• ë¬¼
         }
     }
-	DEBUG_LOG("[OK] 512x512 ¸Ê ·Îµå ¿Ï·á");
+	DEBUG_LOG("[OK] 512x512 ë§µ ë¡œë“œ ì™„ë£Œ");
     return map;
+}
+
+// 5x5 í™•ì¸ìš© í•¨ìˆ˜ (ì¤‘ì‹¬ ê¸°ì¤€ 2ì¹¸ ë²”ìœ„ í™•ì¸)
+bool IsSurroundingsFree(const std::vector<std::vector<int>>& map, int x, int z) {
+    constexpr int RANGE = 2; // ë²”ìœ„ ì¡°ì ˆ: 1 = 3x3, 2 = 5x5, 3 = 7x7 ...
+
+    for (int dz = -RANGE; dz <= RANGE; ++dz) {
+        for (int dx = -RANGE; dx <= RANGE; ++dx) {
+            int nx = x + dx;
+            int nz = z + dz;
+
+            if (nx < 0 || nx >= GRID_WIDTH || nz < 0 || nz >= GRID_HEIGHT)
+                return false;
+            if (map[nz][nx] != 0)
+                return false;
+        }
+    }
+    return true;
 }
 
 std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map)
 {
     const int H = static_cast<int>(map.size());
     if (H == 0) {
-        DEBUG_LOG("[ERROR] ¸ÊÀÌ ºñ¾îÀÖ½À´Ï´Ù.");
+        DEBUG_LOG("[ERROR] ë§µì´ ë¹„ì–´ìˆìŠµë‹ˆë‹¤.");
         exit(1);
     }
     const int W = static_cast<int>(map[0].size());
 
     static std::random_device rd;
     static std::mt19937 gen(rd());
-    //    std::uniform_int_distribution<> distX(0, W - 1); // ÀüÃ¼ ¸Ê¿¡¼­ ½Ãµµ
+    //    std::uniform_int_distribution<> distX(0, W - 1); // ì „ì²´ ë§µì—ì„œ ì‹œë„
     std::uniform_int_distribution<> distX(100, 150);   
     std::uniform_int_distribution<> distZ(100, 150);
 
-    // 1Â÷: ·£´ı ½Ãµµ
-    const int MAX_ATTEMPTS = 1000; // ½Ãµµ È½¼ö 
+    // 1ì°¨: ëœë¤ ì‹œë„
+    const int MAX_ATTEMPTS = 1000; // ì‹œë„ íšŸìˆ˜ 
     for (int attempts = 0; attempts < MAX_ATTEMPTS; ++attempts) {
         const int x = distX(gen);
         const int z = distZ(gen);
-        if (IsAreaClear(map, x, z, 4)) {               //  ¹İ°æ 4Ä­ °Ë»ç
+        if (IsAreaClear(map, x, z, 4)) {               //  ë°˜ê²½ 4ì¹¸ ê²€ì‚¬
             return { x, z };
         }
     }
 
-    // 2Â÷: Æú¹é ½ºÄµ(È®½ÇÇÑ ÀÚ¸®¸¦ º¸Àå)
+    // 2ì°¨: í´ë°± ìŠ¤ìº”(í™•ì‹¤í•œ ìë¦¬ë¥¼ ë³´ì¥)
     for (int z = 0; z < H; ++z) {
         for (int x = 0; x < W; ++x) {
             if (IsAreaClear(map, x, z, 4)) {
                 return { x, z };
             }
         }
+
     }
 
-    DEBUG_LOG("[ERROR] ½ºÆù °¡´ÉÇÑ À§Ä¡¸¦ Ã£Áö ¸øÇß½À´Ï´Ù. (¹İ°æ 4Ä­ Á¶°Ç °ú¾ö °¡´É)");
+    DEBUG_LOG("[ERROR] ìŠ¤í° ê°€ëŠ¥í•œ ìœ„ì¹˜ë¥¼ ì°¾ì§€ ëª»í–ˆìŠµë‹ˆë‹¤. (ë°˜ê²½ 4ì¹¸ ì¡°ê±´ ê³¼ì—„ ê°€ëŠ¥)");
     exit(1);
 }
 
@@ -646,14 +667,14 @@ std::pair<int, int> GetRandomPlayerPosition(const std::vector<std::vector<int>>&
         ++attempts;
     }
 
-    DEBUG_LOG("[ERROR] ÇÃ·¹ÀÌ¾î À§Ä¡ Ã£±â ½ÇÆĞ (ÇØ´ç ±¸¿ªÀÌ ÀüºÎ Àå¾Ö¹°ÀÏ ¼ö ÀÖÀ½)");
+    DEBUG_LOG("[ERROR] í”Œë ˆì´ì–´ ìœ„ì¹˜ ì°¾ê¸° ì‹¤íŒ¨ (í•´ë‹¹ êµ¬ì—­ì´ ì „ë¶€ ì¥ì• ë¬¼ì¼ ìˆ˜ ìˆìŒ)");
     exit(1);
 
 }
 
 
 
-// ======================== ¸Ê ±×·Áº¸´Â ¿ë ========================
+// ======================== ë§µ ê·¸ë ¤ë³´ëŠ” ìš© ========================
 void PrintMap2(
     const std::vector<std::vector<int>>& map,
     const std::vector<ZombieAI*>& zombies,
@@ -663,7 +684,7 @@ void PrintMap2(
 {
     int zombieCount = 0;
 
-    // Ãâ·Â
+    // ì¶œë ¥
     for (int z = startZ; z < startZ + height; ++z) {
         for (int x = startX; x < startX + width; ++x) {
             if (z < 0 || z >= GRID_HEIGHT || x < 0 || x >= GRID_WIDTH) {
@@ -671,11 +692,11 @@ void PrintMap2(
                 continue;
             }
 
-            // Ãâ·Â: ÁöÇü
+            // ì¶œë ¥: ì§€í˜•
             //char ch = map[z][x] == 1 ? ' ' : '# ';
             char ch = map[z][x] == 1 ? '#' : '0 ';
 
-            // °æ·Î À§¿¡ ÀÖÀ¸¸é *
+            // ê²½ë¡œ ìœ„ì— ìˆìœ¼ë©´ *
             for (auto zombie : zombies)
             {
                 for (auto& [px, pz] : zombie->GetPath())
@@ -687,11 +708,12 @@ void PrintMap2(
                 }
             }
 
-            // Á»ºñ°¡ ÀÌ ÀÚ¸®¿¡ ÀÖÀ¸¸é Z
+            // ì¢€ë¹„ê°€ ì´ ìë¦¬ì— ìˆìœ¼ë©´ Z
             for (auto zombie : zombies)
             {
                 int zx = static_cast<int>(zombie->GetX() / CELL_SIZE);
                 int zz = static_cast<int>(zombie->GetZ() / CELL_SIZE);
+                
                 
 
                 if (zx == x && zz == z) {
@@ -709,11 +731,11 @@ void PrintMap2(
         std::cout << "\n";
     }
 
-	DEBUG_LOG("[DEBUG] Á»ºñ ¼ö: " << zombieCount);
+	DEBUG_LOG("[DEBUG] ì¢€ë¹„ ìˆ˜: " << zombieCount);
     if (zombieCount == NUM_ZOMBIES)
-		DEBUG_LOG("[ok] Á»ºñ ÀüºÎ ÂïÇû½À´Ï´Ù!");
+		DEBUG_LOG("[ok] ì¢€ë¹„ ì „ë¶€ ì°í˜”ìŠµë‹ˆë‹¤!");
     else
-		DEBUG_LOG("[bad] Á»ºñ ¼ö°¡ ¸ÂÁö ¾Ê½À´Ï´Ù! (" << zombieCount << " / " << NUM_ZOMBIES << ")");
+		DEBUG_LOG("[bad] ì¢€ë¹„ ìˆ˜ê°€ ë§ì§€ ì•ŠìŠµë‹ˆë‹¤! (" << zombieCount << " / " << NUM_ZOMBIES << ")");
 }
 
 
@@ -723,42 +745,42 @@ void PrintMap2(
 //
 //    std::vector<ZombieAI*> zombies;
 //
-//    // 1. ÇÃ·¹ÀÌ¾î ·£´ı À§Ä¡ ¼±Á¤
+//    // 1. í”Œë ˆì´ì–´ ëœë¤ ìœ„ì¹˜ ì„ ì •
 //    auto [px, pz] = GetRandomPlayerPosition(map);
-//    DEBUG_LOG("[TEST] Player À§Ä¡: (" << px << ", " << pz << ")");
+//    DEBUG_LOG("[TEST] Player ìœ„ì¹˜: (" << px << ", " << pz << ")");
 //
-//  // 2. Á»ºñµé ½ºÆù
+//  // 2. ì¢€ë¹„ë“¤ ìŠ¤í°
 //    for (int i = 0; i < 50; ++i)
 //    {
-//        auto [zx, zz] = GetRandomPosition(map); // ÀÌ¹Ì Àå¾Ö¹° ÇÇÇÔ
+//        auto [zx, zz] = GetRandomPosition(map); // ì´ë¯¸ ì¥ì• ë¬¼ í”¼í•¨
 //
 //        ZombieAI* zombie = new ZombieAI(map, i + 1);
 //        zombie->SetPosition((float)zx, (float)zz);
 //        zombie->SetTargetPosition((float)px, (float)pz);
-//        zombie->FindPath(); // A* ¼öÇà
+//        zombie->FindPath(); // A* ìˆ˜í–‰
 //
 //        zombies.push_back(zombie);
 //    }
-//	DEBUG_LOG("[TEST] Á»ºñµé ½ºÆù ¿Ï·á");
+//	DEBUG_LOG("[TEST] ì¢€ë¹„ë“¤ ìŠ¤í° ì™„ë£Œ");
 //
 //
 //    while (true)
 //    {
-//		DEBUG_LOG("[¿£ÅÍ¸¦ ´©¸£¸é ½ÃÀÛ / esc¸¦ ´©¸£¸é Á¾·á]");
+//		DEBUG_LOG("[ì—”í„°ë¥¼ ëˆ„ë¥´ë©´ ì‹œì‘ / escë¥¼ ëˆ„ë¥´ë©´ ì¢…ë£Œ]");
 //
-//        int key = _getch(); // ¿£ÅÍ ´ë±â
+//        int key = _getch(); // ì—”í„° ëŒ€ê¸°
 //
-//        // ¸ğµç Á»ºñ ·£´ı À§Ä¡ ÀÌµ¿
+//        // ëª¨ë“  ì¢€ë¹„ ëœë¤ ìœ„ì¹˜ ì´ë™
 //        if (key == 13) {
 //            for (auto z : zombies)
 //            {
 //                auto [newx, newz] = GetRandomPosition(map);
 //                z->SetPosition((float)newx, (float)newz);
-//                z->SetTargetPosition((float)px, (float)pz);  // °°Àº ÇÃ·¹ÀÌ¾î¿¡°Ô Àç¼³Á¤
+//                z->SetTargetPosition((float)px, (float)pz);  // ê°™ì€ í”Œë ˆì´ì–´ì—ê²Œ ì¬ì„¤ì •
 //                z->FindPath();
 //            }
 //
-//            //PrintMap2(map, zombies, pz - 100, px - 100, 50, 50, px, pz);  // Player ÁÂÇ¥ ³Ñ±è
+//            //PrintMap2(map, zombies, pz - 100, px - 100, 50, 50, px, pz);  // Player ì¢Œí‘œ ë„˜ê¹€
 //            PrintMap2(map, zombies, 0, 0, 512, 512, px, pz);
 //        }
 //        else if (key == 27) {

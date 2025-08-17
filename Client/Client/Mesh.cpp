@@ -1159,13 +1159,13 @@ CSphereMesh::~CSphereMesh()
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-CBulletMesh::CBulletMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles) : CMesh(pd3dDevice, pd3dCommandList)
+CBulletMesh::CBulletMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Look, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles) : CMesh(pd3dDevice, pd3dCommandList)
 {
-	CreateVertexBuffer(pd3dDevice, pd3dCommandList, xmf3Position, xmf3Velocity, fLifetime, xmf3Acceleration, xmf3Color, xmf2Size);
+	CreateVertexBuffer(pd3dDevice, pd3dCommandList, xmf3Position, xmf3Look, fLifetime, xmf3Acceleration, xmf3Color, xmf2Size);
 	CreateStreamOutputBuffer(pd3dDevice, pd3dCommandList, nMaxParticles);
 }
 
-void CBulletMesh::CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size)
+void CBulletMesh::CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Look, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size)
 {
 	m_nVertices = 1;
 	m_nStride = sizeof(CBulletVertex);
@@ -1173,6 +1173,7 @@ void CBulletMesh::CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	CBulletVertex pVertices[1];
 
+	pVertices[0].m_xmf3Destination = XMFLOAT3{ 0,0,0 };
 	pVertices[0].m_xmf3Position = XMFLOAT3{ 0,0,0 };
 	pVertices[0].m_xmf3Velocity = XMFLOAT3{ 0,0,0 };
 	pVertices[0].m_fLifetime = 0.0f;
@@ -1359,4 +1360,28 @@ void CBulletMesh::AddBullet(const CBulletVertex& Bullet)
 
 	// 정점 갯수를 증가시킨다.
 	::gnCurrentBullets = ++m_nVertices;
+}
+
+void CBulletMesh::AddBullets(const std::vector<CBulletVertex>& Bullets)
+{
+	ComPtr<ID3D12GraphicsCommandList> m_pd3dCommandList = CGameFramework::GetCommandList();
+
+	m_pd3dUploadDrawBuffer->Map(0, NULL, (void**)&m_pBullets);
+
+	// 새로운 입자를 업로드 버퍼에 추가한다.
+	memcpy(m_pBullets, Bullets.data(), sizeof(CBulletVertex) * Bullets.size());
+
+	// 디폴트 버퍼를 복사 상태로 전환한다.
+	::SynchronizeResourceTransition(m_pd3dCommandList.Get(), m_pd3dDrawBuffer.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);
+
+	// 업로드 버퍼 내용을 디폴트 버퍼로 복사한다.
+	m_pd3dCommandList->CopyBufferRegion(m_pd3dDrawBuffer.Get(), m_nStride * m_nVertices, m_pd3dUploadDrawBuffer.Get(), 0, m_nStride);
+
+	// 디폴트 버퍼 상태 복원
+	::SynchronizeResourceTransition(m_pd3dCommandList.Get(), m_pd3dDrawBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+	m_pd3dUploadDrawBuffer->Unmap(0, NULL);
+
+	// 정점 갯수를 증가시킨다.
+	::gnCurrentBullets = m_nVertices = (m_nVertices + Bullets.size());
 }

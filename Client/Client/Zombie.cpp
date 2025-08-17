@@ -33,12 +33,12 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	SetRotationAxisLock(true, false, true);
 
 	// <Components>
-	auto pCollider = CreateComponent<COBBCollider>(shared_from_this());
-
 	std::shared_ptr<CRigidBody> pRigidBody = CreateComponent<CRigidBody>(shared_from_this());
 	pRigidBody->SetGravity(XMFLOAT3(0.0f, -9.0f, 0.0f));
 
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
+
+	
 
 	// Model Info
 	SetSkinType(nSkinType);
@@ -71,14 +71,14 @@ void CZombieObject::SetSkin(int nSkinType)
 
 	auto pZombieModel = CResourceManager::GetInstance().GetModelInfo(m_strModelName[m_nSkinType]);
 	SetChild(pZombieModel->m_pModelRootObject);
-	m_pSkinnedAnimationController->SettingByModel(pZombieModel);
 
+	m_pSkinnedAnimationController->SettingByModel(pZombieModel);
 	for (int i = 0; i < m_pSkinnedAnimationController->m_nAnimationTracks; i++)
 	{
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 		if (i != 0) m_pSkinnedAnimationController->SetTrackEnable(i, false);
 	}
 
-	auto pCollider = GetComponent<COBBCollider>();
-	pCollider->SetCollider(FindFrame(m_strMeshBoneName[m_nSkinType])->GetMeshBound());
+	//auto pCollider = GetComponent<COBBCollider>();
+	//pCollider->SetCollider(FindFrame(m_strMeshBoneName[m_nSkinType])->GetMeshBound());
 }

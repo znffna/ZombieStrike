@@ -11,7 +11,6 @@ void CRigidBody::Init(CGameObject* pObject)
 {
 	CComponent::Init(pObject);
 	m_pTransform = pObject->GetComponent<CTransform>();
-	m_pCollider = pObject->GetComponent<CCollider>();
 }
 
 void CRigidBody::UpdateRigidBody(float fTimeElapsed)
@@ -141,10 +140,10 @@ void CRigidBody::UpdateVelocity(float fTimeElapsed)
 	if (fLength > m_fMaxVelocityY) m_xmf3Velocity.y *= (fMaxVelocityY / fLength);
 
 	// 초당 속도에서 이동 거리로 변환
-	XMFLOAT3 xmf3Velocity = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
+	XMFLOAT3 xmf3Look = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
 
 	// 이동 거리만큼 이동
-	m_pTransform->Move(xmf3Velocity);
+	m_pTransform->Move(xmf3Look);
 }
 
 #include "Camera.h"

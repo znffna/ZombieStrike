@@ -24,14 +24,19 @@ struct CB_FRAMEWORK_INFO
 	//XMFLOAT3				m_xmf3Gravity = XMFLOAT3(0.0f, -9.8f, 0.0f);
 	//int					m_nMaxFlareType2Particles = 150;
 	UINT					m_nRenderMode;
-	float					m_nPadding;
+	float					m_fBias;
+	//float					m_nPadding;
 };
+
+
 
 class CGameFramework
 {
 public:
 	CGameFramework();
 	~CGameFramework();
+
+	static CGameFramework* GetInstance() { return pGameFramework; }
 
 	bool OnCreate(HINSTANCE hInstance, HWND hMainWnd);
 	void OnDestroy();
@@ -45,33 +50,33 @@ public:
 
 	// 창모드 <-> 전체화면
 	void ChangeSwapChainState();
-
 	void BuildObjects();
+	void CreateSceneOnAnotherThread(std::string sceneName);
 
 	void AdvanceFrame();
-	void OMSetBackBuffer();
-	void ClearRtvAndDsv();
+	void ProcessInput(CScene* pScene = nullptr);
+	void AnimateObjects(CScene* pScene);
 
-	void WaitGpuWithoutPresent();
-
-	// MoveToNextFrame 이후 WaitForGpuComplete를 호출하는 순서.
-	void WaitForGpuComplete();
 	void MoveToNextFrame();
 
 	void CreateShaderVariables();
 	void UpdateShaderVariables();
 	void ReleaseShaderVariables();
 
-	void ProcessInput();
-
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
-
 	static CGameFramework* pGameFramework;
 	static ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return pGameFramework->m_pd3dCommandList[pGameFramework->m_nSwapChainBufferIndex]; }
+
+	// Scene Management
+	void AddScene(std::string sceneName);
+	void PopScene();
+
 private:
+	bool isWorkd = true;
+
 	HINSTANCE m_hInstance;
 	HWND m_hWnd;
 
@@ -118,18 +123,19 @@ private:
 	CGameTimer												m_GameTimer;
 
 	// Scene
-	std::list<std::unique_ptr<CScene>>						m_Scenes;
+	std::list<std::shared_ptr<CScene>>						m_Scenes;
 	std::unique_ptr<CScene>									m_pLoadingScene;  // Loading Scene은 Stack이 비었을 경우에만 사용(이는, Render State인 Scene이 없을 때도 포함한다)
-	/*
-	Scene을 Stack으로 관리하여 가장 마지막 Scene에 대해서 Input 처리를 수행.
-	나머지 Scene에 대해서는 Scene의 State에 따라 Update / Render를 수행.
-	*/
 
 	POINT m_ptOldCursorPos;
-
-
 protected:
 	ComPtr<ID3D12Resource> m_pd3dcbFrameworkInfo;
 	CB_FRAMEWORK_INFO* m_pcbMappedFrameworkInfo = NULL;
+
+	float m_fBias = 0.007f; // Depth Bias  0.0001f
+
+	std::shared_ptr<CSprite> m_pCursorSprite; // Cursor Sprite
+	POINTF GetTexturePosition(int x, int y);
+	void RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList);
+
 };
 

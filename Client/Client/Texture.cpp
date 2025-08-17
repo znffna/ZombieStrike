@@ -10,7 +10,7 @@ CTexture::CTexture(int nTextures, UINT nTextureType, int nRootParameters)
 	m_pd3dTextureUploadBuffers.resize(m_nTextures);
 	m_strTextureNames.resize(m_nTextures);
 
-	m_nResourceTypes.resize(m_nTextures);
+	m_nTextureType = nTextureType;
 
 	m_pdxgiBufferFormats.resize(m_nTextures);
 	m_nBufferElements.resize(m_nTextures);
@@ -30,7 +30,7 @@ D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int nIndex)
 	D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc;
 	d3dShaderResourceViewDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-	int nTextureType = GetTextureType(nIndex);
+	int nTextureType = GetTextureType();
 	switch (nTextureType)
 	{
 	case RESOURCE_TEXTURE2D: //(d3dResourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)(d3dResourceDesc.DepthOrArraySize == 1)
@@ -111,7 +111,8 @@ void CTexture::LoadTextureFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		return;
 	};
 
-	m_nResourceTypes[nIndex] = nResourceType;
+
+	m_nTextureType = nResourceType;
 	m_strTextureNames[nIndex] = strTextureName;
 	m_pd3dTextures[nIndex] = ::CreateTextureResourceFromDDSFile(pd3dDevice, pd3dCommandList, strTextureName.c_str(), m_pd3dTextureUploadBuffers[nIndex].GetAddressOf(), D3D12_RESOURCE_STATE_GENERIC_READ/*D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE*/);
 	m_pd3dTextures[nIndex]->SetName(strTextureName.c_str());
@@ -124,7 +125,7 @@ void CTexture::LoadTextureFromWICFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		return;
 	};
 
-	m_nResourceTypes[nIndex] = nResourceType;
+	m_nTextureType = nResourceType;
 	m_strTextureNames[nIndex] = strTextureName;
 	m_pd3dTextures[nIndex] = ::CreateTextureResourceFromWICFile(pd3dDevice, pd3dCommandList, strTextureName.c_str(), m_pd3dTextureUploadBuffers[nIndex].GetAddressOf(), D3D12_RESOURCE_STATE_GENERIC_READ/*D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE*/);
 	m_pd3dTextures[nIndex]->SetName(strTextureName.c_str());
@@ -137,7 +138,7 @@ void CTexture::LoadBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		return;
 	};
 
-	m_nResourceTypes[nIndex] = RESOURCE_BUFFER;
+	m_nTextureType = RESOURCE_BUFFER;
 	m_nBufferElements[nIndex] = nElements;
 	m_nBufferStrides[nIndex] = nStride;
 	m_pdxgiBufferFormats[nIndex] = ndxgiFormat;
@@ -151,7 +152,7 @@ ComPtr<ID3D12Resource> CTexture::CreateTexture(ID3D12Device* pd3dDevice, ID3D12G
 		return nullptr;
 	};
 
-	m_nResourceTypes[nIndex] = nResourceType;
-	//m_pd3dTextures[nIndex] = ::CreateTexture2DResource(pd3dDevice, pd3dCommandList, nWidth, nHeight, nElements, nMipLevels, dxgiFormat, d3dResourceFlags, d3dResourceStates, pd3dClearValue);
+	m_nTextureType = nResourceType;
+	m_pd3dTextures[nIndex] = ::CreateTexture2DResource(pd3dDevice, pd3dCommandList, nWidth, nHeight, nElements, nMipLevels, dxgiFormat, d3dResourceFlags, d3dResourceStates, pd3dClearValue);
 	return(m_pd3dTextures[nIndex]);
 }

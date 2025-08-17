@@ -202,6 +202,12 @@ void CGameObject::UpdateTransform(std::shared_ptr<CGameObject>& pGameobject)
 
 void CGameObject::Update(float fTimeElapsed)
 {
+	if (GetLayer() == GAMEOBJECT_LAYER::LAYER_ENVIRONMENT)
+	{
+		// UI Layer는 Update 하지 않음
+		return;
+	}
+
 	// Component Update 
 	// TODO : 순서좀 생각해야 될 듯?
 	for (auto& pComponent : m_pComponents)
@@ -215,8 +221,13 @@ void CGameObject::Update(float fTimeElapsed)
 
 	for (auto& pChild : m_pChilds) pChild->Update(fTimeElapsed);
 
+	UpdateBBCache();
+}
+
+void CGameObject::UpdateBBCache()
+{
 	// 부모가 없을 경우, 모든 OBB를 Copy
-	if(m_pParent.expired())
+	if (m_pParent.expired())
 	{
 		// 기존 Collider 파괴
 		m_pCachesColliders.clear();
@@ -224,7 +235,7 @@ void CGameObject::Update(float fTimeElapsed)
 		// 현재 모든 자식내 Collider를 가져옴
 		std::vector<std::shared_ptr<CCollider>> pCachesColliders;
 		GetComponentsInChildren<CCollider>(pCachesColliders);
-		
+
 		// Pointer 가아닌 실제 Value를 복사
 		std::vector<std::shared_ptr<CCollider>> pColliders;
 		for (auto& pCollider : pCachesColliders)
@@ -346,7 +357,7 @@ void CGameObject::OnPrepareRender()
 	}
 }
 
-void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
 	if (false == m_bActive) return;
 
@@ -366,9 +377,12 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			if (pMaterial)
 			{
 				// Set Pipeline State
-				if (pMaterial->m_pShader) pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0); // Render(pd3dCommandList, pCamera);
+				if (pMaterial->m_pShader) {
+					//if (pMaterial->m_pShader->GetAllowShadow() == false) continue; // 그림자 허용 여부 확인
+					pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0, bDepthWrite); // Render(pd3dCommandList, pCamera);
+				}
 				// Material Update
-				pMaterial->UpdateShaderVariables(pd3dCommandList);
+				if (!bDepthWrite) pMaterial->UpdateShaderVariables(pd3dCommandList);
 			}
 			// Render Mesh
 			m_pMesh->Render(pd3dCommandList, i);
@@ -380,7 +394,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		}
 	}
 
-	if (g_bRenderCollider) {
+	if (g_bRenderCollider && !bDepthWrite) {
 		auto pColliders = GetComponents<CCollider>();
 
 		for (auto pCollider : pColliders)
@@ -394,17 +408,16 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 16, &xmf4x4World, 0);
 
 			// Use Collider Shader
-			CMaterial::m_pColliderShader->OnPrepareRender(pd3dCommandList, 0);
+			CMaterial::m_pColliderShader->OnPrepareRender(pd3dCommandList, 0, false);
 			
 			CResourceManager::GetInstance().GetMesh("CCubeMesh")->Render(pd3dCommandList);
 		}
 	}
 
-
 	// Render Child Object
 	for (auto& pChild : m_pChilds)
 	{
-		pChild->Render(pd3dCommandList, pCamera);
+		pChild->Render(pd3dCommandList, pCamera, bDepthWrite);
 	}
 }
 
@@ -472,6 +485,7 @@ void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandLi
 	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4World)));
 
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 16, &xmf4x4World, 0);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 4, &m_xmf4Color, 16);
 }
 
 void CGameObject::ReleaseShaderVariables()
@@ -662,11 +676,18 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 	UINT nReads = 0;
 
 	int nAnimationSets = 0;
+	std::string strAnimationRootName;
 
 	for (; ; )
 	{
 		::ReadStringFromFile(pInFile, pstrToken);
-		if (!strcmp(pstrToken, "<AnimationSets>:"))
+		if (!strcmp(pstrToken, "<RootObject>:"))
+		{
+			char pstrRootName[64] = { '\0' };
+			::ReadStringFromFile(pInFile, pstrRootName);
+			strAnimationRootName = pstrRootName;
+		}
+		else if (!strcmp(pstrToken, "<AnimationSets>:"))
 		{
 			nAnimationSets = ::ReadIntegerFromFile(pInFile);
 			pLoadedModel->m_pAnimationSets = std::make_shared<CAnimationSets>(nAnimationSets);
@@ -733,6 +754,7 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 		}
 		else if (!strcmp(pstrToken, "</AnimationSets>"))
 		{
+			pLoadedModel->m_pAnimationRootObject = pLoadedModel->m_pModelRootObject->FindFrame(strAnimationRootName);
 			break;
 		}
 	}
@@ -793,6 +815,9 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 
 			// Test용
 			isGetModel = DeepCopyFromModel(pGameObject->m_strName, pGameObject);
+		}
+		else if (!strcmp(pstrToken, "<Tag>:")) {
+			::ReadStringFromFile(file, pGameObject->m_strTag);
 		}
 		else if (!strcmp(pstrToken, "<Transform>:"))
 		{
@@ -1004,7 +1029,12 @@ void CSkyBox::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	// pSkyBoxShader->CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 1);
+	
 	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture.get(), 0, ROOT_PARAMETER_SKYBOX);
+	{
+		std::string strDebugName = "After CScene::CreateShaderResourceViews\n";
+		OutputDebugStringA(strDebugName.c_str());
+	}
 
 	std::shared_ptr<CMaterial> pSkyBoxMaterial = std::make_shared<CMaterial>();
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);
@@ -1022,16 +1052,16 @@ std::shared_ptr<CSkyBox> CSkyBox::Create(ID3D12Device* pd3dDevice, ID3D12Graphic
 	return pSkyBox;
 }
 
-void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
-	if(pCamera)
+	if (pCamera)
 	{
 		XMFLOAT3 xmf3CameraPos = pCamera->GetPosition();
 		SetPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
 	}
 	UpdateTransform();
 
-	CGameObject::Render(pd3dCommandList, pCamera);
+	CGameObject::Render(pd3dCommandList, pCamera, bDepthWrite);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1214,11 +1244,11 @@ std::shared_ptr<CHeightMapTerrain> CHeightMapTerrain::InitializeByBinary(ID3D12D
 	return pHeightMapTerrain;
 }
 
-void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
 	UpdateTransform();
 
-	CGameObject::Render(pd3dCommandList, pCamera);
+	CGameObject::Render(pd3dCommandList, pCamera, bDepthWrite);
 }
 
 
@@ -1275,14 +1305,14 @@ std::shared_ptr<CCubeObject> CCubeObject::Create(ID3D12Device* pd3dDevice, ID3D1
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-CBulletObject::CBulletObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles)
+CBulletParticleObject::CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Look, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles)
 {
-	std::shared_ptr<CBulletMesh> pMesh = std::make_shared<CBulletMesh>(pd3dDevice, pd3dCommandList, xmf3Position, xmf3Velocity, fLifetime, xmf3Acceleration, xmf3Color, xmf2Size, nMaxParticles);
+	std::shared_ptr<CBulletMesh> pMesh = std::make_shared<CBulletMesh>(pd3dDevice, pd3dCommandList, xmf3Position, xmf3Look, fLifetime, xmf3Acceleration, xmf3Color, xmf2Size, nMaxParticles);
 	SetMesh(pMesh);
 
 	std::shared_ptr<CTexture> pParticleTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
 	pParticleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/BulletTrail.dds", RESOURCE_TEXTURE2D, 0);
-	pParticleTexture->SetName("Image/BulletTrail.dds");
+	pParticleTexture->SetName("CBulletParticleObject");
 	CScene::CreateShaderResourceViews(pd3dDevice, pParticleTexture.get(), 0, ROOT_PARAMETER_ALBEDO_TEXTURE);
 
 	std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
@@ -1298,17 +1328,17 @@ CBulletObject::CBulletObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	SetMaterial(0, pMaterial);
 }
 
-CBulletObject::~CBulletObject()
+CBulletParticleObject::~CBulletParticleObject()
 {
 }
 
-void CBulletObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CBulletParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
 	OnPrepareRender();
 
 	for (auto& pMaterial : m_ppMaterials)
 	{
-		if (pMaterial->m_pShader) pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0);
+		if (pMaterial->m_pShader) pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0, false);
 		for (auto& pTexture : pMaterial->m_ppTextures)
 		{
 			if (pTexture) pTexture->UpdateShaderVariables(pd3dCommandList);
@@ -1323,19 +1353,32 @@ void CBulletObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* 
 
 	for (auto& pMaterial : m_ppMaterials)
 	{
-		if (pMaterial->m_pShader) pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 1);
+		if (pMaterial->m_pShader) pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 1, false);
 	}
 
 	m_pMesh->PreRender(pd3dCommandList, 1); //Draw
 	m_pMesh->Render(pd3dCommandList, 1); //Draw
 }
 
-void CBulletObject::OnPostRender()
+void CBulletParticleObject::OnPostRender()
 {
 	m_pMesh->OnPostRender(0); //Read Stream Output Buffer Filled Size
 }
 
-void CBulletObject::AddBullet(const CBulletVertex& pBulletVertex)
+void CBulletParticleObject::AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Look, float fRange)
+{
+	CBulletVertex pBulletVertex;
+	pBulletVertex.m_xmf3Position = pOrigin;
+	pBulletVertex.m_xmf3Destination = Vector3::Add(pOrigin, Vector3::ScalarProduct(xmf3Look, fRange));
+	pBulletVertex.m_xmf3Velocity = xmf3Look;
+	// 총알 궤적 출력 시간 설정
+	pBulletVertex.m_fLifetime = 0.5f;
+	//pBulletVertex.m_fLifetime = fRange / Vector3::Length(xmf3Look);
+
+	AddBullet(pBulletVertex);
+}
+
+void CBulletParticleObject::AddBullet(const CBulletVertex& pBulletVertex)
 {
 	std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullet(pBulletVertex);
 }

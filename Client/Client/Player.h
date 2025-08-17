@@ -1,7 +1,7 @@
 #pragma once
 #include "GameObject.h"
-
 class CGun;
+class CGaugeBar;
 
 class CPlayer : public CGameObject
 {
@@ -23,10 +23,11 @@ public:
 
 	// Object Update
 	virtual void Update(float fTimeElapsed) override;
+	void UpdateUnderAnimation();
 	virtual void Move(DWORD dwDirection, float fDistance, float deltaTime) override;
 
 	// Object Render
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override;
 
 	// Skin State
 	void SetSkinType(int nSkinType)	{ m_nSkinType = nSkinType % m_ModelName.size();}
@@ -37,7 +38,12 @@ public:
 	void SetGun(const std::shared_ptr<CGun>& pGun) { m_pGun = pGun; }
 	std::shared_ptr<CGun> GetGun() const { return m_pGun; }
 
-	void Fire();
+	bool Fire(FIRE_INFO* pFireInfo);
+	void Reload();
+
+	// UI
+	void SetHealthObject(const std::shared_ptr<CGaugeBar>& pHealthGauge) { m_pHealthGauge = pHealthGauge; }
+
 
 private:
 	std::vector<std::string> m_ModelName{ "Ch18_nonPBR", "Ch35_nonPBR" };
@@ -45,6 +51,8 @@ private:
 
 	std::shared_ptr<CGameObject> m_pGunSlot;
 	std::shared_ptr<CGun> m_pGun;
+
+	std::shared_ptr<CGaugeBar> m_pHealthGauge;
 
 	// Camera Offset
 	float m_fCameraLookY = 0.0f;
@@ -54,5 +62,9 @@ private:
 	float m_fRoll = 0.0f;
 
 	int m_nSkinType = 0;
+
+	// Player State
+	float m_fHealth = 100.0f; // Player Health
+	float m_fMaxHealth = 100.0f; // Max Health
 };
 

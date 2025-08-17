@@ -18,8 +18,8 @@ struct CB_CAMERA_INFO
 	XMFLOAT4X4				m_xmf4x4InverseView;
 	XMFLOAT4X4				m_xmf4x4Projection;
 	XMFLOAT4X4				m_xmf4x4InvProjection;
-	//XMFLOAT3				m_xmf3Position;
-	//float					m_fPadding;
+	XMFLOAT3				m_xmf3Position;
+	float					m_fPadding;
 };
 
 class CCamera : public CComponent
@@ -69,6 +69,8 @@ public:
 	float GetYaw() { return m_fYaw; }
 	float GetRoll() { return m_fRoll; }
 
+	void SetPitch(float fPitch) { m_fPitch = fPitch; }
+
 	virtual void Rotate(float x, float y, float z);
 	void Rotate(const XMFLOAT3& xmf3Shift) { Rotate(xmf3Shift.x, xmf3Shift.y, xmf3Shift.z); }
 
@@ -99,7 +101,7 @@ protected:
 	//XMFLOAT3 m_xmf3LookAtWorld; // World
 	XMFLOAT3 m_xmf3Offset = XMFLOAT3{0.0f, 0.0f, 0.0f}; // 오브젝트(Owner)와의 상대적 포지션[Local]
 	float m_fTimeLag = 0.0f;
-
+public:
 	// Camera Shader Matrix
 	XMFLOAT4X4 m_xmf4x4View;
 	XMFLOAT4X4 m_xmf4x4Projection;

@@ -9,6 +9,8 @@
 #include "Zombie.h" 
 #include "Player.h"
 #include "Gun.h"
+#include "CollisionChecker.h"
+#include "Sprite.h"
 
 #include "Camera.h"
 #include "Shader.h"
@@ -28,12 +30,6 @@ struct INPUT_PARAMETER
 	float cxDelta;
 	float cyDelta;
 };
-
-#define MAX_LIGHTS 16
-
-#define POINT_LIGHT			1
-#define SPOT_LIGHT			2
-#define DIRECTIONAL_LIGHT	3
 
 struct Light
 {
@@ -136,14 +132,9 @@ public:
 	static ID3D12RootSignature* GetGraphicRootSignature() {return m_pd3dGraphicsRootSignature.Get();	};
 	
 	// Scene Management
-	bool CheckWorkRendering() { return (m_SceneState == SCENE_STATE_RUNNING) || (m_SceneState == SCENE_STATE_PAUSING); }
-	bool CheckWorkUpdating()
-	{
-		if (GetSceneState() == SCENE_STATE_READY_TO_START)
-			StartScene(); 
-		return (GetSceneState() == SCENE_STATE_RUNNING);
-	}
 	virtual void StartScene() { SetSceneState(SCENE_STATE_RUNNING); }
+	virtual void PopScene();
+
 	SCENE_STATE GetSceneState() { return m_SceneState; }
 	void SetSceneState(SCENE_STATE SceneState)
 	{ 
@@ -155,21 +146,30 @@ public:
 		m_SceneState = SceneState; 
 	}
 
+	bool CheckWorkRendering() { return (m_SceneState == SCENE_STATE_RUNNING) || (m_SceneState == SCENE_STATE_PAUSING); }
+	bool CheckWorkUpdating() { return (GetSceneState() == SCENE_STATE_RUNNING); }
+
+	virtual void SetCursor() { g_bEnableCursor = true; }
+
 	// Object Management
 	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
 	virtual void AddObjects(const std::vector<std::shared_ptr<CGameObject>>& pObjects);
 	virtual void RemoveObject(const std::shared_ptr<CGameObject>& pObject);
-	void LateUpdate();
-	std::unordered_map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>>& GetObjects() { return m_ppGameObjects; }
+	std::map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>>& GetObjects() { return m_ppGameObjects; }
 
 	void SetPlayer(std::shared_ptr<CPlayer> pPlayer);
 
 	// Scene Method
 	virtual void Update(float deltaTime);
+	void LateUpdate();
+	virtual void UpdateLights() {};
 
 	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
-	virtual void OnPostRender() {} ;
+	virtual bool RenderUI(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
+	virtual void RenderDepthWrite(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
+	virtual bool OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr);
+	virtual void OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList) {} ;
 
 	// static method
 	static ComPtr<ID3D12RootSignature> CreateGraphicsRootSignature(ID3D12Device* pd3dDevice);
@@ -177,6 +177,8 @@ public:
 	static void CreateDescriptorHeap(ID3D12Device* pd3dDevice);
 	static void CreateStaticShader(ID3D12Device* pd3dDevice);
 	static void CreateStaticMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	static ComPtr<ID3D12RootSignature> GetGraphicsRootSignature() { return m_pd3dGraphicsRootSignature; }
 
 	// Descriptor Heap
 	static void CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews);
@@ -202,7 +204,8 @@ public:
 	virtual void ReleaseShaderVariables();
 
 	// Input Method
-	virtual bool ProcessInput(const INPUT_PARAMETER& pBuffer, float deltaTime) { return false; };
+	virtual bool ProcessMouseInput(float cxDelta, float cyDelta, float deltaTime) { return false; };
+	virtual bool ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaTime) { return false; };
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
 
@@ -213,7 +216,7 @@ protected:
 	static std::shared_ptr<CDescirptorHeap> m_pDescriptorHeap;
 
 	// Scene State
-	SCENE_STATE m_SceneState = SCENE_STATE_NONE;
+	SCENE_STATE m_SceneState = SCENE_STATE_ALLOCING;
 
 	// RootSignature
 	static ComPtr<ID3D12RootSignature> m_pd3dGraphicsRootSignature;
@@ -230,7 +233,7 @@ protected:
 	float								m_fElapsedTime = 0.0f;
 
 	// GameObjects
-	std::unordered_map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>> m_ppGameObjects;
+	std::map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>> m_ppGameObjects;
 	std::list<std::shared_ptr<CGameObject>> m_pAddGameObjectList;
 	std::list<std::shared_ptr<CGameObject>> m_pRemoveGameObjectList;
 
@@ -249,7 +252,14 @@ protected:
 	// Camera
 	std::shared_ptr<CCamera> m_pCamera;
 
+public:
+	std::shared_ptr<CDepthRenderShader> m_pDepthRenderShader;
 
+	std::shared_ptr<CShadowMapShader> m_pShadowShader;
+	std::shared_ptr<CShadowToViewportShader> m_pShadowMapToViewport;
+
+	BoundingBox CalculateBoundingBox();
+	std::array<Light, MAX_LIGHTS> GetLights() const { return m_pLights; }
 };
 
 
