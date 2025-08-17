@@ -768,10 +768,8 @@ void CGameFramework::ProcessInput(CScene* pScene)
 
 	pScene->SetCursor();
 
-	if(GetKeyboardState(pKeysBuffer))
-	{
-		if (nullptr != pScene) bProcessedByScene = pScene->ProcessKeyboardInput(pKeysBuffer, m_GameTimer.DeltaTime()) ? true : false;
-	}
+	GetKeyboardState(pKeysBuffer);
+	if (nullptr != pScene) bProcessedByScene = pScene->ProcessKeyboardInput(pKeysBuffer, m_GameTimer.DeltaTime()) ? true : false;
 	
 	// 마우스 입력 처리
 	{
