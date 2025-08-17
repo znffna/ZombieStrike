@@ -13,7 +13,6 @@
 //
 
 bool CAnimationTrack::CheckTag(const std::string& strTag) const {
-	OutputDebugStringA(("CAnimationTrack::CheckTag : " + strTag + "\n").c_str());
 	if (strTag == "Upper") return (m_nMaskFlag & ANIMATION_MASK_UPPER);
 	else if (strTag == "Lower") return (m_nMaskFlag & ANIMATION_MASK_LOWER);
 	else if (strTag == "UnTagged") return (m_nMaskFlag & ANIMATION_MASK_UPPER);
@@ -210,7 +209,7 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 				{
 					// 상/하체에 따른 마스킹(Upper/Lower, 나머지도 Upper가 Default로 설정)
-					if (m_pAnimationTracks[k].CheckTag(m_pAnimationSets->m_ppBoneFrameCaches[j]->GetTag()))
+					if (false == m_pAnimationTracks[k].CheckTag(m_pAnimationSets->m_ppBoneFrameCaches[j]->GetTag()))
 						continue;
 
 #ifdef _WITH_OBJECT_TRANSFORM
