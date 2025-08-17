@@ -217,7 +217,11 @@ bool CPlayer::Fire(FIRE_INFO* pFireInfo)
 	if (m_pGun) {
 		UpdateTransform();
 		m_pGun->UpdateTransform(m_pGunSlot->GetWorldMatrix());
-		return m_pGun->Fire(GetComponent<CCamera>()->GetLook(), pFireInfo);
+		bool ret =  m_pGun->Fire(GetComponent<CCamera>()->GetLook(), pFireInfo);
+		if (ret) {
+			SetState(CAnimationController::ANIMATION_STATE::FIRE);
+		}
+		return ret;
 	} 
 	return false;
 }

@@ -1311,8 +1311,11 @@ CBulletParticleObject::CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12Gra
 	std::shared_ptr<CBulletMesh> pMesh = std::make_shared<CBulletMesh>(pd3dDevice, pd3dCommandList, xmf3Position, xmf3Look, fLifetime, xmf3Acceleration, xmf3Color, xmf2Size, nMaxParticles);
 	SetMesh(pMesh);
 
-	std::shared_ptr<CTexture> pParticleTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
+	std::shared_ptr<CTexture> pParticleTexture = std::make_shared<CTexture>(4, RESOURCE_TEXTURE2D, 4);
 	pParticleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/BulletTrail.dds", RESOURCE_TEXTURE2D, 0);
+	pParticleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Spark.dds", RESOURCE_TEXTURE2D, 1);
+	pParticleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Blood.dds", RESOURCE_TEXTURE2D, 2);
+	pParticleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/StoneFragment.dds", RESOURCE_TEXTURE2D, 3);
 	pParticleTexture->SetName("CBulletParticleObject");
 	CScene::CreateShaderResourceViews(pd3dDevice, pParticleTexture.get(), 0, ROOT_PARAMETER_ALBEDO_TEXTURE);
 
