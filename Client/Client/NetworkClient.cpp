@@ -67,6 +67,10 @@ bool NetworkingClient::Connect()
     c_socket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
     if (c_socket == INVALID_SOCKET) error_display("家南 积己 角菩", WSAGetLastError());
 
+    int flag = 1;   // TCP_NODELAY 劝己拳 (0 = 厚劝己拳)
+    ret = setsockopt(c_socket, IPPROTO_TCP, TCP_NODELAY, (const char*)&flag, sizeof(flag));
+    if (ret == SOCKET_ERROR) { error_display("家南 积己 角菩", WSAGetLastError()); }
+
     sockaddr_in serverAddr{};
     //std::string serverIP = USSING_IP;
     std::string serverIP = LoadIPAddress();
