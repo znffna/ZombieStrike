@@ -278,7 +278,14 @@ bool COnlineScene::Fire(const std::shared_ptr<CPlayer>& pPlayer, FIRE_INFO* pFir
 	auto ret = CGameScene::Fire(pPlayer, &fireInfo);
 
 	// 로컬 정보였을 경우
-	if (ret && m_pPlayer == pPlayer) SendFirePacket(fireInfo);
+	if (ret && m_pPlayer == pPlayer) {
+		SendFirePacket(fireInfo);
+		if(m_pPlayer->GetGun()->GetCurrentAmmo() <= 0)
+		{
+			m_pPlayer->Reload();
+
+		}
+	}
 
 	return ret;
 }

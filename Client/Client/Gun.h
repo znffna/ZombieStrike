@@ -70,5 +70,8 @@ private:
 	float m_fReloadTime = 2.0f; // 재장전 시간
 	int m_nMaxAmmo = 30; // 최대 탄약 수
 	int m_nCurrentAmmo = 30; // 현재 탄약 수
+
+public:
+	int GetCurrentAmmo() const { return m_nCurrentAmmo; }
 };
 

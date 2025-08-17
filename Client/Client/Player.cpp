@@ -171,6 +171,14 @@ bool CPlayer::Fire(FIRE_INFO* pFireInfo)
 	return false;
 }
 
+void CPlayer::Reload()
+{
+	if (m_pGun->NeedReload() == false) return;
+
+	m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::RELOAD);
+	m_fReloadTimeCount = 0.0f;
+}
+
 void CPlayer::Rotate(float x, float y, float z)
 {
 	if (x != 0.0f)

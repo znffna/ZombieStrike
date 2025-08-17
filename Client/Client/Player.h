@@ -39,6 +39,7 @@ public:
 	std::shared_ptr<CGun> GetGun() const { return m_pGun; }
 
 	bool Fire(FIRE_INFO* pFireInfo);
+	void Reload();
 
 	// UI
 	void SetHealthObject(const std::shared_ptr<CGaugeBar>& pHealthGauge) { m_pHealthGauge = pHealthGauge; }
