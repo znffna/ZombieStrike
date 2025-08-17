@@ -10,8 +10,6 @@
 // 필수 정보 
 constexpr float my_gCost = 1.0f;             // 이동 비용
 constexpr float ZOMBIE_HALF_SIZE = 0.4f;     // 좀비 AABB 반 사이즈
-constexpr SIZE2 ZOMBIE_HP = 500;             // 좀비 초기 체력
-constexpr float ZOMBIE_DAMAGE = 10;          // 좀비 초기 공격력 
 constexpr float Z_move_speed = 0.03f;         // 좀비 
 
 constexpr float WORLD_WIDTH = 250.0f;
@@ -66,17 +64,20 @@ public:
     void TriggerAttack(float animTime = Z_ATTACK_ANIM_TIME);
     bool IsAttacking() const;
 
+    //근접 공격 판정& 타이머 갱신
+    int TryMeleeHit(const std::vector<std::pair<SIZEID, Vec3>>&players, float dt); // // ZombieAI::TryMeleeHit: 범위 내 플레이어 1명 히트 시 그 ID 반환, 없으면 -1
+    void TickAttackCooldown(float dt);
+
+
     // ---[Pause]---
     void TriggerPause(float dur = Z_PAUSE_TIME);  // // ZombieAI::TriggerPause - 근접 시 잠깐 멈추기
     bool IsPausing() const;                       // // ZombieAI::IsPausing     - 현재 일시정지 여부
 
 
     // ---[Hit Stun]---
-    // 외부(서버 피격 처리)에서 스턴 부여
-    void SetStun(float seconds = ZOMBIE_HIT_STUN_SEC);
-    // 현재 스턴 상태 조회
-    bool IsStunned() const;
-
+    void SetStun(float seconds = ZOMBIE_HIT_STUN_SEC);  // 외부(서버 피격 처리)에서 스턴 부여
+    bool IsStunned() const;  // 현재 스턴 상태 조회
+     
     Vec3 FindClosestPlayer(const std::vector<Vec3>& playerPositions);
     void FindPath();                      // AI 동작
 

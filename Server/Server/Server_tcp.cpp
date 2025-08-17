@@ -848,6 +848,50 @@ void ZombieAIThread() {
             // // 일반 업데이트
             zombie->Update(playerPositions, g_zombies, deltaTime);
 
+            // 근접공격 판정 & 플레이어 HP 감소 (Update 직후, 다른 송출보다 먼저)
+            // ZombieAIThread: 가까운 플레이어 1명에게 ZOMBIE_DAMAGE 적용하고 브로드캐스트
+            {
+                int hitPid = zombie->TryMeleeHit(playerList, deltaTime);              // // ZombieAIThread: 근접공격 판정
+                if (hitPid >= 0) {
+                    auto it = g_users.find(static_cast<SIZEID>(hitPid));
+                    if (it != g_users.end()) {
+                        SESSION& target = it->second;
+                        const SIZE2 prev_hp = target._hp;
+                        target._hp = (std::max)(static_cast<SIZE2>(0),
+                            static_cast<SIZE2>(target._hp - static_cast<SIZE2>(ZOMBIE_DAMAGE))); // // ZombieAIThread: HP 감소
+                        target._act_type = ActionType::HIT;     // // ZombieAIThread: 피격 애니 유도
+                        target._move_input = 0;                 // // ZombieAIThread: 경직 표현(선택)
+
+                        // [DEBUG]
+                        // std::cout << "[MELEE][HIT] zid=" << zombie->GetID()
+                        //           << " -> pid=" << hitPid
+                        //           << " hp: " << prev_hp << " -> " << target._hp << "\n";
+
+                        // 피격된 플레이어 상태 브로드캐스트
+                        pkt_sc_object_update pu{};
+                        pu.header.size = sizeof(pu);
+                        pu.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
+                        pu.id = hitPid;
+                        pu.position = target._position;
+                        pu.velocity = target._velocity;
+                        pu.look = target._look;
+                        pu.pitch = target._pitch;
+                        pu.hp = target._hp;
+                        pu.gun_type = target._gun_type;
+                        pu.level = target._level;
+                        pu.score = target._score;
+                        pu.damage = target._damage;
+                        pu.act_type = target._act_type;   // HIT
+                        pu.move_input = target._move_input;
+
+                        for (auto& [id, session] : g_users) session.do_send(&pu);      // // ZombieAIThread: 브로드캐스트
+
+                        // (선택) 플레이어 HP가 0이면 별도 사망 처리 패킷/로직 추가 가능
+                        // if (target._hp == 0) { ... }
+                    }
+                }
+            }
+
             // ZombieAIThread: 상태 변경 시 스냅샷 송출 (DEAD/HIT/ATTACK/ZMOVE 포함)
             if (zombie->IsDirty()) {
                 Object info = zombie->GetObjectinfo();

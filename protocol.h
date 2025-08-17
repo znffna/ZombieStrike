@@ -23,8 +23,11 @@ constexpr int W_HEIGHT = 250;
 
 
 
-constexpr SIZE2 PLAYER_HP = 500;           // 플레이어 체력  
-constexpr SIZE2 GUN_DAMAGE = 300;          // 총기 데미지 - 일단 2방에 죽나 tset용  
+constexpr SIZE2 PLAYER_HP = 500;            // 플레이어 체력  
+constexpr SIZE2 GUN_DAMAGE = 300;           // 총기 데미지 - 일단 2방에 죽나 tset용  
+constexpr SIZE2 ZOMBIE_HP = 500;            // 좀비 초기 체력
+constexpr float ZOMBIE_DAMAGE = 10;         // 좀비 초기 공격력 
+constexpr float Z_move_speed = 0.03f;       // 좀비 스피드
 
 enum ObjectType : SIZE1 {
     PLAYER = 1,

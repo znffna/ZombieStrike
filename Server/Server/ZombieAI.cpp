@@ -262,6 +262,57 @@ bool ZombieAI::IsAttacking() const
     return m_attack_left > 0.0f;
 }
 
+// // ZombieAI::TickAttackCooldown: 공격 쿨다운 감소
+void ZombieAI::TickAttackCooldown(float dt) {
+    if (m_attack_cd > 0.0f) {
+        m_attack_cd = std::max(0.0f, m_attack_cd - dt);    // // TickAttackCooldown: 타이머 감소
+    }
+}
+
+// // ZombieAI::TryMeleeHit: 범위 내 플레이어 1명 히트 판정(쿨다운 소모)
+int ZombieAI::TryMeleeHit(const std::vector<std::pair<SIZEID, Vec3>>& players, float dt) {
+    if (m_removed) return -1;                              // // TryMeleeHit: 제거된 개체 무시
+    if (IsDead())   return -1;                             // // TryMeleeHit: 사망 무시
+
+    // 상태에 따라 공격 불가 조건(스턴, 죽음연출, 강제정지 등)
+    if (m_stun_left > 0.0f || m_death_left > 0.0f) return -1;  // // TryMeleeHit: 제약 상태
+    // (일시정지 중에도 공격하지 않도록 한다면 아래 라인 유지)
+    if (m_pause_left > 0.0f) return -1;                       // // TryMeleeHit: 일시정지 중
+
+    // 쿨다운 갱신
+    TickAttackCooldown(dt);                                   // // TryMeleeHit: 쿨다운 감소
+    if (m_attack_cd > 0.0f) return -1;                        // // TryMeleeHit: 아직 쿨다운
+
+    // 가장 가까운 플레이어 탐색 + 사정거리 체크
+    SIZEID best_id = static_cast<SIZEID>(-1);
+    float best_dist2 = FLT_MAX;
+
+    for (const auto& [pid, ppos] : players) {
+        const float dx = ppos.x - m_x;
+        const float dz = ppos.z - m_z;
+        const float d2 = dx * dx + dz * dz;
+        if (d2 < best_dist2) {
+            best_dist2 = d2;
+            best_id = pid;
+        }
+    }
+
+    if (best_id == static_cast<SIZEID>(-1)) return -1;       // // TryMeleeHit: 플레이어 없음
+
+    const float range = Z_ATTACK_RANGE;
+    if (best_dist2 <= (range * range)) {
+        // 히트 성공: 공격 트리거 & 쿨다운 설정
+        TriggerPause(Z_PAUSE_TIME);                          // // TryMeleeHit: 근접 시 잠깐 멈춤(선택)
+        TriggerAttack(Z_ATTACK_ANIM_TIME);                   // // TryMeleeHit: 공격 모션 시작
+        m_attack_cd = Z_ATTACK_COOLDOWN;                     // // TryMeleeHit: 쿨다운 시작
+        m_dirty = true;                                      // // TryMeleeHit: 상태 변경 브로드캐스트 트리거
+        return static_cast<int>(best_id);                    // // TryMeleeHit: 맞은 플레이어 ID 반환
+    }
+
+    return -1;                                               // // TryMeleeHit: 사정거리 밖
+}
+
+
 // 근접 시 잠깐 멈춤
 void ZombieAI::TriggerPause(float dur)
 {
@@ -354,6 +405,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     if (m_attack_left   > 0.0f) { m_attack_left = std::max(0.0f, m_attack_left - deltaTime); }
     if (m_pause_cd      > 0.0f) { m_pause_cd = std::max(0.0f, m_pause_cd - deltaTime); }
     if (m_pause_left    > 0.0f) { m_pause_left = std::max(0.0f, m_pause_left - deltaTime); }
+    TickAttackCooldown(deltaTime);  // // Update: 공격 쿨다운 감소
 
 
     // 스턴 상태면 이동/경로탐색 모두 중지
