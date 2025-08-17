@@ -194,7 +194,7 @@ public:
 	
 	float GetBoneUpperWeight() const
 	{ 
-		if (m_strName == "mixamorig:Hips") return 0.25f;
+		if (m_strName == "mixamorig:Hips") return 0.55f;
 		else if (m_strName == "mixamorig:Spine") return 0.55f;
 		else if (m_strName == "mixamorig:Spine1") return 0.75f;
 		else if (m_strName == "mixamorig:Spine2") return 0.9f;
