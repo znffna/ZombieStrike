@@ -265,7 +265,8 @@ public:
     SIZE1           _level;
     SIZE2           _score;
     SIZE2           _damage;               
-    SIZE1           _act_type;            
+    SIZE1           _act_type;      
+    SIZE1           _move_input;
 
     void do_recv() {
         DWORD flags = 0;
@@ -385,6 +386,7 @@ public:
 		packet.level = _level;
 		packet.score = _score;
 		packet.damage = _damage;
+        packet.move_input = _move_input;
 
         do_send(&packet);
     }
@@ -404,6 +406,7 @@ public:
         p_update.score = _score;
         p_update.damage = _damage;
         p_update.act_type = _act_type;
+        p_update.move_input = _move_input;
         do_send(&p_update);
     }
 
@@ -558,6 +561,7 @@ public:
             _damage = updatePacket->damage;
             _gun_type = updatePacket->gun_type;
             _act_type = updatePacket->act_type;
+            _move_input = updatePacket->move_input;
 
             // 로그
             //std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
@@ -579,6 +583,7 @@ public:
 			u_move_p.score = _score;
 			u_move_p.damage = _damage;
 			u_move_p.act_type = _act_type;
+			u_move_p.move_input = _move_input;
 
             for (auto& [id, session] : g_users) {
                 if (id != _id)

@@ -267,7 +267,7 @@ struct pkt_cs_update {
     SIZE2 score;                // 점수
     SIZE2 damage;               // 공격력
     SIZE1 act_type;             // NONE, Player, ZMOVE, ATTACK, ...
-	SIZE1 move_input;          // 이동 입력
+	SIZE1 move_input;           // 이동 입력
 };
 
 // 총알 발사 패킷
