@@ -44,6 +44,10 @@ public:
 	// BulletParticleObject에 등록
 	bool Fire(const XMFLOAT3& xmf3Direction, FIRE_INFO* pFireInfo);
 
+	void Reload() {
+		m_nCurrentAmmo = m_nMaxAmmo; // 최대 탄약 수로 초기화
+	}
+
 // ----------------------------------------------
 // 미사용(나중에 제거 예정)
 	bool Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction);

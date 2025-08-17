@@ -67,6 +67,15 @@ void CPlayer::Update(float fTimeElapsed)
 {
 	CGameObject::Update(fTimeElapsed);
 
+	if(m_bReload)
+	{
+		m_fReloadTime += fTimeElapsed;
+		if (m_fReloadTime >= 1.0f) {
+			if (m_pGun) m_pGun->Reload();
+			m_fReloadTime = 0.0f;
+		}
+	}
+
 	//Move(m_nMoveInput, m_fMoveSpeed, fTimeElapsed);
 
 	if(auto pCamera = GetComponent<CCamera>()) pCamera->Update(GetPosition(), fTimeElapsed);
@@ -119,7 +128,7 @@ int GetAnimationIndex(char nMoveInput)
 	}
 }
 
-void CPlayer::UpdateUnderAnimation()
+void CPlayer::UpdateLowerAnimation()
 {
 	//if(false) {// 현재 Look과 Velocity를 비교하여 애니메이션 상태 변경
 	//	XMFLOAT3 xmf3Look = GetComponent<CRigidBody>()->GetVelocity();
@@ -145,7 +154,7 @@ void CPlayer::UpdateUnderAnimation()
 	//}
 
 	int nDirection = GetAnimationIndex(m_nMoveInput);
-	m_pSkinnedAnimationController->ChangeState(nDirection);
+	m_pSkinnedAnimationController->SetLowerState(nDirection);
 }
 
 void CPlayer::Move(DWORD dwDirection, float fDistance, float deltaTime)
@@ -154,7 +163,7 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, float deltaTime)
 	SetMoveInput((char)dwDirection);
 	if (m_pSkinnedAnimationController)
 	{
-		UpdateUnderAnimation();
+		UpdateLowerAnimation();
 	}
 }
 
@@ -214,7 +223,9 @@ bool CPlayer::Fire(FIRE_INFO* pFireInfo)
 
 void CPlayer::Reload()
 {
-
+	SetState(CAnimationController::ANIMATION_STATE::RELOAD);
+	m_bReload = true;
+	m_fReloadTime = 0.0f;
 }
 
 void CPlayer::Rotate(float x, float y, float z)

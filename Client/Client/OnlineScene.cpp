@@ -234,10 +234,12 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		float fPitch = updatePkt->pitch;
 		if(auto pCamera = m_mapGameObjects[updatePkt->id]->GetComponent<CCamera>()) pCamera->SetPitch(fPitch);
 	
-		/*if(auto pPlayer = std::dynamic_pointer_cast<CPlayer>(m_mapGameObjects[updatePkt->id]))
+		// 하체 처리용
+		if(auto pPlayer = std::dynamic_pointer_cast<CPlayer>(m_mapGameObjects[updatePkt->id]))
 		{
 			pPlayer->SetMoveInput(updatePkt->move_input);
-		}*/
+		}
+
 		if (g_bNetworkDebugMode) {
 			std::string DebugOutput = "S_C_OBJECT_UPDATE[" + std::to_string(updatePkt->id) + "] ";
 			DebugOutput += "position : (" + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + ")\n";
@@ -248,6 +250,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	case S_C_OBJECT_REMOVE:
 	{
 		pkt_sc_object_remove* removePkt = reinterpret_cast<pkt_sc_object_remove*>(recv_p);
+		RemoveObject(m_mapGameObjects[removePkt->id]);
 		break;
 	}
 

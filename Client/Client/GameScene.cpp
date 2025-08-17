@@ -315,7 +315,16 @@ bool CGameScene::ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaT
 	if (m_pPlayer) {
 		//m_pPlayer->SetMoveInput(dwDirection);
 		m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
+
+		if (pKeysBuffer['R'] & 0xF0) {
+			if (auto pGun = m_pPlayer->GetGun())
+			{
+				m_pPlayer->Reload();
+			}
+		}
 	}
+
+	
 
 	return true;
 }

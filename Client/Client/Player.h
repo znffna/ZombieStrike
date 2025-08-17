@@ -39,6 +39,10 @@ public:
 	std::shared_ptr<CGun> GetGun() const { return m_pGun; }
 
 	bool Fire(FIRE_INFO* pFireInfo);
+
+	// Reload
+	bool m_bReload = false; // 총알 재장전 여부
+	float m_fReloadTime = 0.0f;
 	void Reload();
 
 	// UI
