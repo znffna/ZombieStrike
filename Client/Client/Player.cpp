@@ -81,39 +81,80 @@ void CPlayer::Update(float fTimeElapsed)
 	}
 }
 
+int GetAnimationIndex(char nMoveInput)
+{
+	switch (nMoveInput)
+	{
+	case 0x00: // 입력 없음
+		return (int)CAnimationController::ANIMATION_STATE::IDLE;
+	case 0x01: // F
+		return (int)CAnimationController::ANIMATION_STATE::WALK_FORWARD;
+	case 0x02: // B
+		return (int)CAnimationController::ANIMATION_STATE::WALK_BACKWARD;
+	case 0x03: // F + B -> 상쇄 -> 없음
+		return (int)CAnimationController::ANIMATION_STATE::IDLE;
+	case 0x04: // L
+		return (int)CAnimationController::ANIMATION_STATE::WALK_LEFT;
+	case 0x05: // F + L
+		return (int)CAnimationController::ANIMATION_STATE::WALK_FORWARD_LEFT;
+	case 0x06: // B + L
+		return (int)CAnimationController::ANIMATION_STATE::WALK_BACKWARD_LEFT;
+	case 0x07: // F + B + L -> F/B 상쇄 -> L
+		return (int)CAnimationController::ANIMATION_STATE::WALK_LEFT;
+	case 0x08: // R
+		return (int)CAnimationController::ANIMATION_STATE::WALK_RIGHT;
+	case 0x09: // F + R
+		return (int)CAnimationController::ANIMATION_STATE::WALK_FORWARD_RIGHT;
+	case 0x0A: // B + R
+		return (int)CAnimationController::ANIMATION_STATE::WALK_BACKWARD_RIGHT;
+	case 0x0B: // F + B + R -> F/B 상쇄 -> R
+		return (int)CAnimationController::ANIMATION_STATE::WALK_RIGHT;
+	case 0x0C: // L + R -> 좌우 상쇄 -> 없음
+		return (int)CAnimationController::ANIMATION_STATE::IDLE;
+	case 0x0D: // L + R + F -> L/R 상쇄 -> F
+		return (int)CAnimationController::ANIMATION_STATE::WALK_FORWARD;
+	case 0x0E: // L + R + B -> L/R 상쇄 -> B
+		return (int)CAnimationController::ANIMATION_STATE::WALK_BACKWARD;
+	case 0x0F: // F + B + L + R -> 상하/좌우 모두 상쇄 -> 없음
+		return (int)CAnimationController::ANIMATION_STATE::IDLE;
+	default:
+		return (int)CAnimationController::ANIMATION_STATE::IDLE;
+	}
+}
+
 void CPlayer::UpdateUnderAnimation()
 {
-	XMFLOAT3 xmf3Look = GetComponent<CRigidBody>()->GetVelocity();
-	if (Vector3::IsZero(xmf3Look))
-	{
-		m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::IDLE);
-		return;
+	if(false) {// 현재 Look과 Velocity를 비교하여 애니메이션 상태 변경
+		XMFLOAT3 xmf3Look = GetComponent<CRigidBody>()->GetVelocity();
+		if (Vector3::IsZero(xmf3Look))
+		{
+			m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::IDLE);
+			return;
+		}
+
+		// 현재 Look 방향(x,z평면 기준)기준 Right, Forward 벡터를 구한다.
+		float fRight = Vector3::DotProduct(m_pTransform->GetRight(), xmf3Look);
+		float fForward = Vector3::DotProduct(m_pTransform->GetLook(), xmf3Look);
+		float angle = atan2(fForward, fRight);
+		if (angle < 0.0f) angle += XM_PI * 2.0f; // 각도를 [-PI,PI) 에서 [0, 2PI)로 변환
+		float degree = XMConvertToDegrees(angle); // degree로 변환[0 ~ 2Pi) => [0, 360)
+		int nDirection = (int)CAnimationController::ANIMATION_STATE::WALK_RIGHT + static_cast<int>(round(degree / 45.0f)) % 8; // 8방향으로 나누기
+		float fLength = sqrtf(xmf3Look.x * xmf3Look.x + xmf3Look.z * xmf3Look.z);
+
+		if (false == ::IsZero(fLength))
+		{
+			m_pSkinnedAnimationController->ChangeState(nDirection);
+		}
 	}
 
-	// 현재 Look 방향(x,z평면 기준)기준 Right, Forward 벡터를 구한다.
-	float fRight = Vector3::DotProduct(m_pTransform->GetRight(), xmf3Look);
-	float fForward = Vector3::DotProduct(m_pTransform->GetLook(), xmf3Look);
-	float angle = atan2(fForward, fRight);
-	if (angle < 0.0f) angle += XM_PI * 2.0f; // 각도를 [-PI,PI) 에서 [0, 2PI)로 변환
-	float degree = XMConvertToDegrees(angle); // degree로 변환[0 ~ 2Pi) => [0, 360)
-	int nDirection = (int)CAnimationController::ANIMATION_STATE::WALK_RIGHT + static_cast<int>(round(degree / 45.0f)) % 8; // 8방향으로 나누기
-	float fLength = sqrtf(xmf3Look.x * xmf3Look.x + xmf3Look.z * xmf3Look.z);
-	if (false == ::IsZero(fLength))
-	{
-		m_pSkinnedAnimationController->ChangeState(nDirection);
-	}
+	int nDirection = GetAnimationIndex(m_nMoveInput);
+	m_pSkinnedAnimationController->ChangeState(nDirection);
 }
 
 void CPlayer::Move(DWORD dwDirection, float fDistance, float deltaTime)
 {
-	CGameObject::Move(dwDirection, fDistance, deltaTime);
+	if(dwDirection) CGameObject::Move(dwDirection, fDistance, deltaTime);
 	SetMoveInput((char)dwDirection);
-
-	if (dwDirection)
-	{
-		//m_pSkinnedAnimationController->ChangeState(CAnimationController::ANIMATION_STATE::WALK_RIGHT);
-	}
-	UpdateUnderAnimation();
 }
 
 void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
@@ -124,9 +165,6 @@ void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 		m_pHealthGauge->SetGauge(m_fHealth / m_fMaxHealth);
 	}
 
-	//if (m_pGun)	{
-	//	m_pGun->Render(pd3dCommandList, pCamera);
-	//}
 }
 
 void CPlayer::SetSkin(int nSkinType)

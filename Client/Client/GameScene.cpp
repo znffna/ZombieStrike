@@ -312,10 +312,8 @@ bool CGameScene::ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaT
 	if (pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
 	if (pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
 
-	if (dwDirection) {
-		if (m_pPlayer) {
-			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
-		}
+	if (m_pPlayer) {
+		m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
 	}
 
 	return true;
