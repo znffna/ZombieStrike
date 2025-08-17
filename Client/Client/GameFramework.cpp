@@ -652,7 +652,9 @@ void CGameFramework::AdvanceFrame()
 
 	if (auto pPlayer = pCurrentScene->GetPlayer()) {
 		XMFLOAT3 playerPosition = pPlayer->GetPosition();
+		char move_input = pPlayer->GetMoveInput();
 		text += L"( " + std::to_wstring(playerPosition.x) + L", " + std::to_wstring(playerPosition.y) + L", " + std::to_wstring(playerPosition.z) + L")";
+		text += L"GetMoveInput( " + std::to_wstring(move_input & DIR_FORWARD? 1 : 0) + L", " + std::to_wstring(move_input & DIR_BACKWARD ? 1 : 0) + L", " + std::to_wstring(move_input & DIR_LEFT ? 1 : 0) + L", " + std::to_wstring(move_input & DIR_RIGHT ? 1 : 0) + L")";
 	}
 
 	::SetWindowText(m_hWnd, text.c_str());
@@ -919,13 +921,13 @@ LRESULT CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WP
 	{
 		if (LOWORD(wParam) == WA_INACTIVE) 
 		{
-			m_GameTimer.Stop();
+			//m_GameTimer.Stop();
 			g_bWindowActive = false;
 			WindowCursor::SetCursorVisibility(true);
 		}
 		else 
 		{
-			m_GameTimer.Start();
+			//m_GameTimer.Start();
 			g_bWindowActive = true;
 			WindowCursor::SetCursorVisibility(false);
 		}

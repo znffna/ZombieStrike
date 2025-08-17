@@ -145,8 +145,8 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			//std::shared_ptr<CPlayer> pPlayer = GetPlayer(packet->skin_type); // GetPlayer(skin_type)로 바꿔야 함
 			std::shared_ptr<CPlayer> pPlayer = GetPlayer(0); // GetPlayer(skin_type)로 바꿔야 함
 			pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
-			m_mapGameObjects[packet->id] = pPlayer;
 			pPlayer->SetServerID(packet->id);
+			m_mapGameObjects[packet->id] = pPlayer;
 
 			int gun_type = packet->gun_type;
 			std::shared_ptr<CGun> pGun = CGun::Create(nullptr, nullptr, nullptr, gun_type);
@@ -155,7 +155,6 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 
 			{
 				std::string DebugOutput = "ObjectType::PLAYER 생성 완료\n";
-				//OutputDebugStringA(DebugOutput.c_str());
 			}
 			AddObject(pPlayer);
 			break;
@@ -199,14 +198,48 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		if (auto pRigidBody = m_mapGameObjects[updatePkt->id]->GetComponent<CRigidBody>()) {
 			pRigidBody->SetVelocity(updatePkt->velocity.x, updatePkt->velocity.y, updatePkt->velocity.z);
 		}
-		m_mapGameObjects[updatePkt->id]->SetState(updatePkt->act_type);
+
+		if(auto pPlayer = std::dynamic_pointer_cast<CPlayer>(m_mapGameObjects[updatePkt->id]))
+		{
+			m_mapGameObjects[updatePkt->id]->SetState(updatePkt->act_type);
+		}
+		else if (auto pZombie = std::dynamic_pointer_cast<CZombieObject>(m_mapGameObjects[updatePkt->id]))
+		{
+			switch (updatePkt->act_type)
+			{
+			case ActionType::ZMOVE:
+				pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_RUNNING);
+				break;
+			case ActionType::ATTACK:
+				pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_ATTACK);
+				break;
+			case ActionType::RANGED:
+				pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_ATTACK);
+				break;
+			case ActionType::DEAD:
+				pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_DEATH);
+				break;
+			case ActionType::HIT:
+				pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_HIT);
+				break;
+			default:
+				pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_IDLE);
+				break;
+			}
+		}
+		else {
+			m_mapGameObjects[updatePkt->id]->SetState(updatePkt->act_type);
+		}
+
 		float fPitch = updatePkt->pitch;
 		if(auto pCamera = m_mapGameObjects[updatePkt->id]->GetComponent<CCamera>()) pCamera->SetPitch(fPitch);
 	
+		// 하체 처리용
 		if(auto pPlayer = std::dynamic_pointer_cast<CPlayer>(m_mapGameObjects[updatePkt->id]))
 		{
 			pPlayer->SetMoveInput(updatePkt->move_input);
 		}
+
 		if (g_bNetworkDebugMode) {
 			std::string DebugOutput = "S_C_OBJECT_UPDATE[" + std::to_string(updatePkt->id) + "] ";
 			DebugOutput += "position : (" + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + ")\n";
@@ -217,6 +250,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	case S_C_OBJECT_REMOVE:
 	{
 		pkt_sc_object_remove* removePkt = reinterpret_cast<pkt_sc_object_remove*>(recv_p);
+		RemoveObject(m_mapGameObjects[removePkt->id]);
 		break;
 	}
 
@@ -244,6 +278,7 @@ void COnlineScene::SendPlayerState()
 		packet.score = 0; // 점수
 		packet.damage = 0; // 공격력
 		packet.move_input = m_pPlayer->GetMoveInput(); // 이동 입력
+		packet.act_type = m_pPlayer->GetUpperState();
 
 		XMFLOAT3 position = m_pPlayer->GetPosition();
 		XMFLOAT3 velocity = m_pPlayer->GetComponent<CRigidBody>()->GetVelocity();

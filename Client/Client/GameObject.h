@@ -109,7 +109,18 @@ public:
 	virtual GAMEOBJECT_LAYER GetLayer() { return m_nLayer; }
 
 	void SetState(int state) {
-		if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->ChangeState(state);
+		if (m_pSkinnedAnimationController) {
+			if (m_pSkinnedAnimationController->ChangeState(state)) {
+				if (GetLayer() == LAYER_PLAYER) {
+					std::string debugString = std::to_string(GetServerID()) + " Player : Change Animation State to " + std::to_string(static_cast<int>(state)) + "\n";
+					OutputDebugStringA(debugString.c_str());
+				}
+			}
+		}
+	}
+	int GetUpperState() {
+		if (m_pSkinnedAnimationController) return m_pSkinnedAnimationController->GetUpperState();
+		return -1;
 	}
 
 	// 상속 관계
@@ -176,7 +187,21 @@ protected:
 	UINT m_nObjectID; // Object ID
 	UINT m_nObjectServerID; // Object Server ID
 	std::string m_strName;  // Object Name
-	std::string m_strTag = "Untagged"; // Object Tag (For Skinning)
+
+public:
+	std::string m_strTag = "None"; // Object Tag (For Skinning)
+	std::string GetTag() const { return m_strTag; }
+	
+	float GetBoneUpperWeight() const
+	{ 
+		if (m_strName == "mixamorig:Hips") return 0.55f;
+		else if (m_strName == "mixamorig:Spine") return 0.55f;
+		else if (m_strName == "mixamorig:Spine1") return 0.75f;
+		else if (m_strName == "mixamorig:Spine2") return 0.9f;
+		else if (m_strTag == "Upper") return 1.0f;
+		else return 0.0f;
+	}
+
 
 	std::shared_ptr<CMesh> m_pMesh; // Object Mesh
 
@@ -493,6 +518,7 @@ private:
 struct FIRE_INFO {
 	XMFLOAT3 xmf3Position;
 	XMFLOAT3 xmf3Look;
+	XMFLOAT3 xmf3MuzzlePosition; // 총구 위치(렌더링 파티클 점 생성시 사용)
 	int nBulletType = 0; // 총알 타입(0: 일반, 1: 산탄총 등)
 	float fRange = 0.0f;
 	float fspeed = 0.0f; // 총알 속도

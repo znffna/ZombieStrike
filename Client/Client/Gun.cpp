@@ -94,6 +94,7 @@ bool CGun::Fire(const XMFLOAT3& xmf3Direction, FIRE_INFO* pFireInfo)
 	FIRE_INFO fireInfo;
 	fireInfo.xmf3Position = position;
 	fireInfo.xmf3Look = direction;
+	fireInfo.xmf3MuzzlePosition = position;
 	fireInfo.nBulletType = m_nGunType; // 총알 타입 설정
 	fireInfo.fRange = GetRange();
 	fireInfo.fspeed = GetSpeed();
@@ -115,25 +116,27 @@ bool CGun::Fire(const XMFLOAT3& xmf3Direction, FIRE_INFO* pFireInfo)
 }
 
 // ----------------------------------------------
-// 아래 Fire는 책임 이전 -> Gun이 아닌 BulletParticleObject에서 사용
+// 아래 Fire는 실제 카메라의 위치와 방향을 통해 조준점 위주 판정 이후 피격위치를 향해 궤적 생성하는 방식
+// 으로 구현할때 사용할 함수.
 // ----------------------------------------------
-bool CGun::Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction)
+bool CGun::Fire(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction, FIRE_INFO* pFireInfo)
 {
 	if (CanFire() == false) return false; // 총이 발사 가능한 상태가 아닐 경우
 
-	CBulletVertex pBulletVertice;
-	pBulletVertice.m_xmf3Position = xmf3Position;
-	pBulletVertice.m_xmf3Velocity = xmf3Direction;
-	pBulletVertice.m_fLifetime = 0.6f;
-	pBulletVertice.m_nBulletType = m_nGunType;
+	XMFLOAT3 Muzzleposition = FindFrame(m_strMuzzleName[m_nGunType])->GetPosition(); // 총구 위치
 
-	CGun::m_pBulletObject->AddBullet(pBulletVertice);
+	FIRE_INFO fireInfo;
+	fireInfo.xmf3Position = xmf3Position;
+	fireInfo.xmf3Look = xmf3Direction;
+	fireInfo.xmf3MuzzlePosition = Muzzleposition;
+	fireInfo.nBulletType = m_nGunType; // 총알 타입 설정
+	fireInfo.fRange = GetRange();
+	fireInfo.fspeed = GetSpeed();
+	m_pBulletObject->AddFireInfo(fireInfo);
 
-	{
-		std::string debug = "Gun Fire \n";
-		debug += "Position: " + std::to_string(xmf3Position.x) + ", " + std::to_string(xmf3Position.y) + ", " + std::to_string(xmf3Position.z) + "\n";
-		debug += "Direction: " + std::to_string(xmf3Direction.x) + ", " + std::to_string(xmf3Direction.y) + ", " + std::to_string(xmf3Direction.z) + "\n";
-		OutputDebugStringA(debug.c_str());
+	if (pFireInfo) {
+		*pFireInfo = fireInfo; // 발사 정보 전달
 	}
+	
 	return true; // 발사 성공
 }

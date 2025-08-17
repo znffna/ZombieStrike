@@ -12,6 +12,13 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
+bool CAnimationTrack::CheckTag(const std::string& strTag) const {
+	if (strTag == "Upper") return (m_nMaskFlag & ANIMATION_MASK_UPPER);
+	else if (strTag == "Lower") return (m_nMaskFlag & ANIMATION_MASK_LOWER);
+	else if (strTag == "UnTagged") return (m_nMaskFlag & ANIMATION_MASK_UPPER);
+	else return (m_nMaskFlag & ANIMATION_MASK_UPPER);
+}
+
 float CAnimationTrack::UpdatePosition(float fTrackPosition, float fElapsedTime, float fAnimationLength)
 {
 	float fTrackElapsedTime = fElapsedTime * m_fSpeed;
@@ -79,6 +86,28 @@ void CAnimationTrack::HandleCallback()
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
+void CAnimationController::Print() {
+	std::string debugString = "Animation State: " + std::to_string(static_cast<int>(state)) + "\n";
+	debugString += "Lower State: " + std::to_string(static_cast<int>(LowerState)) + "\n";
+
+	for (int i = 0; i < m_nAnimationTracks; ++i) {
+		if (false == m_pAnimationTracks[i].m_bEnable) continue;
+		debugString += std::to_string(i) + " Track: ";
+		int nMask = m_pAnimationTracks[i].m_nMaskFlag;
+		if (nMask == (ANIMATION_MASK_FULL))
+			debugString += "FULL ";
+		else if (nMask == ANIMATION_MASK_UPPER)
+			debugString += "UPPER ";
+		else if (nMask == ANIMATION_MASK_LOWER)
+			debugString += "LOWER ";
+		else
+			debugString += "NONE ";
+		debugString += "\n";
+	}
+
+	OutputDebugStringA(debugString.c_str());
+}
 
 CAnimationController::CAnimationController()
 {
@@ -169,12 +198,14 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++) m_pAnimationSets->m_ppBoneFrameCaches[j]->SetLocalMatrix(Matrix4x4::Zero());
 #endif
 
-		for (int k = 0; k < m_nAnimationTracks; k++)
-		{
-			if (m_pAnimationTracks[k].m_bEnable)
+		int nLowerState = static_cast<int>(LowerState);
+		int nUpperState = static_cast<int>(state);
+
+		if(nLowerState != nUpperState){
+			// 하체 우선 적용
 			{
-				std::shared_ptr<CAnimationSet> pAnimationSet = m_pAnimationSets->m_pAnimationSets[m_pAnimationTracks[k].m_nAnimationSet];
-				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fElapsedTime, pAnimationSet->m_fLength);
+				std::shared_ptr<CAnimationSet> pAnimationSet = m_pAnimationSets->m_pAnimationSets[m_pAnimationTracks[nLowerState].m_nAnimationSet];
+				float fPosition = m_pAnimationTracks[nLowerState].UpdatePosition(m_pAnimationTracks[nLowerState].m_fPosition, fElapsedTime, pAnimationSet->m_fLength);
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 				{
 #ifdef _WITH_OBJECT_TRANSFORM
@@ -183,14 +214,68 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->GetLocalMatrix();
 #endif
 					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
-					xmf4x4Transform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, m_pAnimationTracks[k].m_fWeight));
+					xmf4x4Transform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, m_pAnimationTracks[nLowerState].m_fWeight));
 #ifdef _WITH_OBJECT_TRANSFORM
 					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local = xmf4x4Transform;
 #else
 					m_pAnimationSets->m_ppBoneFrameCaches[j]->SetLocalMatrix(xmf4x4Transform);
 #endif
 				}
-				m_pAnimationTracks[k].HandleCallback();
+				m_pAnimationTracks[nLowerState].HandleCallback();
+			}
+
+			{ // 상체 Lerp 적용
+				std::shared_ptr<CAnimationSet> pAnimationSet = m_pAnimationSets->m_pAnimationSets[m_pAnimationTracks[nUpperState].m_nAnimationSet];
+				float fPosition = m_pAnimationTracks[nUpperState].UpdatePosition(m_pAnimationTracks[nUpperState].m_fPosition, fElapsedTime, pAnimationSet->m_fLength);
+				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
+				{
+#ifdef _WITH_OBJECT_TRANSFORM
+					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local;
+#else
+					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->GetLocalMatrix();
+#endif
+					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
+					xmf4x4Transform = Matrix4x4::Interpolate(xmf4x4Transform, xmf4x4TrackTransform, m_pAnimationSets->m_ppBoneFrameCaches[j]->GetBoneUpperWeight());
+#ifdef _WITH_OBJECT_TRANSFORM
+					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local = xmf4x4Transform;
+#else
+					m_pAnimationSets->m_ppBoneFrameCaches[j]->SetLocalMatrix(xmf4x4Transform);
+#endif
+				}
+				m_pAnimationTracks[nUpperState].HandleCallback();
+			}
+		}
+		else
+		{
+			for (int k = 0; k < m_nAnimationTracks; k++)
+			{
+				//if(pRootGameObject->GetLayer() == CGameObject::GAMEOBJECT_LAYER::LAYER_PLAYER) Print();
+
+				if (m_pAnimationTracks[k].m_bEnable)
+				{
+					std::shared_ptr<CAnimationSet> pAnimationSet = m_pAnimationSets->m_pAnimationSets[m_pAnimationTracks[k].m_nAnimationSet];
+					float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fElapsedTime, pAnimationSet->m_fLength);
+					for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
+					{
+						// 상/하체에 따른 마스킹(Upper/Lower, 나머지도 Upper가 Default로 설정)
+						if (false == m_pAnimationTracks[k].CheckTag(m_pAnimationSets->m_ppBoneFrameCaches[j]->GetTag()))
+							continue;
+
+#ifdef _WITH_OBJECT_TRANSFORM
+						XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local;
+#else
+						XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->GetLocalMatrix();
+#endif
+						XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
+						xmf4x4Transform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, m_pAnimationTracks[k].m_fWeight));
+#ifdef _WITH_OBJECT_TRANSFORM
+						m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local = xmf4x4Transform;
+#else
+						m_pAnimationSets->m_ppBoneFrameCaches[j]->SetLocalMatrix(xmf4x4Transform);
+#endif
+					}
+					m_pAnimationTracks[k].HandleCallback();
+				}
 			}
 		}
 
@@ -236,24 +321,46 @@ void CAnimationController::ApplyPitchToSpine(CGameObject* pRootGameObject)
 	}
 }
 
-void CAnimationController::ChangeState(ANIMATION_STATE state)
+bool CAnimationController::ChangeState(ANIMATION_STATE state)
 {
-	if (state == this->state) return; // 현재 상태와 같으면 변경하지 않음
-	beforeState = this->state;
+	return ChangeState(state, 0.0f);
+}
+
+bool CAnimationController::ChangeState(ANIMATION_STATE state, float fPosition)
+{
+	if (state == this->state) return false; // 현재 상태와 같으면 변경하지 않음
+	ANIMATION_STATE beforeState = this->state;
 	this->state = state;
 
 	/*{
-		std::string debugString = "Change Animation State: " + std::to_string(static_cast<int>(beforeState)) + " to " + std::to_string(static_cast<int>(state)) +"\n";
+		std::string debugString = "Change Animation State: " + std::to_string(static_cast<int>(beforeState)) + " to " + std::to_string(static_cast<int>(state)) + "\n";
 		OutputDebugStringA(debugString.c_str());
 	}*/
 
-	SetTrackEnable(beforeState, false);
-	SetTrackEnable(state, true);
-	SetTrackPosition(state, 0.0f);
+	//SetTrackEnable(beforeState, false);
+	//SetTrackEnable(state, true);
+
+	int nMask = ANIMATION_MASK_FULL;
+	// Player인 경우 Upper Body Animation만 적용
+	if (state == IDLE || state == FIRE || state == RELOAD || state == HITTED)
+	{
+		nMask = ANIMATION_MASK_UPPER;
+	}
+
+	SetTrackMask(beforeState, nMask, false);
+	SetTrackMask(state, nMask, true);
+	SetTrackPosition(state, fPosition);
+	return true;
 }
 
-void CAnimationController::ChangeState(ANIMATION_STATE state, float fPosition)
-{
-	ChangeState(state);
-	SetTrackPosition(state, fPosition);
+void CAnimationController::SetLowerState(int state)
+{ 
+	if (state == this->LowerState) return; // 현재 상태와 같으면 변경하지 않음
+
+	ANIMATION_STATE beforeLowerState = LowerState;
+	LowerState = (ANIMATION_STATE)state; 
+
+	SetTrackMask(beforeLowerState, ANIMATION_MASK_LOWER, false);
+	SetTrackMask(state, ANIMATION_MASK_LOWER, true);
+	SetTrackPosition(state, 0.0f);
 }
