@@ -146,6 +146,11 @@ private:
 // Util 함수
 std::vector<std::vector<int>> LoadMapBin(const std::string& filename);
 std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map);
+std::pair<int, int> GetSpawnPointByIndexN(
+    const std::vector<std::vector<int>>& map,
+    const std::vector<std::pair<int, int>>& points,
+    int spawn_index,
+    int total_spawns);
 
 // 스폰 후보 타일이 반경 r 칸 내에 장애물이 없는지 확인
 bool IsAreaClear(const std::vector<std::vector<int>>&map, int x, int z, int radius = 4); // // IsAreaClear

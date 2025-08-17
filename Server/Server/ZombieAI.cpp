@@ -630,11 +630,18 @@ std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map)
 
     static std::random_device rd;
     static std::mt19937 gen(rd());
-    //    std::uniform_int_distribution<> distX(0, W - 1); // 전체 맵에서 시도
+
+    // std::uniform_int_distribution<> distX(0, W - 1); // 전체 맵에서 시도
+
     //std::uniform_int_distribution<> distX(100, 130);   
     //std::uniform_int_distribution<> distZ(100, 110);
-    std::uniform_int_distribution<> distX(60, 70);
-    std::uniform_int_distribution<> distZ(95, 100);
+
+    std::uniform_int_distribution<> distX(150, 151);// 가로 좌 ->우 
+    std::uniform_int_distribution<> distZ(180, 181);
+
+
+    //std::uniform_int_distribution<> distX(150, 151);// 가로 좌 ->우 
+    //std::uniform_int_distribution<> distZ(100, 101);
 
     // 1차: 랜덤 시도
     const int MAX_ATTEMPTS = 1000; // 시도 횟수 
@@ -680,6 +687,40 @@ std::pair<int, int> GetRandomPlayerPosition(const std::vector<std::vector<int>>&
 }
 
 
+// 포인트 수(2~4)에 따라 가능한 한 균등하게 분배
+std::pair<int, int> GetSpawnPointByIndexN(
+    const std::vector<std::vector<int>>& /*map*/,
+    const std::vector<std::pair<int, int>>& points,
+    int spawn_index,
+    int total_spawns)
+{
+    // // GetSpawnPointByIndexN: 방어 코드 (포인트가 1개 이하거나 4개 초과면 0번 사용)
+    if (points.empty()) return { -1, -1 };
+    const int P = static_cast<int>(points.size());
+    if (P == 1) return points[0];
+
+    // 포인트 개수 제한(요구: 최대 4개)
+    const int MAX_POINTS = 4;
+    const int useP = std::min(P, MAX_POINTS);
+
+    // // GetSpawnPointByIndexN: 총 스폰 수를 useP로 가능한 한 균등 분할
+    // 각 포인트에 배정되는 기본 몫(base), 그리고 앞에서부터 remainder개 포인트에 +1 배정
+    const int base = total_spawns / useP;
+    const int remainder = total_spawns % useP;
+
+    // spawn_index가 어느 구간(bucket)에 속하는지 계산
+    int acc = 0;
+    for (int bucket = 0; bucket < useP; ++bucket) {
+        const int size_of_bucket = base + ((bucket < remainder) ? 1 : 0);
+        if (spawn_index < acc + size_of_bucket) {
+            return points[bucket];
+        }
+        acc += size_of_bucket;
+    }
+
+    // // GetSpawnPointByIndexN: 이론상 도달 X, 방어적 처리
+    return points[(useP - 1)];
+}
 
 // ======================== 맵 그려보는 용 ========================
 void PrintMap2(
