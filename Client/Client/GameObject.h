@@ -518,6 +518,7 @@ private:
 struct FIRE_INFO {
 	XMFLOAT3 xmf3Position;
 	XMFLOAT3 xmf3Look;
+	XMFLOAT3 xmf3MuzzlePosition; // 총구 위치(렌더링 파티클 점 생성시 사용)
 	int nBulletType = 0; // 총알 타입(0: 일반, 1: 산탄총 등)
 	float fRange = 0.0f;
 	float fspeed = 0.0f; // 총알 속도
