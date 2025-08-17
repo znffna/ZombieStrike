@@ -248,6 +248,10 @@ protected:
 
 	// Player
 	std::shared_ptr<CPlayer> m_pPlayer;
+public:
+	std::shared_ptr<CPlayer> GetPlayer() { return m_pPlayer; }
+
+protected:
 
 	// Camera
 	std::shared_ptr<CCamera> m_pCamera;

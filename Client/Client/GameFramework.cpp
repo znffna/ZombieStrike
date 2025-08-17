@@ -646,7 +646,15 @@ void CGameFramework::AdvanceFrame()
 	// Time / FPS Ãâ·Â
 	std::wstring time = L"Time: " + std::to_wstring(m_GameTimer.GameTime());
 	std::wstring fps = L"FPS: " + std::to_wstring(m_GameTimer.calculateAverageFPS());
+
+	std::string playerPostion = "Player Position: ";
 	std::wstring text = time + L" " + fps;
+
+	if (auto pPlayer = pCurrentScene->GetPlayer()) {
+		XMFLOAT3 playerPosition = pPlayer->GetPosition();
+		text += L"( " + std::to_wstring(playerPosition.x) + L", " + std::to_wstring(playerPosition.y) + L", " + std::to_wstring(playerPosition.z) + L")";
+	}
+
 	::SetWindowText(m_hWnd, text.c_str());
 }
 
