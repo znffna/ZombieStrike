@@ -1336,8 +1336,8 @@ CBulletParticleObject::CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12Gra
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CScene::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueTexture.get(), 0, ROOT_PARAMETER_TO_LIGHT + 1);
-	CScene::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueOnSphereTexture.get(), 0, ROOT_PARAMETER_TO_LIGHT + 2);
+	CScene::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueTexture.get(), 0, ROOT_PARAMETER_RANDOMBUFFER);
+	CScene::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueOnSphereTexture.get(), 0, ROOT_PARAMETER_RANDOM_SPHERE_BUFFER);
 
 	std::shared_ptr<CBulletShader> pShader = std::make_shared<CBulletShader>();
 	pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature);

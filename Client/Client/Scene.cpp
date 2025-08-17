@@ -680,17 +680,15 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	pd3dRootParameters[ROOT_PARAMETER_TO_LIGHT].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	// Random Buffer
-	int index = ROOT_PARAMETER_TO_LIGHT + 1;
-	pd3dRootParameters[index].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[index].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[index].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
-	pd3dRootParameters[index].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	pd3dRootParameters[ROOT_PARAMETER_RANDOMBUFFER].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[ROOT_PARAMETER_RANDOMBUFFER].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[ROOT_PARAMETER_RANDOMBUFFER].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
+	pd3dRootParameters[ROOT_PARAMETER_RANDOMBUFFER].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-	++index;
-	pd3dRootParameters[index].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[index].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[index].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
-	pd3dRootParameters[index].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	pd3dRootParameters[ROOT_PARAMETER_RANDOM_SPHERE_BUFFER].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[ROOT_PARAMETER_RANDOM_SPHERE_BUFFER].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[ROOT_PARAMETER_RANDOM_SPHERE_BUFFER].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
+	pd3dRootParameters[ROOT_PARAMETER_RANDOM_SPHERE_BUFFER].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	// Static Sampler
 	std::vector<D3D12_STATIC_SAMPLER_DESC> pd3dStaticSamplerDescs(4);
