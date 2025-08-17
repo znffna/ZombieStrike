@@ -111,10 +111,10 @@ public:
 	void SetState(int state) {
 		if (m_pSkinnedAnimationController) {
 			if (m_pSkinnedAnimationController->ChangeState(state)) {
-				if (GetLayer() == LAYER_PLAYER) {
+				/*if (GetLayer() == LAYER_PLAYER) {
 					std::string debugString = std::to_string(GetServerID()) + " Player : Change Animation State to " + std::to_string(static_cast<int>(state)) + "\n";
 					OutputDebugStringA(debugString.c_str());
-				}
+				}*/
 			}
 		}
 	}
@@ -552,6 +552,9 @@ public:
 
 private:
 	std::vector<FIRE_INFO> m_pFireInfos;
+
+	std::shared_ptr<CTexture> m_pRandowmValueTexture;
+	std::shared_ptr<CTexture> m_pRandowmValueOnSphereTexture;
 
 public:
 	void AddFireInfo(const FIRE_INFO& fireInfo) {

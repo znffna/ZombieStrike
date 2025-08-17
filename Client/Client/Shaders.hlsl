@@ -72,6 +72,8 @@ Texture2D gtxtStandardTextures[7] : register(t6); // t6 ~ t12 : Albedo, Specular
 
 TextureCube gtxtSkyCubeTexture : register(t13);
 
+Buffer<float4> gRandomBuffer : register(t30);
+Buffer<float4> gRandomSphereBuffer : register(t31);
 
 SamplerState gssWrap : register(s0);
 
@@ -420,6 +422,18 @@ float4 PSCollider(VS_COLLIDER_OUTPUT input) : SV_TARGET
 
 float gfSparkLifetime = 0.2f; // 총구 스파크의 생명주기
 
+float4 RandomDirection(float fOffset)
+{
+    int u = uint(gfCurrentTime + fOffset + frac(gfCurrentTime) * 1000.0f) % 1024;
+    return (normalize(gRandomBuffer.Load(u)));
+}
+
+float4 RandomDirectionOnSphere(float fOffset)
+{
+    int u = uint(gfCurrentTime + fOffset + frac(gfCurrentTime) * 1000.0f) % 256;
+    return (normalize(gRandomSphereBuffer.Load(u)));
+}
+
 
 struct VS_BULLET_INPUT
 {
@@ -461,7 +475,12 @@ void GenerateSparkParticles(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_I
         p.velocity = fourDir[j] + fourDir[(j + 1) % 4];
         output.Append(p);
     }
-       
+    
+    for(int l= 0; l < 30; l++)
+    {
+        p.velocity = RandomDirection(input.id + l);
+        output.Append(p);
+    }
 }
 
 

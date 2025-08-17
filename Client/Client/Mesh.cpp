@@ -1178,7 +1178,7 @@ void CBulletMesh::CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	pVertices[0].m_xmf3Velocity = XMFLOAT3{ 0,0,0 };
 	pVertices[0].m_fLifetime = 0.0f;
 	pVertices[0].m_nBulletType = BULLET_TYPE_MAINTAIN;
-	pVertices[0].m_nHitObjectType = 0;
+	pVertices[0].m_nHitObjectType = HIT_TYPE_ENVIRONMENT;
 
 	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
 
@@ -1308,7 +1308,7 @@ void CBulletMesh::PostRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPi
 {
 }
 
-//#define _WITH_DEBUG_STREAM_OUTPUT_VERTICES
+#define _WITH_DEBUG_STREAM_OUTPUT_VERTICES
 
 void CBulletMesh::OnPostRender(int nPipelineState)
 {

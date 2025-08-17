@@ -1322,7 +1322,22 @@ CBulletParticleObject::CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12Gra
 	std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
 	pMaterial->SetTexture(pParticleTexture);
 
+	srand((unsigned)time(NULL));
+
+	XMFLOAT4* pxmf4RandomValues = new XMFLOAT4[1024];
+	for (int i = 0; i < 1024; i++) { pxmf4RandomValues[i].x = float((rand() % 10000) - 5000) / 5000.0f; pxmf4RandomValues[i].y = float((rand() % 10000) - 5000) / 5000.0f; pxmf4RandomValues[i].z = float((rand() % 10000) - 5000) / 5000.0f; pxmf4RandomValues[i].w = float((rand() % 10000) - 5000) / 5000.0f; }
+
+	//	m_pRandowmValueTexture = new CTexture(1, RESOURCE_TEXTURE1D, 0, 1);
+	m_pRandowmValueTexture = std::make_shared<CTexture>(1, RESOURCE_BUFFER, 1);
+	m_pRandowmValueTexture->CreateBuffer(pd3dDevice, pd3dCommandList, pxmf4RandomValues, 1024, sizeof(XMFLOAT4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, 0);
+
+	m_pRandowmValueOnSphereTexture = std::make_shared<CTexture>(1, RESOURCE_BUFFER, 1);
+	m_pRandowmValueOnSphereTexture->CreateBuffer(pd3dDevice, pd3dCommandList, pxmf4RandomValues, 256, sizeof(XMFLOAT4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, 0);
+
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	CScene::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueTexture.get(), 0, ROOT_PARAMETER_TO_LIGHT + 1);
+	CScene::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueOnSphereTexture.get(), 0, ROOT_PARAMETER_TO_LIGHT + 2);
 
 	std::shared_ptr<CBulletShader> pShader = std::make_shared<CBulletShader>();
 	pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature);
@@ -1348,6 +1363,9 @@ void CBulletParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, C
 			if (pTexture) pTexture->UpdateShaderVariables(pd3dCommandList);
 		}
 	}
+	if (m_pRandowmValueTexture) m_pRandowmValueTexture->UpdateShaderVariables(pd3dCommandList);
+	if (m_pRandowmValueOnSphereTexture) m_pRandowmValueOnSphereTexture->UpdateShaderVariables(pd3dCommandList);
+
 
 	UpdateShaderVariables(pd3dCommandList);
 
