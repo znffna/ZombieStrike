@@ -85,6 +85,10 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 //
 
+#define HIT_TYPE_NONE -1
+#define HIT_TYPE_ENVIRONMENT 0
+#define HIT_TYPE_ENEMY 1
+
 class CBulletVertex : public CVertex
 {
 public:
@@ -557,8 +561,6 @@ public:
 //
 #define MAX_BULLETS				9000000
 
-#define HIT_TYPE_ENVIRONMENT 0
-#define HIT_TYPE_ENEMY 1
 
 class CBulletMesh : public CMesh
 {

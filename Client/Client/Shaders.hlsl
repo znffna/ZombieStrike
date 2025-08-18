@@ -465,6 +465,7 @@ void GenerateSparkParticles(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_I
         p.velocity = cross(p.velocity, float3(0.0f, 0.0f, 1.0f)); // 스파크의 방향을 랜덤하게 설정
         fourDir[i] = p.velocity;
     }
+    // 8방향 스파크 생성
     for (int k = 0; k < 4; k++)
     {
         p.velocity = fourDir[k];
@@ -476,13 +477,37 @@ void GenerateSparkParticles(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_I
         output.Append(p);
     }
     
+    // 랜덤 스파크 생성
     for(int l= 0; l < 30; l++)
     {
-        p.velocity = RandomDirection(input.id + l);
+        p.velocity = RandomDirectionOnSphere(input.id + l);
         output.Append(p);
     }
 }
 
+void GenerateImpactDustParticles(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT> output)
+{
+    VS_BULLET_INPUT p = input;
+    if (input.target == TARGET_ENVIRONMENT)
+    {
+        p.type = BULLET_TYPE_FRAGMENT;
+    }
+    else if (input.target == TARGET_ENEMY)
+    {
+        p.type = BULLET_TYPE_BLOOD;
+    }
+    else
+        return; // 잘못된 대상 타입이면 아무것도 하지 않는다.
+    
+    p.position = p.endposition; // 충돌 위치로 설정
+    // 랜덤 스파크 생성
+    for (int l = 0; l < 30; l++)
+    {
+        p.velocity = RandomDirection(input.id + l);
+        p.lifetime = 0.5f + (float) l * 0.01f; // 생명주기를 조금씩 증가시켜서 먼지의 크기를 다르게 한다.
+        output.Append(p);
+    }
+}
 
 // 라이플 총알 생성
 void EmmitAssaultBullet(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT> output)
@@ -493,16 +518,7 @@ void EmmitAssaultBullet(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT
     input.type = BULLET_TYPE_TRAIL;
     output.Append(input);
     
-    if (input.target == TARGET_ENVIRONMENT)
-    {
-        input.type = BULLET_TYPE_FRAGMENT;
-        output.Append(input);
-    }
-    else if (input.target == TARGET_ENEMY)
-    {
-        input.type = BULLET_TYPE_BLOOD;
-        output.Append(input);
-    }
+    GenerateImpactDustParticles(input, output);
 }
 
 // 샷건 총알 생성
@@ -514,16 +530,7 @@ void EmmitShotgunBullet(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT
     input.type = BULLET_TYPE_TRAIL;
     output.Append(input);
     
-    if (input.target == TARGET_ENVIRONMENT)
-    {
-        input.type = BULLET_TYPE_FRAGMENT;
-        output.Append(input);
-    }
-    else if (input.target == TARGET_ENEMY)
-    {
-        input.type = BULLET_TYPE_BLOOD;
-        output.Append(input);
-    }
+    GenerateImpactDustParticles(input, output);
 }
 
 
@@ -570,17 +577,7 @@ void GSBulletStreamOutput(point VS_BULLET_INPUT input[1], inout PointStream<VS_B
     else if (particle.type == BULLET_TYPE_EMIT_SHOTGUN) EmmitShotgunBullet(particle, output);
     else if (particle.type == BULLET_TYPE_TRAIL) OutputTrailParticles(particle, output);
     else if (particle.type == BULLET_TYPE_MUZZLE_SPARK) OutputSparkParticles(particle, output);
-    else if (particle.type == BULLET_TYPE_FRAGMENT)
-    {
-        particle.position += particle.velocity * gfElapsedTime;
-        particle.velocity += gf3Gravity * gfElapsedTime;
-        particle.lifetime -= gfElapsedTime;
-        if (particle.lifetime > 0.0f)
-        {
-            output.Append(particle);
-        }
-    }
-    else if (particle.type == BULLET_TYPE_BLOOD)
+    else if (particle.type == BULLET_TYPE_FRAGMENT || particle.type == BULLET_TYPE_BLOOD)
     {
         particle.position += particle.velocity * gfElapsedTime;
         particle.velocity += gf3Gravity * gfElapsedTime;
@@ -686,6 +683,21 @@ void GSBulletDraw(point VS_BULLET_DRAW_OUTPUT input[1], inout TriangleStream<GS_
             outputStream.Append(output);
         }
     }
+    else if (input[0].type == BULLET_TYPE_FRAGMENT || input[0].type == BULLET_TYPE_BLOOD)
+    {
+        float3 gf3RectPositions[4] = gf3Positions;
+        for (int i = 0; i < 4; i++)
+        {
+            //gf3RectPositions[i] *= input[0].lifetime;
+            float3 positionW = mul(gf3Positions[i] * input[0].lifetime * 0.2f, (float3x3) gmtxInvView) + input[0].position;
+            //float3 positionW = gf3RectPositions[i] * input[0].lifetime;;
+            output.position = mul(mul(float4(positionW, 1.0f), gmtxView), gmtxProjection);
+            output.uv = gf2QuadUVs[i];
+            output.color = input[0].color;
+
+            outputStream.Append(output);
+        }
+    }
     
 //#define BULLET_MAINTAIN -1 // uint 가 type이기에 최대값을 가진다.
 //#define BULLET_TYPE_EMIT_ASSAULT 0
@@ -707,6 +719,8 @@ float4 PSBulletDraw(GS_BULLET_DRAW_OUTPUT input) : SV_TARGET
         cColor = gtxtNormalTexture.Sample(gssWrap, input.uv);
     else if (input.type == BULLET_TYPE_BLOOD)
         cColor = gtxtMetallicTexture.Sample(gssWrap, input.uv);
+    else
+        discard;
     
     // 색상 별도 적용(기본은 흰색으로 텍스쳐 색상만 적용)
     cColor *= input.color;

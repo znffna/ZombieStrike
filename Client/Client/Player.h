@@ -67,9 +67,18 @@ private:
 	int m_nSkinType = 0;
 
 	// Player State
+private:
 	float m_fHealth = 100.0f; // Player Health
 	float m_fMaxHealth = 100.0f; // Max Health
 	float m_fMoveSpeed = 10.0f; // Player Move Speed
+
+public:
+	void SetHealth(float fHealth) { m_fHealth = fHealth; }
+	float GetHealth() const { return m_fHealth; }
+	void SetMaxHealth(float fMaxHealth) { m_fMaxHealth = fMaxHealth; }
+	float GetMaxHealth() const { return m_fMaxHealth; }
+	void SetMoveSpeed(float fMoveSpeed) { m_fMoveSpeed = fMoveSpeed; }
+	float GetMoveSpeed() const { return m_fMoveSpeed; }
 
 	// Player Move Input
 private:

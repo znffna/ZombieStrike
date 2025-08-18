@@ -74,4 +74,6 @@ public:
 	std::shared_ptr<CCamera> m_pFreeCamera;
 
 	bool m_bPrintObjectCount = false; // 디버그 출력용
+
+	std::shared_ptr<CSprite> m_pHealthObject;
 };
