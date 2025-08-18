@@ -252,6 +252,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	{
 		pkt_sc_object_remove* removePkt = reinterpret_cast<pkt_sc_object_remove*>(recv_p);
 		RemoveObject(m_mapGameObjects[removePkt->id]);
+		m_mapGameObjects.erase(removePkt->id);
 		break;
 	}
 

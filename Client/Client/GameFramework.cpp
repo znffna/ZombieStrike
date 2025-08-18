@@ -446,8 +446,8 @@ void CGameFramework::BuildObjects()
 	m_pUILayer->StorePoolTextBlock(0, NULL, &d2dRect, pdwTextFormat.Get(), pd2dBrush.Get());
 
 	pd2dBrush = m_pUILayer->CreateBrush(D2D1::ColorF(D2D1::ColorF::BlueViolet, 1.0f));
-	pdwTextFormat = m_pUILayer->CreateTextFormat(L"Arial", m_nWndClientHeight / 25.0f);
-	d2dRect = D2D1::RectF(0.0f, m_nWndClientHeight - 75.0f, (float)m_nWndClientWidth, (float)m_nWndClientHeight);
+	pdwTextFormat = m_pUILayer->CreateTextFormat(L"Arial", m_nWndClientHeight / 35.0f);
+	d2dRect = D2D1::RectF(0.0f, m_nWndClientHeight - 45.0f, (float)300.0f, (float)m_nWndClientHeight);
 
 	m_pUILayer->StorePoolTextBlock(1, NULL, &d2dRect, pdwTextFormat.Get(), pd2dBrush.Get());
 

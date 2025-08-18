@@ -581,40 +581,34 @@ public:
 class TextBlock
 {
 public:
-	bool						   m_bActive = true;
-	WCHAR                           m_pstrText[256];
+	bool						    m_bActive = true;
+	std::wstring                    m_pstrText;
 	D2D1_RECT_F                     m_d2dLayoutRect;
 	ComPtr<IDWriteTextFormat> m_pdwFormat;
 	ComPtr<ID2D1SolidColorBrush> m_pd2dTextBrush;
 
 	void SetText(std::wstring pstrUIText) {
-		wcscpy_s(m_pstrText, pstrUIText.data());
+		m_pstrText = pstrUIText;
+	}
+
+	void SetActive(bool bActive) {
+		m_bActive = bActive;
 	}
 };
+
+class TextBlock;
 
 class UILayer
 {
 public:
 	UILayer(UINT nFrames, UINT nTextBlocks, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight);
 
-	void StorePoolTextBlock(UINT nIndex, WCHAR* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush);
-	void UpdateTextOutputs(UINT nIndex, WCHAR* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush);
+	void StorePoolTextBlock(UINT nIndex, std::wstring* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush);
+	void UpdateTextOutputs(UINT nIndex, std::wstring* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush);
 	void Render(UINT nFrame);
 	void ReleaseResources();
 
-	std::shared_ptr<TextBlock> GetNewTextBlock(int nPoolIndex = 0){
-		if (m_pTextPools.size() > nPoolIndex) {
-			if (m_pTextPools[nPoolIndex]->m_pdwFormat && m_pTextPools[nPoolIndex]->m_pd2dTextBrush) {
-				m_pTextBlocks.push_back(std::make_shared<TextBlock>(m_pTextPools[nPoolIndex]));
-				return m_pTextBlocks.back();
-			}
-		}
-		else {
-			m_pTextBlocks.push_back(std::make_shared<TextBlock>(m_pTextPools[0]));
-			return m_pTextBlocks.back();
-		}
-		return nullptr;
-	}
+	std::shared_ptr<TextBlock> GetNewTextBlock(int nPoolIndex = 0);
 
 	ComPtr<ID2D1SolidColorBrush> CreateBrush(D2D1::ColorF d2dColor);
 	ComPtr<IDWriteTextFormat> CreateTextFormat(WCHAR* pszFontName, float fFontSize);

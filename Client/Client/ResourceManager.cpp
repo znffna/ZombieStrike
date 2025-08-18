@@ -255,18 +255,18 @@ ComPtr<IDWriteTextFormat> UILayer::CreateTextFormat(WCHAR* pszFontName, float fF
 	return(pdwDefaultTextFormat);
 }
 
-void UILayer::StorePoolTextBlock(UINT nIndex, WCHAR* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush)
+void UILayer::StorePoolTextBlock(UINT nIndex, std::wstring* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush)
 {
 	m_pTextPools[nIndex] = std::make_shared<TextBlock>();
-	if (pstrUIText) wcscpy_s(m_pTextPools[nIndex]->m_pstrText, 256, pstrUIText);
+	if (pstrUIText) m_pTextPools[nIndex]->m_pstrText = *pstrUIText;
 	if (pd2dLayoutRect) m_pTextPools[nIndex]->m_d2dLayoutRect = *pd2dLayoutRect;
 	if (pdwFormat) m_pTextPools[nIndex]->m_pdwFormat = pdwFormat;
 	if (pd2dTextBrush) m_pTextPools[nIndex]->m_pd2dTextBrush = pd2dTextBrush;
 }
 
-void UILayer::UpdateTextOutputs(UINT nIndex, WCHAR* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush)
+void UILayer::UpdateTextOutputs(UINT nIndex, std::wstring* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush)
 {
-	if (pstrUIText) wcscpy_s(m_pTextBlocks[nIndex]->m_pstrText, 256, pstrUIText);
+	if (pstrUIText) m_pTextPools[nIndex]->m_pstrText = *pstrUIText;
 	if (pd2dLayoutRect) m_pTextBlocks[nIndex]->m_d2dLayoutRect = *pd2dLayoutRect;
 	if (pdwFormat) m_pTextBlocks[nIndex]->m_pdwFormat = pdwFormat;
 	if (pd2dTextBrush) m_pTextBlocks[nIndex]->m_pd2dTextBrush = pd2dTextBrush;
@@ -284,7 +284,7 @@ void UILayer::Render(UINT nFrame)
 		m_pd2dDeviceContext->BeginDraw();
 		for (UINT i = 0; i < m_pTextBlocks.size(); i++)
 		{
-			m_pd2dDeviceContext->DrawText(m_pTextBlocks[i]->m_pstrText, (UINT)wcslen(m_pTextBlocks[i]->m_pstrText), m_pTextBlocks[i]->m_pdwFormat.Get(), m_pTextBlocks[i]->m_d2dLayoutRect, m_pTextBlocks[i]->m_pd2dTextBrush.Get());
+			if(m_pTextBlocks[i]->m_bActive) m_pd2dDeviceContext->DrawText(m_pTextBlocks[i]->m_pstrText.c_str(), (UINT)m_pTextBlocks[i]->m_pstrText.length(), m_pTextBlocks[i]->m_pdwFormat.Get(), m_pTextBlocks[i]->m_d2dLayoutRect, m_pTextBlocks[i]->m_pd2dTextBrush.Get());
 		}
 		m_pd2dDeviceContext->EndDraw();
 
@@ -324,3 +324,26 @@ void UILayer::ReleaseResources()
 	m_pd3d11On12Device.Reset();
 }
 
+std::shared_ptr<TextBlock>  UILayer::GetNewTextBlock(int nPoolIndex) {
+	if (m_pTextPools.size() > nPoolIndex) {
+		if (m_pTextPools[nPoolIndex]->m_pdwFormat && m_pTextPools[nPoolIndex]->m_pd2dTextBrush) {
+			auto pBlock = std::make_shared<TextBlock>();
+			pBlock->m_pstrText = m_pTextPools[nPoolIndex]->m_pstrText;
+			pBlock->m_d2dLayoutRect = m_pTextPools[nPoolIndex]->m_d2dLayoutRect;
+			pBlock->m_pdwFormat = m_pTextPools[nPoolIndex]->m_pdwFormat;
+			pBlock->m_pd2dTextBrush = m_pTextPools[nPoolIndex]->m_pd2dTextBrush;
+			m_pTextBlocks.push_back(pBlock);
+			return pBlock;
+		}
+	}
+	else {
+		auto pBlock = std::make_shared<TextBlock>();
+		pBlock->m_pstrText = m_pTextPools[0]->m_pstrText;
+		pBlock->m_d2dLayoutRect = m_pTextPools[0]->m_d2dLayoutRect;
+		pBlock->m_pdwFormat = m_pTextPools[0]->m_pdwFormat;
+		pBlock->m_pd2dTextBrush = m_pTextPools[0]->m_pd2dTextBrush;
+		m_pTextBlocks.push_back(pBlock);
+		return pBlock;
+	}
+	return nullptr;
+}
