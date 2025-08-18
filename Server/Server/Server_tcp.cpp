@@ -799,7 +799,7 @@ auto lastTick = std::chrono::steady_clock::now();
 std::vector<std::pair<int, int>> spawnPoints = {
     {150, 180},  // 포인트 A
     {150, 100},  // 포인트 B
-    // {200, 300},  // 포인트 C (원하면 활성화)
+    {100, 180},  // 포인트 C (원하면 활성화)
     // {400, 420},  // 포인트 D (원하면 활성화)
 };
 

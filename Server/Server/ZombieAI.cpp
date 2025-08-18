@@ -113,6 +113,31 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
             break;
         }
 
+
+        // 4방향 탐색으로 축소  //
+        //const int dirX[4] = { 1, -1,  0,  0 };   // // AStar::FindPath: 4-방향만
+        //const int dirZ[4] = { 0,  0,  1, -1 };   // // AStar::FindPath: 4-방향만
+        //for (int dir = 0; dir < 4; ++dir)       // // AStar::FindPath: 루프 8→4
+        //{
+        //    int nx = current->x + dirX[dir];
+        //    int nz = current->z + dirZ[dir];
+
+        //    if (nx < 0 || nx >= m_width || nz < 0 || nz >= m_height) continue;
+        //    if (m_map[nz][nx] != 0) continue;
+
+        //    // (삭제) 대각선 코너-컷 체크는 불필요  // // AStar::FindPath: 대각선 제거
+
+        //    int nextKey = nz * m_width + nx;
+        //    if (closedList.find(nextKey) != closedList.end()) continue;
+
+        //    Node* neighbor = new Node{ nx, nz };
+        //    float stepCost = 1.0f;                         // // AStar::FindPath: 4방향 단위비용
+        //    neighbor->gCost = current->gCost + stepCost;   // // A* 누적 gCost 갱신
+        //    neighbor->hCost = Heuristic(nx, nz, endX, endZ);
+        //    neighbor->parent = current;
+        //    openList.push(neighbor);
+        //}
+
         // 8방향 탐색
         const int dirX[8] = { 1, -1,  0,  0,  1,  1, -1, -1 };
         const int dirZ[8] = { 0,  0,  1, -1,  1, -1,  1, -1 };
@@ -162,6 +187,14 @@ ZombieAI::ZombieAI(const std::vector<std::vector<int>>& map, int id)
 {
     m_astar = std::make_unique<AStar>(map);
     //m_astar = new AStar(map);
+
+    // // ZombieAI: 개별 속도 랜덤 지정 (예: 80%~120%)
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dist(0.8f, 1.2f);
+
+    //m_speed = Z_move_speed * dist(gen);
+    m_speed = Z_move_speed;
 }
 ZombieAI::~ZombieAI() = default;
 
@@ -512,7 +545,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     }
 
     Vec3 moveDir = toTarget.Normalize();
-    Vec3 nextPos = currentPos + moveDir * Z_move_speed;
+    Vec3 nextPos = currentPos + moveDir * m_speed;
 
     // [REPLACE] 4. 좀비↔좀비 분리력(Separation force) 계산
     Vec3 separation(0, 0, 0);
@@ -562,7 +595,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
 
     // 6. 최종 이동 (공격 중 잠깐 정지 → 다시 추격)
     {
-        Vec3 finalMove = moveDir * Z_move_speed + wallPush + separation;
+        Vec3 finalMove = moveDir * m_speed + wallPush + separation;
 
         // 공격 중 이동량 배율 적용 (기본 0.0f → 완전 정지)
         if (IsAttacking()) {
@@ -631,7 +664,7 @@ Object ZombieAI::GetObjectinfo() const {
 
     // --- 속도/입력 결정 ---
     const bool frozen = isDeadOrDying || isStunned || isAttacking || isPausing;
-    info.velocity = frozen ? Vec3(0, 0, 0) : (info.look * Z_move_speed); // // GetObjectinfo: 상태별 속도
+    info.velocity = frozen ? Vec3(0, 0, 0) : (info.look * m_speed); // // GetObjectinfo: 상태별 속도
     info.move_input = frozen ? 0 : 1;                                      // // GetObjectinfo: 클라 애니 전이 안정화
 
     return info;
@@ -728,7 +761,7 @@ std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map)
     //std::uniform_int_distribution<> distZ(100, 110);
 
     std::uniform_int_distribution<> distX(150, 151);// 가로 좌 ->우 
-    std::uniform_int_distribution<> distZ(180, 181);
+    std::uniform_int_distribution<> distZ(150, 151);
 
 
     //std::uniform_int_distribution<> distX(150, 151);// 가로 좌 ->우 

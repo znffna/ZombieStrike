@@ -131,6 +131,8 @@ private:
     float m_x, m_z;
     float m_targetX, m_targetZ;
     SIZE2 m_hp = ZOMBIE_HP;
+    float m_speed = Z_move_speed;
+
     std::vector<std::pair<int, int>> m_path;
 
     const std::vector<std::vector<int>>& m_map;
