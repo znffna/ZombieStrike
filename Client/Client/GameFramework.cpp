@@ -149,39 +149,27 @@ void CGameFramework::CreateDirect3DDevice()
 		return;
 	}
 
-	// 비디오 메모리가 가장 큰 Adapter 검색
-	size_t maxVideoMemory = 0;
+	IDXGIAdapter1* pd3dAdapter = NULL;
 
-	for (UINT i = 0;; ++i) {
-		ComPtr<IDXGIAdapter1> adapter;
-		if (m_pdxgiFactory->EnumAdapters1(i, &adapter) == DXGI_ERROR_NOT_FOUND) {
-			break; // 더 이상 Adapter가 없음
-		}
-
-		DXGI_ADAPTER_DESC1 desc;
-		adapter->GetDesc1(&desc);
-
-		// Software Adapter는 무시
-		if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
-			continue;
-		}
-
-		// 비디오 메모리 확인
-		if (desc.DedicatedVideoMemory > maxVideoMemory) {
-			maxVideoMemory = desc.DedicatedVideoMemory;
-			m_pdxgiAdapter.Reset();
-			m_pdxgiAdapter = adapter;
-		}
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != m_pdxgiFactory->EnumAdapters1(i, &pd3dAdapter); i++)
+	{
+		DXGI_ADAPTER_DESC1 dxgiAdapterDesc;
+		pd3dAdapter->GetDesc1(&dxgiAdapterDesc);
+		if (dxgiAdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) continue;
+		if (SUCCEEDED(D3D12CreateDevice(pd3dAdapter, D3D_FEATURE_LEVEL_12_0, _uuidof(ID3D12Device), (void**)&m_pd3dDevice))) break;
 	}
 
-	// 선택된 Adpater가 없을 경우 Warp Adapter 사용
-	if (!m_pdxgiAdapter) {
-		m_pdxgiFactory->EnumWarpAdapter(_uuidof(IDXGIFactory4), (void**)&m_pdxgiAdapter);
-		D3D12CreateDevice(m_pdxgiAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_pd3dDevice));
+	if (!m_pd3dDevice)
+	{
+		hResult = m_pdxgiFactory->EnumWarpAdapter(_uuidof(IDXGIAdapter1), (void**)&pd3dAdapter);
+		hResult = D3D12CreateDevice(pd3dAdapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), (void**)&m_pd3dDevice);
 	}
-	else {
-		// 선택된 Adapter로 Device 생성
-		FAILED(D3D12CreateDevice(m_pdxgiAdapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_pd3dDevice)));
+
+	if (!m_pd3dDevice)
+	{
+		MessageBox(NULL, L"Direct3D 12 Device Cannot be Created.", L"Error", MB_OK);
+		::PostQuitMessage(0);
+		return;
 	}
 
 	// MSAA Quality Level 확인
