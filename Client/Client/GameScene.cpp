@@ -7,6 +7,7 @@
 #include "Sprite.h"
 #include "GaugeBar.h"
 #include "CollisionChecker.h"
+#include "GameFramework.h"
 
 CGameScene::CGameScene()
 {
@@ -125,8 +126,15 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 			pHealthObject->AddMaterial(pHealthMaterial);
 			pHealthObject->SetName("Health");
 			
+			// Health Bar 크기 설정
+
 			float aspectRatio = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
 			pHealthObject->SetGauge(1.0f, -1.0f, -1.0f, 0.3f, 0.1f);
+
+			// Health Text 생성
+			pHealthObject->m_pTextBlock = CGameFramework::pGameFramework->GetUILayer()->GetNewTextBlock(2);
+			pHealthObject->m_pTextBlock->m_pstrText = 
+			m_pHealthObject = pHealthObject;
 
 			pPlayer->SetHealthObject(pHealthObject);
 			AddObject(pHealthObject);

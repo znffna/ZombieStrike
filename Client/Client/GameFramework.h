@@ -138,5 +138,9 @@ protected:
 	POINTF GetTexturePosition(int x, int y);
 	void RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList);
 
+protected:
+	std::shared_ptr<UILayer> m_pUILayer; // UI Layer for DirectWrite
+public:
+	std::shared_ptr<UILayer> GetUILayer() { return m_pUILayer; }
 };
 

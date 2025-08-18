@@ -52,6 +52,13 @@
 
 #include "d3dx12.h"
 
+// DirectX 11
+#include <dxgi1_6.h>
+#include <d2d1_3.h>
+#include <d3d11on12.h>
+
+#include <dwrite.h>
+
 #ifdef _DEBUG
 #include <dxgidebug.h>
 #endif
@@ -70,11 +77,21 @@ using Microsoft::WRL::ComPtr;
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 
+#pragma comment(lib, "d3dcompiler.lib")
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "d2d1.lib")
+#pragma comment(lib, "dwrite.lib")
+#pragma comment(lib, "dxguid.lib")
+
 #pragma comment(lib, "dxguid.lib")
 
 // DirectXTK
 //#include <WICTextureLoader.h>
 //#include <DDSTextureLoader.h>
+
+// Direct UI
+#define _WITH_DIRECT_WRITE_UI
+
 
 // Global Variables
 #define _WITH_STANDARD_TEXTURE_MULTIPLE_PARAMETERS

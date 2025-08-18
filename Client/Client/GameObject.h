@@ -575,19 +575,67 @@ public:
 
 }; // CBulletParticleObject
 
-//class CUIObject : public CGameObject
-//{
-//public:
-//	CUIObject() {
-//		SetMesh(CResourceManager::GetInstance().GetMesh("UIMesh"));
-//	};
-//	virtual ~CUIObject() {};
-//	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_UI; }
-//	// Object Initialization
-//	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-//	virtual std::string GetDefaultName() override { return "CUIObject"; }
-//	static std::shared_ptr<CUIObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-//	// Object Render
-//	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override {};
-//}; // CUIObject
+
+class TextBlock
+{
+public:
+	bool						   m_bActive = true;
+	WCHAR                           m_pstrText[256];
+	D2D1_RECT_F                     m_d2dLayoutRect;
+	ComPtr<IDWriteTextFormat> m_pdwFormat;
+	ComPtr<ID2D1SolidColorBrush> m_pd2dTextBrush;
+
+	void SetText(std::wstring pstrUIText) {
+		wcscpy_s(m_pstrText, pstrUIText.data());
+	}
+};
+
+class UILayer
+{
+public:
+	UILayer(UINT nFrames, UINT nTextBlocks, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight);
+
+	void StorePoolTextBlock(UINT nIndex, WCHAR* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush);
+	void UpdateTextOutputs(UINT nIndex, WCHAR* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush);
+	void Render(UINT nFrame);
+	void ReleaseResources();
+
+	std::shared_ptr<TextBlock> GetNewTextBlock(int nPoolIndex = 0){
+		if (m_pTextPools.size() > nPoolIndex) {
+			if (m_pTextPools[nPoolIndex]->m_pdwFormat && m_pTextPools[nPoolIndex]->m_pd2dTextBrush) {
+				m_pTextBlocks.push_back(std::make_shared<TextBlock>(m_pTextPools[nPoolIndex]));
+				return m_pTextBlocks.back();
+			}
+		}
+		else {
+			m_pTextBlocks.push_back(std::make_shared<TextBlock>(m_pTextPools[0]));
+			return m_pTextBlocks.back();
+		}
+		return nullptr;
+	}
+
+	ComPtr<ID2D1SolidColorBrush> CreateBrush(D2D1::ColorF d2dColor);
+	ComPtr<IDWriteTextFormat> CreateTextFormat(WCHAR* pszFontName, float fFontSize);
+
+public:
+	void InitializeDevice(ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets);
+
+	float                           m_fWidth = 0.0f;
+	float                           m_fHeight = 0.0f;
+
+	ComPtr<ID3D11DeviceContext> m_pd3d11DeviceContext;
+	ComPtr<ID3D11On12Device> m_pd3d11On12Device;
+	ComPtr<IDWriteFactory> m_pd2dWriteFactory;
+	ComPtr<ID2D1Factory3> m_pd2dFactory;
+	ComPtr<ID2D1Device2> m_pd2dDevice;
+	ComPtr<ID2D1DeviceContext2> m_pd2dDeviceContext ;
+
+	UINT             m_nRenderTargets = 0;
+	ID3D11Resource** m_ppd3d11WrappedRenderTargets = NULL;
+	ID2D1Bitmap1** m_ppd2dRenderTargets = NULL;
+
+	std::vector<std::shared_ptr<TextBlock>> m_pTextBlocks;
+	std::vector<std::shared_ptr<TextBlock>> m_pTextPools;
+};
