@@ -718,6 +718,10 @@ void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
 		m_pCursorSprite->SetMesh(pRectangleMesh);
 		m_pCursorSprite->MaterialResize(1);
 		m_pCursorSprite->SetMaterial(0, pCursorMaterial);
+
+#ifdef _WITH_DIRECT_WRITE_UI
+		m_pCursorSprite->m_pTextBlock = m_pUILayer->GetNewTextBlock(0);
+#endif
 	}
 
 	POINT ptCursorPos;
@@ -735,6 +739,10 @@ void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
 	{
 		m_pCursorSprite->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
 	}
+#ifdef _WITH_DIRECT_WRITE_UI
+	std::wstring cursorText = L"Cursor Position: (" + std::to_wstring(ptCursorPos.x) + L", " + std::to_wstring(ptCursorPos.y) + L")";
+	m_pCursorSprite->m_pTextBlock->SetText(cursorText);
+#endif
 
 	m_pCursorSprite->Render(pd3dCommandList, nullptr);
 }
@@ -940,13 +948,11 @@ LRESULT CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WP
 		{
 			//m_GameTimer.Stop();
 			g_bWindowActive = false;
-			WindowCursor::SetCursorVisibility(true);
 		}
 		else 
 		{
 			//m_GameTimer.Start();
 			g_bWindowActive = true;
-			WindowCursor::SetCursorVisibility(false);
 		}
 		break;
 	}
