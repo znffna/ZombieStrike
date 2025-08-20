@@ -394,7 +394,8 @@ void CGameFramework::CreateDepthStencilView()
 void CGameFramework::ChangeSwapChainState()
 {
 	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
-	
+	if (m_pUILayer) m_pUILayer->ReleaseRenderTargetResources();
+
 	BOOL bFullScreenState = FALSE;
 	m_pdxgiSwapChain->GetFullscreenState(&bFullScreenState, NULL);
 	m_pdxgiSwapChain->SetFullscreenState(!bFullScreenState, NULL);
@@ -420,6 +421,7 @@ void CGameFramework::ChangeSwapChainState()
 
 	CreateRenderTargetViews();
 
+	if (m_pUILayer) m_pUILayer->InitializeRenderTargetResources(m_ppd3dSwapChainBackBuffers.data()->GetAddressOf());
 }
 
 void CGameFramework::BuildObjects()

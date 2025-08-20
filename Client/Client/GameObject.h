@@ -616,6 +616,9 @@ public:
 public:
 	void InitializeDevice(ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets);
 
+	void InitializeRenderTargetResources(ID3D12Resource** ppd3dRenderTargets);
+	void ReleaseRenderTargetResources();
+
 	float                           m_fWidth = 0.0f;
 	float                           m_fHeight = 0.0f;
 
