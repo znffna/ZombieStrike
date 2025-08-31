@@ -267,7 +267,7 @@ void NetworkingClient::StorePacket(PacketHeader* pktHeader, DWORD size)
 }
 
 std::vector<RawPacket>& NetworkingClient::GetReadQueue() {
-    int count = false;
+    size_t count = false;
     
     {
         std::lock_guard<std::mutex> lock(write_lock); // 쓰기 작업을 위한 뮤텍스 잠금

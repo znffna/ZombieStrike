@@ -210,7 +210,7 @@ ComPtr<ID3D12Resource> CreateTextureResourceFromDDSFile(ID3D12Device* pd3dDevice
 	{
 		// Handle error
 		std::wstring debug = pszFileName;
-		int pathLength = debug.length();
+		size_t pathLength = debug.length();
 		debug = L"[CreateTextureResourceFromDDSFile] LoadDDSTextureFromFileEx failed / Texture Name :" + debug + L", Length :" + std::to_wstring(pathLength) + L"\n";
 		OutputDebugString(debug.c_str());
 		return nullptr;

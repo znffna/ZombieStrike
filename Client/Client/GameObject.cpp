@@ -1409,16 +1409,13 @@ void CBulletParticleObject::AddBullet(const CBulletVertex& pBulletVertex)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-UILayer::UILayer(UINT nFrames, UINT nTextBlocks, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight)
+UILayer::UILayer(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight)
 {
 	m_fWidth = static_cast<float>(nWidth);
 	m_fHeight = static_cast<float>(nHeight);
 	m_nRenderTargets = nFrames;
 	m_ppd3d11WrappedRenderTargets = new ID3D11Resource * [nFrames];
 	m_ppd2dRenderTargets = new ID2D1Bitmap1 * [nFrames];
-
-	m_pTextBlocks.reserve(nTextBlocks);
-	m_pTextPools.resize(nTextBlocks);
 
 	InitializeDevice(pd3dDevice, pd3dCommandQueue, ppd3dRenderTargets);
 }
@@ -1470,11 +1467,6 @@ void UILayer::InitializeDevice(ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3
 	::DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&m_pd2dWriteFactory);
 	pdxgiDevice->Release();
 
-	InitializeRenderTargetResources(ppd3dRenderTargets);
-}
-
-void UILayer::InitializeRenderTargetResources(ID3D12Resource** ppd3dRenderTargets)
-{
 	D2D1_BITMAP_PROPERTIES1 d2dBitmapProperties = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED));
 
 	for (UINT i = 0; i < m_nRenderTargets; i++)
@@ -1486,10 +1478,110 @@ void UILayer::InitializeRenderTargetResources(ID3D12Resource** ppd3dRenderTarget
 		m_pd2dDeviceContext->CreateBitmapFromDxgiSurface(pdxgiSurface, &d2dBitmapProperties, &m_ppd2dRenderTargets[i]);
 		pdxgiSurface->Release();
 	}
+
 }
 
-void UILayer::ReleaseRenderTargetResources()
+uint8_t q8(float x) {
+	// [0,1] clamp 후 0..255로 반올림
+	x = std::max(0.0f, std::min(1.0f, x));
+	return static_cast<uint8_t>(x * 255.0f + 0.5f);
+}
+
+// ARGB(8:8:8:8)로 패킹 (원하는 순서로 바꿔도 무방)
+static inline uint32_t PackRGBA8(const D2D1_COLOR_F& c) {
+	uint32_t r = q8(c.r);
+	uint32_t g = q8(c.g);
+	uint32_t b = q8(c.b);
+	uint32_t a = q8(c.a);
+	return (a << 24) | (r << 16) | (g << 8) | (b << 0);
+}
+
+ComPtr<ID2D1SolidColorBrush> UILayer::GetBrush(D2D1::ColorF d2dColor)
 {
+	auto colorKey = PackRGBA8(d2dColor);
+	auto it = m_pBrushes.find(colorKey);
+	if (it != m_pBrushes.end()) {
+		return it->second;
+	}
+	else {
+		return CreateBrush(d2dColor);
+	}
+}
+
+ComPtr<IDWriteTextFormat> UILayer::GetTextFormat(WCHAR* pszFontName, float fFontSize)
+{
+	auto it = m_pTextFormats.find({ std::wstring(pszFontName), fFontSize });
+	if (it != m_pTextFormats.end()) {
+		return it->second;
+	}
+	else {
+		return CreateTextFormat(pszFontName, fFontSize);
+	}
+}
+
+ComPtr<ID2D1SolidColorBrush> UILayer::CreateBrush(D2D1::ColorF d2dColor)
+{
+	ComPtr<ID2D1SolidColorBrush> pd2dDefaultTextBrush;
+	m_pd2dDeviceContext->CreateSolidColorBrush(d2dColor, pd2dDefaultTextBrush.GetAddressOf());
+
+	auto colorKey = PackRGBA8(d2dColor);
+	m_pBrushes[colorKey] = pd2dDefaultTextBrush;
+
+	return(pd2dDefaultTextBrush);
+}
+
+ComPtr<IDWriteTextFormat> UILayer::CreateTextFormat(WCHAR* pszFontName, float fFontSize)
+{
+	ComPtr<IDWriteTextFormat> pdwDefaultTextFormat;
+	m_pd2dWriteFactory->CreateTextFormat(L"궁서체", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, fFontSize, L"en-us", pdwDefaultTextFormat.GetAddressOf());
+
+	pdwDefaultTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+	pdwDefaultTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
+	//m_pd2dWriteFactory->CreateTextFormat(L"Arial", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, fSmallFontSize, L"en-us", &m_pdwDefaultTextFormat);
+
+	//m_pTextFormats[std::make_pair(pszFontName, fFontSize)] = pdwDefaultTextFormat;
+
+	m_pTextFormats[{ std::wstring(pszFontName), fFontSize }] = pdwDefaultTextFormat;
+
+	return(pdwDefaultTextFormat);
+}
+
+void UILayer::Render(UINT nFrame, const std::vector<std::shared_ptr<CGameObject>> &vecTextObjects)
+{
+	ID3D11Resource* ppResources[] = { m_ppd3d11WrappedRenderTargets[nFrame] };
+
+	m_pd2dDeviceContext->SetTarget(m_ppd2dRenderTargets[nFrame]);
+	m_pd3d11On12Device->AcquireWrappedResources(ppResources, _countof(ppResources));
+
+	m_pd2dDeviceContext->BeginDraw();
+	// vecTextObjects 을 전부 Draw
+	for (auto& pTextObject : vecTextObjects)
+	{
+		if (auto pText = dynamic_pointer_cast<CTextObject>(pTextObject))
+		{
+			TextBlock pBlock = pText->GetTextBlock();
+			if (pBlock.IsActive()) 
+				m_pd2dDeviceContext->DrawText(
+					pBlock.m_pstrText.c_str(),
+					(UINT)pBlock.m_pstrText.length(),
+					GetTextFormat(pBlock.GetFont().data(),
+					pBlock.GetFontSize()).Get(),
+					pBlock.m_d2dLayoutRect,
+					GetBrush(pBlock.GetBrush()).Get()
+				);
+		}
+	}
+	m_pd2dDeviceContext->EndDraw();
+
+	m_pd2dDeviceContext->SetTarget(nullptr);  
+	m_pd3d11On12Device->ReleaseWrappedResources(ppResources, _countof(ppResources));
+	m_pd3d11DeviceContext->Flush();
+}
+
+void UILayer::ReleaseResources()
+{
+	ClearCache();
+
 	if (m_ppd3d11WrappedRenderTargets == NULL || m_ppd2dRenderTargets == NULL)
 	{
 		return; // 이미 해제된 경우
@@ -1508,75 +1600,6 @@ void UILayer::ReleaseRenderTargetResources()
 		m_ppd2dRenderTargets[i]->Release();
 		m_ppd3d11WrappedRenderTargets[i]->Release();
 	}
-}
-
-ComPtr<ID2D1SolidColorBrush> UILayer::CreateBrush(D2D1::ColorF d2dColor)
-{
-	ComPtr<ID2D1SolidColorBrush> pd2dDefaultTextBrush;
-	m_pd2dDeviceContext->CreateSolidColorBrush(d2dColor, pd2dDefaultTextBrush.GetAddressOf());
-
-	return(pd2dDefaultTextBrush);
-}
-
-ComPtr<IDWriteTextFormat> UILayer::CreateTextFormat(WCHAR* pszFontName, float fFontSize)
-{
-	ComPtr<IDWriteTextFormat> pdwDefaultTextFormat;
-	m_pd2dWriteFactory->CreateTextFormat(L"궁서체", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, fFontSize, L"en-us", pdwDefaultTextFormat.GetAddressOf());
-
-	pdwDefaultTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-	pdwDefaultTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
-	//m_pd2dWriteFactory->CreateTextFormat(L"Arial", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, fSmallFontSize, L"en-us", &m_pdwDefaultTextFormat);
-
-	return(pdwDefaultTextFormat);
-}
-
-void UILayer::StorePoolTextBlock(UINT nIndex, std::wstring* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush)
-{
-	m_pTextPools[nIndex] = std::make_shared<TextBlock>();
-	if (pstrUIText) m_pTextPools[nIndex]->m_pstrText = *pstrUIText;
-	if (pd2dLayoutRect) m_pTextPools[nIndex]->m_d2dLayoutRect = *pd2dLayoutRect;
-	if (pdwFormat) m_pTextPools[nIndex]->m_pdwFormat = pdwFormat;
-	if (pd2dTextBrush) m_pTextPools[nIndex]->m_pd2dTextBrush = pd2dTextBrush;
-}
-
-void UILayer::UpdateTextOutputs(UINT nIndex, std::wstring* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush)
-{
-	if (pstrUIText) m_pTextPools[nIndex]->m_pstrText = *pstrUIText;
-	if (pd2dLayoutRect) m_pTextBlocks[nIndex]->m_d2dLayoutRect = *pd2dLayoutRect;
-	if (pdwFormat) m_pTextBlocks[nIndex]->m_pdwFormat = pdwFormat;
-	if (pd2dTextBrush) m_pTextBlocks[nIndex]->m_pd2dTextBrush = pd2dTextBrush;
-}
-
-void UILayer::Render(UINT nFrame)
-{
-	if (m_pTextBlocks.size() > 0)
-	{
-		ID3D11Resource* ppResources[] = { m_ppd3d11WrappedRenderTargets[nFrame] };
-
-		m_pd2dDeviceContext->SetTarget(m_ppd2dRenderTargets[nFrame]);
-		m_pd3d11On12Device->AcquireWrappedResources(ppResources, _countof(ppResources));
-
-		m_pd2dDeviceContext->BeginDraw();
-		for (UINT i = 0; i < m_pTextBlocks.size(); i++)
-		{
-			if (m_pTextBlocks[i]->m_bActive) m_pd2dDeviceContext->DrawText(m_pTextBlocks[i]->m_pstrText.c_str(), (UINT)m_pTextBlocks[i]->m_pstrText.length(), m_pTextBlocks[i]->m_pdwFormat.Get(), m_pTextBlocks[i]->m_d2dLayoutRect, m_pTextBlocks[i]->m_pd2dTextBrush.Get());
-		}
-		m_pd2dDeviceContext->EndDraw();
-
-		m_pd3d11On12Device->ReleaseWrappedResources(ppResources, _countof(ppResources));
-		m_pd3d11DeviceContext->Flush();
-	}
-}
-
-void UILayer::ReleaseResources()
-{
-	for (UINT i = 0; i < m_pTextBlocks.size(); i++)
-	{
-		m_pTextBlocks[i]->m_pdwFormat.Reset();
-		m_pTextBlocks[i]->m_pd2dTextBrush.Reset();
-	}
-
-	ReleaseRenderTargetResources();
 
 	m_pd2dDeviceContext.Reset();
 	m_pd2dWriteFactory.Reset();
@@ -1584,28 +1607,4 @@ void UILayer::ReleaseResources()
 	m_pd2dFactory.Reset();
 	m_pd3d11DeviceContext.Reset();
 	m_pd3d11On12Device.Reset();
-}
-
-std::shared_ptr<TextBlock>  UILayer::GetNewTextBlock(int nPoolIndex) {
-	if (m_pTextPools.size() > nPoolIndex) {
-		if (m_pTextPools[nPoolIndex]->m_pdwFormat && m_pTextPools[nPoolIndex]->m_pd2dTextBrush) {
-			auto pBlock = std::make_shared<TextBlock>();
-			pBlock->m_pstrText = m_pTextPools[nPoolIndex]->m_pstrText;
-			pBlock->m_d2dLayoutRect = m_pTextPools[nPoolIndex]->m_d2dLayoutRect;
-			pBlock->m_pdwFormat = m_pTextPools[nPoolIndex]->m_pdwFormat;
-			pBlock->m_pd2dTextBrush = m_pTextPools[nPoolIndex]->m_pd2dTextBrush;
-			m_pTextBlocks.push_back(pBlock);
-			return pBlock;
-		}
-	}
-	else {
-		auto pBlock = std::make_shared<TextBlock>();
-		pBlock->m_pstrText = m_pTextPools[0]->m_pstrText;
-		pBlock->m_d2dLayoutRect = m_pTextPools[0]->m_d2dLayoutRect;
-		pBlock->m_pdwFormat = m_pTextPools[0]->m_pdwFormat;
-		pBlock->m_pd2dTextBrush = m_pTextPools[0]->m_pd2dTextBrush;
-		m_pTextBlocks.push_back(pBlock);
-		return pBlock;
-	}
-	return nullptr;
 }

@@ -21,6 +21,6 @@ public:
 
 	bool IsClicked(float x, float y) const;
 
-	std::shared_ptr<TextBlock> m_pTextBlock;
+	std::shared_ptr<CTextObject> m_pTextBlock;
 };
 

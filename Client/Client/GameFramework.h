@@ -51,11 +51,12 @@ public:
 	// 창모드 <-> 전체화면
 	void ChangeSwapChainState();
 	void BuildObjects();
+	void BuildUILayer();
 	void CreateSceneOnAnotherThread(std::string sceneName);
 
-	void AdvanceFrame();
 	void ProcessInput(CScene* pScene = nullptr);
 	void AnimateObjects(CScene* pScene);
+	void AdvanceFrame();
 
 	void MoveToNextFrame();
 

@@ -73,6 +73,7 @@ public:
 		LAYER_SKYBOX,
 		LAYER_CONTROLLER,
 		LAYER_UI,
+		LAYER_TEXT,
 	};
 	
 public:
@@ -584,40 +585,116 @@ public:
 	bool						    m_bActive = true;
 	std::wstring                    m_pstrText;
 	D2D1_RECT_F                     m_d2dLayoutRect;
-	ComPtr<IDWriteTextFormat> m_pdwFormat;
-	ComPtr<ID2D1SolidColorBrush> m_pd2dTextBrush;
+	//ComPtr<IDWriteTextFormat> m_pdwFormat;
+	//ComPtr<ID2D1SolidColorBrush> m_pd2dTextBrush;
+	std::wstring m_strFontKey;
+	float  m_fFontSize = 12.0f;
+	D2D1::ColorF m_cBrushKey{0,0,0};
+
+	// Setters
+	void SetActive(bool bActive) {
+		m_bActive = bActive;
+	}
 
 	void SetText(std::wstring pstrUIText) {
 		m_pstrText = pstrUIText;
 	}
 
-	void SetActive(bool bActive) {
-		m_bActive = bActive;
+	void SetSize(float x, float y, float width, float height, bool isCenter = true) {
+		if(isCenter) {
+			x = x - width / 2;
+			y = y - height / 2;
+		}
+		m_d2dLayoutRect.left = x;
+		m_d2dLayoutRect.top = y;
+		m_d2dLayoutRect.right = x + width;
+		m_d2dLayoutRect.bottom = y + height;
 	}
+
+
+	void SetFont(const std::wstring& strFontKey) {
+		m_strFontKey = strFontKey;
+	}
+
+	void SetFontSize(float fFontSize) {
+		m_fFontSize = fFontSize;
+	}
+
+	void SetBrush(const D2D1::ColorF& cBrushKey) {
+		m_cBrushKey = cBrushKey;
+	}
+
+	void SetColor(const D2D1::ColorF& cBrushKey) {
+		SetBrush(cBrushKey);
+	}
+
+	// Getters
+	bool IsActive() const {
+		return m_bActive;
+	}
+	std::wstring GetText() const {
+		return m_pstrText;
+	}
+	D2D1_RECT_F GetSize() const {
+		return m_d2dLayoutRect;
+	}
+	std::wstring GetFont() const {
+		return m_strFontKey;
+	}
+	float GetFontSize() const {
+		return m_fFontSize;
+	}
+
+	D2D1::ColorF GetBrush() const {
+		return m_cBrushKey;
+	}
+};
+
+class CTextObject : public CGameObject
+{
+private:
+	TextBlock m_TextBlock{};
+
+public:
+	CTextObject() : CGameObject() {};
+	virtual ~CTextObject() {};
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr, bool bDepthWrite = false) override {};
+	virtual TextBlock GetTextBlock() { return m_TextBlock; };
+
+public:
+	// TextBlock Setters
+	void SetActive(bool bActive) { m_TextBlock.SetActive(bActive); }
+	void SetText(std::wstring pstrUIText) { m_TextBlock.SetText(pstrUIText); }
+	void SetSize(float x, float y, float width, float height, bool isCenter = true) { m_TextBlock.SetSize(x, y, width, height, isCenter); }
+	void SetFont(const std::wstring& strFontKey) { m_TextBlock.SetFont(strFontKey); }
+	void SetFontSize(float fFontSize) { m_TextBlock.SetFontSize(fFontSize); }
+	void SetBrush(const D2D1::ColorF& cBrushKey) { m_TextBlock.SetBrush(cBrushKey); }
+	void SetColor(const D2D1::ColorF& cBrushKey) { m_TextBlock.SetColor(cBrushKey); }
+	// TextBlock Getters
+	bool IsActive() const { return m_TextBlock.IsActive(); }
+	std::wstring GetText() const { return m_TextBlock.GetText(); }
+	D2D1_RECT_F GetSize() const { return m_TextBlock.GetSize(); }
+	std::wstring GetFont() const { return m_TextBlock.GetFont(); }
+	float GetFontSize() const { return m_TextBlock.GetFontSize(); }
+	D2D1::ColorF GetBrush() const { return m_TextBlock.GetBrush(); }
 };
 
 class TextBlock;
 
+
+
 class UILayer
 {
 public:
-	UILayer(UINT nFrames, UINT nTextBlocks, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight);
+	UILayer(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight);
+	~UILayer() { ReleaseResources(); }
 
-	void StorePoolTextBlock(UINT nIndex, std::wstring* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush);
-	void UpdateTextOutputs(UINT nIndex, std::wstring* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush);
-	void Render(UINT nFrame);
-	void ReleaseResources();
-
-	std::shared_ptr<TextBlock> GetNewTextBlock(int nPoolIndex = 0);
-
-	ComPtr<ID2D1SolidColorBrush> CreateBrush(D2D1::ColorF d2dColor);
-	ComPtr<IDWriteTextFormat> CreateTextFormat(WCHAR* pszFontName, float fFontSize);
+	void Render(UINT nFrame, const std::vector<std::shared_ptr<CGameObject>> &);
 
 public:
 	void InitializeDevice(ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets);
-
-	void InitializeRenderTargetResources(ID3D12Resource** ppd3dRenderTargets);
-	void ReleaseRenderTargetResources();
+	void ReleaseResources();
 
 	float                           m_fWidth = 0.0f;
 	float                           m_fHeight = 0.0f;
@@ -633,6 +710,21 @@ public:
 	ID3D11Resource** m_ppd3d11WrappedRenderTargets = NULL;
 	ID2D1Bitmap1** m_ppd2dRenderTargets = NULL;
 
-	std::vector<std::shared_ptr<TextBlock>> m_pTextBlocks;
-	std::vector<std::shared_ptr<TextBlock>> m_pTextPools;
+private:
+
+	// Caching Brush & TextFormat 
+	std::unordered_map<uint32_t, ComPtr<ID2D1SolidColorBrush>> m_pBrushes;
+	std::map<std::pair<std::wstring, float>, ComPtr<IDWriteTextFormat>> m_pTextFormats;
+
+	void ClearCache() {
+		m_pBrushes.clear();
+		m_pTextFormats.clear();
+	}
+
+	// Create & Get Brush & TextFormat
+	ComPtr<ID2D1SolidColorBrush> CreateBrush(D2D1::ColorF d2dColor);
+	ComPtr<IDWriteTextFormat> CreateTextFormat(WCHAR* pszFontName, float fFontSize);
+
+	ComPtr<ID2D1SolidColorBrush> GetBrush(D2D1::ColorF d2dColor);
+	ComPtr<IDWriteTextFormat> GetTextFormat(WCHAR* pszFontName, float fFontSize);
 };

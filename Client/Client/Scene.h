@@ -251,6 +251,9 @@ protected:
 public:
 	std::shared_ptr<CPlayer> GetPlayer() { return m_pPlayer; }
 
+public:
+	const std::vector<std::shared_ptr<CGameObject>>& GetTextBlocks() { return m_ppGameObjects[CGameObject::GAMEOBJECT_LAYER::LAYER_TEXT]; }
+
 protected:
 
 	// Camera

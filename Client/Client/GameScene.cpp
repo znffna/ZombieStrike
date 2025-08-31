@@ -15,7 +15,6 @@ CGameScene::CGameScene()
 
 CGameScene::~CGameScene()
 {
-	if (m_pHealthObject) m_pHealthObject->m_pTextBlock->SetActive(false);
 }
 
 void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
@@ -133,9 +132,9 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 			pHealthObject->SetGauge(1.0f, -1.0f, -1.0f, 0.3f, 0.1f);
 
 			// Health Text »ý¼º
-			pHealthObject->m_pTextBlock = CGameFramework::pGameFramework->GetUILayer()->GetNewTextBlock(2);
+			/*pHealthObject->m_pTextBlock = CGameFramework::pGameFramework->GetUILayer()->GetNewTextBlock(2);
 			pHealthObject->m_pTextBlock->SetText(L"HP :");
-			pHealthObject->m_pTextBlock->SetActive(false);
+			pHealthObject->m_pTextBlock->SetActive(false);*/
 			m_pHealthObject = pHealthObject;
 
 			pPlayer->SetHealthObject(pHealthObject);
@@ -313,8 +312,6 @@ void CGameScene::BuildFiredBullets()
 void CGameScene::OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	if(m_pBulletObject) m_pBulletObject->OnPostRender();
-
-	if (m_pHealthObject) m_pHealthObject->m_pTextBlock->SetActive(true);
 }
 
 bool CGameScene::ProcessMouseInput(float cxDelta, float cyDelta, float deltaTime)

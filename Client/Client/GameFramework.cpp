@@ -88,7 +88,6 @@ void CGameFramework::OnDestroy()
 	ReleaseShaderVariables();
 
 #ifdef _WITH_DIRECT_WRITE_UI
-	if (m_pUILayer) m_pUILayer->ReleaseResources();
 	m_pUILayer.reset();
 #endif
 
@@ -394,7 +393,6 @@ void CGameFramework::CreateDepthStencilView()
 void CGameFramework::ChangeSwapChainState()
 {
 	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
-	if (m_pUILayer) m_pUILayer->ReleaseRenderTargetResources();
 
 	BOOL bFullScreenState = FALSE;
 	m_pdxgiSwapChain->GetFullscreenState(&bFullScreenState, NULL);
@@ -410,6 +408,9 @@ void CGameFramework::ChangeSwapChainState()
 	dxgiTargetParameters.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	m_pdxgiSwapChain->ResizeTarget(&dxgiTargetParameters);
 
+#ifdef _WITH_DIRECT_WRITE_UI
+	if (m_pUILayer) m_pUILayer.reset();
+#endif
 	for (int i = 0; i < m_nSwapChainBuffers; i++) if (m_ppd3dSwapChainBackBuffers[i]) m_ppd3dSwapChainBackBuffers[i].Reset();
 
 	DXGI_SWAP_CHAIN_DESC dxgiSwapChainDesc;
@@ -420,30 +421,15 @@ void CGameFramework::ChangeSwapChainState()
 	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
 	CreateRenderTargetViews();
-
-	if (m_pUILayer) m_pUILayer->InitializeRenderTargetResources(m_ppd3dSwapChainBackBuffers.data()->GetAddressOf());
+#ifdef _WITH_DIRECT_WRITE_UI
+	BuildUILayer();
+#endif
 }
 
 void CGameFramework::BuildObjects()
 {
 #ifdef _WITH_DIRECT_WRITE_UI
-	m_pUILayer = std::make_shared<UILayer>(m_nSwapChainBuffers, 3, m_pd3dDevice.Get(), m_pd3dCommandQueue.Get(), m_ppd3dSwapChainBackBuffers.data()->GetAddressOf(), m_nWndClientWidth, m_nWndClientHeight);
-
-	ComPtr<ID2D1SolidColorBrush> pd2dBrush = m_pUILayer->CreateBrush(D2D1::ColorF(D2D1::ColorF::Purple, 1.0f));
-	ComPtr<IDWriteTextFormat> pdwTextFormat = m_pUILayer->CreateTextFormat(L"궁서체", m_nWndClientHeight / 15.0f);
-	D2D1_RECT_F d2dRect = D2D1::RectF(0.0f, 0.0f, (float)m_nWndClientWidth, (float)m_nWndClientHeight);
-
-	m_pUILayer->StorePoolTextBlock(0, NULL, &d2dRect, pdwTextFormat.Get(), pd2dBrush.Get());
-
-	pd2dBrush = m_pUILayer->CreateBrush(D2D1::ColorF(D2D1::ColorF::BlueViolet, 1.0f));
-	pdwTextFormat = m_pUILayer->CreateTextFormat(L"Arial", m_nWndClientHeight / 35.0f);
-	d2dRect = D2D1::RectF(0.0f, m_nWndClientHeight - 45.0f, (float)300.0f, (float)m_nWndClientHeight);
-
-	m_pUILayer->StorePoolTextBlock(1, NULL, &d2dRect, pdwTextFormat.Get(), pd2dBrush.Get());
-
-	pd2dBrush = m_pUILayer->CreateBrush(D2D1::ColorF(D2D1::ColorF::Black, 1.0f));
-	pdwTextFormat = m_pUILayer->CreateTextFormat(L"Bahnschrift Condensed", m_nWndClientHeight / 25.0f);
-	m_pUILayer->StorePoolTextBlock(2, NULL, &d2dRect, pdwTextFormat.Get(), pd2dBrush.Get());
+	BuildUILayer();
 #endif
 
 	m_pd3dCommandAllocator[m_nSwapChainBufferIndex]->Reset();
@@ -498,6 +484,28 @@ void CGameFramework::BuildObjects()
 	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
 
 	if (m_pLoadingScene) m_pLoadingScene->ReleaseUploadBuffers();
+}
+
+void CGameFramework::BuildUILayer()
+{
+	std::vector< ID3D12Resource*> ppd3dRenderTargets;
+	for (UINT i = 0; i < m_nSwapChainBuffers; i++) {
+		ppd3dRenderTargets.push_back(m_ppd3dSwapChainBackBuffers[i].Get());
+	}
+	m_pUILayer = std::make_shared<UILayer>(m_nSwapChainBuffers, m_pd3dDevice.Get(), m_pd3dCommandQueue.Get(), ppd3dRenderTargets.data(), m_nWndClientWidth, m_nWndClientHeight);
+
+	/*{
+		ComPtr<ID2D1SolidColorBrush> pd2dBrush = m_pUILayer->GetBrush(D2D1::ColorF(D2D1::ColorF::Purple, 1.0f));
+		ComPtr<IDWriteTextFormat> pdwTextFormat = m_pUILayer->GetTextFormat(L"궁서체", m_nWndClientHeight / 15.0f);
+		D2D1_RECT_F d2dRect = D2D1::RectF(0.0f, 0.0f, (float)m_nWndClientWidth, (float)m_nWndClientHeight);
+
+		pd2dBrush = m_pUILayer->GetBrush(D2D1::ColorF(D2D1::ColorF::BlueViolet, 1.0f));
+		pdwTextFormat = m_pUILayer->GetTextFormat(L"Arial", m_nWndClientHeight / 35.0f);
+		d2dRect = D2D1::RectF(0.0f, m_nWndClientHeight - 45.0f, (float)300.0f, (float)m_nWndClientHeight);
+
+		pd2dBrush = m_pUILayer->GetBrush(D2D1::ColorF(D2D1::ColorF::Black, 1.0f));
+		pdwTextFormat = m_pUILayer->GetTextFormat(L"Bahnschrift Condensed", m_nWndClientHeight / 25.0f);
+	}*/
 }
 
 void CGameFramework::CreateSceneOnAnotherThread(std::string sceneName)
@@ -646,11 +654,24 @@ void CGameFramework::AdvanceFrame()
 	if (g_bWindowActive && g_bEnableCursor) { RenderCursor(pd3dCommandList); }
 
 	// Command List에 대한 명령들을 종료
+#ifndef _WITH_DIRECT_WRITE_UI
 	::SynchronizeResourceTransition(pd3dCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+#endif
 	::ExecuteCommandList(pd3dCommandList, m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
 	
 #ifdef _WITH_DIRECT_WRITE_UI
-	m_pUILayer->Render(m_nSwapChainBufferIndex);
+	std::vector <std::shared_ptr<CGameObject>> textBlocks = pCurrentScene->GetTextBlocks();
+	if (g_bWindowActive && g_bEnableCursor)
+	{
+		textBlocks.push_back(m_pCursorSprite->m_pTextBlock);
+	}
+	m_pUILayer->Render(m_nSwapChainBufferIndex, textBlocks);
+
+	/*if (g_bWindowActive && g_bEnableCursor)
+	{
+		std::vector<std::shared_ptr<CGameObject>> textBlock = { m_pCursorSprite->m_pTextBlock };
+		m_pUILayer->Render(m_nSwapChainBufferIndex, textBlock);
+	}*/
 #endif
 
 	pCurrentScene->OnPostRender(nullptr);
@@ -665,16 +686,7 @@ void CGameFramework::AdvanceFrame()
 	// Time / FPS 출력
 	std::wstring time = L"Time: " + std::to_wstring(m_GameTimer.GameTime());
 	std::wstring fps = L"FPS: " + std::to_wstring(m_GameTimer.calculateAverageFPS());
-
-	std::string playerPostion = "Player Position: ";
 	std::wstring text = time + L" " + fps;
-
-	if (auto pPlayer = pCurrentScene->GetPlayer()) {
-		XMFLOAT3 playerPosition = pPlayer->GetPosition();
-		char move_input = pPlayer->GetMoveInput();
-		text += L"( " + std::to_wstring(playerPosition.x) + L", " + std::to_wstring(playerPosition.y) + L", " + std::to_wstring(playerPosition.z) + L")";
-		text += L"GetMoveInput( " + std::to_wstring(move_input & DIR_FORWARD? 1 : 0) + L", " + std::to_wstring(move_input & DIR_BACKWARD ? 1 : 0) + L", " + std::to_wstring(move_input & DIR_LEFT ? 1 : 0) + L", " + std::to_wstring(move_input & DIR_RIGHT ? 1 : 0) + L")";
-	}
 
 	::SetWindowText(m_hWnd, text.c_str());
 }
@@ -722,7 +734,13 @@ void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
 		m_pCursorSprite->SetMaterial(0, pCursorMaterial);
 
 #ifdef _WITH_DIRECT_WRITE_UI
-		m_pCursorSprite->m_pTextBlock = m_pUILayer->GetNewTextBlock(0);
+		m_pCursorSprite->m_pTextBlock = std::make_shared<CTextObject>();
+		m_pCursorSprite->m_pTextBlock->SetText(L"Cursor Position: (0, 0)");
+		m_pCursorSprite->m_pTextBlock->SetActive(true); 
+		m_pCursorSprite->m_pTextBlock->SetSize(0.0f, 0.0f, (float)m_nWndClientWidth, (float)m_nWndClientHeight, false);
+		m_pCursorSprite->m_pTextBlock->SetFont(L"Arial");
+		m_pCursorSprite->m_pTextBlock->SetFontSize(m_nWndClientHeight / 35.0f);
+		m_pCursorSprite->m_pTextBlock->SetBrush(D2D1::ColorF(D2D1::ColorF::Purple, 1.0f));
 #endif
 	}
 
