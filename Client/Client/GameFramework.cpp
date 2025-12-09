@@ -408,19 +408,51 @@ void CGameFramework::ChangeSwapChainState()
 	dxgiTargetParameters.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	m_pdxgiSwapChain->ResizeTarget(&dxgiTargetParameters);
 
+	ReallocateSwapChain(m_nWndClientWidth, m_nWndClientHeight);
+}
+
+void CGameFramework::Resize(int width, int height)
+{
+	if (m_pdxgiSwapChain == nullptr) return;
+
+	ReallocateSwapChain(width, height);
+}
+
+void CGameFramework::ReallocateSwapChain(int width, int height)
+{
+	// 1) GPU 동기화
+	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
+
+	m_nWndClientWidth = width;
+	m_nWndClientHeight = height;
+
+	// 2) 기존 BackBuffers 해제
 #ifdef _WITH_DIRECT_WRITE_UI
 	if (m_pUILayer) m_pUILayer.reset();
 #endif
-	for (int i = 0; i < m_nSwapChainBuffers; i++) if (m_ppd3dSwapChainBackBuffers[i]) m_ppd3dSwapChainBackBuffers[i].Reset();
 
-	DXGI_SWAP_CHAIN_DESC dxgiSwapChainDesc;
-	m_pdxgiSwapChain->GetDesc(&dxgiSwapChainDesc);
-	m_pdxgiSwapChain->ResizeBuffers(m_nSwapChainBuffers, m_nWndClientWidth,
-		m_nWndClientHeight, dxgiSwapChainDesc.BufferDesc.Format, dxgiSwapChainDesc.Flags);
+	for (int i = 0; i < m_nSwapChainBuffers; i++)
+		if (m_ppd3dSwapChainBackBuffers[i])
+			m_ppd3dSwapChainBackBuffers[i].Reset();
 
+	// 3) ResizeBuffers
+	DXGI_SWAP_CHAIN_DESC desc;
+	m_pdxgiSwapChain->GetDesc(&desc);
+
+	m_pdxgiSwapChain->ResizeBuffers(
+		m_nSwapChainBuffers,
+		width,
+		height,
+		desc.BufferDesc.Format,
+		desc.Flags
+	);
+
+	// 4) BackBuffer Index 갱신
 	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
+	// 5) RTV 재생성
 	CreateRenderTargetViews();
+
 #ifdef _WITH_DIRECT_WRITE_UI
 	BuildUILayer();
 #endif
@@ -977,6 +1009,17 @@ LRESULT CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WP
 		break;
 	}
 	case WM_SIZE:
+	{
+		int width = LOWORD(lParam);
+		int height = HIWORD(lParam);
+
+		if (width != 0 && height != 0)
+		{
+			OutputDebugStringA("WM_SIZE received\n");
+			//Resize(width, height);
+		}
+	}
+	break;
 		break;
 	case WM_LBUTTONDOWN:
 	case WM_RBUTTONDOWN:

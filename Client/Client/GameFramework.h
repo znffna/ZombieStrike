@@ -41,15 +41,10 @@ public:
 	bool OnCreate(HINSTANCE hInstance, HWND hMainWnd);
 	void OnDestroy();
 
-	void CreateDirect3DDevice();
-	void CreateCommandQueueAndList();
-	void CreateRtvAndDsvDescriptorHeap();
-	void CreateSwapChain();
-	void CreateRenderTargetViews();
-	void CreateDepthStencilView();
-
 	// 창모드 <-> 전체화면
 	void ChangeSwapChainState();
+	void Resize(int width, int height);
+	void ReallocateSwapChain(int width, int height);
 	void BuildObjects();
 	void BuildUILayer();
 	void CreateSceneOnAnotherThread(std::string sceneName);
@@ -77,6 +72,13 @@ public:
 	std::shared_ptr<CScene> GetCurrentScene() { if(m_Scenes.size()) return m_Scenes.back(); }
 
 private:
+	void CreateDirect3DDevice();
+	void CreateCommandQueueAndList();
+	void CreateRtvAndDsvDescriptorHeap();
+	void CreateSwapChain();
+	void CreateRenderTargetViews();
+	void CreateDepthStencilView();
+
 	bool isWorkd = true;
 
 	HINSTANCE m_hInstance;
