@@ -253,9 +253,9 @@ public:
 	
 	// Clone
 	static bool DeepCopyFromModel(const std::string &strModelName, std::shared_ptr<CGameObject>& pGameObject);
-	static bool DeepCopyFromModel(const std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject);
-	bool DeepCopyFromModel(const std::string& strModelName);;
-	bool DeepCopyFromModel(const std::shared_ptr<CLoadedModelInfo>& pLoadModel) { auto pThis = shared_from_this(); return DeepCopyFromModel(pLoadModel, pThis); };
+	static bool DeepCopyFromModel(const CLoadedModelInfo* pLoadModel, std::shared_ptr<CGameObject>& pGameObject);
+	bool DeepCopyFromModel(const std::string& strModelName);
+	bool DeepCopyFromModel(const CLoadedModelInfo* pLoadModel) { auto pThis = shared_from_this(); return DeepCopyFromModel(pLoadModel, pThis); };
 	
 	std::shared_ptr<CGameObject> FindFrame(std::string strFrameName);
 public:

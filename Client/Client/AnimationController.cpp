@@ -132,7 +132,7 @@ void CAnimationController::Clear()
 	m_pAnimationTracks.clear();
 }
 
-void CAnimationController::SettingByModel(std::shared_ptr<CLoadedModelInfo>& pModel, int nAnimationTracks)
+void CAnimationController::SettingByModel(CLoadedModelInfo* pModel, int nAnimationTracks)
 {
 	Clear();
 

@@ -66,10 +66,10 @@ void CResourceManager::SetSkinInfo(const std::string& name, std::shared_ptr<CLoa
 	ModelInfos[name] = modelInfo;
 }
 
-inline std::shared_ptr<CLoadedModelInfo> CResourceManager::GetModelInfo(const std::string& name) {
+inline CLoadedModelInfo* CResourceManager::GetModelInfo(const std::string& name) {
 	if (ModelInfos.find(name) != ModelInfos.end()) {
 		// 이미 로드된 모델이 있는 경우
-		if (ModelInfos[name]) return ModelInfos[name];
+		if (ModelInfos[name]) return ModelInfos[name].get();
 		else return nullptr;
 	}
 
@@ -83,7 +83,7 @@ inline std::shared_ptr<CLoadedModelInfo> CResourceManager::GetModelInfo(const st
 	auto pModelInfo = CGameObject::LoadGeometryAndAnimationFromFile(m_d3dDevice, m_d3dGraphicsCommandList, m_d3dGraphicRootSignature, filepath.c_str(), nullptr);
 	if (pModelInfo) {
 		SetSkinInfo(name, pModelInfo);
-		return pModelInfo;
+		return pModelInfo.get();
 	}
 	else {
 		// 로드 실패

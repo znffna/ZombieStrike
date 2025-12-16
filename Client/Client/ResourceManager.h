@@ -50,7 +50,7 @@ public:
 	void LoadModelList(std::string filepath = "Model/ModelList.txt");
 
 	void SetSkinInfo(const std::string& name, std::shared_ptr<CLoadedModelInfo> modelInfo);
-	std::shared_ptr<CLoadedModelInfo> GetModelInfo(const std::string& name);
+	CLoadedModelInfo* GetModelInfo(const std::string& name);
 
 	// 메쉬 정보를 저장
 	void SetMesh(const std::string& name, std::shared_ptr<CMesh> pMesh);

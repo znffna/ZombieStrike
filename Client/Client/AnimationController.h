@@ -129,7 +129,7 @@ public:
 	~CAnimationController();
 
 	void Clear();
-	void SettingByModel(std::shared_ptr<CLoadedModelInfo>& pModel, int nAnimationTracks = -1);
+	void SettingByModel(CLoadedModelInfo* pModel, int nAnimationTracks = -1);
 
 public:
 	// State

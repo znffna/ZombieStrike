@@ -769,7 +769,7 @@ bool CGameObject::DeepCopyFromModel(const std::string& strModelName, std::shared
 	return false;
 }
 
-bool CGameObject::DeepCopyFromModel(const std::shared_ptr<CLoadedModelInfo>& pLoadModel, std::shared_ptr<CGameObject>& pGameObject)
+bool CGameObject::DeepCopyFromModel(const CLoadedModelInfo* pLoadModel, std::shared_ptr<CGameObject>& pGameObject)
 {
 	if (pLoadModel) {
 		pGameObject->DeepCopyFromGameObject(pLoadModel->m_pModelRootObject);
