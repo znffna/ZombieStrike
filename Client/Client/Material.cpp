@@ -116,7 +116,7 @@ void LoadTextureFromFile(std::shared_ptr<CTexture>& ppTexture, ID3D12Device* pd3
 	CScene::CreateShaderResourceViews(pd3dDevice, ppTexture.get(), 0, nRootParameter);
 }
 
-void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, std::wstring& pwstrTextureName, std::shared_ptr<CTexture>& ppTexture, std::shared_ptr<CGameObject> pParent, std::ifstream& File, std::shared_ptr<CShader> pShader)
+void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, std::wstring& pwstrTextureName, std::shared_ptr<CTexture>& ppTexture, CGameObject* pParent, std::ifstream& File, std::shared_ptr<CShader> pShader)
 {
 	char pstrTextureName[64] = { '\0' };
 
@@ -171,11 +171,11 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 			{
 				while (pParent)
 				{
-					std::shared_ptr<CGameObject> pGrandParent = pParent->GetParent();
+					auto pGrandParent = pParent->GetParent();
 					if (!pGrandParent) break;
 					pParent = pGrandParent;
 				}
-				std::shared_ptr<CGameObject> pRootGameObject = pParent;
+				auto pRootGameObject = pParent;
 				ppTexture = pRootGameObject->FindReplicatedTexture(pwstrTextureName.data());
 			}
 		}

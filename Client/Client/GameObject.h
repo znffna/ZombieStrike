@@ -125,12 +125,12 @@ public:
 	}
 
 	// 상속 관계
-	std::shared_ptr<CGameObject> GetParent() { return m_pParent.lock(); }
+	CGameObject* GetParent() { return m_pParent; }
 	std::vector<std::shared_ptr<CGameObject>> GetChilds() { return m_pChilds; }
 	std::shared_ptr<CGameObject> GetChild(int nIndex) { return m_pChilds[nIndex]; }
 
-	void SetParent(std::shared_ptr<CGameObject> pParent) { m_pParent = pParent; };
-	void SetChild(std::shared_ptr<CGameObject> pChild) { m_pChilds.push_back(pChild); pChild->SetParent(shared_from_this()); };
+	void SetParent(CGameObject* pParent) { m_pParent = pParent; };
+	void SetChild(std::shared_ptr<CGameObject> pChild) { m_pChilds.push_back(pChild); pChild->SetParent(this); };
 
 	// Object Update
 	virtual void Update(float fTimeElapsed);
@@ -234,7 +234,7 @@ public:
 
 protected:
 	// Parent
-	std::weak_ptr<CGameObject> m_pParent;
+	CGameObject* m_pParent;
 
 	// Child
 	std::vector<std::shared_ptr<CGameObject>> m_pChilds; // Child Object
@@ -243,12 +243,12 @@ public:
 	std::shared_ptr<CAnimationController> m_pSkinnedAnimationController;
 
 	// Load Model
-	void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> pParent, std::ifstream& File, std::shared_ptr<CShader> pShader);
+	void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, std::ifstream& File, std::shared_ptr<CShader> pShader);
 	std::shared_ptr<CTexture> FindReplicatedTexture(const _TCHAR* pstrTextureName);
 	void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& ppSkinnedMeshes, int* pnSkinnedMesh);;
 	
 	static void LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<CLoadedModelInfo> pLoadedModel);
-	static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth = 0);
+	static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth = 0);
 	static std::shared_ptr<CLoadedModelInfo> LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* pstrFileName, std::shared_ptr<CShader> pShader);
 	
 	// Clone

@@ -228,7 +228,7 @@ void CGameObject::Update(float fTimeElapsed)
 void CGameObject::UpdateBBCache()
 {
 	// 부모가 없을 경우, 모든 OBB를 Copy
-	if (m_pParent.expired())
+	if (!m_pParent)
 	{
 		// 기존 Collider 파괴
 		m_pCachesColliders.clear();
@@ -540,7 +540,7 @@ void CGameObject::FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh
 	for (auto& pChild : m_pChilds) pChild->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
 }
 
-void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> pParent, std::ifstream& File, std::shared_ptr<CShader> pShader)
+void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, std::ifstream& File, std::shared_ptr<CShader> pShader)
 {
 	char pstrToken[64] = { '\0' };
 	int nMaterial = 0;
@@ -791,7 +791,7 @@ bool CGameObject::DeepCopyFromModel(const std::string& strModelName)
 	return DeepCopyFromModel(strModelName, pThis); 
 }
 
-std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth)
+std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth)
 {
 	char pstrToken[64] = { '\0' };
 	UINT nReads = 0;
@@ -880,7 +880,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 				pGameObject->m_pChilds.reserve(nChilds); 
 				for (int i = 0; i < nChilds; i++)
 				{
-					std::shared_ptr<CGameObject> pChild = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, file, pShader, pnSkinnedMeshes, nDepth + 1);
+					std::shared_ptr<CGameObject> pChild = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject.get(), file, pShader, pnSkinnedMeshes, nDepth + 1);
 					if (pChild) pGameObject->SetChild(pChild);
 
 #ifdef _WITH_DEBUG_FRAME_HIERARCHY
