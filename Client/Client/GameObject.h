@@ -690,7 +690,7 @@ public:
 	UILayer(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight);
 	~UILayer() { ReleaseResources(); }
 
-	void Render(UINT nFrame, const std::vector<std::shared_ptr<CGameObject>> &);
+	void Render(UINT nFrame, const std::vector<CTextObject*>& vecTextObjects);
 
 public:
 	void InitializeDevice(ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets);

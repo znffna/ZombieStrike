@@ -24,6 +24,56 @@
 #define DIR_UP						0x10
 #define DIR_DOWN					0x20
 
+template<typename T>
+struct TypeTag
+{
+	using type = T;
+};
+
+enum class ESceneBuildState : uint8_t
+{
+	Idle,
+	Requested,
+	Building,
+	Completed,
+	Failed
+};
+
+enum class ESceneRequestState
+{
+	Idle,        // 요청 없음
+	Pending,     // 요청 대기 (아직 처리 안 함)
+	Processing   // Scene 생성/전환 중
+};
+
+enum class ESceneCommandType
+{
+	Push,  // 새로운 Scene을 Stack에 추가
+	Pop,   // 현재 Scene을 Stack에서 제거
+};
+
+class CLoadingScene;
+class CGameScene;
+class CTitleScene;
+class COnlineScene;
+
+using SceneTypeTag = std::variant<
+	TypeTag<CLoadingScene>,
+	TypeTag<CGameScene>,
+	TypeTag<CTitleScene>,
+	TypeTag<COnlineScene>
+>;
+
+struct SceneRequest
+{
+	ESceneCommandType Type;                 // Push / Pop / Change
+	std::optional<SceneTypeTag> SceneTag;   // 필요 시
+};
+
+
+
+
+
 struct INPUT_PARAMETER
 {
 	UCHAR pKeysBuffer[256];
@@ -99,12 +149,8 @@ extern std::vector<std::string> g_vecSceneStateNames;
 
 enum SCENE_STATE
 {
-	SCENE_STATE_NONE = 0x00, // 초기화되지 않은 상태 [ None ]
-	SCENE_STATE_ALLOCING, // 할당 중 [ ALLOC ]
-	SCENE_STATE_READY_TO_START, // 시작 준비 중 [ PreInitialize ]
-	SCENE_STATE_RUNNING,  // 실행 중 [ Update / Render ]
-	SCENE_STATE_PAUSING,  // 일시 중지 중 [ Render ]
-	SCENE_STATE_ENDING    // 종료 중 [ Release ]
+	SCENE_STATE_RUNNING = 0x00,  // 실행 중 [ Update / Render ]
+	SCENE_STATE_PAUSE,			 // 일시 중지 중 [ Render ]
 };
 
 class CScene
@@ -132,23 +178,14 @@ public:
 	static ID3D12RootSignature* GetGraphicRootSignature() {return m_pd3dGraphicsRootSignature.Get();	};
 	
 	// Scene Management
-	virtual void StartScene() { SetSceneState(SCENE_STATE_RUNNING); }
+	virtual void ResetScene();
 	virtual void PopScene();
 
 	SCENE_STATE GetSceneState() { return m_SceneState; }
-	void SetSceneState(SCENE_STATE SceneState)
-	{ 
-		{
-			std::string debug = typeid(*this).name();
-			debug += " / [CScene::SetSceneState] SceneState = " + g_vecSceneStateNames[SceneState] + "\n";
-			OutputDebugStringA(debug.c_str());
-		}
-		m_SceneState = SceneState; 
-	}
+	void SetSceneState(SCENE_STATE state) { m_SceneState = state; }
+	bool IsSceneRunning() const { return m_SceneState == SCENE_STATE_RUNNING; }
 
-	bool CheckWorkRendering() { return (m_SceneState == SCENE_STATE_RUNNING) || (m_SceneState == SCENE_STATE_PAUSING); }
-	bool CheckWorkUpdating() { return (GetSceneState() == SCENE_STATE_RUNNING); }
-
+	// Cursor Management
 	virtual void SetCursor() { g_bEnableCursor = true; }
 
 	// Object Management
@@ -216,7 +253,7 @@ protected:
 	static std::shared_ptr<CDescirptorHeap> m_pDescriptorHeap;
 
 	// Scene State
-	SCENE_STATE m_SceneState = SCENE_STATE_ALLOCING;
+	SCENE_STATE m_SceneState = SCENE_STATE_RUNNING;
 
 	// RootSignature
 	static ComPtr<ID3D12RootSignature> m_pd3dGraphicsRootSignature;
@@ -252,7 +289,16 @@ public:
 	std::shared_ptr<CPlayer> GetPlayer() { return m_pPlayer; }
 
 public:
-	const std::vector<std::shared_ptr<CGameObject>>& GetTextBlocks() { return m_ppGameObjects[CGameObject::GAMEOBJECT_LAYER::LAYER_TEXT]; }
+	const std::vector<CTextObject*>& GetTextBlocks()
+	{
+		std::vector<CTextObject*> ppVector(m_ppGameObjects[CGameObject::GAMEOBJECT_LAYER::LAYER_TEXT].size());
+		for(auto& obj : m_ppGameObjects[CGameObject::GAMEOBJECT_LAYER::LAYER_TEXT])
+		{
+			if (auto textObj = std::dynamic_pointer_cast<CTextObject>(obj))
+				ppVector.push_back(textObj.get());
+		}
+		return ppVector;
+	}
 
 protected:
 

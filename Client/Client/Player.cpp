@@ -184,7 +184,7 @@ void CPlayer::SetSkin(int nSkinType)
 
 	m_pChilds.clear();
 
-	auto pPlayerModel = CResourceManager::GetInstance().GetModelInfo(m_ModelName[m_nSkinType]);
+	auto pPlayerModel = CResourceManager::Instance().GetModelInfo(m_ModelName[m_nSkinType]);
 	SetChild(pPlayerModel->m_pModelRootObject);
 	m_pSkinnedAnimationController->SettingByModel(pPlayerModel);
 

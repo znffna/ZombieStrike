@@ -23,7 +23,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 #endif
 
 	// Create Objects
-	CResourceManager& resourceManager = CResourceManager::GetInstance();
+	CResourceManager& resourceManager = CResourceManager::Instance();
 
 	if (pd3dRootSignature == nullptr) {
 		pd3dRootSignature = m_pd3dGraphicsRootSignature.Get();
@@ -87,7 +87,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	// UI Object
 	{
-		std::shared_ptr<CMesh> pRectangleMesh = CResourceManager::GetInstance().GetMesh("UI");
+		std::shared_ptr<CMesh> pRectangleMesh = CResourceManager::Instance().GetMesh("UI");
 
 		std::shared_ptr<CShader> pUIShader = std::make_shared<CTextureToViewportShader>(nullptr);
 		pUIShader->CreateShader(pd3dDevice, pd3dRootSignature);
@@ -178,7 +178,6 @@ void CGameScene::CreateFreeCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 
 void CGameScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	SetSceneState(SCENE_STATE_READY_TO_START);
 }
 
 void CGameScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -412,7 +411,7 @@ void CGameScene::ChangeMap(int nMapIndex)
 		RemoveObject(m_pMap);
 	}
 
-	auto pMap = CResourceManager::GetInstance().GetModelInfo(m_strStageNames[m_nStageIndex]);
+	auto pMap = CResourceManager::Instance().GetModelInfo(m_strStageNames[m_nStageIndex]);
 	pMap->m_pModelRootObject->UpdateTransform();
 	m_pMap = pMap->m_pModelRootObject;
 	m_pMap->Update(0.0f);

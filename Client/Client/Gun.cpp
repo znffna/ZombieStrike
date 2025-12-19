@@ -31,7 +31,7 @@ void CGun::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dC
 	m_fBulletRange = 100.0f;
 	m_fReloadTime = 2.0f;
 
-	DeepCopyFromModel(CResourceManager::GetInstance().GetModelInfo(m_strGunName[m_nGunType]));
+	DeepCopyFromModel(CResourceManager::Instance().GetModelInfo(m_strGunName[m_nGunType]));
 }
 
 void CGun::Update(float fTimeElapsed)
@@ -61,7 +61,7 @@ void CGun::SetGunType(int type)
 		break;
 	}
 
-	auto pModel = CResourceManager::GetInstance().GetModelInfo(m_strGunName[m_nGunType]);
+	auto pModel = CResourceManager::Instance().GetModelInfo(m_strGunName[m_nGunType]);
 	DeepCopyFromModel(pModel);
 }
 
@@ -71,14 +71,6 @@ void CGun::UpdateTransform(const DirectX::XMFLOAT4X4* xmf4x4ParentMatrix)
 
 	CGameObject::UpdateTransform(xmf4x4ParentMatrix);
 
-	if(g_bDebugOutput){
-		std::string debug = "Gun UpdateTransform \n";
-		debug += "Position: " + std::to_string(GetPosition().x) + ", " + std::to_string(GetPosition().y) + ", " + std::to_string(GetPosition().z) + "\n";
-		OutputDebugStringA(debug.c_str());
-		if (GetPosition().x + GetPosition().y + GetPosition().z < 1.0f) {
-			std::cout << 1;
-		}
-	}
 }
 
 bool CGun::Fire(const XMFLOAT3& xmf3Direction, FIRE_INFO* pFireInfo)

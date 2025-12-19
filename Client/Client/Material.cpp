@@ -158,11 +158,11 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 #endif
 		if (!bDuplicated)
 		{
-			ppTexture = CResourceManager::GetInstance().GetTexture(pstrTextureName);
+			ppTexture = CResourceManager::Instance().GetTexture(pstrTextureName);
 			if (nullptr == ppTexture)
 			{
 				::LoadTextureFromFile(ppTexture, pd3dDevice, pd3dCommandList, pwstrTextureName, pstrTextureName, nRootParameter);
-				CResourceManager::GetInstance().SetTexture(pstrTextureName, ppTexture);
+				CResourceManager::Instance().SetTexture(pstrTextureName, ppTexture);
 			}
 		}
 		else

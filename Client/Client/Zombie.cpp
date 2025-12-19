@@ -67,7 +67,8 @@ void CZombieObject::Update(float fTimeElapsed)
 		{
 			m_bDied = false; // 좀비가 죽은 상태를 초기화
 			m_fDeathTime = 0.0f; // 죽은 시간 초기화
-			CGameFramework::pGameFramework->GetCurrentScene()->RemoveObject(shared_from_this());
+
+			m_bActive = false; // 좀비 오브젝트 비활성화
 		}
 	}
 }
@@ -86,7 +87,7 @@ void CZombieObject::SetSkin(int nSkinType)
 
 	m_pChilds.clear();
 
-	auto pZombieModel = CResourceManager::GetInstance().GetModelInfo(m_strModelName[m_nSkinType]);
+	auto pZombieModel = CResourceManager::Instance().GetModelInfo(m_strModelName[m_nSkinType]);
 	SetChild(pZombieModel->m_pModelRootObject);
 
 	m_pSkinnedAnimationController->SettingByModel(pZombieModel);

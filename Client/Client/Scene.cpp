@@ -37,8 +37,6 @@ CScene::~CScene()
 	//m_pd3dGraphicsRootSignature.Reset();
 	//m_pd3dComputeRootSignature.Reset();
 
-	// Scene 종료
-	SetSceneState(SCENE_STATE_ENDING);
 }
 
 void CScene::Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
@@ -53,12 +51,7 @@ void CScene::PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 {
 	// Create Default Lights and Materials
 	BuildDefaultLightsAndMaterials();
-
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-	//CreateRootSignature(pd3dRootSignature, pd3dDevice);
-	//CreateDescriptorHeap(pd3dDevice);
-	//CreateStaticShader(pd3dDevice);
 }
 
 void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
@@ -69,10 +62,6 @@ void CScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 {
 	// Fixed Camera
 	CreateFixedCamera(pd3dDevice, pd3dCommandList);
-
-	// Scene 생성 완료
-	//m_SceneState = SCENE_STATE_RUNNING;
-	SetSceneState(SCENE_STATE_READY_TO_START);
 }
 
 void CScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -133,8 +122,8 @@ void CScene::CreateStaticShader(ID3D12Device* pd3dDevice)
 
 void CScene::CreateStaticMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	CResourceManager::GetInstance().SetMesh("CCubeMesh", std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f));
-	//CResourceManager::GetInstance().SetMesh("SphereMesh", std::make_shared<CSphereMesh>(pd3dDevice, pd3dCommandList));
+	CResourceManager::Instance().SetMesh("CCubeMesh", std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f));
+	//CResourceManager::Instance().SetMesh("SphereMesh", std::make_shared<CSphereMesh>(pd3dDevice, pd3dCommandList));
 }
 
 void CScene::ReleaseObjects()
@@ -174,7 +163,7 @@ void CScene::InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	CreateStaticShader(pd3dDevice);
 	CreateStaticMesh(pd3dDevice, pd3dCommandList);
 
-	//CResourceManager::GetInstance().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
+	//CResourceManager::Instance().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 }
 
 void CScene::BuildDefaultLightsAndMaterials()
@@ -243,10 +232,21 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_xmf3Direction = XMFLOAT3(+1.0f, -1.0f, 0.0f);*/
 }
 
+void CScene::ResetScene()
+{
+	// TODO : Object의 전부 삭제 후 생성이 아닌, 각 오브젝트의 Reset 함수 호출로 변경 필요
+	ReleaseObjects();
+
+	auto& CUploadContext = CUploadContext::Instance();
+	Init(CUploadContext.m_pd3dDevice, CUploadContext.m_pd3dGraphicCommandList, m_pd3dGraphicsRootSignature.Get());
+}
+
 void CScene::PopScene()
 {
-	SetSceneState(SCENE_STATE_ENDING);
-	CGameFramework::GetInstance()->PopScene();
+	SceneRequest newReq;
+	newReq.Type = ESceneCommandType::Pop;
+
+	CGameFramework::Instance()->RequestSceneChange(newReq);
 }
 
 void CScene::AddObject(const std::shared_ptr<CGameObject>& pObject)
@@ -310,7 +310,7 @@ void CScene::SetPlayer(std::shared_ptr<CPlayer> pPlayer)
 
 void CScene::Update(float deltaTime)
 {
-	if (false == CheckWorkUpdating()) return;
+	if (false == IsSceneRunning()) return;
 
 	m_fElapsedTime = deltaTime;
 
@@ -328,7 +328,7 @@ void CScene::Update(float deltaTime)
 bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	// Scene is not running or pausing
-	if (false == CheckWorkRendering()){	return false;}
+	if (false == IsSceneRunning()){	return false;}
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature.Get());
 
 	if (m_pDescriptorHeap) {
@@ -352,7 +352,7 @@ bool CScene::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	// Scene is not running or pausing
-	if (false == CheckWorkRendering())	{return (false);}
+	if (false == IsSceneRunning())	{return (false);}
 
 	// Set Descriptor Heap
 	/*ID3D12DescriptorHeap* ppHeaps[] = { m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap.Get() };

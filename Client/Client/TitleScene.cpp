@@ -16,7 +16,7 @@ void CTitleScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 		pd3dRootSignature = m_pd3dGraphicsRootSignature.Get();
 	}
 
-	std::shared_ptr<CMesh> pRectangleMesh = CResourceManager::GetInstance().GetMesh("UI");
+	std::shared_ptr<CMesh> pRectangleMesh = CResourceManager::Instance().GetMesh("UI");
 	
 	std::shared_ptr<CShader> pUIShader = std::make_shared<CTextureToViewportShader>(nullptr);
 	pUIShader->CreateShader(pd3dDevice, pd3dRootSignature);
@@ -143,10 +143,15 @@ void CTitleScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 					//TODO : 해당 로직을 TitleScene에서 이미지를 띄우고 지우는 로직으로 변경할 예정
 					auto ip = StringToWString(NetworkingClient::Instance().LoadIPAddress());
 					std::wstring str = L" 서버에 연결할 수 없습니다. (" + ip + L")";
-					MessageBox(hWnd, str.c_str(), L"연결 실패", MB_OK | MB_ICONERROR);
+					OutputDebugStringW(str.c_str());
 					return;
 				}
-				CGameFramework::pGameFramework->AddScene("COnlineScene");
+
+				SceneRequest newReq;
+				newReq.Type = ESceneCommandType::Push;
+				newReq.SceneTag = TypeTag<COnlineScene>{};
+				CGameFramework::Instance()->RequestSceneChange(newReq);
+
 			});
 			connectThread.detach();  // 비동기 연결
 		}

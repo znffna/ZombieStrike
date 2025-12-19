@@ -411,7 +411,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			// Use Collider Shader
 			CMaterial::m_pColliderShader->OnPrepareRender(pd3dCommandList, 0, false);
 			
-			CResourceManager::GetInstance().GetMesh("CCubeMesh")->Render(pd3dCommandList);
+			CResourceManager::Instance().GetMesh("CCubeMesh")->Render(pd3dCommandList);
 		}
 	}
 
@@ -763,7 +763,7 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 
 bool CGameObject::DeepCopyFromModel(const std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject)
 {
-	if (auto pModel = CResourceManager::GetInstance().GetModelInfo(strModelName)) {
+	if (auto pModel = CResourceManager::Instance().GetModelInfo(strModelName)) {
 		return DeepCopyFromModel(pModel, pGameObject);
 	}
 	return false;
@@ -1281,11 +1281,11 @@ CCubeObject::~CCubeObject()
 void CCubeObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	// Mesh
-	auto pCubeMesh = CResourceManager::GetInstance().GetMesh("CCubeMesh");
+	auto pCubeMesh = CResourceManager::Instance().GetMesh("CCubeMesh");
 	if (nullptr == pCubeMesh)
 	{
 		pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
-		CResourceManager::GetInstance().SetMesh("CCubeMesh", pCubeMesh);
+		CResourceManager::Instance().SetMesh("CCubeMesh", pCubeMesh);
 	}
 	SetMesh(pCubeMesh);
 
@@ -1546,7 +1546,7 @@ ComPtr<IDWriteTextFormat> UILayer::CreateTextFormat(WCHAR* pszFontName, float fF
 	return(pdwDefaultTextFormat);
 }
 
-void UILayer::Render(UINT nFrame, const std::vector<std::shared_ptr<CGameObject>> &vecTextObjects)
+void UILayer::Render(UINT nFrame, const std::vector<CTextObject*>& vecTextObjects)
 {
 	ID3D11Resource* ppResources[] = { m_ppd3d11WrappedRenderTargets[nFrame] };
 
@@ -1557,9 +1557,8 @@ void UILayer::Render(UINT nFrame, const std::vector<std::shared_ptr<CGameObject>
 	// vecTextObjects À» ÀüºÎ Draw
 	for (auto& pTextObject : vecTextObjects)
 	{
-		if (auto pText = dynamic_pointer_cast<CTextObject>(pTextObject))
 		{
-			TextBlock pBlock = pText->GetTextBlock();
+			TextBlock pBlock = pTextObject->GetTextBlock();
 			if (pBlock.IsActive()) 
 				m_pd2dDeviceContext->DrawText(
 					pBlock.m_pstrText.c_str(),

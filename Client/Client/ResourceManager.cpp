@@ -72,7 +72,7 @@ inline CLoadedModelInfo* CResourceManager::GetModelInfo(const std::string& name)
 		*/
 	}
 
-	uploadContext.ExecuteUploadCommandList();
+	uploadContext.ExecuteAndReset();
 	return nullptr;
 }
 

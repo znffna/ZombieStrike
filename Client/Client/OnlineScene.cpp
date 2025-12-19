@@ -26,7 +26,6 @@ void COnlineScene::ReleaseUploadBuffers()
 
 void COnlineScene::StartScene()
 { 
-	CScene::StartScene();
 }
 
 #include "GameFramework.h"
@@ -100,7 +99,7 @@ void COnlineScene::ProcessReadQueuePacket()
 {
 	auto& readQueue = NetworkingClient::Instance().GetReadQueue();
 
-	if (false == CheckWorkUpdating()) return;
+	if (false == IsSceneRunning()) return;
 
 	for (auto& packet : readQueue) {
 		ProcessPacket(packet.header());

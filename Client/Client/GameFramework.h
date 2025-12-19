@@ -13,6 +13,7 @@
 #include "GameScene.h"
 #include "LoadingScene.h"
 #include "OnlineScene.h"
+#include "TitleScene.h"
 
 struct CB_FRAMEWORK_INFO
 {
@@ -33,7 +34,7 @@ public:
 	CGameFramework();
 	~CGameFramework();
 
-	static CGameFramework* GetInstance() { return pGameFramework; }
+	static CGameFramework* Instance() { return pGameFramework; }
 
 	bool OnCreate(HINSTANCE hInstance, HWND hMainWnd);
 	void OnDestroy();
@@ -42,14 +43,12 @@ public:
 	void ChangeSwapChainState();
 	void Resize(int width, int height);
 	void ReallocateSwapChain(int width, int height);
+
 	void BuildDefaultObjects();
+	void ReleaseDefaultObjects();
+
 	void BuildObjects();
-
-	void BuildTitleScene();
-	void BuildTestObjects();
-
 	void BuildUILayer();
-	void CreateSceneOnAnotherThread(std::string sceneName);
 
 	void ProcessInput(CScene* pScene = nullptr);
 	void AnimateObjects(CScene* pScene);
@@ -68,11 +67,7 @@ public:
 	static CGameFramework* pGameFramework;
 	static ComPtr<ID3D12GraphicsCommandList> GetCommandList() { return pGameFramework->m_pd3dCommandList[pGameFramework->m_nSwapChainBufferIndex]; }
 
-	// Scene Management
-	void AddScene(std::string sceneName);
-	void PopScene();
-	std::shared_ptr<CScene> GetCurrentScene() { if(m_Scenes.size()) return m_Scenes.back(); }
-
+	
 private:
 	void CreateDirect3DDevice();
 	void CreateCommandQueueAndList();
@@ -81,7 +76,7 @@ private:
 	void CreateRenderTargetViews();
 	void CreateDepthStencilView();
 
-	bool isWorkd = true;
+	bool isWorked = false;
 
 	HINSTANCE m_hInstance;
 	HWND m_hWnd;
@@ -110,9 +105,6 @@ private:
 	std::array<ComPtr<ID3D12CommandAllocator>, m_nSwapChainBuffers>		m_pd3dCommandAllocator;
 	std::array<ComPtr<ID3D12GraphicsCommandList>, m_nSwapChainBuffers>	m_pd3dCommandList;
 
-	ComPtr<ID3D12CommandAllocator>							m_pd3dSceneMadeCommandAllocator;
-	ComPtr<ID3D12GraphicsCommandList>						m_pd3dSceneMadeCommandList;
-
 	ComPtr<ID3D12Fence>										m_pd3dFence;
 	UINT64													m_nFenceValueForSignal;
 	std::array<UINT64, m_nSwapChainBuffers>					m_nFenceValues;
@@ -129,7 +121,7 @@ private:
 	CGameTimer												m_GameTimer;
 
 	// Scene
-	std::list<std::shared_ptr<CScene>>						m_Scenes;
+	std::vector<std::unique_ptr<CScene>>					m_Scenes;
 	std::unique_ptr<CScene>									m_pLoadingScene;  // Loading Scene은 Stack이 비었을 경우에만 사용(이는, Render State인 Scene이 없을 때도 포함한다)
 
 	POINT m_ptOldCursorPos;
@@ -143,9 +135,114 @@ protected:
 	POINTF GetTexturePosition(int x, int y);
 	void RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList);
 
+	// UI
 protected:
 	std::shared_ptr<UILayer> m_pUILayer; // UI Layer for DirectWrite
 public:
 	std::shared_ptr<UILayer> GetUILayer() { return m_pUILayer; }
+
+private:
+	// Scene Creation on Another Thread
+	std::thread												m_SceneMadeThread;
+
+	HANDLE													m_hSceneMadeEvent;
+	std::atomic_bool										m_SceneThreadRunning{ false };
+
+	std::optional<SceneTypeTag>								m_PendingSceneTag;
+	std::atomic<ESceneBuildState>							m_SceneBuildState{ ESceneBuildState::Idle };
+
+	std::unique_ptr<CScene> m_BuiltScene;
+	std::mutex m_BuiltSceneMutex;
+
+	// Scene Transition
+	std::atomic<ESceneRequestState>							 m_RequestState{ ESceneRequestState::Idle };
+	std::optional<SceneRequest>								 m_PendingRequest;
+
+
+public:
+	// Scene 변경 요청 등록
+	void RequestSceneChange(SceneRequest newReq)
+	{
+		// 이미 처리 중이면 병합
+		if (m_RequestState.load() != ESceneRequestState::Idle)
+		{
+			// 기존 요청 덮어쓰기 (마지막 입력만 유지)
+			m_PendingRequest = newReq;
+			return;
+		}
+
+		// 새 요청 등록
+		m_PendingRequest = newReq;
+		m_RequestState.store(ESceneRequestState::Pending);
+	}
+	
+private:
+	// Scene 변경 요청 처리 함수
+	void ProcessSceneRequest()
+	{
+		const auto& PendingRequest = *m_PendingRequest;
+
+		switch (PendingRequest.Type)
+		{
+		case ::ESceneCommandType::Push:
+			// Push Scene
+			RequestBuildScene(*PendingRequest.SceneTag);
+			break;
+		case ::ESceneCommandType::Pop:
+			// Pop Scene
+			PopScene();
+			break;
+		}
+
+		// 요청 처리 완료
+		m_PendingRequest.reset();
+	}
+
+	template<typename T>
+	void PushScene()
+	{
+		// 아래는 Request를 처리할때의 코드.
+		SceneTypeTag tag = TypeTag<T>{};
+		RequestBuildScene(tag);
+	}
+	void RequestBuildScene(const SceneTypeTag& tag)
+	{
+		if (m_SceneBuildState.load() != ESceneBuildState::Idle)
+			return;
+
+		m_PendingSceneTag = tag;
+		m_SceneBuildState.store(ESceneBuildState::Requested, std::memory_order_release);
+
+		SetEvent(m_hSceneMadeEvent);
+	}
+	void PopScene();
+
+	// Scene Management 
+	template <typename T>
+	std::unique_ptr<T> BuildScene(CUploadContext& uploadContext)
+	{
+		// 여기서 Scene을 및 각종 오브젝트들을 생성한다.
+		auto pScene = std::make_unique<T>();
+		pScene->Init(uploadContext.m_pd3dDevice, uploadContext.m_pd3dGraphicCommandList);
+
+		// ------------- 
+		uploadContext.ExecuteAndReset();
+		pScene->ReleaseUploadBuffers();
+		return pScene;
+	}
+
+	// 현재 Scene 반환
+	CScene* GetCurrentScene() { if (m_Scenes.size()) return m_Scenes.back().get(); else return m_pLoadingScene.get(); }
+	
+	void BuildSceneMadeThread(); // Scene 생성 스레드 함수
+	void StopSceneMadeThread();  // Scene 생성 스레드 종료
+	void UpdateSceneTransition();
+	void HandleSceneBuildState(); // Scene 생성상태 처리
+
+private:
+	std::vector<CTextObject> m_DebugTextObjects; // 디버그용 텍스트 오브젝트들
+
+	void CreateDebugTextObjects();
+	void ReleaseDebugTextObjects();
 };
 

@@ -14,6 +14,7 @@ public:
 	CUploadContext() {};
 	~CUploadContext() {};
 
+	// 전역 리소스 업로드 컨텍스트
 	static CUploadContext& Instance()
 	{
 		static CUploadContext instance;
@@ -65,7 +66,7 @@ public:
 		m_bIsCreated = false;
 	}
 
-	void ExecuteUploadCommandList()
+	void ExecuteAndReset()
 	{
 		if (!m_bIsCreated) return;
 
@@ -100,7 +101,7 @@ private:
 	~CResourceManager() {}
 
 public:
-	static CResourceManager& GetInstance() {
+	static CResourceManager& Instance() {
 		static CResourceManager instance;
 		return instance;
 	}

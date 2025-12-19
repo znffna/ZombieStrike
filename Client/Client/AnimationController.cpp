@@ -162,7 +162,7 @@ void CAnimationController::SettingByModel(CLoadedModelInfo* pModel, int nAnimati
 		std::wstring name = L"Skinning Bone Transforms [" + std::to_wstring(i) + L"]";
 		m_ppd3dcbSkinningBoneTransforms[i]->SetName(name.c_str());
 	}
-	CUploadContext.ExecuteUploadCommandList();
+	CUploadContext.ExecuteAndReset();
 
 
 	m_pAnimationTracks.resize(m_nAnimationTracks);

@@ -38,6 +38,14 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <memory>       // std::unique_ptr
+#include <variant>      // std::variant, std::visit
+#include <optional>     // std::optional
+#include <atomic>       // std::atomic, std::atomic_bool
+#include <thread>       // std::thread
+#include <mutex>        // std::mutex, std::lock_guard
+#include <type_traits>  // std::is_base_of_v
+
 // C++ STL Algorithms
 #include <algorithm>
 #include <thread>
@@ -150,7 +158,7 @@ extern bool g_bWindowActive; // 전역 또는 멤버 변수로 상태 저장
 extern int gnCurrentBullets;
 extern bool g_bRenderCollider;
 
-extern bool g_bDebugOutput;
+extern bool g_bDebugOutput; // 디버그 출력 활성화 여부
 
 // Window Size
 extern UINT WINDOW_WIDTH;
@@ -552,3 +560,4 @@ namespace WindowCursor
 		return POINT{ cx, cy };
 	}
 }
+
