@@ -159,6 +159,7 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="NetworkClient.h" />
+    <ClInclude Include="TestScene.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TitleScene.h" />
     <ClInclude Include="Transform.h" />
@@ -192,6 +193,7 @@
     <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="NetworkClient.cpp" />
+    <ClCompile Include="TestScene.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TitleScene.cpp" />
     <ClCompile Include="Transform.cpp" />

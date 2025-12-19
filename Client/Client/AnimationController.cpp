@@ -118,9 +118,7 @@ void CAnimationController::Clear()
 	m_fTime = 0.0f;
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
-		if (m_ppd3dcbSkinningBoneTransforms[i].resource) {
-			m_ppd3dcbSkinningBoneTransforms[i].Release();
-		}
+		if (m_ppd3dcbSkinningBoneTransforms[i]) m_ppd3dcbSkinningBoneTransforms[i]->Release();
 		if (m_ppcbxmf4x4MappedSkinningBoneTransforms[i]) m_ppcbxmf4x4MappedSkinningBoneTransforms[i] = NULL;
 	}
 
@@ -153,15 +151,19 @@ void CAnimationController::SettingByModel(CLoadedModelInfo* pModel, int nAnimati
 
 	m_pRootMotionObject = pModel->m_pAnimationRootObject;
 
+	// Create Constant Buffers for Skinned Meshes
+	auto& CUploadContext = CUploadContext::Instance();
 	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256ÀÇ ¹è¼ö
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
-		m_ppd3dcbSkinningBoneTransforms[i] = CResourceManager::GetInstance().GetSkinningBoneTransforms();
-		m_ppd3dcbSkinningBoneTransforms[i].resource->Map(0, NULL, (void**)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
+		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(CUploadContext.m_pd3dDevice, CUploadContext.m_pd3dGraphicCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+		m_ppd3dcbSkinningBoneTransforms[i]->Map(0, NULL, (void**)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
 
 		std::wstring name = L"Skinning Bone Transforms [" + std::to_wstring(i) + L"]";
-		m_ppd3dcbSkinningBoneTransforms[i].resource->SetName(name.c_str());
+		m_ppd3dcbSkinningBoneTransforms[i]->SetName(name.c_str());
 	}
+	CUploadContext.ExecuteUploadCommandList();
+
 
 	m_pAnimationTracks.resize(m_nAnimationTracks);
 	for (int i = 0; i < m_nAnimationTracks; i++)
@@ -182,7 +184,7 @@ void CAnimationController::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3d
 {
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
-		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i].resource;
+		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i];
 		m_ppSkinnedMeshes[i]->m_pcbxmf4x4MappedSkinningBoneTransforms = m_ppcbxmf4x4MappedSkinningBoneTransforms[i];
 	}
 }

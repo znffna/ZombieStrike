@@ -14,7 +14,6 @@
 #include "LoadingScene.h"
 #include "OnlineScene.h"
 
-
 struct CB_FRAMEWORK_INFO
 {
 	float					m_fCurrentTime;
@@ -27,8 +26,6 @@ struct CB_FRAMEWORK_INFO
 	float					m_fBias;
 	//float					m_nPadding;
 };
-
-
 
 class CGameFramework
 {
@@ -45,7 +42,12 @@ public:
 	void ChangeSwapChainState();
 	void Resize(int width, int height);
 	void ReallocateSwapChain(int width, int height);
+	void BuildDefaultObjects();
 	void BuildObjects();
+
+	void BuildTitleScene();
+	void BuildTestObjects();
+
 	void BuildUILayer();
 	void CreateSceneOnAnotherThread(std::string sceneName);
 

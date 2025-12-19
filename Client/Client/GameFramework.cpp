@@ -68,8 +68,13 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 	//CoInitialize(nullptr);
 
+	// 전역 변수들 생성 및 초기화
+	BuildDefaultObjects();
+
 	// 씬들을 생성한다.
-	BuildObjects();
+	// BuildObjects();
+	BuildTitleScene();
+	BuildTestObjects();
 
 	m_GameTimer.Reset();
 
@@ -80,6 +85,8 @@ void CGameFramework::OnDestroy()
 {
 	if (!isWorkd) return;
 	isWorkd = false;
+
+	CUploadContext::Instance().Destroy();
 
 	// 남은 Command List가 없는지 확인
 	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
@@ -124,6 +131,7 @@ void CGameFramework::OnDestroy()
 #ifdef _DEBUG
 	if (m_pd3dDebugController) m_pd3dDebugController.Reset();
 #endif
+
 }
 
 void CGameFramework::CreateDirect3DDevice()
@@ -458,19 +466,27 @@ void CGameFramework::ReallocateSwapChain(int width, int height)
 #endif
 }
 
-void CGameFramework::BuildObjects()
+void CGameFramework::BuildDefaultObjects()
 {
 #ifdef _WITH_DIRECT_WRITE_UI
 	BuildUILayer();
 #endif
+	CUploadContext::Instance().Create(m_pd3dDevice.Get(), m_pd3dCommandQueue.Get());
 
+	auto& CUploadContext = CUploadContext::Instance();
+
+	CScene::InitStaticMembers(CUploadContext.m_pd3dDevice, CUploadContext.m_pd3dGraphicCommandList);
+	CResourceManager::GetInstance().Initialize(CScene::GetGraphicRootSignature());
+	CreateShaderVariables();
+
+	CUploadContext.ExecuteUploadCommandList();
+}
+
+void CGameFramework::BuildObjects()
+{
 	m_pd3dCommandAllocator[m_nSwapChainBufferIndex]->Reset();
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->Reset(m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get(), nullptr);
 
-	// 모든 씬이 공유할 요소 생성
-	CScene::InitStaticMembers(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
-	CResourceManager::GetInstance().Initialize(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get(), nullptr);
-	CResourceManager::GetInstance().SetCommandList(m_pd3dSceneMadeCommandList.Get());
 	// Title Scene 생성
 	std::shared_ptr<CScene> pTitleScene = std::make_unique<CTitleScene>();
 	pTitleScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
@@ -493,17 +509,12 @@ void CGameFramework::BuildObjects()
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->Reset(m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get(), nullptr);
 	
 	// Framework 정보 생성 (Shader에 전달할 정보)
-	CreateShaderVariables();
-
-	// GameScene 생성
-	//AddScene("CGameScene");
 
 	// LoadingScene 생성
 	std::unique_ptr<CScene> pLoadingScene = std::make_unique<CLoadingScene>();
 	pLoadingScene->Init(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
 	pLoadingScene->SetSceneState(SCENE_STATE_RUNNING);
 	m_pLoadingScene = std::move(pLoadingScene);
-	
 
 	// Command List에 대한 명령들을 종료
 	CloseCommandList(m_pd3dCommandList[m_nSwapChainBufferIndex].Get());
@@ -516,6 +527,32 @@ void CGameFramework::BuildObjects()
 	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
 
 	if (m_pLoadingScene) m_pLoadingScene->ReleaseUploadBuffers();
+}
+
+void CGameFramework::BuildTitleScene()
+{
+	auto& uploadContext = CUploadContext::Instance();
+
+	std::shared_ptr<CScene> pTitleScene = std::make_unique<CTitleScene>();
+	pTitleScene->Init(uploadContext.m_pd3dDevice, uploadContext.m_pd3dGraphicCommandList);
+	pTitleScene->SetSceneState(SCENE_STATE_RUNNING);
+	m_Scenes.push_back(std::move(pTitleScene));
+
+	uploadContext.ExecuteUploadCommandList();
+}
+
+void CGameFramework::BuildTestObjects()
+{
+	auto& uploadContext = CUploadContext::Instance();
+
+	// 여기서 Scene을 및 각종 오브젝트들을 생성한다.
+	std::shared_ptr<CScene> pTitleScene = std::make_unique<CTitleScene>();
+	pTitleScene->Init(uploadContext.m_pd3dDevice, uploadContext.m_pd3dGraphicCommandList);
+	pTitleScene->SetSceneState(SCENE_STATE_RUNNING);
+	m_Scenes.push_back(std::move(pTitleScene));
+
+	// ------------- 
+	uploadContext.ExecuteUploadCommandList();
 }
 
 void CGameFramework::BuildUILayer()
@@ -691,7 +728,9 @@ void CGameFramework::AdvanceFrame()
 #endif
 	::ExecuteCommandList(pd3dCommandList, m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
 	
+
 #ifdef _WITH_DIRECT_WRITE_UI
+	// Text 출력
 	std::vector <std::shared_ptr<CGameObject>> textBlocks = pCurrentScene->GetTextBlocks();
 	if (g_bWindowActive && g_bEnableCursor)
 	{
@@ -908,7 +947,7 @@ void CGameFramework::ProcessInput(CScene* pScene)
 void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	// 마우스 메시지 처리
-	{
+	if(!m_Scenes.empty()){
 		auto& scene = m_Scenes.back();
 		if(scene != nullptr && scene->CheckWorkUpdating()){
 			scene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);

@@ -147,7 +147,7 @@ public:
 	int m_nSkinnedMeshes = 0;
 	std::vector<std::shared_ptr<CSkinnedMesh>> m_ppSkinnedMeshes; //[SkinnedMeshes], Skinned Mesh Cache
 
-	std::vector<CResource> m_ppd3dcbSkinningBoneTransforms; //[SkinnedMeshes]
+	std::vector<ComPtr<ID3D12Resource>> m_ppd3dcbSkinningBoneTransforms; //[SkinnedMeshes]
 	std::vector<XMFLOAT4X4*> m_ppcbxmf4x4MappedSkinningBoneTransforms; //[SkinnedMeshes]
 
 public:
