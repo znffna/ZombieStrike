@@ -656,8 +656,11 @@ private:
 	TextBlock m_TextBlock{};
 
 public:
-	CTextObject() : CGameObject() {};
+	CTextObject() : CGameObject() { SetName(GetDefaultName()); }
 	virtual ~CTextObject() {};
+
+	virtual std::string GetDefaultName() override { return "CTextObject"; }
+	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_TEXT; }
 
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr, bool bDepthWrite = false) override {};
 	virtual TextBlock GetTextBlock() { return m_TextBlock; };

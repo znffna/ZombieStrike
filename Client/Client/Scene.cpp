@@ -62,6 +62,7 @@ void CScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 {
 	// Fixed Camera
 	CreateFixedCamera(pd3dDevice, pd3dCommandList);
+	SetSceneState(SCENE_STATE_RUNNING);
 }
 
 void CScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -243,10 +244,7 @@ void CScene::ResetScene()
 
 void CScene::PopScene()
 {
-	SceneRequest newReq;
-	newReq.Type = ESceneCommandType::Pop;
-
-	CGameFramework::Instance()->RequestSceneChange(newReq);
+	CGameFramework::Instance()->RequestSceneChange(CPopScene());
 }
 
 void CScene::AddObject(const std::shared_ptr<CGameObject>& pObject)
@@ -947,6 +945,9 @@ void CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam,
 		m_bMouseLButtonDown = false;
 		break;
 	}
+
+
+
 }
 
 BoundingBox CScene::CalculateBoundingBox()

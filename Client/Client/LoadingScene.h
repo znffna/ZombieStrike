@@ -12,6 +12,8 @@ public:
 	CLoadingScene();
 	virtual ~CLoadingScene();
 
+	virtual const std::wstring& GetSceneName() const override { static std::wstring scenename = L"CLoadingScene"; return scenename; }
+
 	// Scene Initialization / Release
 	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
 	virtual void ReleaseObjects() override;

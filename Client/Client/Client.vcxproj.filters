@@ -146,6 +146,9 @@
     <ClInclude Include="GaugeBar.h">
       <Filter>소스 파일\Game\GameObject</Filter>
     </ClInclude>
+    <ClInclude Include="TestScene.h">
+      <Filter>소스 파일\Game\Scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp">
@@ -240,6 +243,9 @@
     </ClCompile>
     <ClCompile Include="GaugeBar.cpp">
       <Filter>소스 파일\Game\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="TestScene.cpp">
+      <Filter>소스 파일\Game\Scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

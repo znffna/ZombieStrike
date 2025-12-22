@@ -46,32 +46,33 @@ enum class ESceneRequestState
 	Processing   // Scene 생성/전환 중
 };
 
-enum class ESceneCommandType
-{
-	Push,  // 새로운 Scene을 Stack에 추가
-	Pop,   // 현재 Scene을 Stack에서 제거
-};
-
 class CLoadingScene;
 class CGameScene;
 class CTitleScene;
 class COnlineScene;
+class CTestScene;
 
 using SceneTypeTag = std::variant<
 	TypeTag<CLoadingScene>,
 	TypeTag<CGameScene>,
 	TypeTag<CTitleScene>,
-	TypeTag<COnlineScene>
+	TypeTag<COnlineScene>,
+	TypeTag<CTestScene>
 >;
 
-struct SceneRequest
+struct CPushScene
 {
-	ESceneCommandType Type;                 // Push / Pop / Change
-	std::optional<SceneTypeTag> SceneTag;   // 필요 시
+	SceneTypeTag SceneTag;
 };
 
+struct CPopScene
+{
+};
 
-
+using SceneRequest = std::variant<
+	CPushScene,
+	CPopScene
+>;
 
 
 struct INPUT_PARAMETER
@@ -159,6 +160,8 @@ public:
 	CScene();
 	virtual ~CScene();
 
+	virtual const std::wstring& GetSceneName() const { static std::wstring scenename = L"CScene"; return scenename; }
+
 	// Scene Initialization / Release
 	void Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
 	virtual void PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
@@ -178,6 +181,12 @@ public:
 	static ID3D12RootSignature* GetGraphicRootSignature() {return m_pd3dGraphicsRootSignature.Get();	};
 	
 	// Scene Management
+	template<typename T>
+	void PushScene()
+	{
+		CGameFramework::Instance()->RequestSceneChange(CPushScene{ TypeTag<T>{} });
+	};
+
 	virtual void ResetScene();
 	virtual void PopScene();
 
@@ -289,9 +298,10 @@ public:
 	std::shared_ptr<CPlayer> GetPlayer() { return m_pPlayer; }
 
 public:
-	const std::vector<CTextObject*>& GetTextBlocks()
+	const std::vector<CTextObject*> GetTextBlocks()
 	{
-		std::vector<CTextObject*> ppVector(m_ppGameObjects[CGameObject::GAMEOBJECT_LAYER::LAYER_TEXT].size());
+		std::vector<CTextObject*> ppVector;
+		ppVector.reserve(m_ppGameObjects[CGameObject::GAMEOBJECT_LAYER::LAYER_TEXT].size());
 		for(auto& obj : m_ppGameObjects[CGameObject::GAMEOBJECT_LAYER::LAYER_TEXT])
 		{
 			if (auto textObj = std::dynamic_pointer_cast<CTextObject>(obj))

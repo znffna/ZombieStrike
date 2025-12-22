@@ -11,6 +11,8 @@ public:
 	COnlineScene();
 	virtual ~COnlineScene();
 
+	virtual const std::wstring& GetSceneName() const override { static std::wstring scenename = L"COnlineScene"; return scenename; }
+
 	// Scene Override
 	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
 	virtual void PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;

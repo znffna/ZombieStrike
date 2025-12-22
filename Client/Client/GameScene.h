@@ -14,6 +14,8 @@ public:
 	CGameScene();
 	virtual ~CGameScene();
 
+	virtual const std::wstring& GetSceneName() const override { static std::wstring scenename = L"CGameScene"; return scenename; }
+	
 	// Scene Initialization / Release
 	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
 	void CreateFreeCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);

@@ -147,10 +147,7 @@ void CTitleScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 					return;
 				}
 
-				SceneRequest newReq;
-				newReq.Type = ESceneCommandType::Push;
-				newReq.SceneTag = TypeTag<COnlineScene>{};
-				CGameFramework::Instance()->RequestSceneChange(newReq);
+				CGameFramework::Instance()->RequestSceneChange(CPushScene{ TypeTag<COnlineScene>{}});
 
 			});
 			connectThread.detach();  // 비동기 연결

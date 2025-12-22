@@ -70,7 +70,6 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	// 전역 변수들 생성 및 초기화
 	BuildDefaultObjects();
-	BuildSceneMadeThread();
 
 	m_pLoadingScene = std::move(BuildScene<CLoadingScene>(CUploadContext::Instance()));
 	isWorked = true;
@@ -467,6 +466,8 @@ void CGameFramework::BuildDefaultObjects()
 	CUploadContext.ExecuteAndReset();
 
 	CreateDebugTextObjects();
+
+	BuildSceneMadeThread();
 }
 
 void CGameFramework::ReleaseDefaultObjects()
@@ -487,7 +488,10 @@ void CGameFramework::BuildObjects()
 {
 	auto& CUploadContext = CUploadContext::Instance();
 
-	m_Scenes.push_back(std::move(BuildScene<CTitleScene>(CUploadContext)));
+	// RequestBuildScene<CTitleScene>();
+	RequestBuildScene<CTestScene>();
+
+	// m_Scenes.push_back(std::move(BuildScene<CTitleScene>(CUploadContext)));
 }
 
 
@@ -524,7 +528,10 @@ void CGameFramework::AdvanceFrame()
 	// 이번 프레임에 작업할	Scene 결정
 	UpdateSceneTransition();
 
-	CScene* pCurrentScene{ GetCurrentScene() };
+	CScene* pCurrentScene{};
+	// 현재 Scene 요청이 들어온 경우 로딩 Scene을 현재 Scene으로 설정
+	const ESceneRequestState requestState = m_RequestState.load(std::memory_order_acquire);
+	requestState == ESceneRequestState::Processing ? pCurrentScene = m_pLoadingScene.get() : pCurrentScene = GetCurrentScene();
 
 	// 현재 Scene이 없으면 종료
 	if(nullptr == pCurrentScene)
@@ -586,6 +593,7 @@ void CGameFramework::AdvanceFrame()
 		textBlocks.push_back(m_pCursorSprite->m_pTextBlock.get());
 	}
 	if (g_bDebugOutput) {
+		UpdateDebugTextObjects();
 		for (auto& pDebugText : m_DebugTextObjects)
 		{
 			textBlocks.push_back(&pDebugText);
@@ -802,8 +810,7 @@ void CGameFramework::ProcessInput(CScene* pScene)
 void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	// 마우스 메시지 처리
-	if(!m_Scenes.empty()){
-		auto& scene = m_Scenes.back();
+	if(auto scene = GetCurrentScene()){
 		if(scene != nullptr && scene->IsSceneRunning()){
 			scene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
 		}
@@ -951,6 +958,8 @@ void CGameFramework::BuildSceneMadeThread()
 		return;
 	}
 
+	OutputDebugString(L"Scene 생성 스레드 시작.\n");
+
 	// Scene 생성 스레드 시작
 	m_SceneMadeThread = std::thread([this]() {
 
@@ -1033,6 +1042,7 @@ void CGameFramework::StopSceneMadeThread()
 
 void CGameFramework::UpdateSceneTransition()
 {
+	// 씬 빌드 상태에 따른 처리
 	HandleSceneBuildState();
 
 	// 씬 전환 상태에 따른 처리
@@ -1053,8 +1063,6 @@ void CGameFramework::UpdateSceneTransition()
 
 	}
 
-	m_PendingRequest.reset();
-	m_RequestState.store(ESceneRequestState::Processing);
 }
 
 void CGameFramework::HandleSceneBuildState()
@@ -1076,10 +1084,11 @@ void CGameFramework::HandleSceneBuildState()
 
 	case ESceneBuildState::Completed:
 		m_Scenes.push_back(std::move(m_BuiltScene));
+		ClearSceneRequest();
 		break;
-
 	case ESceneBuildState::Failed:
 		m_BuiltScene.reset();
+		ClearSceneRequest();
 		break;
 	}
 }
@@ -1088,13 +1097,14 @@ void CGameFramework::CreateDebugTextObjects()
 {
 	int nDebugTextObjects = 10;
 	m_DebugTextObjects.reserve(nDebugTextObjects);
+	int FontSize = m_nWndClientHeight / 40.0f;
 	for (int i = 0; i < nDebugTextObjects; i++) {
 		CTextObject pDebugTextObject;
 		pDebugTextObject.SetText(L"Debug Info");
 		pDebugTextObject.SetActive(true);
-		pDebugTextObject.SetSize(0.0f, 0.0f, (float)m_nWndClientWidth, (float)m_nWndClientHeight / nDebugTextObjects * 0.5f * i, false);
+		pDebugTextObject.SetSize(0.0f, (FontSize) * i, (float)m_nWndClientWidth, (float)m_nWndClientHeight , false);
 		pDebugTextObject.SetFont(L"Consolas");
-		pDebugTextObject.SetFontSize(m_nWndClientHeight / 40.0f);
+		pDebugTextObject.SetFontSize(FontSize);
 		pDebugTextObject.SetBrush(D2D1::ColorF(D2D1::ColorF::LimeGreen, 1.0f));
 		m_DebugTextObjects.push_back(pDebugTextObject);
 	}
@@ -1106,6 +1116,13 @@ void CGameFramework::CreateDebugTextObjects()
 			nIndex++;
 		}
 	};
+}
+
+void CGameFramework::UpdateDebugTextObjects()
+{
+	m_DebugTextObjects[0].SetText(L"Debug Info");
+	m_DebugTextObjects[1].SetText(L"Scene Size :" + std::to_wstring(m_Scenes.size()));
+	m_DebugTextObjects[2].SetText(L"Current Scene Name :" + GetCurrentScene()->GetSceneName());
 }
 
 void CGameFramework::ReleaseDebugTextObjects()
