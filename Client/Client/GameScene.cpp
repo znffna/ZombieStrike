@@ -69,7 +69,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	auto pMap = resourceManager.GetModelInfo("Stage1");
 	pMap->m_pModelRootObject->UpdateTransform();
 	m_pMap = pMap->m_pModelRootObject;
-	m_pMap->SetLayer(CGameObject::LAYER_ENVIRONMENT);
+	m_pMap->SetLayer(LAYER_ENVIRONMENT);
 	m_pMap->UpdateBBCache();
 	AddObject(m_pMap);
 
@@ -204,35 +204,8 @@ void CGameScene::Update(float deltaTime)
 {
 	CScene::Update(deltaTime);
 
-	static const std::map<CGameObject::GAMEOBJECT_LAYER, std::string> LayerToString = {
-	{ CGameObject::LAYER_DEFAULT, "LAYER_DEFAULT" },
-	{ CGameObject::LAYER_SKYBOX, "LAYER_SKYBOX" },
-	{ CGameObject::LAYER_TERRAIN, "LAYER_TERRAIN" },
-	{ CGameObject::LAYER_ENVIRONMENT, "LAYER_ENVIRONMENT" },
-	{ CGameObject::LAYER_ENEMY, "LAYER_ENEMY" },
-	{ CGameObject::LAYER_PLAYER, "LAYER_PLAYER" },
-	{ CGameObject::LAYER_GUN, "LAYER_GUN" },
-	{ CGameObject::LAYER_BULLET, "LAYER_BULLET" },
-	{ CGameObject::LAYER_CONTROLLER, "LAYER_CONTROLLER" },
-	{ CGameObject::LAYER_UI, "LAYER_UI" },
-	};
-
-	if (m_bPrintObjectCount) {
-		for(auto& pvecObject : m_ppGameObjects)
-		{
-			std::string debugOutput = "CGameScene::Update() - Layer: " + LayerToString.at(pvecObject.first) + ", Object Count: " + std::to_string(pvecObject.second.size()) + "\n";
-			OutputDebugStringA(debugOutput.c_str());
-		}
-
-		std::string debugOutput = "////////////////////////////////" + std::to_string(g_nFrameCount) + "////////////////////////////////\n";
-		OutputDebugStringA(debugOutput.c_str());
-
-		m_bPrintObjectCount = false;
-	}
-
 	std::wstring strHealthText = L"HP : " + std::to_wstring((int)m_pPlayer->GetHealth()) + L" / " + std::to_wstring((int)m_pPlayer->GetMaxHealth());
 	m_pHealthObject->m_pTextBlock->SetText(strHealthText.data());
-
 
 	BuildFiredBullets();
 }
@@ -415,7 +388,7 @@ void CGameScene::ChangeMap(int nMapIndex)
 	pMap->m_pModelRootObject->UpdateTransform();
 	m_pMap = pMap->m_pModelRootObject;
 	m_pMap->Update(0.0f);
-	m_pMap->SetLayer(CGameObject::LAYER_ENVIRONMENT);
+	m_pMap->SetLayer(LAYER_ENVIRONMENT);
 	AddObject(m_pMap);
 }
 

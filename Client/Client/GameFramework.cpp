@@ -533,8 +533,8 @@ void CGameFramework::AdvanceFrame()
 	const ESceneRequestState requestState = m_RequestState.load(std::memory_order_acquire);
 	requestState == ESceneRequestState::Processing ? pCurrentScene = m_pLoadingScene.get() : pCurrentScene = GetCurrentScene();
 
-	// 현재 Scene이 없으면 종료
-	if(nullptr == pCurrentScene)
+	// 현재 Scene이 없고, 생성중이 아닐 시 종료
+	if(m_Scenes.empty() && requestState == ESceneRequestState::Idle)
 	{
 		PostQuitMessage(0);
 		return;
@@ -1102,7 +1102,7 @@ void CGameFramework::CreateDebugTextObjects()
 		CTextObject pDebugTextObject;
 		pDebugTextObject.SetText(L"Debug Info");
 		pDebugTextObject.SetActive(true);
-		pDebugTextObject.SetSize(0.0f, (FontSize) * i, (float)m_nWndClientWidth, (float)m_nWndClientHeight , false);
+		pDebugTextObject.SetSize(0.0f, (FontSize) * i, (float)m_nWndClientWidth * 0.2f, (float)m_nWndClientHeight , false);
 		pDebugTextObject.SetFont(L"Consolas");
 		pDebugTextObject.SetFontSize(FontSize);
 		pDebugTextObject.SetBrush(D2D1::ColorF(D2D1::ColorF::LimeGreen, 1.0f));
@@ -1120,9 +1120,26 @@ void CGameFramework::CreateDebugTextObjects()
 
 void CGameFramework::UpdateDebugTextObjects()
 {
-	m_DebugTextObjects[0].SetText(L"Debug Info");
-	m_DebugTextObjects[1].SetText(L"Scene Size :" + std::to_wstring(m_Scenes.size()));
-	m_DebugTextObjects[2].SetText(L"Current Scene Name :" + GetCurrentScene()->GetSceneName());
+	int index = 0;
+	m_DebugTextObjects[index++].SetText(L"Debug Info");
+	m_DebugTextObjects[index++].SetText(L"Scene Size :" + std::to_wstring(m_Scenes.size()));
+
+	// 
+	auto requestState = m_RequestState.load(std::memory_order_acquire);
+	m_DebugTextObjects[index++].SetText(L" Scene Request State:" + to_wstring(requestState));
+
+	//
+	auto sceneBuildState = m_SceneBuildState.load(std::memory_order_acquire);
+	m_DebugTextObjects[index++].SetText(L" Scene Build State :" + to_wstring(sceneBuildState));
+
+	m_DebugTextObjects[index++].SetText(GetCurrentScene()->to_wstring());
+
+	for(; index < m_DebugTextObjects.size(); index++)
+	{
+		m_DebugTextObjects[index].SetText(L"");
+	}
+
+
 }
 
 void CGameFramework::ReleaseDebugTextObjects()

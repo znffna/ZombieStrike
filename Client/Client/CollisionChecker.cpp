@@ -12,12 +12,12 @@ CCollisionChecker::~CCollisionChecker()
 
 void CCollisionChecker::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	std::vector<std::pair<CGameObject::GAMEOBJECT_LAYER, CGameObject::GAMEOBJECT_LAYER>> ppObjectLayerPairs{
-	{ CGameObject::LAYER_PLAYER, CGameObject::LAYER_ENEMY,},
-	{ CGameObject::LAYER_BULLET, CGameObject::LAYER_ENEMY },
-	{ CGameObject::LAYER_PLAYER, CGameObject::LAYER_ENVIRONMENT },
-	//{ CGameObject::LAYER_ENEMY, CGameObject::LAYER_ENVIRONMENT },
-	{ CGameObject::LAYER_BULLET, CGameObject::LAYER_ENVIRONMENT }
+	std::vector<std::pair<GAMEOBJECT_LAYER, GAMEOBJECT_LAYER>> ppObjectLayerPairs{
+	{ LAYER_PLAYER, LAYER_ENEMY,},
+	{ LAYER_BULLET, LAYER_ENEMY },
+	{ LAYER_PLAYER, LAYER_ENVIRONMENT },
+	//{ LAYER_ENEMY, LAYER_ENVIRONMENT },
+	{ LAYER_BULLET, LAYER_ENVIRONMENT }
 	};
 	m_ppObjectLayerPairs = ppObjectLayerPairs;
 }
@@ -29,7 +29,7 @@ void CCollisionChecker::Update(float fTimeElapsed)
 	CollisionCheckFromLayers(m_ppObjectLayerPairs);
 }
 
-void CCollisionChecker::CollisionCheckFromLayers(std::vector<std::pair<CGameObject::GAMEOBJECT_LAYER, CGameObject::GAMEOBJECT_LAYER>>& ppObjectLayerPairs)
+void CCollisionChecker::CollisionCheckFromLayers(std::vector<std::pair<GAMEOBJECT_LAYER, GAMEOBJECT_LAYER>>& ppObjectLayerPairs)
 {
 	auto& ppObjects = m_pScene->GetObjects();	
 
@@ -98,8 +98,8 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 
 	// 총알 충돌 체크
 	auto& ppObjects = m_pScene->GetObjects();
-	auto& pMaps = ppObjects[CGameObject::LAYER_ENVIRONMENT];
-	auto& pEnemies = ppObjects[CGameObject::LAYER_ENEMY];
+	auto& pMaps = ppObjects[LAYER_ENVIRONMENT];
+	auto& pEnemies = ppObjects[LAYER_ENEMY];
 
 	XMVECTOR xmv3Position = XMLoadFloat3(&xmf3Position);
 	XMVECTOR xmv3Direction = XMLoadFloat3(&xmf3Direction);

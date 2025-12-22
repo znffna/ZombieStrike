@@ -29,7 +29,7 @@ public:
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)  override;
 	// Object Update
 	virtual void Update(float fTimeElapsed) override;
-	void CollisionCheckFromLayers(std::vector<std::pair<CGameObject::GAMEOBJECT_LAYER, CGameObject::GAMEOBJECT_LAYER>>& ppObjectLayerPairs);
+	void CollisionCheckFromLayers(std::vector<std::pair<GAMEOBJECT_LAYER, GAMEOBJECT_LAYER>>& ppObjectLayerPairs);
 	// Object Render
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr, bool bDepthWrite = false) override;
 	// Object Collision
@@ -41,6 +41,6 @@ public:
 private:
 	CScene* m_pScene;
 
-	std::vector<std::pair<CGameObject::GAMEOBJECT_LAYER, CGameObject::GAMEOBJECT_LAYER>> m_ppObjectLayerPairs;
+	std::vector<std::pair<GAMEOBJECT_LAYER, GAMEOBJECT_LAYER>> m_ppObjectLayerPairs;
 };
 

@@ -1607,3 +1607,45 @@ void UILayer::ReleaseResources()
 	m_pd3d11DeviceContext.Reset();
 	m_pd3d11On12Device.Reset();
 }
+
+std::string to_string(GAMEOBJECT_LAYER type)
+{
+	std::string ret;
+	switch (type)
+	{
+	case LAYER_DEFAULT:     ret = "Default";     break;
+	case LAYER_TERRAIN:     ret = "Terrain";     break;
+	case LAYER_ENVIRONMENT: ret = "Environment"; break;
+	case LAYER_ENEMY:       ret = "Enemy";       break;
+	case LAYER_PLAYER:      ret = "Player";      break;
+	case LAYER_GUN:         ret = "Gun";         break;
+	case LAYER_BULLET:      ret = "Bullet";      break;
+	case LAYER_SKYBOX:      ret = "SkyBox";      break;
+	case LAYER_CONTROLLER:  ret = "Controller";  break;
+	case LAYER_UI:          ret = "UI";          break;
+	case LAYER_TEXT:        ret = "Text";        break;
+	default:                             ret = "Unknown";     break;
+	}
+	return ret;
+}
+
+std::wstring to_wstring(GAMEOBJECT_LAYER type)
+{
+	std::wstring ret;
+	switch (type)
+	{
+	case LAYER_DEFAULT:     ret = L"Default";     break;
+	case LAYER_TERRAIN:     ret = L"Terrain";     break;
+	case LAYER_ENVIRONMENT: ret = L"Environment"; break;
+	case LAYER_ENEMY:       ret = L"Enemy";       break;
+	case LAYER_PLAYER:      ret = L"Player";      break;
+	case LAYER_GUN:         ret = L"Gun";         break;
+	case LAYER_BULLET:      ret = L"Bullet";      break;
+	case LAYER_SKYBOX:      ret = L"SkyBox";      break;
+	case LAYER_CONTROLLER:  ret = L"Controller";  break;
+	case LAYER_UI:          ret = L"UI";          break;
+	case LAYER_TEXT:        ret = L"Text";        break;
+	default:                             ret = L"Unknown";     break;
+	}
+	return ret;
+}

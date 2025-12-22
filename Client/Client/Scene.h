@@ -39,12 +39,62 @@ enum class ESceneBuildState : uint8_t
 	Failed
 };
 
+constexpr const std::string to_string(const ESceneBuildState& type)
+{
+	switch (type)
+	{
+	case ESceneBuildState::Idle:  return "Idle";
+	case ESceneBuildState::Requested:  return "Requested";
+	case ESceneBuildState::Building:   return "Building";
+	case ESceneBuildState::Completed:   return "Completed";
+	case ESceneBuildState::Failed: return "Failed";
+	default:                 return "Unknown";
+	}
+}
+
+constexpr const std::wstring to_wstring(const ESceneBuildState& type)
+{
+	switch (type)
+	{
+	case ESceneBuildState::Idle:  return L"Idle";
+	case ESceneBuildState::Requested:  return L"Requested";
+	case ESceneBuildState::Building:   return L"Building";
+	case ESceneBuildState::Completed:   return L"Completed";
+	case ESceneBuildState::Failed: return L"Failed";
+	default:                 return L"Unknown";
+	}
+}
+
+
 enum class ESceneRequestState
 {
 	Idle,        // 요청 없음
 	Pending,     // 요청 대기 (아직 처리 안 함)
 	Processing   // Scene 생성/전환 중
 };
+
+constexpr const std::string to_string(const ESceneRequestState& type)
+{
+	switch (type)
+	{
+	case ESceneRequestState::Idle:       return "Idle";
+	case ESceneRequestState::Pending:    return "Pending";
+	case ESceneRequestState::Processing: return "Processing";
+	default:                             return "Unknown";
+	}
+}
+
+constexpr const std::wstring to_wstring(const ESceneRequestState& type)
+{
+	switch (type)
+	{
+	case ESceneRequestState::Idle:       return L"Idle";
+	case ESceneRequestState::Pending:    return L"Pending";
+	case ESceneRequestState::Processing: return L"Processing";
+	default:                             return L"Unknown";
+	}
+}
+
 
 class CLoadingScene;
 class CGameScene;
@@ -154,6 +204,31 @@ enum SCENE_STATE
 	SCENE_STATE_PAUSE,			 // 일시 중지 중 [ Render ]
 };
 
+inline std::string to_string(SCENE_STATE type)
+{
+	std::string ret;
+	switch (type)
+	{
+	case SCENE_STATE_RUNNING: ret = "Running"; break;
+	case SCENE_STATE_PAUSE:   ret = "Pause";   break;
+	default:                  ret = "Unknown"; break;
+	}
+	return ret;
+}
+
+inline std::wstring to_wstring(SCENE_STATE type)
+{
+	std::wstring ret;
+	switch (type)
+	{
+	case SCENE_STATE_RUNNING: ret = L"Running"; break;
+	case SCENE_STATE_PAUSE:   ret = L"Pause";   break;
+	default:                  ret = L"Unknown"; break;
+	}
+	return ret;
+}
+
+
 class CScene
 {
 public:
@@ -164,12 +239,15 @@ public:
 
 	// Scene Initialization / Release
 	void Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
-	virtual void PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
-	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
-	virtual void PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature);
 	virtual void ReleaseObjects();
 	virtual void ReleaseUploadBuffers();
 
+protected:
+	virtual void PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
+	virtual void InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
+	virtual void PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature);
+
+public:
 	static void InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
 
 	void BuildDefaultLightsAndMaterials();
@@ -201,7 +279,7 @@ public:
 	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
 	virtual void AddObjects(const std::vector<std::shared_ptr<CGameObject>>& pObjects);
 	virtual void RemoveObject(const std::shared_ptr<CGameObject>& pObject);
-	std::map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>>& GetObjects() { return m_ppGameObjects; }
+	std::map<GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>>& GetObjects() { return m_ppGameObjects; }
 
 	void SetPlayer(std::shared_ptr<CPlayer> pPlayer);
 
@@ -226,23 +304,6 @@ public:
 
 	static ComPtr<ID3D12RootSignature> GetGraphicsRootSignature() { return m_pd3dGraphicsRootSignature; }
 
-	// Descriptor Heap
-	static void CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews);
-	static void CreateConstantBufferViews(ID3D12Device* pd3dDevice, int nConstantBufferViews, ID3D12Resource* pd3dConstantBuffers, UINT nStride);
-	static D3D12_GPU_DESCRIPTOR_HANDLE CreateConstantBufferView(ID3D12Device* pd3dDevice, ID3D12Resource* pd3dConstantBuffer, UINT nStride);
-	static D3D12_GPU_DESCRIPTOR_HANDLE CreateConstantBufferView(ID3D12Device* pd3dDevice, D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress, UINT nStride);
-	static void CreateShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex);
-	static void CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, int nIndex, UINT nRootParameterStartIndex);
-	static void CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, int nIndex);
-
-	static D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandleForHeapStart() { return(m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart()); }
-	static D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandleForHeapStart() { return(m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart()); }
-
-	static D3D12_CPU_DESCRIPTOR_HANDLE GetCPUCbvDescriptorStartHandle() { return(m_pDescriptorHeap->m_d3dCbvCPUDescriptorStartHandle); }
-	static D3D12_GPU_DESCRIPTOR_HANDLE GetGPUCbvDescriptorStartHandle() { return(m_pDescriptorHeap->m_d3dCbvGPUDescriptorStartHandle); }
-	static D3D12_GPU_DESCRIPTOR_HANDLE GetGPUCbvDescriptorNextHandle() { return(m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle); }
-	static D3D12_CPU_DESCRIPTOR_HANDLE GetCPUSrvDescriptorStartHandle() { return(m_pDescriptorHeap->m_d3dSrvCPUDescriptorStartHandle); }
-	static D3D12_GPU_DESCRIPTOR_HANDLE GetGPUSrvDescriptorStartHandle() { return(m_pDescriptorHeap->m_d3dSrvGPUDescriptorStartHandle); }
 	
 	// Shader Variables
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
@@ -279,7 +340,7 @@ protected:
 	float								m_fElapsedTime = 0.0f;
 
 	// GameObjects
-	std::map<CGameObject::GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>> m_ppGameObjects;
+	std::map<GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>> m_ppGameObjects;
 	std::list<std::shared_ptr<CGameObject>> m_pAddGameObjectList;
 	std::list<std::shared_ptr<CGameObject>> m_pRemoveGameObjectList;
 
@@ -301,8 +362,8 @@ public:
 	const std::vector<CTextObject*> GetTextBlocks()
 	{
 		std::vector<CTextObject*> ppVector;
-		ppVector.reserve(m_ppGameObjects[CGameObject::GAMEOBJECT_LAYER::LAYER_TEXT].size());
-		for(auto& obj : m_ppGameObjects[CGameObject::GAMEOBJECT_LAYER::LAYER_TEXT])
+		ppVector.reserve(m_ppGameObjects[GAMEOBJECT_LAYER::LAYER_TEXT].size());
+		for(auto& obj : m_ppGameObjects[GAMEOBJECT_LAYER::LAYER_TEXT])
 		{
 			if (auto textObj = std::dynamic_pointer_cast<CTextObject>(obj))
 				ppVector.push_back(textObj.get());
@@ -311,11 +372,11 @@ public:
 	}
 
 protected:
-
 	// Camera
 	std::shared_ptr<CCamera> m_pCamera;
 
 public:
+	// Shadow Map
 	std::shared_ptr<CDepthRenderShader> m_pDepthRenderShader;
 
 	std::shared_ptr<CShadowMapShader> m_pShadowShader;
@@ -323,7 +384,43 @@ public:
 
 	BoundingBox CalculateBoundingBox();
 	std::array<Light, MAX_LIGHTS> GetLights() const { return m_pLights; }
+
+public:
+	// Descriptor Heap
+	static void CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews);
+	static void CreateConstantBufferViews(ID3D12Device* pd3dDevice, int nConstantBufferViews, ID3D12Resource* pd3dConstantBuffers, UINT nStride);
+	static D3D12_GPU_DESCRIPTOR_HANDLE CreateConstantBufferView(ID3D12Device* pd3dDevice, ID3D12Resource* pd3dConstantBuffer, UINT nStride);
+	static D3D12_GPU_DESCRIPTOR_HANDLE CreateConstantBufferView(ID3D12Device* pd3dDevice, D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress, UINT nStride);
+	static void CreateShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex);
+	static void CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, int nIndex, UINT nRootParameterStartIndex);
+	static void CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, int nIndex);
+
+	static D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandleForHeapStart() { return(m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart()); }
+	static D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandleForHeapStart() { return(m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart()); }
+
+	static D3D12_CPU_DESCRIPTOR_HANDLE GetCPUCbvDescriptorStartHandle() { return(m_pDescriptorHeap->m_d3dCbvCPUDescriptorStartHandle); }
+	static D3D12_GPU_DESCRIPTOR_HANDLE GetGPUCbvDescriptorStartHandle() { return(m_pDescriptorHeap->m_d3dCbvGPUDescriptorStartHandle); }
+	static D3D12_GPU_DESCRIPTOR_HANDLE GetGPUCbvDescriptorNextHandle() { return(m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle); }
+	static D3D12_CPU_DESCRIPTOR_HANDLE GetCPUSrvDescriptorStartHandle() { return(m_pDescriptorHeap->m_d3dSrvCPUDescriptorStartHandle); }
+	static D3D12_GPU_DESCRIPTOR_HANDLE GetGPUSrvDescriptorStartHandle() { return(m_pDescriptorHeap->m_d3dSrvGPUDescriptorStartHandle); }
+
+
+public:
+	std::wstring to_wstring() const
+	{
+		std::wstring ret;
+		ret += L"Scene Name: " + GetSceneName() + L"\n";
+		ret += L"Scene State: " + ::to_wstring(m_SceneState) + L"\n";
+		ret += L"Number of GameObjects Layer: " + std::to_wstring(m_ppGameObjects.size()) + L"\n";
+		for(auto& [layer, objects] : m_ppGameObjects)
+		{
+			ret += L"  Layer " + ::to_wstring(layer) + L": " + std::to_wstring(objects.size()) + L" objects\n";
+		}
+		return ret;
+	}
 };
+
+
 
 
 

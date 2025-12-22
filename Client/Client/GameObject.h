@@ -59,22 +59,29 @@ struct CB_GAMEOBJECT_INFO
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
+enum GAMEOBJECT_LAYER {
+	LAYER_DEFAULT = 0,
+	LAYER_TERRAIN,
+	LAYER_ENVIRONMENT,
+	LAYER_ENEMY,
+	LAYER_PLAYER,
+	LAYER_GUN,
+	LAYER_BULLET,
+	LAYER_SKYBOX,
+	LAYER_CONTROLLER,
+	LAYER_UI,
+	LAYER_TEXT,
+};
+
+std::string to_string(GAMEOBJECT_LAYER type);
+std::wstring to_wstring(GAMEOBJECT_LAYER type);
+
 class CGameObject : public std::enable_shared_from_this<CGameObject>
 {
 public:
-	enum GAMEOBJECT_LAYER {
-		LAYER_DEFAULT = 0,
-		LAYER_TERRAIN,
-		LAYER_ENVIRONMENT,
-		LAYER_ENEMY,
-		LAYER_PLAYER,
-		LAYER_GUN,
-		LAYER_BULLET,
-		LAYER_SKYBOX,
-		LAYER_CONTROLLER,
-		LAYER_UI,
-		LAYER_TEXT,
-	};
+	
+
+	
 	
 public:
 	CGameObject();

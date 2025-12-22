@@ -409,7 +409,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 bool CScene::RenderUI(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	auto UIObjects = m_ppGameObjects.find(CGameObject::GAMEOBJECT_LAYER::LAYER_UI);
+	auto UIObjects = m_ppGameObjects.find(GAMEOBJECT_LAYER::LAYER_UI);
 	if(UIObjects != m_ppGameObjects.end())
 	{
 		for (auto& pObject : UIObjects->second)
@@ -423,12 +423,12 @@ bool CScene::RenderUI(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCame
 
 void CScene::RenderDepthWrite(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	std::set<CGameObject::GAMEOBJECT_LAYER> layer = {
-		CGameObject::GAMEOBJECT_LAYER::LAYER_TERRAIN,
-		CGameObject::GAMEOBJECT_LAYER::LAYER_ENVIRONMENT,
-		CGameObject::GAMEOBJECT_LAYER::LAYER_PLAYER,
-		CGameObject::GAMEOBJECT_LAYER::LAYER_ENEMY,
-		CGameObject::GAMEOBJECT_LAYER::LAYER_GUN,
+	std::set<GAMEOBJECT_LAYER> layer = {
+		GAMEOBJECT_LAYER::LAYER_TERRAIN,
+		GAMEOBJECT_LAYER::LAYER_ENVIRONMENT,
+		GAMEOBJECT_LAYER::LAYER_PLAYER,
+		GAMEOBJECT_LAYER::LAYER_ENEMY,
+		GAMEOBJECT_LAYER::LAYER_GUN,
 	};
 
 	// Render GameObjects 

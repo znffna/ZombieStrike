@@ -35,6 +35,18 @@ void CLoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	pRotateGameObject->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	AddObject(pRotateGameObject);
 
+	// Create a Quad for Loading Text
+	{
+		/*std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
+		pMaterial->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+		std::shared_ptr<CShader> pStandardShader = std::make_shared<CStandardShader>();
+		pStandardShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+
+		std::shared_ptr<CGameObject> pLoadingBg = std::make_shared<CGameObject>();
+		pLoadingBg->SetMesh(CResourceManager::Instance().GetDefaultQuad());*/
+	}
+
 }
 
 void CLoadingScene::ReleaseObjects()
