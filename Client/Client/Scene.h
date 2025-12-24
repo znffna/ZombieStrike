@@ -276,13 +276,36 @@ public:
 	virtual void SetCursor() { g_bEnableCursor = true; }
 
 	// Object Management
-	virtual void AddObject(const std::shared_ptr<CGameObject>& pObject);
-	virtual void AddObjects(const std::vector<std::shared_ptr<CGameObject>>& pObjects);
-	virtual void RemoveObject(const std::shared_ptr<CGameObject>& pObject);
-	std::map<GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>>& GetObjects() { return m_ppGameObjects; }
+public:
+	template<typename TObject, typename TDesc>
+	TObject* RequestCreateObject(const TDesc& desc)
+	{
+		static_assert(std::is_base_of_v<CGameObject, TObject>);
 
-	void SetPlayer(std::shared_ptr<CPlayer> pPlayer);
+		auto obj = std::make_unique<TObject>();
+		obj->Initialize(desc);
+		return obj.get();
+	}
 
+	void RequestRemoveObject(uint32_t objectID)
+	{
+		m_RemoveQueue.push_back(objectID);
+	}
+
+	std::map<GAMEOBJECT_LAYER, std::vector<CGameObject*>>& GetLayerViews() { return m_ppLayerView; }
+	void SetPlayer(std::unique_ptr<CPlayer>& pPlayer);
+
+	virtual void AddObject(std::unique_ptr<CGameObject>& pObject);
+	virtual void RemoveObject(const std::unique_ptr<CGameObject>& pObject);
+
+protected:
+	std::map<uint32_t, std::unique_ptr<CGameObject>> m_ppGameObjects; // 실제 오브젝트 소유권 보유
+	std::map<GAMEOBJECT_LAYER, std::vector<CGameObject*>> m_ppLayerView;		   // 레이어별 오브젝트 뷰 (포인터만 보유)
+
+	std::list<std::unique_ptr<CGameObject>> m_CreateQueue;				   // Request로 받은 Object를 담아둘 리스트
+	std::list<uint32_t> m_RemoveQueue;								   // Remove 요청 받은 Object ID를 담아둘 리스트
+
+public:
 	// Scene Method
 	virtual void Update(float deltaTime);
 	void LateUpdate();
@@ -304,11 +327,14 @@ public:
 
 	static ComPtr<ID3D12RootSignature> GetGraphicsRootSignature() { return m_pd3dGraphicsRootSignature; }
 
-	
 	// Shader Variables
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void ReleaseShaderVariables();
+
+	void CreateLightShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void UpdateLightShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	void ReleaseLightShaderVariables();
 
 	// Input Method
 	virtual bool ProcessMouseInput(float cxDelta, float cyDelta, float deltaTime) { return false; };
@@ -320,7 +346,7 @@ protected:
 	bool m_bMouseLButtonDown = false;
 
 	// DescriptorHeap
-	static std::shared_ptr<CDescirptorHeap> m_pDescriptorHeap;
+	static std::unique_ptr<CDescirptorHeap> m_pDescriptorHeap;
 
 	// Scene State
 	SCENE_STATE m_SceneState = SCENE_STATE_RUNNING;
@@ -339,19 +365,14 @@ protected:
 	// Animation
 	float								m_fElapsedTime = 0.0f;
 
-	// GameObjects
-	std::map<GAMEOBJECT_LAYER, std::vector<std::shared_ptr<CGameObject>>> m_ppGameObjects;
-	std::list<std::shared_ptr<CGameObject>> m_pAddGameObjectList;
-	std::list<std::shared_ptr<CGameObject>> m_pRemoveGameObjectList;
-
 	// SkyBox
-	std::shared_ptr<CGameObject> m_pSkyBox;
+	std::unique_ptr<CGameObject> m_pSkyBox;
 
 	// Terrain
-	std::shared_ptr<CGameObject> m_pTerrain;
+	std::unique_ptr<CGameObject> m_pTerrain;
 
 	// Map
-	std::shared_ptr<CGameObject> m_pMap;
+	std::unique_ptr<CGameObject> m_pMap;
 
 	// Player
 	std::shared_ptr<CPlayer> m_pPlayer;
@@ -362,11 +383,11 @@ public:
 	const std::vector<CTextObject*> GetTextBlocks()
 	{
 		std::vector<CTextObject*> ppVector;
-		ppVector.reserve(m_ppGameObjects[GAMEOBJECT_LAYER::LAYER_TEXT].size());
-		for(auto& obj : m_ppGameObjects[GAMEOBJECT_LAYER::LAYER_TEXT])
+		ppVector.reserve(m_ppLayerView[GAMEOBJECT_LAYER::LAYER_TEXT].size());
+		for(auto& obj : m_ppLayerView[GAMEOBJECT_LAYER::LAYER_TEXT])
 		{
-			if (auto textObj = std::dynamic_pointer_cast<CTextObject>(obj))
-				ppVector.push_back(textObj.get());
+			if (CTextObject* textObj = dynamic_cast<CTextObject*>(obj))
+				ppVector.push_back(textObj);
 		}
 		return ppVector;
 	}
@@ -406,13 +427,14 @@ public:
 
 
 public:
+	// For Debug
 	std::wstring to_wstring() const
 	{
 		std::wstring ret;
 		ret += L"Scene Name: " + GetSceneName() + L"\n";
 		ret += L"Scene State: " + ::to_wstring(m_SceneState) + L"\n";
-		ret += L"Number of GameObjects Layer: " + std::to_wstring(m_ppGameObjects.size()) + L"\n";
-		for(auto& [layer, objects] : m_ppGameObjects)
+		ret += L"Number of GameObjects Layer: " + std::to_wstring(m_ppLayerView.size()) + L"\n";
+		for(auto& [layer, objects] : m_ppLayerView)
 		{
 			ret += L"  Layer " + ::to_wstring(layer) + L": " + std::to_wstring(objects.size()) + L" objects\n";
 		}

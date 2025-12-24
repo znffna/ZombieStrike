@@ -7,7 +7,7 @@
 #include "Scene.h"
 #include "GameFramework.h"
 
-std::shared_ptr<CDescirptorHeap> CScene::m_pDescriptorHeap;
+std::unique_ptr<CDescirptorHeap> CScene::m_pDescriptorHeap;
 ComPtr<ID3D12RootSignature> CScene::m_pd3dGraphicsRootSignature;
 ComPtr<ID3D12RootSignature> CScene::m_pd3dComputeRootSignature;
 
@@ -148,7 +148,7 @@ void CScene::ReleaseObjects()
 void CScene::ReleaseUploadBuffers()
 {
 	// Release Shader Variables
-	for (auto& pGameObject : m_ppGameObjects)
+	for (auto& pGameObject : m_ppLayerView)
 	{
 		for (auto& pObject : pGameObject.second)
 		{
@@ -247,30 +247,21 @@ void CScene::PopScene()
 	CGameFramework::Instance()->RequestSceneChange(CPopScene());
 }
 
-void CScene::AddObject(const std::shared_ptr<CGameObject>& pObject)
+void CScene::AddObject(std::unique_ptr<CGameObject>& pObject)
 {
 	if (pObject)
 	{
 		// Add Object to Scene
-		m_pAddGameObjectList.push_back(pObject);	
+		m_CreateQueue.push_back(std::move(pObject));	
 		pObject->SetActive(true);
 	}
 }
 
-void CScene::AddObjects(const std::vector<std::shared_ptr<CGameObject>>& pObjects)
-{
-	if (pObjects.empty()) return;
-	for (const auto& pObject : pObjects)
-	{
-		AddObject(pObject);
-	}
-}
-
-void CScene::RemoveObject(const std::shared_ptr<CGameObject>& pObject)
+void CScene::RemoveObject(const std::unique_ptr<CGameObject>& pObject)
 {
 	if (pObject)
 	{
-		m_pRemoveGameObjectList.push_back(pObject);
+		m_RemoveQueue.push_back(pObject->GetObjectID());
 		pObject->SetActive(false);
 	}
 }
@@ -278,32 +269,41 @@ void CScene::RemoveObject(const std::shared_ptr<CGameObject>& pObject)
 void CScene::LateUpdate()
 {
 	// Add GameObjects
-	for (auto& pObject : m_pAddGameObjectList)
+	for (auto& pObject : m_CreateQueue)
 	{
 		if (pObject)
 		{
-			m_ppGameObjects[pObject->GetLayer()].push_back(pObject);
+			// Layer View 등록
+			m_ppLayerView[pObject->GetLayer()].push_back(pObject.get());
+
+			// GameObjects Map 등록
+			m_ppGameObjects[pObject->GetObjectID()] = (std::move(pObject));
 		}
 	}
-	m_pAddGameObjectList.clear();
+	m_CreateQueue.clear();
 
 	// Remove GameObjects
-	for (auto& pObject : m_pRemoveGameObjectList)
+	for (auto& ID : m_RemoveQueue)
 	{
-		auto Layer = pObject->GetLayer();
-		auto it = std::find(m_ppGameObjects[Layer].begin(), m_ppGameObjects[Layer].end(), pObject);
-		if (it != m_ppGameObjects[Layer].end())
+		// Find Object to Delete
+		auto& deleteObject = m_ppGameObjects[ID];
+		auto layer = deleteObject->GetLayer();
+		// Remove from Layer View
+		auto it = std::find(m_ppLayerView[layer].begin(), m_ppLayerView[layer].end(), deleteObject);
+		if (it != m_ppLayerView[layer].end())
 		{
-			m_ppGameObjects[Layer].erase(it); 
+			m_ppLayerView[layer].erase(it);
 		}
+
+		// Remove from GameObjects Map
+		m_ppGameObjects.erase(ID);
 	}
-	m_pRemoveGameObjectList.clear();
+	m_RemoveQueue.clear();
 }
 
-void CScene::SetPlayer(std::shared_ptr<CPlayer> pPlayer)
+void CScene::SetPlayer(std::unique_ptr<CPlayer>& pPlayer)
 { 
-	m_pPlayer = pPlayer; 
-	//m_pCamera->SetTarget(m_pPlayer); 
+	m_pPlayer = std::move(pPlayer);
 }
 
 void CScene::Update(float deltaTime)
@@ -313,10 +313,10 @@ void CScene::Update(float deltaTime)
 	m_fElapsedTime = deltaTime;
 
 	// Update GameObjects
-	for (auto& pvecObjects : m_ppGameObjects) for(auto& pObject : pvecObjects.second) pObject->Update(deltaTime);
+	for (auto& pvecObjects : m_ppLayerView) for(auto& pObject : pvecObjects.second) pObject->Update(deltaTime);
 
 	// Update Matrix
-	for (auto& pvecObjects : m_ppGameObjects) for (auto& pObject : pvecObjects.second)  pObject->UpdateTransform();
+	for (auto& pvecObjects : m_ppLayerView) for (auto& pObject : pvecObjects.second)  pObject->UpdateTransform();
 
 	UpdateLights();
 
@@ -376,7 +376,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	//if (m_pShadowMapToViewport) m_pShadowMapToViewport->Render(pd3dCommandList, pCamera);
 
 	// Render GameObjects 
-	for (auto& pvecObjects : m_ppGameObjects)
+	for (auto& pvecObjects : m_ppLayerView)
 	{
 		for (auto& pObject : pvecObjects.second)
 		{
@@ -409,8 +409,8 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 
 bool CScene::RenderUI(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	auto UIObjects = m_ppGameObjects.find(GAMEOBJECT_LAYER::LAYER_UI);
-	if(UIObjects != m_ppGameObjects.end())
+	auto UIObjects = m_ppLayerView.find(GAMEOBJECT_LAYER::LAYER_UI);
+	if(UIObjects != m_ppLayerView.end())
 	{
 		for (auto& pObject : UIObjects->second)
 		{
@@ -432,7 +432,7 @@ void CScene::RenderDepthWrite(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 	};
 
 	// Render GameObjects 
-	for (auto& pvecObjects : m_ppGameObjects)
+	for (auto& pvecObjects : m_ppLayerView)
 	{
 		if (false == layer.contains(pvecObjects.first))
 			continue;
@@ -904,9 +904,14 @@ void CScene::CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTextu
 void CScene::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	// Light
+	CreateLightShaderVariables(pd3dDevice, pd3dCommandList);
+}
+
+void CScene::CreateLightShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
 	// Create Constant Buffer
 	UINT ncbElementBytes = ((sizeof(CB_LIGHT_INFO) + 255) & ~255); //256의 배수
-	m_pd3dcbLights= ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
+	m_pd3dcbLights = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
 
 	// Map Constant Buffer
 	m_pd3dcbLights->Map(0, nullptr, (void**)&m_pcbMappedLights);
@@ -914,6 +919,11 @@ void CScene::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 }
 
 void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	UpdateLightShaderVariables(pd3dCommandList);
+}
+
+void CScene::UpdateLightShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	// Light 
 	memcpy(&m_pcbMappedLights->m_pLights, m_pLights.data(), sizeof(Light) * m_pLights.size());
@@ -927,6 +937,11 @@ void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 void CScene::ReleaseShaderVariables()
 {
 	// Light 
+	ReleaseLightShaderVariables();
+}
+
+void CScene::ReleaseLightShaderVariables()
+{
 	if (m_pd3dcbLights) m_pd3dcbLights->Unmap(0, nullptr);
 	m_pd3dcbLights.Reset();
 	m_pcbMappedLights = nullptr;
@@ -953,7 +968,7 @@ void CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam,
 BoundingBox CScene::CalculateBoundingBox()
 {
 	BoundingBox ret;
-	for (auto& pvecObject : m_ppGameObjects) {
+	for (auto& pvecObject : m_ppLayerView) {
 		for (auto& pObject : pvecObject.second) {
 			BoundingBox box = pObject->GetMergedMeshBound();
 			ret.CreateMerged(ret, box, ret);

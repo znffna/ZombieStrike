@@ -31,7 +31,7 @@ void CCollisionChecker::Update(float fTimeElapsed)
 
 void CCollisionChecker::CollisionCheckFromLayers(std::vector<std::pair<GAMEOBJECT_LAYER, GAMEOBJECT_LAYER>>& ppObjectLayerPairs)
 {
-	auto& ppObjects = m_pScene->GetObjects();	
+	auto& ppObjects = m_pScene->GetLayerViews();	
 
 	std::vector<CollisionInfo> ppCollidedPairs;
 	for (auto& ppLayerPair : ppObjectLayerPairs) {
@@ -97,7 +97,7 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 	resultRaycast.nHitObjectType = HIT_TYPE_NONE; // 초기값은 충돌 없음
 
 	// 총알 충돌 체크
-	auto& ppObjects = m_pScene->GetObjects();
+	auto& ppObjects = m_pScene->GetLayerViews();
 	auto& pMaps = ppObjects[LAYER_ENVIRONMENT];
 	auto& pEnemies = ppObjects[LAYER_ENEMY];
 
