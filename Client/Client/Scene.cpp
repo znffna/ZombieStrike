@@ -96,7 +96,7 @@ void CScene::CreateDescriptorHeap(ID3D12Device* pd3dDevice)
 {
 	if (!m_pDescriptorHeap)
 	{
-		m_pDescriptorHeap = std::make_shared<CDescirptorHeap>();
+		m_pDescriptorHeap = std::make_unique<CDescirptorHeap>();
 		CreateCbvSrvDescriptorHeaps(pd3dDevice, 100, 3000);
 		m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->SetName(L"CScene::m_pd3dCbvSrvDescriptorHeap");
 	}
@@ -287,9 +287,11 @@ void CScene::LateUpdate()
 	{
 		// Find Object to Delete
 		auto& deleteObject = m_ppGameObjects[ID];
+		auto rawPtr = deleteObject.get();
 		auto layer = deleteObject->GetLayer();
+
 		// Remove from Layer View
-		auto it = std::find(m_ppLayerView[layer].begin(), m_ppLayerView[layer].end(), deleteObject);
+		auto it = std::find(m_ppLayerView[layer].begin(), m_ppLayerView[layer].end(), rawPtr);
 		if (it != m_ppLayerView[layer].end())
 		{
 			m_ppLayerView[layer].erase(it);

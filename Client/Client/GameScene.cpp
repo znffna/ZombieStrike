@@ -30,117 +30,117 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	}
 
 	// <Environment>
-	StoreTerrain(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
+	//StoreTerrain(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
 
-	// Skybox
-	m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
-	AddObject(m_pSkyBox);
-	
-	// Terrain
-	XMFLOAT3 xmf3Scale(1.0f, 50.0f / 255.0f, 1.0f);
-	XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
-	m_pTerrain = GetTerrain(0);
-	//m_pTerrain = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain1.bin"), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
-	//m_pTerrain = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.bin"), _T("Terrain/terrain.raw"), 1025, 1025, 65, 65, xmf3Scale, xmf4Color);
-	AddObject(m_pTerrain);
-	//m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
-	
-	// <Store GameObjects>
-	StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 100);
-	StorePlayer(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
-	
+	//// Skybox
+	//m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
+	//AddObject(m_pSkyBox);
+	//
+	//// Terrain
+	//XMFLOAT3 xmf3Scale(1.0f, 50.0f / 255.0f, 1.0f);
+	//XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
+	//m_pTerrain = GetTerrain(0);
+	////m_pTerrain = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain1.bin"), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
+	////m_pTerrain = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.bin"), _T("Terrain/terrain.raw"), 1025, 1025, 65, 65, xmf3Scale, xmf4Color);
+	//AddObject(m_pTerrain);
+	////m_pTerrain = CHeightMapTerrain::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
+	//
+	//// <Store GameObjects>
+	//StoreZombie(pd3dDevice, pd3dCommandList, pd3dRootSignature, 100);
+	//StorePlayer(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
+	//
 
-	// <Initialize GameObjects>
-	// Player 积己
-	std::shared_ptr<CPlayer> pPlayer = GetPlayer();
-	//std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, 0);
-	pPlayer->SetPosition(DirectX::XMFLOAT3(100.0f, 0.0f, 100.0f));
-	AddObject(pPlayer);
-	m_pPlayer = pPlayer;
+	//// <Initialize GameObjects>
+	//// Player 积己
+	//std::shared_ptr<CPlayer> pPlayer = GetPlayer();
+	////std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, 0);
+	//pPlayer->SetPosition(DirectX::XMFLOAT3(100.0f, 0.0f, 100.0f));
+	//AddObject(pPlayer);
+	//m_pPlayer = pPlayer;
 
-	// Gun 积己
-	std::shared_ptr<CGun> pGun = CGun::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
-	m_pPlayer->SetGun(pGun);
-	AddObject(pGun);
+	//// Gun 积己
+	//std::shared_ptr<CGun> pGun = CGun::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
+	//m_pPlayer->SetGun(pGun);
+	//AddObject(pGun);
 
-	CreateFreeCamera(pd3dDevice, pd3dCommandList);
+	//CreateFreeCamera(pd3dDevice, pd3dCommandList);
 
-	// Map Load
-	auto pMap = resourceManager.GetModelInfo("Stage1");
-	pMap->m_pModelRootObject->UpdateTransform();
-	m_pMap = pMap->m_pModelRootObject;
-	m_pMap->SetLayer(LAYER_ENVIRONMENT);
-	m_pMap->UpdateBBCache();
-	AddObject(m_pMap);
+	//// Map Load
+	//auto pMap = resourceManager.GetModelInfo("Stage1");
+	//pMap->m_pModelRootObject->UpdateTransform();
+	//m_pMap = pMap->m_pModelRootObject;
+	//m_pMap->SetLayer(LAYER_ENVIRONMENT);
+	//m_pMap->UpdateBBCache();
+	//AddObject(m_pMap);
 
-	// Collision Checker
-	auto pCollisionChecker = std::make_shared<CCollisionChecker>(this);
-	pCollisionChecker->Initialize(pd3dDevice, pd3dCommandList);
-	m_pCollisionChecker = pCollisionChecker;
-	AddObject(pCollisionChecker);
+	//// Collision Checker
+	//auto pCollisionChecker = std::make_shared<CCollisionChecker>(this);
+	//pCollisionChecker->Initialize(pd3dDevice, pd3dCommandList);
+	//m_pCollisionChecker = pCollisionChecker;
+	//AddObject(pCollisionChecker);
 
-	// BulletObject
-	std::shared_ptr<CBulletParticleObject> pBullet = std::make_shared<CBulletParticleObject>(pd3dDevice, pd3dCommandList, pd3dRootSignature, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 65.0f, 0.0f), 20.0f, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(8.0f, 8.0f), MAX_BULLETS);
-	m_pBulletObject = pBullet;
-	CGun::m_pBulletObject = pBullet;
-	AddObject(pBullet);
+	//// BulletObject
+	//std::shared_ptr<CBulletParticleObject> pBullet = std::make_shared<CBulletParticleObject>(pd3dDevice, pd3dCommandList, pd3dRootSignature, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 65.0f, 0.0f), 20.0f, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(8.0f, 8.0f), MAX_BULLETS);
+	//m_pBulletObject = pBullet;
+	//CGun::m_pBulletObject = pBullet;
+	//AddObject(pBullet);
 
-	// UI Object
-	{
-		std::shared_ptr<CMesh> pRectangleMesh = CResourceManager::Instance().GetMesh("UI");
+	//// UI Object
+	//{
+	//	std::shared_ptr<CMesh> pRectangleMesh = CResourceManager::Instance().GetMesh("UI");
 
-		std::shared_ptr<CShader> pUIShader = std::make_shared<CTextureToViewportShader>(nullptr);
-		pUIShader->CreateShader(pd3dDevice, pd3dRootSignature);
-		{
-			std::shared_ptr<CTexture> pAimTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
-			pAimTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/aim_cross.dds", RESOURCE_TEXTURE2D, 0);
-			CScene::CreateShaderResourceViews(pd3dDevice, pAimTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+	//	std::shared_ptr<CShader> pUIShader = std::make_shared<CTextureToViewportShader>(nullptr);
+	//	pUIShader->CreateShader(pd3dDevice, pd3dRootSignature);
+	//	{
+	//		std::shared_ptr<CTexture> pAimTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
+	//		pAimTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/aim_cross.dds", RESOURCE_TEXTURE2D, 0);
+	//		CScene::CreateShaderResourceViews(pd3dDevice, pAimTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
 
-			std::shared_ptr<CMaterial> pTitleMaterial = std::make_shared<CMaterial>();
-			pTitleMaterial->SetTexture(pAimTexture);
-			pTitleMaterial->SetShader(pUIShader);
+	//		std::shared_ptr<CMaterial> pTitleMaterial = std::make_shared<CMaterial>();
+	//		pTitleMaterial->SetTexture(pAimTexture);
+	//		pTitleMaterial->SetShader(pUIShader);
 
-			std::shared_ptr<CSprite> pAimObject = std::make_shared<CSprite>();
-			pAimObject->Initialize(pd3dDevice, pd3dCommandList);
-			pAimObject->SetMesh(pRectangleMesh);
-			pAimObject->AddMaterial(pTitleMaterial);
-			pAimObject->SetName("Aim");
+	//		std::shared_ptr<CSprite> pAimObject = std::make_shared<CSprite>();
+	//		pAimObject->Initialize(pd3dDevice, pd3dCommandList);
+	//		pAimObject->SetMesh(pRectangleMesh);
+	//		pAimObject->AddMaterial(pTitleMaterial);
+	//		pAimObject->SetName("Aim");
 
-			float aspectRatio = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
-			pAimObject->SetSize(0.0f, 0.0f, 0.05f, 0.05f * aspectRatio);
-			AddObject(pAimObject);
-		}
+	//		float aspectRatio = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
+	//		pAimObject->SetSize(0.0f, 0.0f, 0.05f, 0.05f * aspectRatio);
+	//		AddObject(pAimObject);
+	//	}
 
-		{
-			std::shared_ptr<CTexture> pHealthTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
-			pHealthTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/GaugeBar.dds", RESOURCE_TEXTURE2D, 0);
-			CScene::CreateShaderResourceViews(pd3dDevice, pHealthTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
-			
-			std::shared_ptr<CMaterial> pHealthMaterial = std::make_shared<CMaterial>();
-			pHealthMaterial->SetTexture(pHealthTexture);
-			pHealthMaterial->SetShader(pUIShader);
-			
-			std::shared_ptr<CGaugeBar> pHealthObject = std::make_shared<CGaugeBar>();
-			pHealthObject->Initialize(pd3dDevice, pd3dCommandList);
-			pHealthObject->SetMesh(pRectangleMesh);
-			pHealthObject->AddMaterial(pHealthMaterial);
-			pHealthObject->SetName("Health");
-			
-			// Health Bar 农扁 汲沥
+	//	{
+	//		std::shared_ptr<CTexture> pHealthTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
+	//		pHealthTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/GaugeBar.dds", RESOURCE_TEXTURE2D, 0);
+	//		CScene::CreateShaderResourceViews(pd3dDevice, pHealthTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+	//		
+	//		std::shared_ptr<CMaterial> pHealthMaterial = std::make_shared<CMaterial>();
+	//		pHealthMaterial->SetTexture(pHealthTexture);
+	//		pHealthMaterial->SetShader(pUIShader);
+	//		
+	//		std::shared_ptr<CGaugeBar> pHealthObject = std::make_shared<CGaugeBar>();
+	//		pHealthObject->Initialize(pd3dDevice, pd3dCommandList);
+	//		pHealthObject->SetMesh(pRectangleMesh);
+	//		pHealthObject->AddMaterial(pHealthMaterial);
+	//		pHealthObject->SetName("Health");
+	//		
+	//		// Health Bar 农扁 汲沥
 
-			float aspectRatio = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
-			pHealthObject->SetGauge(1.0f, -1.0f, -1.0f, 0.3f, 0.1f);
+	//		float aspectRatio = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
+	//		pHealthObject->SetGauge(1.0f, -1.0f, -1.0f, 0.3f, 0.1f);
 
-			// Health Text 积己
-			/*pHealthObject->m_pTextBlock = CGameFramework::pGameFramework->GetUILayer()->GetNewTextBlock(2);
-			pHealthObject->m_pTextBlock->SetText(L"HP :");
-			pHealthObject->m_pTextBlock->SetActive(false);*/
-			m_pHealthObject = pHealthObject;
+	//		// Health Text 积己
+	//		/*pHealthObject->m_pTextBlock = CGameFramework::pGameFramework->GetUILayer()->GetNewTextBlock(2);
+	//		pHealthObject->m_pTextBlock->SetText(L"HP :");
+	//		pHealthObject->m_pTextBlock->SetActive(false);*/
+	//		m_pHealthObject = pHealthObject;
 
-			pPlayer->SetHealthObject(pHealthObject);
-			AddObject(pHealthObject);
-		}
-	}
+	//		pPlayer->SetHealthObject(pHealthObject);
+	//		AddObject(pHealthObject);
+	//	}
+	//}
 	
 	// Shader
 	m_pDepthRenderShader = std::make_shared<CDepthRenderShader>(this);
@@ -366,30 +366,30 @@ void CGameScene::ChangeMap(int nMapIndex)
 {
 	m_nStageIndex = nMapIndex % m_strStageNames.size();
 
-	if (m_pTerrain) RemoveObject(m_pTerrain);
-	m_pTerrain = GetTerrain(m_nStageIndex);
-	AddObject(m_pTerrain);
+	//if (m_pTerrain) RemoveObject(m_pTerrain);
+	//m_pTerrain = GetTerrain(m_nStageIndex);
+	//AddObject(m_pTerrain);
 
-	for (auto& pObject : m_pZombiePool)
-	{
-		if (pObject) pObject->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
-	}
-	for (auto& pObject : m_pPlayerObjects)
-	{
-		if (pObject) pObject->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
-	}
-	//if (m_pPlayer) m_pPlayer->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
+	//for (auto& pObject : m_pZombiePool)
+	//{
+	//	if (pObject) pObject->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
+	//}
+	//for (auto& pObject : m_pPlayerObjects)
+	//{
+	//	if (pObject) pObject->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
+	//}
+	////if (m_pPlayer) m_pPlayer->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
 
-	if (m_pMap) {
-		RemoveObject(m_pMap);
-	}
+	//if (m_pMap) {
+	//	RemoveObject(m_pMap);
+	//}
 
-	auto pMap = CResourceManager::Instance().GetModelInfo(m_strStageNames[m_nStageIndex]);
-	pMap->m_pModelRootObject->UpdateTransform();
-	m_pMap = pMap->m_pModelRootObject;
-	m_pMap->Update(0.0f);
-	m_pMap->SetLayer(LAYER_ENVIRONMENT);
-	AddObject(m_pMap);
+	//auto pMap = CResourceManager::Instance().GetModelInfo(m_strStageNames[m_nStageIndex]);
+	//pMap->m_pModelRootObject->UpdateTransform();
+	//m_pMap = pMap->m_pModelRootObject;
+	//m_pMap->Update(0.0f);
+	//m_pMap->SetLayer(LAYER_ENVIRONMENT);
+	//AddObject(m_pMap);
 }
 
 bool CGameScene::Fire(const std::shared_ptr<CPlayer>& pPlayer, FIRE_INFO* pFireInfo)
@@ -401,14 +401,14 @@ bool CGameScene::Fire(const std::shared_ptr<CPlayer>& pPlayer, FIRE_INFO* pFireI
 void CGameScene::StoreZombie(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nZombieCount)
 {
 	m_pZombiePool.reserve(nZombieCount);
-	for (int i = 0; i < nZombieCount; ++i)
+	/*for (int i = 0; i < nZombieCount; ++i)
 	{
 		std::shared_ptr<CZombieObject> pZombie = CZombieObject::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, i);
 		pZombie->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
 		pZombie->SetActive(false);
 		m_pZombiePool.push_back(pZombie);
 		
-	}
+	}*/
 }
 
 std::shared_ptr<CZombieObject> CGameScene::GetZombie(int nSkinType)
@@ -428,7 +428,7 @@ std::shared_ptr<CZombieObject> CGameScene::GetZombie(int nSkinType)
 void CGameScene::StorePlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nPlayerCount)
 {
 	m_pPlayerObjects.reserve(nPlayerCount);
-	for (int i = 0; i < nPlayerCount; ++i)
+	/*for (int i = 0; i < nPlayerCount; ++i)
 	{
 		std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, i);
 		pPlayer->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(m_pTerrain.get());
@@ -436,7 +436,7 @@ void CGameScene::StorePlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 			pCamera->SetTerrainUpdatedContext(m_pTerrain.get());
 		pPlayer->SetActive(false);
 		m_pPlayerObjects.push_back(pPlayer);
-	}
+	}*/
 }
 
 std::shared_ptr<CPlayer> CGameScene::GetPlayer(int nSkinType)
@@ -468,3 +468,4 @@ void CGameScene::StoreTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	m_pTerrainObjects.push_back(pTerrain2);
 	m_pTerrainObjects.push_back(pTerrain3);
 }
+
