@@ -123,7 +123,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 
 	//	m_pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
 	//	m_mapGameObjects[packet->id] = m_pPlayer;
-	//	m_pPlayer->SetServerID(packet->id);
+	//	m_pPlayer->SetSID(packet->id);
 	//	break;
 	//}
 	//case S_C_OBJECT_ADD:
@@ -145,7 +145,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	//		//std::shared_ptr<CPlayer> pPlayer = GetPlayer(packet->skin_type); // GetPlayer(skin_type)로 바꿔야 함
 	//		std::shared_ptr<CPlayer> pPlayer = GetPlayer(0); // GetPlayer(skin_type)로 바꿔야 함
 	//		pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
-	//		pPlayer->SetServerID(packet->id);
+	//		pPlayer->SetSID(packet->id);
 	//		m_mapGameObjects[packet->id] = pPlayer;
 
 	//		int gun_type = packet->gun_type;
@@ -165,7 +165,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	//		std::shared_ptr<CGameObject> pZombie = GetZombie(packet->skin_type);
 	//		pZombie->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
 	//		m_mapGameObjects[packet->id] = pZombie;
-	//		pZombie->SetServerID(packet->id);
+	//		pZombie->SetSID(packet->id);
 	//		{
 	//			std::string DebugOutput = "ObjectType::ZOMBIE 생성 완료\n";
 	//			//OutputDebugStringA(DebugOutput.c_str());

@@ -205,7 +205,7 @@ void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 {
 	if (gameObject)
 	{
-		auto& pChaseTransform = gameObject->m_pTransform;
+		auto& pChaseTransform = gameObject->GetComponent<CTransform>();
 
 		// 카메라의 회전 행렬 계산
 		XMFLOAT4X4 xmf4x4Rotate = Matrix4x4::Identity();

@@ -4,6 +4,7 @@
 CCollisionChecker::CCollisionChecker(CScene* pScene)
 	:CGameObject(), m_pScene(pScene)
 {
+	SetLayer(LAYER_CONTROLLER);
 }
 
 CCollisionChecker::~CCollisionChecker()
@@ -35,11 +36,11 @@ void CCollisionChecker::CollisionCheckFromLayers(std::vector<std::pair<GAMEOBJEC
 
 	std::vector<CollisionInfo> ppCollidedPairs;
 	for (auto& ppLayerPair : ppObjectLayerPairs) {
-		auto& pObjectsA = ppObjects[ppLayerPair.first];
-		auto& pObjectsB = ppObjects[ppLayerPair.second];
-		for (auto& pObjectA : pObjectsA) {
+		auto pObjectsA = ppObjects[ppLayerPair.first];
+		auto pObjectsB = ppObjects[ppLayerPair.second];
+		for (auto pObjectA : pObjectsA) {
 			//pObjectA->UpdateTransform();
-			for (auto& pObjectB : pObjectsB) {
+			for (auto pObjectB : pObjectsB) {
 				// 여기서의 Object는 RootObject임을 기억.
 				//pObjectB->UpdateTransform();
 
@@ -49,8 +50,8 @@ void CCollisionChecker::CollisionCheckFromLayers(std::vector<std::pair<GAMEOBJEC
 				if (!pMergedA.Intersects(pMergedB)) continue;
 
 				// 그 이후, Collider 를 가져와 체크
-				std::vector<std::shared_ptr<CCollider>> pCollidersA = pObjectA->m_pCachesColliders;
-				std::vector<std::shared_ptr<CCollider>> pCollidersB = pObjectB->m_pCachesColliders;
+				auto pCollidersA = pObjectA->GetCachedColliders();
+				auto pCollidersB = pObjectB->GetCachedColliders();
 
 				//pObjectA->GetComponentsInChildren<CCollider>(pCollidersA);
 				//pObjectB->GetComponentsInChildren<CCollider>(pCollidersB);
@@ -70,6 +71,7 @@ void CCollisionChecker::CollisionCheckFromLayers(std::vector<std::pair<GAMEOBJEC
 	for (auto& ppCollisionInfo : ppCollidedPairs)
 	{
 		ppCollisionInfo.pObjectA->OnCollision(ppCollisionInfo.pObjectB, ppCollisionInfo.pColliderA, ppCollisionInfo.pColliderB);
+		ppCollisionInfo.pObjectB->OnCollision(ppCollisionInfo.pObjectA, ppCollisionInfo.pColliderB, ppCollisionInfo.pColliderA);
 	}
 }
 
@@ -77,7 +79,7 @@ void CCollisionChecker::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 {
 }
 
-bool CCollisionChecker::IsCollided(std::shared_ptr<CCollider>& colliderA, std::shared_ptr<CCollider>& colliderB)
+bool CCollisionChecker::IsCollided(CCollider* colliderA, CCollider* colliderB)
 {
 	return colliderA->IsCollided(colliderB);
 }
@@ -118,7 +120,7 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 
 	for (auto& pObject : pMaps)
 	{
-		std::vector<std::shared_ptr<CCollider>> pColliders = pObject->m_pCachesColliders;
+		auto& pColliders = pObject->GetCachedColliders();
 		for (auto& pCollider : pColliders) {
 			if (auto result = pCollider->RayCast(xmv3Position, xmv3Direction, tempRange)) {
 				isCollided = true;
@@ -131,7 +133,7 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 	}
 
 	for (auto& pEnemy : pEnemies) {
-		std::vector<std::shared_ptr<CCollider>> pColliders = pEnemy->m_pCachesColliders;
+		auto& pColliders = pEnemy->GetCachedColliders();
 		for (auto& pCollider : pColliders) {
 			if (auto result = pCollider->RayCast(xmv3Position, xmv3Direction, tempRange)) {
 				isCollided = true;

@@ -185,7 +185,7 @@ XMFLOAT4X4 CAABBCollider::GetColliderMatrix()
 	return xmf4x4box;
 }
 
-BoundingBox CAABBCollider::MergeColliders(std::vector<std::shared_ptr<CCollider>>& pColliders)
+BoundingBox CAABBCollider::MergeColliders(std::vector<CCollider*>& pColliders)
 { 
 	BoundingBox boundingBox{};
 	for (auto pCollider : pColliders)

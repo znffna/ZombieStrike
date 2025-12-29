@@ -12,16 +12,6 @@ class CGameObject;
 class CMesh;
 class CCamera;
 
-enum COMPONENT_LAYER
-{
-	COMPONENT_LAYER_NONE = 0,
-	COMPONENT_LAYER_COLLIDER,
-	COMPONENT_LAYER_RIGIDBODY,
-	COMPONENT_LAYER_ANIMATION,
-	COMPONENT_LAYER_TRANSFORM,
-	COMPONENT_LAYER_CAMERA,
-};
-
 class CComponent
 {
 public:
@@ -41,4 +31,3 @@ public:
 	void SetActive(bool bActive) { m_bActive = bActive; }
 	bool IsActive() const { return m_bActive; }
 };
-

@@ -5,10 +5,10 @@
 class CScene;
 
 struct CollisionInfo {
-	std::shared_ptr<CGameObject> pObjectA;
-	std::shared_ptr<CGameObject> pObjectB;
-	std::shared_ptr<CCollider> pColliderA;
-	std::shared_ptr<CCollider> pColliderB;
+	CGameObject* pObjectA;
+	CGameObject* pObjectB;
+	CCollider* pColliderA;
+	CCollider* pColliderB;
 };
 
 struct RESULT_RAYCAST {
@@ -23,8 +23,6 @@ public:
 	CCollisionChecker(CScene* pScene);
 	virtual ~CCollisionChecker();
 
-	virtual GAMEOBJECT_LAYER GetLayer() { return m_nLayer = LAYER_CONTROLLER; }
-
 	// Object Initialization
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)  override;
 	// Object Update
@@ -33,7 +31,7 @@ public:
 	// Object Render
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr, bool bDepthWrite = false) override;
 	// Object Collision
-	virtual bool IsCollided(std::shared_ptr<CCollider>& colliderA, std::shared_ptr<CCollider>& colliderB);
+	virtual bool IsCollided(CCollider* colliderA, CCollider* colliderB);
 	virtual bool IsCollided(CCollider& colliderA, CCollider& colliderB);
 
 	virtual RESULT_RAYCAST CheckBulletCollision(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction, float fRange);

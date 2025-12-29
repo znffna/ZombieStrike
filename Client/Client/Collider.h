@@ -141,7 +141,7 @@ public:
 	virtual bool IsCollided(CCollider* pCollider) override;    
 	XMFLOAT4X4 GetColliderMatrix() override;    
 
-	static BoundingBox MergeColliders(std::vector<std::shared_ptr<CCollider>>& pColliders);
+	static BoundingBox MergeColliders(std::vector<CCollider*>& pColliders);
 
 	virtual XMFLOAT3 GetCorrectionVector(std::shared_ptr<CCollider>& pCollider) override;
 	virtual XMFLOAT3 GetCorrectionVector(CCollider* pCollider) override;
