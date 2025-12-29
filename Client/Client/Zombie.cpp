@@ -16,6 +16,7 @@ CZombieCAnimationController::~CZombieCAnimationController()
 
 CZombieObject::CZombieObject()
 {
+	SetLayer(LAYER_ENEMY);
 }
 
 CZombieObject::~CZombieObject()
@@ -29,7 +30,7 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	// Object Info
 	Init();
 
-	m_strName = "Zombie_" + std::to_string(m_nObjectID);
+	SetName("Zombie_" + std::to_string(GetID()));
 
 	SetRotationAxisLock(true, false, true);
 
@@ -68,7 +69,7 @@ void CZombieObject::Update(float fTimeElapsed)
 			m_bDied = false; // 좀비가 죽은 상태를 초기화
 			m_fDeathTime = 0.0f; // 죽은 시간 초기화
 
-			m_bActive = false; // 좀비 오브젝트 비활성화
+			SetActive(false); // 좀비 오브젝트 비활성화
 		}
 	}
 }

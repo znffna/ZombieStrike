@@ -79,59 +79,90 @@ std::wstring to_wstring(GAMEOBJECT_LAYER type);
 class CGameObject : public std::enable_shared_from_this<CGameObject>
 {
 public:
-	
-
-	
-	
-public:
 	CGameObject();
 	CGameObject(const std::string& strName);
 	virtual ~CGameObject();
 
-	void ClearMemberVariables();
-	void Init(); 
-
+	// --------------------------------------------
 	// Object Initialization
+	// --------------------------------------------
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {};
 	virtual void DeepCopyFromGameObject(std::shared_ptr<CGameObject> rhs);
+	void ClearMemberVariables();
+	void Init();
 
+	// --------------------------------------------
+	// Object methods
+	// --------------------------------------------
+	virtual void Update(float fTimeElapsed);
+	void UpdateBBCache();
+
+	virtual void OnPrepareRender();
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr, bool bDepthWrite = false);
+
+public:
+	// --------------------------------------------
+	// Object ID
+	// --------------------------------------------
+	UINT GetID() { return m_nID; }
+	void SetID(UINT nObjectID) { m_nID = nObjectID; }
+private:
+	UINT m_nID; 
+
+public:
+	// --------------------------------------------
+	// Server ID
+	// --------------------------------------------
+	UINT GetSID() { return m_nSID; } // 서버 ID는 Object ID와 동일하게 사용
+	void SetSID(UINT nServerID) { m_nSID = nServerID; } // 서버 ID는 Object ID와 동일하게 사용
+
+private:
+	UINT m_nSID; // Object Server ID
+
+public:
+	// --------------------------------------------
 	// Active Flag
+	// --------------------------------------------
 	bool IsActive() { return m_bActive; }
 	void SetActive(bool bActive) { m_bActive = bActive; }
 
-	// Object ID
-	UINT GetObjectID() { return m_nObjectID; }
-	void SetObjectID(UINT nObjectID) { m_nObjectID = nObjectID; }
+private:
+	bool m_bActive; // Active Flag
 
-	// Server ID
-	UINT GetServerID() { return m_nObjectServerID; } // 서버 ID는 Object ID와 동일하게 사용
-	void SetServerID(UINT nServerID) { m_nObjectServerID = nServerID; } // 서버 ID는 Object ID와 동일하게 사용
 
+public:
+	// --------------------------------------------
 	// Object Name
+	// --------------------------------------------
 	std::string GetName() { return m_strName; }
 	void SetName(const std::string& strName);
 	virtual std::string GetDefaultName() { return "CGameObject"; }
+private:
+	std::string m_strName;  // Object Name
 
+public:
+	// --------------------------------------------
 	// Layer
+	// --------------------------------------------
 	virtual void SetLayer(GAMEOBJECT_LAYER layer) { m_nLayer = layer; }
 	virtual GAMEOBJECT_LAYER GetLayer() { return m_nLayer; }
 
 	void SetState(int state) {
 		if (m_pSkinnedAnimationController) {
-			if (m_pSkinnedAnimationController->ChangeState(state)) {
-				/*if (GetLayer() == LAYER_PLAYER) {
-					std::string debugString = std::to_string(GetServerID()) + " Player : Change Animation State to " + std::to_string(static_cast<int>(state)) + "\n";
-					OutputDebugStringA(debugString.c_str());
-				}*/
-			}
+			m_pSkinnedAnimationController->ChangeState(state);
 		}
 	}
 	int GetUpperState() {
 		if (m_pSkinnedAnimationController) return m_pSkinnedAnimationController->GetUpperState();
 		return -1;
 	}
+private:
+	GAMEOBJECT_LAYER m_nLayer; // Object Layer
 
+public:
+	// --------------------------------------------
 	// 상속 관계
+	// --------------------------------------------
 	CGameObject* GetParent() { return m_pParent; }
 	std::vector<std::shared_ptr<CGameObject>> GetChilds() { return m_pChilds; }
 	std::shared_ptr<CGameObject> GetChild(int nIndex) { return m_pChilds[nIndex]; }
@@ -139,17 +170,17 @@ public:
 	void SetParent(CGameObject* pParent) { m_pParent = pParent; };
 	void SetChild(std::shared_ptr<CGameObject> pChild) { m_pChilds.push_back(pChild); pChild->SetParent(this); };
 
-	// Object Update
-	virtual void Update(float fTimeElapsed);
+protected:
+	// Parent
+	CGameObject* m_pParent;
 
-	void UpdateBBCache();
-
-	// Object Render
-	virtual void OnPrepareRender();
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr, bool bDepthWrite = false);
-
+	// Child
+	std::vector<std::shared_ptr<CGameObject>> m_pChilds; // Child Object
+public:
+	// --------------------------------------------
 	// Object Collision
-	virtual void OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::shared_ptr<CCollider>& pColliderA, std::shared_ptr<CCollider>& pColliderB); // Collision Event
+	// --------------------------------------------
+	virtual void OnCollision(CGameObject* pOther, CCollider* pColliderA, CCollider* pColliderB); // Collision Event
 	CAABBCollider GetMergedCollider();
 
 	BoundingBox GetMeshBound() {
@@ -161,6 +192,10 @@ public:
 	void UpdateLocalBoundingBox(const XMFLOAT4X4& pParentTransform = Matrix4x4::Identity());
 
 public:
+	// --------------------------------------------
+	// Renderer Group
+	// --------------------------------------------
+	
 	// Mesh
 	void SetMesh(std::shared_ptr<CMesh> pMesh);
 	UINT GetMeshType() { return((m_pMesh) ? m_pMesh->GetType() : 0x00); }
@@ -172,31 +207,33 @@ public:
 
 	// Shader
 	void SetShader(std::shared_ptr<CShader> pShader, int nIndex = 0);
+protected:
+	std::shared_ptr<CMesh> m_pMesh; // Object Mesh
 
+	// Material
+	UINT m_nMaterials = 0;
+	std::vector<std::shared_ptr<CMaterial>> m_ppMaterials; // Object CMaterial
+
+public:
+	// --------------------------------------------
 	// Shader Variables
+	// TODO : 사실상 Object 단위로 Shader Variable을 생성하는 것은 비효율적임
+	// --------------------------------------------
 	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseShaderVariables();
 
 	virtual void ReleaseUploadBuffers();
 
-protected:
-	bool m_bActive; // Active Flag
-
-	GAMEOBJECT_LAYER m_nLayer; // Object Layer
-
-#ifdef _DEBUG
-	int nLoadFrames = -1;
-#endif
-
-	// Object ID
-	static UINT m_nObjectIDCounter; // Object ID Counter
-
-	UINT m_nObjectID; // Object ID
-	UINT m_nObjectServerID; // Object Server ID
-	std::string m_strName;  // Object Name
+public:
+	ComPtr<ID3D12Resource> m_pd3dcbGameObject;
+	CB_GAMEOBJECT_INFO* m_pcbMappedObject = nullptr;
 
 public:
+	// --------------------------------------------
+	// Skinning Tag
+	// TODO : Bone Tag를 Object가 다루는건 아닌거같음.
+	// --------------------------------------------
 	std::string m_strTag = "None"; // Object Tag (For Skinning)
 	std::string GetTag() const { return m_strTag; }
 	
@@ -210,63 +247,19 @@ public:
 		else return 0.0f;
 	}
 
-
-	std::shared_ptr<CMesh> m_pMesh; // Object Mesh
-
-	// CMaterial
-	UINT m_nMaterials = 0;
-	std::vector<std::shared_ptr<CMaterial>> m_ppMaterials; // Object CMaterial
-
 public:
+	// --------------------------------------------
+	// Debug Color
+	// TODO : Object Color는 Renderer로 옮겨야 함.
+	// --------------------------------------------
 	XMFLOAT4 m_xmf4Color = { 1.0f, 1.0f, 1.0f, 1.0f }; // Object Color
 	void SetColor(const XMFLOAT4& xmf4Color) { m_xmf4Color = xmf4Color; }
 	XMFLOAT4 GetColor() const { return m_xmf4Color; }
 
 public:
-	// Transform
-	bool m_bPitchLock = false;
-	bool m_bYawLock = false;
-	bool m_bRollLock = false;
-	std::shared_ptr<CTransform> m_pTransform = std::make_shared<CTransform>(this);
-
+	// --------------------------------------------
 	// Component
-	std::vector<std::shared_ptr<CComponent>> m_pComponents;
-
-	std::vector<std::shared_ptr<CCollider>> m_pCachesColliders; // 모든 Children Collide를 복사할당(For CollisionCheck)
-
-public:
-	// Shader Variables
-	ComPtr<ID3D12Resource> m_pd3dcbGameObject;
-	CB_GAMEOBJECT_INFO* m_pcbMappedObject = nullptr;
-
-protected:
-	// Parent
-	CGameObject* m_pParent;
-
-	// Child
-	std::vector<std::shared_ptr<CGameObject>> m_pChilds; // Child Object
-public:
-	// Animation	
-	std::shared_ptr<CAnimationController> m_pSkinnedAnimationController;
-
-	// Load Model
-	void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, std::ifstream& File, std::shared_ptr<CShader> pShader);
-	std::shared_ptr<CTexture> FindReplicatedTexture(const _TCHAR* pstrTextureName);
-	void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& ppSkinnedMeshes, int* pnSkinnedMesh);;
-	
-	static void LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<CLoadedModelInfo> pLoadedModel);
-	static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth = 0);
-	static std::shared_ptr<CLoadedModelInfo> LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* pstrFileName, std::shared_ptr<CShader> pShader);
-	
-	// Clone
-	static bool DeepCopyFromModel(const std::string &strModelName, std::shared_ptr<CGameObject>& pGameObject);
-	static bool DeepCopyFromModel(const CLoadedModelInfo* pLoadModel, std::shared_ptr<CGameObject>& pGameObject);
-	bool DeepCopyFromModel(const std::string& strModelName);
-	bool DeepCopyFromModel(const CLoadedModelInfo* pLoadModel) { auto pThis = shared_from_this(); return DeepCopyFromModel(pLoadModel, pThis); };
-	
-	std::shared_ptr<CGameObject> FindFrame(std::string strFrameName);
-public:
-	// Component
+	// --------------------------------------------
 	template <typename T>
 	std::shared_ptr<T> CreateComponent(std::shared_ptr<CGameObject> pOwner)
 	{
@@ -304,10 +297,10 @@ public:
 	}
 
 	template <typename T>
-	void GetComponentsInChildren(std::vector<std::shared_ptr<T>>& pVec) const {
+	void GetComponentsInChildren(std::vector<T*>& pVec) const {
 		for (auto& pComponent : m_pComponents) {
 			if (auto casted = std::dynamic_pointer_cast<T>(pComponent)) {
-				pVec.push_back(casted);
+				pVec.push_back(casted.get());
 			}
 		}
 
@@ -316,6 +309,42 @@ public:
 		}
 	}
 
+	std::vector<CCollider*>& GetCachedColliders() { return m_pCachesColliders; }
+private:
+	bool m_bPitchLock = false;
+	bool m_bYawLock = false;
+	bool m_bRollLock = false;
+
+	// Component
+	std::vector<std::shared_ptr<CComponent>> m_pComponents;
+	std::vector<CCollider*> m_pCachesColliders; // 모든 Children Collide를 복사할당(For CollisionCheck)
+
+public:
+	// --------------------------------------------
+	// Model
+	// --------------------------------------------
+	
+	// Animation	
+	std::shared_ptr<CAnimationController> m_pSkinnedAnimationController;
+
+	// Load Model
+	void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, std::ifstream& File, std::shared_ptr<CShader> pShader);
+	std::shared_ptr<CTexture> FindReplicatedTexture(const _TCHAR* pstrTextureName);
+	void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& ppSkinnedMeshes, int* pnSkinnedMesh);;
+	
+	static void LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<CLoadedModelInfo> pLoadedModel);
+	static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth = 0);
+	static std::shared_ptr<CLoadedModelInfo> LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* pstrFileName, std::shared_ptr<CShader> pShader);
+	
+	// Clone
+	static bool DeepCopyFromModel(const std::string &strModelName, std::shared_ptr<CGameObject>& pGameObject);
+	static bool DeepCopyFromModel(const CLoadedModelInfo* pLoadModel, std::shared_ptr<CGameObject>& pGameObject);
+	bool DeepCopyFromModel(const std::string& strModelName);
+	bool DeepCopyFromModel(const CLoadedModelInfo* pLoadModel) { auto pThis = shared_from_this(); return DeepCopyFromModel(pLoadModel, pThis); };
+	
+	std::shared_ptr<CGameObject> FindFrame(std::string strFrameName);
+
+public:
 	// Transform
 	const DirectX::XMFLOAT3 GetPosition() { return m_pTransform->GetPosition(); }
 	const DirectX::XMFLOAT3 GetRightVector() { return m_pTransform->GetRight(); }
@@ -366,44 +395,19 @@ public:
 	void UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix);
 	void UpdateTransform(std::shared_ptr<CGameObject>& pGameobject);
 
-// 2D Sprite
+
+protected:
+	std::shared_ptr<CTransform> m_pTransform = std::make_shared<CTransform>(this);
+
+public:
+	// 2D Sprite
 	virtual void SetSize(float cx, float cy, float width, float height) {}
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
 
-class CRotatingObject : public CGameObject
-{
-public:
-	CRotatingObject();
-	virtual ~CRotatingObject();
-
-	// Object Initialization
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandlist);
-	virtual std::string GetDefaultName() override { return "CRotatingObject"; } 
-
-	static std::shared_ptr<CRotatingObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-
-	// Object Update
-	virtual void Update(float fTimeElapsed) override;
-
-	// Set Rotation Speed
-	void SetRotationSpeed(float fRotationSpeed) { m_fRotationSpeed = fRotationSpeed; }
-
-	// Set Rotation Axis
-	void SetRotationAxis(DirectX::XMFLOAT3 xmf3RotationAxis) { m_xmf3RotationAxis = xmf3RotationAxis; }
-
-private:
-	float m_fRotationSpeed = 90.0f; // 초당 회전 속도
-	XMFLOAT3 m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f); // 회전 축
-
-};  // CRotatingObject
-
-////////////////////////////////////////////////////////////////////////////////////////
-//
-
-class CCubeObject : public CRotatingObject
+class CCubeObject : public CGameObject
 {
 public:
 	CCubeObject();
@@ -553,11 +557,6 @@ public:
 	void AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Look, float fRange);
 	void AddBullet(const CBulletVertex& pBulletVertex);
 
-	void AddBullets(const std::vector<CBulletVertex>& pBulletVertices)
-	{
-		std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullets(pBulletVertices);
-	}
-
 private:
 	std::vector<FIRE_INFO> m_pFireInfos;
 
@@ -574,7 +573,7 @@ public:
 	}
 
 	void UpdateBulletVertices(const std::vector<CBulletVertex>& pBulletVertices) {
-		std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullets(pBulletVertices);
+		//std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullets(pBulletVertices);
 	}
 
 	void ClearFireInfos() {

@@ -8,7 +8,9 @@
 //
 
 CPlayer::CPlayer()
+
 {
+	SetLayer(LAYER_PLAYER);
 }
 
 CPlayer::~CPlayer()
@@ -22,7 +24,7 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	// Object Info
 	Init();
 
-	m_strName = "Player_" + std::to_string(m_nObjectID);
+	SetName("Player_" + std::to_string(GetID()));
 
 	SetRotationAxisLock(true, false, true);
 
@@ -194,11 +196,12 @@ void CPlayer::SetSkin(int nSkinType)
 		if(i != 0) m_pSkinnedAnimationController->SetTrackMask(i, ANIMATION_MASK_FULL, false);
 	}
 
+	// TODO: 이부분 수정 필요
 	// 바뀐 Model에 맞춰 Component 변경
-	for (auto& pComponent : m_pComponents)
+	/*for (auto& pComponent : m_pComponents)
 	{
 		pComponent->Init(this);
-	}
+	}*/
 
 	//auto pCollider = GetComponent<COBBCollider>();
 	//pCollider->SetCollider(FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound());
@@ -260,10 +263,10 @@ void CPlayer::Rotate(float x, float y, float z)
 		pCamera->Rotate(x, y, z);
 	}
 
-	if (m_bPitchLock) x = 0.0f;
+	/*if (m_bPitchLock) x = 0.0f;
 	if (m_bYawLock) y = 0.0f;
 	if (m_bRollLock) z = 0.0f;
 
-	m_pTransform->Rotate(x, y, z);
+	m_pTransform->Rotate(x, y, z);*/
 }
 

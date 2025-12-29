@@ -247,60 +247,95 @@ void CScene::PopScene()
 	CGameFramework::Instance()->RequestSceneChange(CPopScene());
 }
 
-void CScene::AddObject(std::unique_ptr<CGameObject>& pObject)
+// --------------------------------------------
+// 즉시 추가 (디버그 / 테스트)
+// --------------------------------------------
+CGameObject* CScene::AddObject(std::unique_ptr<CGameObject> object)
 {
-	if (pObject)
-	{
-		// Add Object to Scene
-		m_CreateQueue.push_back(std::move(pObject));	
-		pObject->SetActive(true);
-	}
+	if (!object)
+		return nullptr;
+
+	object->SetID(m_NextGameObjectID++);
+	CGameObject* rawPtr = object.get();
+
+	RegisterLayerView(rawPtr);
+	m_ppGameObjects.emplace(rawPtr->GetID(), std::move(object));
+
+	return rawPtr;
 }
 
-void CScene::RemoveObject(const std::unique_ptr<CGameObject>& pObject)
+// --------------------------------------------
+// 삭제 요청
+// --------------------------------------------
+void CScene::RequestDestroyObject(uint32_t id)
 {
-	if (pObject)
+	m_RemoveQueue.push_back(id);
+}
+
+// --------------------------------------------
+// Pending Request 처리
+// --------------------------------------------
+void CScene::ProcessPendingRequest()
+{
+	for (auto& object : m_CreateQueue)
 	{
-		m_RemoveQueue.push_back(pObject->GetObjectID());
-		pObject->SetActive(false);
+		// TODO : Initialize 시점에 ID3D12 요소	전달 필요 또는 별도로 가져오는 Init 함수 필요
+		// object->Initialize();
+
+		CGameObject* rawPtr = object.get();
+		RegisterLayerView(rawPtr);
+
+		m_ppGameObjects.emplace(rawPtr->GetID(), std::move(object));
 	}
+	m_CreateQueue.clear();
+
+	for (uint32_t id : m_RemoveQueue)
+	{
+		auto it = m_ppGameObjects.find(id);
+		if (it != m_ppGameObjects.end())
+		{
+			UnregisterLayerView(it->second.get());
+			m_ppGameObjects.erase(it);
+		}
+	}
+	m_RemoveQueue.clear();
+}
+
+// --------------------------------------------
+// Object 검색
+// --------------------------------------------
+CGameObject* CScene::FindObject(uint32_t id) const
+{
+	auto it = m_ppGameObjects.find(id);
+	return (it != m_ppGameObjects.end()) ? it->second.get() : nullptr;
+}
+
+// --------------------------------------------
+// Layer View 관리
+// --------------------------------------------
+void CScene::RegisterLayerView(CGameObject* object)
+{
+	if (!object)
+		return;
+
+	m_ppLayerView[object->GetLayer()].push_back(object);
+}
+
+void CScene::UnregisterLayerView(CGameObject* object)
+{
+	if (!object)
+		return;
+
+	auto& vec = m_ppLayerView[object->GetLayer()];
+	vec.erase(
+		std::remove(vec.begin(), vec.end(), object),
+		vec.end()
+	);
 }
 
 void CScene::LateUpdate()
 {
-	// Add GameObjects
-	for (auto& pObject : m_CreateQueue)
-	{
-		if (pObject)
-		{
-			// Layer View 등록
-			m_ppLayerView[pObject->GetLayer()].push_back(pObject.get());
-
-			// GameObjects Map 등록
-			m_ppGameObjects[pObject->GetObjectID()] = (std::move(pObject));
-		}
-	}
-	m_CreateQueue.clear();
-
-	// Remove GameObjects
-	for (auto& ID : m_RemoveQueue)
-	{
-		// Find Object to Delete
-		auto& deleteObject = m_ppGameObjects[ID];
-		auto rawPtr = deleteObject.get();
-		auto layer = deleteObject->GetLayer();
-
-		// Remove from Layer View
-		auto it = std::find(m_ppLayerView[layer].begin(), m_ppLayerView[layer].end(), rawPtr);
-		if (it != m_ppLayerView[layer].end())
-		{
-			m_ppLayerView[layer].erase(it);
-		}
-
-		// Remove from GameObjects Map
-		m_ppGameObjects.erase(ID);
-	}
-	m_RemoveQueue.clear();
+	ProcessPendingRequest();
 }
 
 void CScene::SetPlayer(std::unique_ptr<CPlayer>& pPlayer)

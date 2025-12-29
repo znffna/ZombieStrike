@@ -16,8 +16,6 @@
 
 #include "GameFramework.h"
 
-UINT CGameObject::m_nObjectIDCounter = 0;
-
 CGameObject::CGameObject()	
 {
 	Init();
@@ -71,11 +69,11 @@ void CGameObject::Init()
 {
 	// Object Info
 	m_bActive = true;
-	m_nObjectID = m_nObjectIDCounter++;
+	m_nID = 0;
 
 	// Default Name
 	m_strName = "Default_GameObject";
-	//m_strName = "GameObject_" + std::to_string(m_nObjectID);
+	//m_strName = "GameObject_" + std::to_string(m_nID);
 }
 
 void CGameObject::DeepCopyFromGameObject(std::shared_ptr<CGameObject> rhs)
@@ -127,7 +125,7 @@ void CGameObject::SetName(const std::string& strName)
 	}
 	else
 	{
-		m_strName = GetDefaultName() + "_" + std::to_string(m_nObjectID);
+		m_strName = GetDefaultName() + "_" + std::to_string(m_nID);
 	}
 }
 
@@ -234,30 +232,30 @@ void CGameObject::UpdateBBCache()
 		m_pCachesColliders.clear();
 
 		// 현재 모든 자식내 Collider를 가져옴
-		std::vector<std::shared_ptr<CCollider>> pCachesColliders;
+		std::vector<CCollider*> pCachesColliders;
 		GetComponentsInChildren<CCollider>(pCachesColliders);
 
 		// Pointer 가아닌 실제 Value를 복사
-		std::vector<std::shared_ptr<CCollider>> pColliders;
+		std::vector<CCollider*> pColliders(pCachesColliders.size());
 		for (auto& pCollider : pCachesColliders)
 		{
-			pColliders.push_back(std::dynamic_pointer_cast<CCollider>(pCollider->Clone()));
+			pColliders.push_back(pCollider);
 		}
 
 		m_pCachesColliders = std::move(pColliders);
 	}
 }
 
-void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::shared_ptr<CCollider>& pColliderA, std::shared_ptr<CCollider>& pColliderB)
+void CGameObject::OnCollision(CGameObject* pOther, CCollider* pColliderA, CCollider* pColliderB)
 {
 	// Collision Event
 	if (nullptr == pColliderA) return;
 
 	std::shared_ptr<CRigidBody> rigidBody = GetComponent<CRigidBody>();
-	std::shared_ptr<CRigidBody> pOtherRigidBody = pObjectB->GetComponent<CRigidBody>();
+	std::shared_ptr<CRigidBody> pOtherRigidBody = pOther->GetComponent<CRigidBody>();
 	
 	/*{
-		std::string debugoutput = "Collision Root Object Occured: " + GetName() + " - " + pObjectB->GetName() + " / ";
+		std::string debugoutput = "Collision Root Object Occured: " + GetName() + " - " + pOther->GetName() + " / ";
 		debugoutput += "Collision Collider Object Occured: " + pColliderA->gameObject->GetName() + " - " + pColliderB->gameObject->GetName() + "\n";
 		OutputDebugStringA(debugoutput.c_str());
 	}*/
@@ -297,7 +295,7 @@ void CGameObject::OnCollision(std::shared_ptr<CGameObject>& pObjectB, std::share
 
 CAABBCollider CGameObject::GetMergedCollider()
 {
-	std::vector<std::shared_ptr<CCollider>> pColliders;
+	std::vector<CCollider*> pColliders;
 	GetComponentsInChildren<CCollider>(pColliders);
 
 	CAABBCollider mergedBoundingBox{ this };
@@ -469,7 +467,7 @@ void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandLi
 
 #ifdef _DEBUG
 	// Debug Output
-	std::wstring DebugString = L"GameObject [" + std::to_wstring(m_nObjectID) + L"] - position ("
+	std::wstring DebugString = L"GameObject [" + std::to_wstring(m_nID) + L"] - position ("
 		+ std::to_wstring(m_xmf4x4World._41) + L", "
 		+ std::to_wstring(m_xmf4x4World._42) + L", "
 		+ std::to_wstring(m_xmf4x4World._43) + L")\n";
@@ -974,39 +972,6 @@ std::shared_ptr<CGameObject> CGameObject::FindFrame(std::string strFrameName)
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-CRotatingObject::CRotatingObject()
-	: CGameObject()
-{
-}
-
-CRotatingObject::~CRotatingObject()
-{
-}
-
-void CRotatingObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandlist)
-{
-	CGameObject::Initialize(pd3dDevice, pd3dCommandlist);
-
-	m_fRotationSpeed = 30.0f;
-	m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);
-}
-
-std::shared_ptr<CRotatingObject> CRotatingObject::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
-{
-	std::shared_ptr<CRotatingObject> pRotatingObject = std::make_shared<CRotatingObject>();
-	pRotatingObject->Initialize(pd3dDevice, pd3dCommandList);
-
-	return pRotatingObject;
-}
-
-void CRotatingObject::Update(float fTimeElapsed)
-{
-	Rotate(m_xmf3RotationAxis, m_fRotationSpeed * fTimeElapsed);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//
-
 CSkyBox::CSkyBox()
 {
 }
@@ -1041,7 +1006,7 @@ void CSkyBox::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);
 	pSkyBoxMaterial->SetShader(pSkyBoxShader);
 
-	m_ppMaterials.resize(1);
+	MaterialResize(1);
 	SetMaterial(0, pSkyBoxMaterial);
 }
 
@@ -1161,7 +1126,7 @@ void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	CScene::CreateShaderResourceViews(pd3dDevice, pTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
 
-	m_ppMaterials.resize(1);
+	MaterialResize(1);
 	m_ppMaterials[0]->SetTexture(pTexture);
 }
 
@@ -1269,7 +1234,7 @@ void CLoadedModelInfo::PrepareSkinning()
 //
 
 CCubeObject::CCubeObject()
-	: CRotatingObject()
+	: CGameObject()
 {
 
 }

@@ -277,33 +277,45 @@ public:
 
 	// Object Management
 public:
-	template<typename TObject, typename TDesc>
-	TObject* RequestCreateObject(const TDesc& desc)
-	{
-		static_assert(std::is_base_of_v<CGameObject, TObject>);
+	// 디버그 / 테스트용 즉시 추가 (소유권 이전 강제)
+	CGameObject* AddObject(std::unique_ptr<CGameObject> object);
 
-		auto obj = std::make_unique<TObject>();
-		obj->Initialize(desc);
-		return obj.get();
-	}
+	// 생성 요청 (지연 생성)
+	template<typename T>
+	CGameObject* RequestCreateObject(TypeTag<T> tag);
 
-	void RequestRemoveObject(uint32_t objectID)
-	{
-		m_RemoveQueue.push_back(objectID);
-	}
+	// 삭제 요청 (지연 삭제)
+	void RequestDestroyObject(uint32_t id);
 
+	// 프레임 경계에서 호출
+	void ProcessPendingRequest();
+
+	// ----------------------------------------
+    // Object 조회
+    // ----------------------------------------
+	CGameObject* FindObject(uint32_t id) const;
+	
 	std::map<GAMEOBJECT_LAYER, std::vector<CGameObject*>>& GetLayerViews() { return m_ppLayerView; }
 	void SetPlayer(std::unique_ptr<CPlayer>& pPlayer);
 
-	virtual void AddObject(std::unique_ptr<CGameObject>& pObject);
-	virtual void RemoveObject(const std::unique_ptr<CGameObject>& pObject);
+protected:
+	// ----------------------------------------
+	// 내부 헬퍼
+	// ----------------------------------------
+	void RegisterLayerView(CGameObject* object);
+	void UnregisterLayerView(CGameObject* object);
 
 protected:
-	std::map<uint32_t, std::unique_ptr<CGameObject>> m_ppGameObjects; // 실제 오브젝트 소유권 보유
-	std::map<GAMEOBJECT_LAYER, std::vector<CGameObject*>> m_ppLayerView;		   // 레이어별 오브젝트 뷰 (포인터만 보유)
-
+	// ----------------------------------------
+	// Containers
+	// ----------------------------------------
+	std::map<uint32_t, std::unique_ptr<CGameObject>> m_ppGameObjects;      // 실제 오브젝트 소유권 보유
+	std::map<GAMEOBJECT_LAYER, std::vector<CGameObject*>> m_ppLayerView;   // 레이어별 오브젝트 뷰 (포인터만 보유)
 	std::list<std::unique_ptr<CGameObject>> m_CreateQueue;				   // Request로 받은 Object를 담아둘 리스트
-	std::list<uint32_t> m_RemoveQueue;								   // Remove 요청 받은 Object ID를 담아둘 리스트
+	std::list<uint32_t> m_RemoveQueue;									   // Remove 요청 받은 Object ID를 담아둘 리스트
+
+	// ID 발급기
+	uint32_t m_NextGameObjectID = 1;
 
 public:
 	// Scene Method
@@ -442,7 +454,18 @@ public:
 	}
 };
 
+template<typename T>
+CGameObject* CScene::RequestCreateObject(TypeTag<T>)
+{
+	static_assert(std::is_base_of_v<CGameObject, T>,
+		"T must derive from CGameObject");
 
+	auto object = std::make_unique<T>();
+	object->SetID(m_NextGameObjectID++);
 
+	CGameObject* rawPtr = object.get();
+	m_CreateQueue.push_back(std::move(object));
 
+	return rawPtr; // 아직 Scene에 등록되지 않은 객체
+}
 

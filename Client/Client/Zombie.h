@@ -3,8 +3,6 @@
 #include "GameObject.h"
 #include "AnimationController.h"
 
-
-
 class CZombieCAnimationController : public CAnimationController
 {
 public:
@@ -24,7 +22,6 @@ public:
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nSkinType);
 	
 	virtual std::string GetDefaultName() override { return "CZombieObject"; }
-	virtual GAMEOBJECT_LAYER GetLayer() { return m_nLayer = LAYER_ENEMY; }
 
 	virtual void Update(float fTimeElapsed) override;
 
