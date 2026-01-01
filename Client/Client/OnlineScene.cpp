@@ -81,7 +81,7 @@ void COnlineScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARA
 			case VK_F5:
 			case VK_F6:
 			case VK_F7:
-				ChangeMap(wParam - VK_F5);
+				// ChangeMap(wParam - VK_F5);
 				break;
 			case VK_ESCAPE:
 				PopScene();
@@ -315,7 +315,7 @@ void COnlineScene::SendFirePacket(const FIRE_INFO fireInfo)
 	NetworkingClient::Instance().send_packet((char*)&packet);
 }
 
-bool COnlineScene::Fire(const std::shared_ptr<CPlayer>& pPlayer, FIRE_INFO* pFireInfo)
+bool COnlineScene::Fire(CPlayer* pPlayer, FIRE_INFO* pFireInfo)
 {
 	FIRE_INFO fireInfo{};
 	auto ret = CGameScene::Fire(pPlayer, &fireInfo);
@@ -333,7 +333,7 @@ bool COnlineScene::Fire(const std::shared_ptr<CPlayer>& pPlayer, FIRE_INFO* pFir
 	return ret;
 }
 
-bool COnlineScene::Fire(const std::shared_ptr<CPlayer>& pPlayer)
+bool COnlineScene::Fire(CPlayer* pPlayer)
 {
 	auto ret = Fire(pPlayer, nullptr);
 	return ret;

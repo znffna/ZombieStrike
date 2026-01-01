@@ -129,14 +129,18 @@ void CScene::CreateStaticMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 void CScene::ReleaseObjects()
 {
-	// Release GameObjects
+	// Release GameObjects (m_ppGameObjects가 소유권을 관리)
 	m_ppGameObjects.clear();
 
-	// Release Terrain
-	m_pTerrain.reset();
+	// Clear LayerView (포인터들은 소유권이 사라짐)
+	m_ppLayerView.clear();
 
-	// Release SkyBox
-	m_pSkyBox.reset();
+	// Reset special IDs / observers
+	m_SkyBoxID = 0;
+	m_TerrainID = 0;
+	m_MapID = 0;
+	m_PlayerID = 0;
+	m_pPlayer = nullptr;
 
 	// Release Lights
 	ZeroMemory(m_pLights.data(), sizeof(Light) * MAX_LIGHTS);
@@ -261,6 +265,10 @@ CGameObject* CScene::AddObject(std::unique_ptr<CGameObject> object)
 	RegisterLayerView(rawPtr);
 	m_ppGameObjects.emplace(rawPtr->GetID(), std::move(object));
 
+	{
+		std::string debugMsg = "CScene::AddObject: Object Added. ID = " + std::to_string(rawPtr->GetID()) + ", Name = " + rawPtr->GetName() + "\n";
+		OutputDebugStringA(debugMsg.c_str());
+	}
 	return rawPtr;
 }
 
@@ -336,11 +344,6 @@ void CScene::UnregisterLayerView(CGameObject* object)
 void CScene::LateUpdate()
 {
 	ProcessPendingRequest();
-}
-
-void CScene::SetPlayer(std::unique_ptr<CPlayer>& pPlayer)
-{ 
-	m_pPlayer = std::move(pPlayer);
 }
 
 void CScene::Update(float deltaTime)
@@ -997,9 +1000,6 @@ void CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam,
 		m_bMouseLButtonDown = false;
 		break;
 	}
-
-
-
 }
 
 BoundingBox CScene::CalculateBoundingBox()
@@ -1012,5 +1012,23 @@ BoundingBox CScene::CalculateBoundingBox()
 		}
 	}
 	return ret;
+}
+
+void CScene::SetPlayer(std::unique_ptr<CPlayer>& pPlayer)
+{
+	if (!pPlayer) return;
+
+	// AddObject은 ID 부여 및 LayerView 등록을 수행함
+	CGameObject* rawPtr = AddObject(std::move(pPlayer)); // 소유권이 m_ppGameObjects로 이동
+	if (rawPtr)
+	{
+		m_PlayerID = rawPtr->GetID();
+		m_pPlayer = dynamic_cast<CPlayer*>(rawPtr); // observer pointer (소유권 없음)
+	}
+	else
+	{
+		m_PlayerID = 0;
+		m_pPlayer = nullptr;
+	}
 }
 

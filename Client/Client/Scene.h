@@ -275,8 +275,10 @@ public:
 	// Cursor Management
 	virtual void SetCursor() { g_bEnableCursor = true; }
 
-	// Object Management
 public:
+	// ----------------------------------------
+	// Object Management
+	// ----------------------------------------
 	// 디버그 / 테스트용 즉시 추가 (소유권 이전 강제)
 	CGameObject* AddObject(std::unique_ptr<CGameObject> object);
 
@@ -290,12 +292,11 @@ public:
 	// 프레임 경계에서 호출
 	void ProcessPendingRequest();
 
-	// ----------------------------------------
     // Object 조회
-    // ----------------------------------------
 	CGameObject* FindObject(uint32_t id) const;
-	
 	std::map<GAMEOBJECT_LAYER, std::vector<CGameObject*>>& GetLayerViews() { return m_ppLayerView; }
+
+	// Player 세팅(현 클라이언트 입력처리를 수행할 오브젝트)
 	void SetPlayer(std::unique_ptr<CPlayer>& pPlayer);
 
 protected:
@@ -305,9 +306,8 @@ protected:
 	void RegisterLayerView(CGameObject* object);
 	void UnregisterLayerView(CGameObject* object);
 
-protected:
 	// ----------------------------------------
-	// Containers
+	// Object Containers
 	// ----------------------------------------
 	std::map<uint32_t, std::unique_ptr<CGameObject>> m_ppGameObjects;      // 실제 오브젝트 소유권 보유
 	std::map<GAMEOBJECT_LAYER, std::vector<CGameObject*>> m_ppLayerView;   // 레이어별 오브젝트 뷰 (포인터만 보유)
@@ -317,6 +317,19 @@ protected:
 	// ID 발급기
 	uint32_t m_NextGameObjectID = 1;
 
+	// Special objects: owned by m_ppGameObjects; store IDs + observer pointer for fast access
+	uint32_t m_SkyBoxID = 0;
+	uint32_t m_TerrainID = 0;
+	uint32_t m_MapID = 0;
+	uint32_t m_PlayerID = 0;
+
+	// Observer pointer (lifetime: owned by m_ppGameObjects)
+	// - 빠른 접근 용도. 실제 소유권은 m_ppGameObjects에 있음.
+	CPlayer* m_pPlayer = nullptr;
+
+public:
+	// Observer getter (null if not present)
+	CPlayer* GetPlayer() { return m_pPlayer; }
 public:
 	// Scene Method
 	virtual void Update(float deltaTime);
@@ -377,19 +390,7 @@ protected:
 	// Animation
 	float								m_fElapsedTime = 0.0f;
 
-	// SkyBox
-	std::unique_ptr<CGameObject> m_pSkyBox;
-
-	// Terrain
-	std::unique_ptr<CGameObject> m_pTerrain;
-
-	// Map
-	std::unique_ptr<CGameObject> m_pMap;
-
-	// Player
-	std::shared_ptr<CPlayer> m_pPlayer;
-public:
-	std::shared_ptr<CPlayer> GetPlayer() { return m_pPlayer; }
+	
 
 public:
 	const std::vector<CTextObject*> GetTextBlocks()

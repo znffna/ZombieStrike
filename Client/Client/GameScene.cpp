@@ -392,7 +392,7 @@ void CGameScene::ChangeMap(int nMapIndex)
 	//AddObject(m_pMap);
 }
 
-bool CGameScene::Fire(const std::shared_ptr<CPlayer>& pPlayer, FIRE_INFO* pFireInfo)
+bool CGameScene::Fire(CPlayer* pPlayer, FIRE_INFO* pFireInfo)
 {
 	bool ret = pPlayer->Fire(pFireInfo);
 	return ret;

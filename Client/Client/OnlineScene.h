@@ -38,8 +38,8 @@ public:
 	void SendPlayerState();
 	void SendFirePacket(const FIRE_INFO fireInfo);
 
-	virtual bool Fire(const std::shared_ptr<CPlayer>& pPlayer, FIRE_INFO* pFireInfo) override;
-	virtual bool Fire(const std::shared_ptr<CPlayer>& pPlayer);
+	virtual bool Fire(CPlayer* pPlayer, FIRE_INFO* pFireInfo);
+	virtual bool Fire(CPlayer* pPlayer);
 
 private:
 	std::unordered_map<int, std::shared_ptr<CGameObject>> m_mapGameObjects;
