@@ -269,7 +269,7 @@ public:
 	virtual void PopScene();
 
 	SCENE_STATE GetSceneState() { return m_SceneState; }
-	void SetSceneState(SCENE_STATE state) { m_SceneState = state; }
+	void SetSceneState(SCENE_STATE UpperPose) { m_SceneState = UpperPose; }
 	bool IsSceneRunning() const { return m_SceneState == SCENE_STATE_RUNNING; }
 
 	// Cursor Management

@@ -208,23 +208,23 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	//		switch (updatePkt->act_type)
 	//		{
 	//		case ActionType::ZMOVE:
-	//			pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_RUNNING);
+	//			pZombie->SetState((int)CAnimationController::ANIMATION_POSE::ZOMBIE_RUNNING);
 	//			break;
 	//		case ActionType::ATTACK:
-	//			pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_ATTACK);
+	//			pZombie->SetState((int)CAnimationController::ANIMATION_POSE::ZOMBIE_ATTACK);
 	//			break;
 	//		case ActionType::RANGED:
-	//			pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_ATTACK);
+	//			pZombie->SetState((int)CAnimationController::ANIMATION_POSE::ZOMBIE_ATTACK);
 	//			break;
 	//		case ActionType::DEAD:
-	//			pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_DEATH);
+	//			pZombie->SetState((int)CAnimationController::ANIMATION_POSE::ZOMBIE_DEATH);
 	//			//pZombie->Died();
 	//			break;
 	//		case ActionType::HIT:
-	//			pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_HIT);
+	//			pZombie->SetState((int)CAnimationController::ANIMATION_POSE::ZOMBIE_HIT);
 	//			break;
 	//		default:
-	//			pZombie->SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_IDLE);
+	//			pZombie->SetState((int)CAnimationController::ANIMATION_POSE::ZOMBIE_IDLE);
 	//			break;
 	//		}
 	//	}
@@ -280,7 +280,7 @@ void COnlineScene::SendPlayerState()
 		packet.score = 0; // 점수
 		packet.damage = 0; // 공격력
 		packet.move_input = m_pPlayer->GetMoveInput(); // 이동 입력
-		packet.act_type = m_pPlayer->GetUpperState();
+		packet.act_type = 0;
 
 		XMFLOAT3 position = m_pPlayer->GetPosition();
 		XMFLOAT3 velocity = m_pPlayer->GetComponent<CRigidBody>()->GetVelocity();

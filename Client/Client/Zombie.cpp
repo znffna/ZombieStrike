@@ -95,10 +95,10 @@ void CZombieObject::SetSkin(int nSkinType)
 	for (int i = 0; i < m_pSkinnedAnimationController->m_nAnimationTracks; i++)
 	{
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
-		if (i != 0) m_pSkinnedAnimationController->SetTrackMask(i, ANIMATION_MASK_FULL, false);
 	}
 
-	m_fMaxDeathTime = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[(int)CAnimationController::ANIMATION_STATE::ZOMBIE_DEATH]->m_fLength + 3.0f; // 좀비가 죽은 후 사라지기까지의 시간
+	m_fMaxDeathTime = 3.0f;
+	//m_fMaxDeathTime = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[(int)CAnimationController::ANIMATION_POSE::ZOMBIE_DEATH]->m_fLength + 3.0f; // 좀비가 죽은 후 사라지기까지의 시간
 
 	//auto pCollider = GetComponent<COBBCollider>();
 	//pCollider->SetCollider(FindFrame(m_strMeshBoneName[m_nSkinType])->GetMeshBound());

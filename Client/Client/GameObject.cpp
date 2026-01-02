@@ -753,7 +753,6 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 		}
 		else if (!strcmp(pstrToken, "</AnimationSets>"))
 		{
-			pLoadedModel->m_pAnimationRootObject = pLoadedModel->m_pModelRootObject->FindFrame(strAnimationRootName);
 			break;
 		}
 	}
@@ -1228,44 +1227,6 @@ void CLoadedModelInfo::PrepareSkinning()
 	m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes, &nSkinnedMesh);
 
 	for (int i = 0; i < m_nSkinnedMeshes; i++) m_ppSkinnedMeshes[i]->PrepareSkinning(m_pModelRootObject);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//
-
-CCubeObject::CCubeObject()
-	: CGameObject()
-{
-
-}
-
-CCubeObject::~CCubeObject()
-{
-}
-
-void CCubeObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
-{
-	// Mesh
-	auto pCubeMesh = CResourceManager::Instance().GetMesh("CCubeMesh");
-	if (nullptr == pCubeMesh)
-	{
-		pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
-		CResourceManager::Instance().SetMesh("CCubeMesh", pCubeMesh);
-	}
-	SetMesh(pCubeMesh);
-
-	// Material
-	std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
-	pMaterial->SetStandardShader();
-	SetMaterial(0, pMaterial);
-}
-
-std::shared_ptr<CCubeObject> CCubeObject::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
-{
-	std::shared_ptr<CCubeObject> pCube = std::make_shared<CCubeObject>();
-	pCube->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-
-	return pCube;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

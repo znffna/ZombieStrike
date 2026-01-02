@@ -38,8 +38,8 @@ public:
 // Track 모음은 AnimationController에서 관리.
 
 #define ANIMATION_MASK_UPPER 0x01
-#define ANIMATION_MASK_LOWER 0x02
-#define ANIMATION_MASK_FULL  ANIMATION_MASK_UPPER | ANIMATION_MASK_LOWER
+#define ANIMATION_MASK_BASE 0x02
+#define ANIMATION_MASK_FULL  ANIMATION_MASK_UPPER | ANIMATION_MASK_BASE
 
 class CAnimationTrack
 {
@@ -70,7 +70,6 @@ public:
 	void SetAnimationSet(int nAnimationSet) { m_nAnimationSet = nAnimationSet; }
 
 	void SetEnable(bool bEnable) { m_bEnable = bEnable; }
-	void SetMask(UINT nMaskFlag, bool bEnable) { bEnable ? m_nMaskFlag |= nMaskFlag : m_nMaskFlag &= ~nMaskFlag; (m_nMaskFlag)? SetEnable(true) : SetEnable(false); }
 	void SetSpeed(float fSpeed) { m_fSpeed = fSpeed; }
 	void SetWeight(float fWeight) { m_fWeight = fWeight; }
 
@@ -84,43 +83,41 @@ public:
 	void HandleCallback();;
 };
 
+enum ANIMATION_POSE // Number == Animation Track Index
+{
+	/// Player Animation States
+	// IDLE(Aiming)
+	IDLE = 0,
+	// WALK
+	WALK_RIGHT,
+	WALK_FORWARD_RIGHT,
+	WALK_FORWARD,
+	WALK_FORWARD_LEFT,
+	WALK_LEFT,
+	WALK_BACKWARD_LEFT,
+	WALK_BACKWARD,
+	WALK_BACKWARD_RIGHT,
+	// FIRE
+	FIRE,
+	// Reload
+	RELOAD,
+	// Hitted
+	HITTED,
 
+	/// Zombie Animation States
+	ZOMBIE_IDLE = 0,
+	ZOMBIE_RUNNING,
+	ZOMBIE_ATTACK,
+	ZOMBIE_DEATH,
+	ZOMBIE_SCREAM,
+	ZOMBIE_HIT,
+
+};
 
 // Animation Set과 Animation Track을 모아놓는 클래스
 class CAnimationController
 {
 public:
-	enum ANIMATION_STATE // Number == Animation Track Index
-	{
-		/// Player Animation States
-		// IDLE(Aiming)
-		IDLE = 0,
-		// WALK
-		WALK_RIGHT,
-		WALK_FORWARD_RIGHT,
-		WALK_FORWARD,
-		WALK_FORWARD_LEFT,
-		WALK_LEFT,
-		WALK_BACKWARD_LEFT,
-		WALK_BACKWARD,
-		WALK_BACKWARD_RIGHT,
-		// FIRE
-		FIRE,
-		// Reload
-		RELOAD,
-		// Hitted
-		HITTED,
-
-		/// Zombie Animation States
-		ZOMBIE_IDLE = 0,
-		ZOMBIE_RUNNING,
-		ZOMBIE_ATTACK,
-		ZOMBIE_DEATH,
-		ZOMBIE_SCREAM,
-		ZOMBIE_HIT,
-		
-	};
-
 	void Print();
 
 	CAnimationController();
@@ -131,8 +128,8 @@ public:
 
 public:
 	// State
-	ANIMATION_STATE state = IDLE;
-	ANIMATION_STATE LowerState = IDLE; // Lower Body Animation State
+	ANIMATION_POSE BasePose = IDLE;  // Lower Body Animation 
+	ANIMATION_POSE UpperPose = IDLE; // Upper Body Animation 
 
 	// Animation 
 	float 							m_fTime = 0.0f;
@@ -157,7 +154,6 @@ private:
 	void SetTrackEnable(int nAnimationTrack, bool bEnable) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetEnable(bEnable); };
 	
 public:
-	void SetTrackMask(int nAnimationTrack, UINT nFlag, bool bEnable) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetMask(nFlag, bEnable); };
 	void SetTrackPosition(int nAnimationTrack, float fPosition) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetPosition(fPosition); };
 	void SetTrackSpeed(int nAnimationTrack, float fSpeed) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetSpeed(fSpeed); };
 	void SetTrackWeight(int nAnimationTrack, float fWeight) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetWeight(fWeight); };
@@ -169,17 +165,14 @@ public:
 	void AdvanceTime(float fElapsedTime, CGameObject* pRootGameObject);
 	void ApplyPitchToSpine(CGameObject* pRootGameObject);
 
-	bool ChangeState(int state) { return ChangeState((ANIMATION_STATE)state); };
-	bool ChangeState(ANIMATION_STATE state);
-	bool ChangeState(ANIMATION_STATE state, float fPosition);
-	void SetLowerState(int state);
-	int GetUpperState() const { return static_cast<int>(state); }
+public:
+	// Pose Control
 
 public:
 	bool m_bRootMotion = false;
 	std::shared_ptr<CGameObject> m_pModelRootObject;
 
-	std::shared_ptr<CGameObject> m_pRootMotionObject;
+	CGameObject* m_pRootMotionObject;
 	XMFLOAT3 m_xmf3FirstRootMotionPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 	void SetRootMotion(bool bRootMotion) { m_bRootMotion = bRootMotion; }

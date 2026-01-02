@@ -14,7 +14,7 @@
 
 bool CAnimationTrack::CheckTag(const std::string& strTag) const {
 	if (strTag == "Upper") return (m_nMaskFlag & ANIMATION_MASK_UPPER);
-	else if (strTag == "Lower") return (m_nMaskFlag & ANIMATION_MASK_LOWER);
+	else if (strTag == "Lower") return (m_nMaskFlag & ANIMATION_MASK_BASE);
 	else if (strTag == "UnTagged") return (m_nMaskFlag & ANIMATION_MASK_UPPER);
 	else return (m_nMaskFlag & ANIMATION_MASK_UPPER);
 }
@@ -88,8 +88,8 @@ void CAnimationTrack::HandleCallback()
 //
 
 void CAnimationController::Print() {
-	std::string debugString = "Animation State: " + std::to_string(static_cast<int>(state)) + "\n";
-	debugString += "Lower State: " + std::to_string(static_cast<int>(LowerState)) + "\n";
+	std::string debugString = "Animation State: " + std::to_string(static_cast<int>(UpperPose)) + "\n";
+	debugString += "Lower State: " + std::to_string(static_cast<int>(BasePose)) + "\n";
 
 	for (int i = 0; i < m_nAnimationTracks; ++i) {
 		if (false == m_pAnimationTracks[i].m_bEnable) continue;
@@ -99,8 +99,8 @@ void CAnimationController::Print() {
 			debugString += "FULL ";
 		else if (nMask == ANIMATION_MASK_UPPER)
 			debugString += "UPPER ";
-		else if (nMask == ANIMATION_MASK_LOWER)
-			debugString += "LOWER ";
+		else if (nMask == ANIMATION_MASK_BASE)
+			debugString += "BASE ";
 		else
 			debugString += "NONE ";
 		debugString += "\n";
@@ -134,7 +134,7 @@ void CAnimationController::SettingByModel(CLoadedModelInfo* pModel, int nAnimati
 {
 	Clear();
 
-	state = IDLE;
+	UpperPose = IDLE;
 
 	m_pModelRootObject = pModel->m_pModelRootObject;
 	m_nSkinnedMeshes = pModel->m_nSkinnedMeshes;
@@ -148,8 +148,6 @@ void CAnimationController::SettingByModel(CLoadedModelInfo* pModel, int nAnimati
 	if (nAnimationTracks == -1) 
 		m_nAnimationTracks = m_pAnimationSets->m_nAnimationSets;
 	else m_nAnimationTracks = nAnimationTracks;
-
-	m_pRootMotionObject = pModel->m_pAnimationRootObject;
 
 	// Create Constant Buffers for Skinned Meshes
 	auto& CUploadContext = CUploadContext::Instance();
@@ -200,8 +198,8 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++) m_pAnimationSets->m_ppBoneFrameCaches[j]->SetLocalMatrix(Matrix4x4::Zero());
 #endif
 
-		int nLowerState = static_cast<int>(LowerState);
-		int nUpperState = static_cast<int>(state);
+		int nLowerState = static_cast<int>(BasePose);
+		int nUpperState = static_cast<int>(UpperPose);
 
 		if(nLowerState != nUpperState){
 			// 하체 우선 적용
@@ -321,48 +319,4 @@ void CAnimationController::ApplyPitchToSpine(CGameObject* pRootGameObject)
 			pSpine2->SetLocalMatrix(pSpineTransform);
 		}
 	}
-}
-
-bool CAnimationController::ChangeState(ANIMATION_STATE state)
-{
-	return ChangeState(state, 0.0f);
-}
-
-bool CAnimationController::ChangeState(ANIMATION_STATE state, float fPosition)
-{
-	if (state == this->state) return false; // 현재 상태와 같으면 변경하지 않음
-	ANIMATION_STATE beforeState = this->state;
-	this->state = state;
-
-	/*{
-		std::string debugString = "Change Animation State: " + std::to_string(static_cast<int>(beforeState)) + " to " + std::to_string(static_cast<int>(state)) + "\n";
-		OutputDebugStringA(debugString.c_str());
-	}*/
-
-	//SetTrackEnable(beforeState, false);
-	//SetTrackEnable(state, true);
-
-	int nMask = ANIMATION_MASK_FULL;
-	// Player인 경우 Upper Body Animation만 적용
-	if (state == IDLE || state == FIRE || state == RELOAD || state == HITTED)
-	{
-		nMask = ANIMATION_MASK_UPPER;
-	}
-
-	SetTrackMask(beforeState, nMask, false);
-	SetTrackMask(state, nMask, true);
-	SetTrackPosition(state, fPosition);
-	return true;
-}
-
-void CAnimationController::SetLowerState(int state)
-{ 
-	if (state == this->LowerState) return; // 현재 상태와 같으면 변경하지 않음
-
-	ANIMATION_STATE beforeLowerState = LowerState;
-	LowerState = (ANIMATION_STATE)state; 
-
-	SetTrackMask(beforeLowerState, ANIMATION_MASK_LOWER, false);
-	SetTrackMask(state, ANIMATION_MASK_LOWER, true);
-	SetTrackPosition(state, 0.0f);
 }

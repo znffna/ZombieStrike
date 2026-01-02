@@ -40,7 +40,7 @@ public:
 		{
 			if (m_pSkinnedAnimationController)
 			{
-				SetState((int)CAnimationController::ANIMATION_STATE::ZOMBIE_DEATH);
+				SetState((int)ANIMATION_POSE::ZOMBIE_DEATH);
 			}
 			m_bDied = true;
 		}

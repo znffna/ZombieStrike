@@ -39,7 +39,6 @@ public:
 	std::string m_strFileName{};
 
 	std::shared_ptr<CGameObject> m_pModelRootObject;
-	std::shared_ptr<CGameObject> m_pAnimationRootObject;
 
 	int m_nSkinnedMeshes = 0;
 	std::vector <std::shared_ptr<CSkinnedMesh>> m_ppSkinnedMeshes; //[SkinnedMeshes], Skinned Mesh Cache
@@ -48,7 +47,7 @@ public:
 
 	BoundingBox m_MeshBoundingBox;
 public:
-	void PrepareSkinning();;
+	void PrepareSkinning();
 };
 
 struct CB_GAMEOBJECT_INFO
@@ -147,17 +146,23 @@ public:
 	virtual void SetLayer(GAMEOBJECT_LAYER layer) { m_nLayer = layer; }
 	virtual GAMEOBJECT_LAYER GetLayer() { return m_nLayer; }
 
-	void SetState(int state) {
-		if (m_pSkinnedAnimationController) {
-			m_pSkinnedAnimationController->ChangeState(state);
-		}
-	}
-	int GetUpperState() {
-		if (m_pSkinnedAnimationController) return m_pSkinnedAnimationController->GetUpperState();
-		return -1;
-	}
+	
 private:
 	GAMEOBJECT_LAYER m_nLayer; // Object Layer
+
+public:
+	// --------------------------------------------
+	// State
+	// --------------------------------------------
+	void SetState(int UpperPose) {
+		{
+			std::string debugOutput = "SetState called with UpperPose: " + std::to_string(UpperPose) + " on object: " + m_strName + "\n";
+			OutputDebugStringA(debugOutput.c_str());
+		}
+		/*if (m_pSkinnedAnimationController) {
+			m_pSkinnedAnimationController->ChangeState(UpperPose);
+		}*/
+	}
 
 public:
 	// --------------------------------------------
@@ -404,21 +409,6 @@ public:
 	virtual void SetSize(float cx, float cy, float width, float height) {}
 };
 
-////////////////////////////////////////////////////////////////////////////////////////
-//
-
-class CCubeObject : public CGameObject
-{
-public:
-	CCubeObject();
-	virtual ~CCubeObject();
-
-	// Object Initialization
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-	virtual std::string GetDefaultName() override { return "CCubeObject"; }
-
-	static std::shared_ptr<CCubeObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-};  // CCubeObject
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
