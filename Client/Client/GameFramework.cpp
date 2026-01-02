@@ -1083,6 +1083,10 @@ void CGameFramework::HandleSceneBuildState()
 		break;
 
 	case ESceneBuildState::Completed:
+		{
+			std::wstring debug = L"[HandleSceneBuildState]" + m_BuiltScene->GetSceneName() + L" ºôµå ¿Ï·á.\n";
+			OutputDebugString(debug.data());
+		}
 		m_Scenes.push_back(std::move(m_BuiltScene));
 		ClearSceneRequest();
 		break;

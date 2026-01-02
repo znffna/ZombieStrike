@@ -456,7 +456,7 @@ public:
 };
 
 template<typename T>
-CGameObject* CScene::RequestCreateObject(TypeTag<T>)
+CGameObject* CScene::RequestCreateObject(TypeTag<T> tag)
 {
 	static_assert(std::is_base_of_v<CGameObject, T>,
 		"T must derive from CGameObject");
