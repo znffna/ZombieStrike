@@ -331,9 +331,64 @@ public:
 	// Observer getter (null if not present)
 	CPlayer* GetPlayer() { return m_pPlayer; }
 public:
-	// Scene Method
+	// Scene Update
 	virtual void Update(float deltaTime);
 	void LateUpdate();
+
+	// Camera registry
+	void RegisterCamera(std::shared_ptr<CCamera> pCamera)
+	{
+		// 빈 자리 정리 및 동일 포인터 중복 방지
+		for (auto it = m_CameraRegistry.begin(); it != m_CameraRegistry.end(); )
+		{
+			if (it->expired()) it = m_CameraRegistry.erase(it);
+			else
+			{
+				auto locked = it->lock();
+				if (locked == pCamera) return; // 이미 등록되어 있음
+				++it;
+			}
+		}
+		m_CameraRegistry.push_back(pCamera);
+	}
+
+	void UnregisterCamera(std::shared_ptr<CCamera> pCamera)
+	{
+		for (auto it = m_CameraRegistry.begin(); it != m_CameraRegistry.end(); )
+		{
+			if (it->expired()) it = m_CameraRegistry.erase(it);
+			else
+			{
+				auto locked = it->lock();
+				if (locked == pCamera) it = m_CameraRegistry.erase(it);
+				else ++it;
+			}
+		}
+	}
+
+	// 유효한 카메라가 있으면 우선순위에 따라 반환, 없으면 기존 m_pCamera(기본 카메라) 반환
+	std::shared_ptr<CCamera> GetMainCamera() const
+	{
+		for (auto& wp : m_CameraRegistry)
+		{
+			if (auto sp = wp.lock()) return sp;
+		}
+		return m_pCamera;
+	}
+
+protected:
+	// ----------------------------------------
+	// 내부 멤버
+	// ----------------------------------------
+	std::vector<std::weak_ptr<CCamera>> m_CameraRegistry;
+
+	// 기존에 있던 기본 카메라
+	std::shared_ptr<CCamera> m_pCamera;
+
+	// ----------------------------------------
+	// Render
+	// ----------------------------------------
+public:
 	virtual void UpdateLights() {};
 
 	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
@@ -404,10 +459,6 @@ public:
 		}
 		return ppVector;
 	}
-
-protected:
-	// Camera
-	std::shared_ptr<CCamera> m_pCamera;
 
 public:
 	// Shadow Map

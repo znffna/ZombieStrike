@@ -11,6 +11,7 @@
 #include "Rigidbody.h"
 #include "Collider.h"
 #include "AnimationController.h"
+#include "ModelComponent.h"
 
 #include "ResourceManager.h"
 
@@ -20,6 +21,8 @@
 #include "Shader.h"
 #include "Material.h"
 
+#include "Camera.h" // CCamera 타입을 사용하므로 헤더 포함 (기존 전방선언 대신 안전하게 포함)
+
 #define COMPONENT_KEY(T) typeid(T).name()
 
 class CGameObject;
@@ -27,28 +30,11 @@ class CTexture;
 class CShader;
 class CCamera;
 
+class CScene; // forward
+
 ////////////////////////////////////////////////////////////////////////////////////////
 //
 
-class CLoadedModelInfo
-{
-public:
-	CLoadedModelInfo() { };
-	~CLoadedModelInfo()	{ };
-
-	std::string m_strFileName{};
-
-	std::shared_ptr<CGameObject> m_pModelRootObject;
-
-	int m_nSkinnedMeshes = 0;
-	std::vector <std::shared_ptr<CSkinnedMesh>> m_ppSkinnedMeshes; //[SkinnedMeshes], Skinned Mesh Cache
-
-	std::shared_ptr<CAnimationSets> m_pAnimationSets;
-
-	BoundingBox m_MeshBoundingBox;
-public:
-	void PrepareSkinning();
-};
 
 struct CB_GAMEOBJECT_INFO
 {
@@ -156,7 +142,7 @@ public:
 	// --------------------------------------------
 	void SetState(int UpperPose) {
 		{
-			std::string debugOutput = "SetState called with UpperPose: " + std::to_string(UpperPose) + " on object: " + m_strName + "\n";
+			std::string debugOutput = "SetState called : " + std::to_string(UpperPose) + " on object: " + m_strName + "\n";
 			OutputDebugStringA(debugOutput.c_str());
 		}
 		/*if (m_pSkinnedAnimationController) {
@@ -173,7 +159,23 @@ public:
 	std::shared_ptr<CGameObject> GetChild(int nIndex) { return m_pChilds[nIndex]; }
 
 	void SetParent(CGameObject* pParent) { m_pParent = pParent; };
-	void SetChild(std::shared_ptr<CGameObject> pChild) { m_pChilds.push_back(pChild); pChild->SetParent(this); };
+	void SetChild(std::shared_ptr<CGameObject> pChild) 
+	{ 
+		m_pChilds.push_back(pChild); 
+		pChild->SetParent(this); 
+		// 부모의 scene이 있으면 자식에게 전파
+		if (m_pScene) pChild->SetScene(m_pScene);
+	};
+
+	void SetScene(CScene* pScene) 
+	{ 
+		m_pScene = pScene; 
+		// 자식들에게도 전파
+		for (auto& pChild : m_pChilds)
+		{
+			pChild->SetScene(pScene);
+		}
+	};
 
 protected:
 	// Parent
@@ -181,6 +183,10 @@ protected:
 
 	// Child
 	std::vector<std::shared_ptr<CGameObject>> m_pChilds; // Child Object
+
+	// Scene observer pointer (lifetime: Scene owns GameObjects)
+	CScene* m_pScene = nullptr;
+
 public:
 	// --------------------------------------------
 	// Object Collision
@@ -271,6 +277,16 @@ public:
 		std::shared_ptr<T> pComponent = std::make_shared<T>(pOwner.get());
 		m_pComponents.push_back(pComponent);
 		pComponent->Init(pOwner.get());
+
+		// 생성 직후에 Scene이 있다면, Camera 타입이면 Scene에 등록
+		if (auto pScene = pOwner->GetScene())
+		{
+			if (auto pCamera = std::dynamic_pointer_cast<CCamera>(pComponent))
+			{
+				pScene->RegisterCamera(pCamera);
+			}
+		}
+
 		return pComponent;
 	};
 
@@ -380,8 +396,8 @@ public:
 	virtual void Move(DWORD dwDirection, float fDistance, float deltaTime);
 
 	void MoveStrafe(float fDistance = 1.0f) { m_pTransform->MoveStrafe(fDistance); };
-	void MoveUp(float fDistance = 1.0f) { m_pTransform->MoveUp(fDistance); };
-	void MoveForward(float fDistance = 1.0f) { m_pTransform->MoveForward(fDistance); };
+	 void MoveUp(float fDistance = 1.0f) { m_pTransform->MoveUp(fDistance); };
+	 void MoveForward(float fDistance = 1.0f) { m_pTransform->MoveForward(fDistance); };
 
 	void SetRotationAxisLock(bool bPitchLock, bool bYawLock, bool bRollLock);
 	virtual void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f);

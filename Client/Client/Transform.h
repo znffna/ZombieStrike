@@ -11,9 +11,16 @@ class CTransform : public CComponent
 {
 public:
 	CTransform(CGameObject* pObject) : CComponent(pObject) { }
+	CTransform(CGameObject* pObject, CTransform* pTransform)
+		: CComponent(pObject),
+		m_xmf3Position(pTransform->m_xmf3Position),
+		m_xmf3Rotation(pTransform->m_xmf3Rotation),
+		m_xmf3Scale(pTransform->m_xmf3Scale),
+		m_xmf4x4Local(pTransform->m_xmf4x4Local),
+		m_xmf4x4World(pTransform->m_xmf4x4World) { }
 	virtual ~CTransform() { }
 
-	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared< CTransform>(*this); };
+	virtual std::shared_ptr<CComponent> Clone(CGameObject* newOwner) const { return std::make_shared< CTransform>(newOwner, this); };
 
 	// Transform Getter
 	DirectX::XMFLOAT3 GetPosition() const { return XMFLOAT3{m_xmf4x4World._41, m_xmf4x4World._42, m_xmf4x4World._43}; }

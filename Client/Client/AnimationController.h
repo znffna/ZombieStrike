@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "stdafx.h"
+#include "Component.h"
 #include "AnimationSet.h"
 
 class CGameObject;
@@ -37,10 +37,6 @@ public:
 // Track에선 실행 속도, 현재 시간, 그리고 가중치를 가지고 있음.
 // Track 모음은 AnimationController에서 관리.
 
-#define ANIMATION_MASK_UPPER 0x01
-#define ANIMATION_MASK_BASE 0x02
-#define ANIMATION_MASK_FULL  ANIMATION_MASK_UPPER | ANIMATION_MASK_BASE
-
 class CAnimationTrack
 {
 public:
@@ -49,7 +45,6 @@ public:
 
 public:
 	BOOL 							m_bEnable = true;
-	UINT 							m_nMaskFlag = ANIMATION_MASK_FULL; // 0x01 = Upper, 0x02 = Lower, 0x03 = Both Upper and Lower
 
 	float 							m_fSpeed = 1.0f;
 	float 							m_fPosition = -ANIMATION_CALLBACK_EPSILON;
@@ -63,8 +58,6 @@ public:
 	std::vector<CALLBACKKEY> m_pCallbackKeys;
 
 	std::shared_ptr<CAnimationCallbackHandler> m_pAnimationCallbackHandler;
-
-	bool CheckTag(const std::string& strTag) const;
 
 public:
 	void SetAnimationSet(int nAnimationSet) { m_nAnimationSet = nAnimationSet; }
@@ -115,16 +108,29 @@ enum ANIMATION_POSE // Number == Animation Track Index
 };
 
 // Animation Set과 Animation Track을 모아놓는 클래스
-class CAnimationController
+class CAnimationController : public CComponent
 {
 public:
-	void Print();
-
-	CAnimationController();
+	CAnimationController(CGameObject* pOwner) : CComponent(pOwner) {};
+	CAnimationController(CGameObject* pOwner, CAnimationController* pAnimationController)
+		: CComponent(pOwner),
+		m_pModelRootObject(pAnimationController->m_pModelRootObject),
+		BasePose(pAnimationController->BasePose),
+		UpperPose(pAnimationController->UpperPose),
+		m_fTime(pAnimationController->m_fTime),
+		m_nAnimationTracks(pAnimationController->m_nAnimationTracks),
+		m_pAnimationTracks(pAnimationController->m_pAnimationTracks),
+		m_pAnimationSets(pAnimationController->m_pAnimationSets),
+		m_nSkinnedMeshes(pAnimationController->m_nSkinnedMeshes),
+		m_ppSkinnedMeshes(pAnimationController->m_ppSkinnedMeshes),
+		m_pRootMotionObject(pOwner) {};
 	~CAnimationController();
 
+	virtual std::shared_ptr<CComponent> Clone(CGameObject* newOwner) const { return std::make_shared<CAnimationController>(newOwner, this); };
+
+
 	void Clear();
-	void SettingByModel(CLoadedModelInfo* pModel, int nAnimationTracks = -1);
+	void SettingByModel(CLoadedModelInfo* pModel);
 
 public:
 	// State

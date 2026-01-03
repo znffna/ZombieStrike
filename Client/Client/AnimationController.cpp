@@ -12,13 +12,6 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-bool CAnimationTrack::CheckTag(const std::string& strTag) const {
-	if (strTag == "Upper") return (m_nMaskFlag & ANIMATION_MASK_UPPER);
-	else if (strTag == "Lower") return (m_nMaskFlag & ANIMATION_MASK_BASE);
-	else if (strTag == "UnTagged") return (m_nMaskFlag & ANIMATION_MASK_UPPER);
-	else return (m_nMaskFlag & ANIMATION_MASK_UPPER);
-}
-
 float CAnimationTrack::UpdatePosition(float fTrackPosition, float fElapsedTime, float fAnimationLength)
 {
 	float fTrackElapsedTime = fElapsedTime * m_fSpeed;
@@ -87,32 +80,6 @@ void CAnimationTrack::HandleCallback()
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-void CAnimationController::Print() {
-	std::string debugString = "Animation State: " + std::to_string(static_cast<int>(UpperPose)) + "\n";
-	debugString += "Lower State: " + std::to_string(static_cast<int>(BasePose)) + "\n";
-
-	for (int i = 0; i < m_nAnimationTracks; ++i) {
-		if (false == m_pAnimationTracks[i].m_bEnable) continue;
-		debugString += std::to_string(i) + " Track: ";
-		int nMask = m_pAnimationTracks[i].m_nMaskFlag;
-		if (nMask == (ANIMATION_MASK_FULL))
-			debugString += "FULL ";
-		else if (nMask == ANIMATION_MASK_UPPER)
-			debugString += "UPPER ";
-		else if (nMask == ANIMATION_MASK_BASE)
-			debugString += "BASE ";
-		else
-			debugString += "NONE ";
-		debugString += "\n";
-	}
-
-	OutputDebugStringA(debugString.c_str());
-}
-
-CAnimationController::CAnimationController()
-{
-}
-
 void CAnimationController::Clear()
 {
 	m_fTime = 0.0f;
@@ -130,7 +97,7 @@ void CAnimationController::Clear()
 	m_pAnimationTracks.clear();
 }
 
-void CAnimationController::SettingByModel(CLoadedModelInfo* pModel, int nAnimationTracks)
+void CAnimationController::SettingByModel(CLoadedModelInfo* pModel)
 {
 	Clear();
 
@@ -145,9 +112,7 @@ void CAnimationController::SettingByModel(CLoadedModelInfo* pModel, int nAnimati
 	m_ppd3dcbSkinningBoneTransforms.resize(m_nSkinnedMeshes);
 	m_ppcbxmf4x4MappedSkinningBoneTransforms.resize(m_nSkinnedMeshes);
 
-	if (nAnimationTracks == -1) 
-		m_nAnimationTracks = m_pAnimationSets->m_nAnimationSets;
-	else m_nAnimationTracks = nAnimationTracks;
+	m_nAnimationTracks = m_pAnimationSets->m_nAnimationSets;
 
 	// Create Constant Buffers for Skinned Meshes
 	auto& CUploadContext = CUploadContext::Instance();
@@ -257,10 +222,6 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 					float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fElapsedTime, pAnimationSet->m_fLength);
 					for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 					{
-						// 상/하체에 따른 마스킹(Upper/Lower, 나머지도 Upper가 Default로 설정)
-						if (false == m_pAnimationTracks[k].CheckTag(m_pAnimationSets->m_ppBoneFrameCaches[j]->GetTag()))
-							continue;
-
 #ifdef _WITH_OBJECT_TRANSFORM
 						XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local;
 #else

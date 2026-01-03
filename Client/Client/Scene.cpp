@@ -260,6 +260,7 @@ CGameObject* CScene::AddObject(std::unique_ptr<CGameObject> object)
 		return nullptr;
 
 	object->SetID(m_NextGameObjectID++);
+	object->SetScene(this);
 	CGameObject* rawPtr = object.get();
 
 	RegisterLayerView(rawPtr);
@@ -289,6 +290,7 @@ void CScene::ProcessPendingRequest()
 	{
 		// TODO : Initialize 시점에 ID3D12 요소	전달 필요 또는 별도로 가져오는 Init 함수 필요
 		// object->Initialize();
+		object->SetScene(this);
 
 		CGameObject* rawPtr = object.get();
 		RegisterLayerView(rawPtr);

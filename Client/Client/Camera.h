@@ -25,12 +25,20 @@ struct CB_CAMERA_INFO
 class CCamera : public CComponent
 {
 public:
-	CCamera(CGameObject* pObject = nullptr);
-	virtual ~CCamera();
+	CCamera(CGameObject* pObject) : CComponent(pObject) {};
+	CCamera(CGameObject* pObject, CCamera* pCamera)
+		: CComponent(pObject), m_fAspectRatio(pCamera->m_fAspectRatio),
+		m_fFovAngle(pCamera->m_fFovAngle), m_fNearZ(pCamera->m_fNearZ), m_fFarZ(pCamera->m_fFarZ),
+		m_xmf3Position(pCamera->m_xmf3Position), m_xmf3Right(pCamera->m_xmf3Right),
+		m_xmf3Up(pCamera->m_xmf3Up), m_xmf3Look(pCamera->m_xmf3Look),
+		m_fPitch(pCamera->m_fPitch), m_fYaw(pCamera->m_fYaw), m_fRoll(pCamera->m_fRoll),
+		m_xmf4x4View(pCamera->m_xmf4x4View), m_xmf4x4Projection(pCamera->m_xmf4x4Projection){}
+		
+	virtual ~CCamera() {};
 
 	virtual void Init(CGameObject* pObject);
 
-	virtual std::shared_ptr<CComponent> Clone() const { return std::make_shared<CCamera>(*this); };
+	virtual std::shared_ptr<CComponent> Clone(CGameObject* newOwner) const { return std::make_shared<CCamera>(newOwner, this); };
 
 	// Camera Shader Variables
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);

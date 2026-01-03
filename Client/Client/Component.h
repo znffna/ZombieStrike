@@ -15,12 +15,12 @@ class CCamera;
 class CComponent
 {
 public:
-	CComponent(CGameObject* pObject = nullptr);
+	CComponent(CGameObject* pObject);
 	virtual ~CComponent();
 
-	virtual void Init(CGameObject* pObject) { gameObject = pObject; }
+	virtual void Init(CGameObject* pObject) {}
 
-	virtual std::shared_ptr<CComponent> Clone() const = 0;
+	virtual std::shared_ptr<CComponent> Clone(CGameObject* newOwner) const = 0;
 
 	virtual void Update(float fTimeElapsed) { }
 

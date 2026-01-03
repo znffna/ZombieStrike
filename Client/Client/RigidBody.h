@@ -16,11 +16,20 @@ class CRigidBody : public CComponent
 {
 public:
 	CRigidBody(CGameObject* pObject) : CComponent(pObject) {};
+	CRigidBody(CGameObject* pObject, CRigidBody* pRigidBody)
+		: CComponent(pObject), m_fMass(pRigidBody->m_fMass),
+		m_fInverseMass(pRigidBody->m_fInverseMass),
+		  m_xmf3Velocity(pRigidBody->m_xmf3Velocity),
+		  m_xmf3Force(pRigidBody->m_xmf3Force),
+		  m_xmf3Gravity(pRigidBody->m_xmf3Gravity),
+		  m_fMaxVelocityXZ(pRigidBody->m_fMaxVelocityXZ),
+		  m_fMaxVelocityY(pRigidBody->m_fMaxVelocityY),
+		m_fFriction(pRigidBody->m_fFriction) {};
 	virtual ~CRigidBody() {};
 
 	virtual void Init(CGameObject* pObject) override;
 
-	virtual std::shared_ptr<CComponent> Clone() const {	return std::make_shared<CRigidBody>(*this);};
+	virtual std::shared_ptr<CComponent> Clone(CGameObject* newOwner) const { return std::make_shared<CRigidBody>(newOwner, this);};
 
 	void SetVelocity(const XMFLOAT3& xmf3Look) { m_xmf3Velocity = xmf3Look; }
 	void SetVelocity(float x, float y, float z) { m_xmf3Velocity = XMFLOAT3(x, y, z); }

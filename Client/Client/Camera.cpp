@@ -9,15 +9,6 @@
 
 #include "Transform.h"
 
-CCamera::CCamera(CGameObject* pObject)
-	: CComponent(pObject)
-{
-}
-
-CCamera::~CCamera()
-{
-}
-
 void CCamera::Init(CGameObject* pObject)
 {
 	CComponent::Init(pObject);
