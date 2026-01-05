@@ -481,7 +481,7 @@ void CGameFramework::ReleaseDefaultObjects()
 
 	CResourceManager::Instance().ReleaseResources();
 
-	CUploadContext::Instance().Destroy();
+	CUploadContext::Instance().OnDestroy();
 }
 
 void CGameFramework::BuildObjects()
@@ -587,23 +587,25 @@ void CGameFramework::AdvanceFrame()
 
 #ifdef _WITH_DIRECT_WRITE_UI
 	// Text 출력
-	std::vector <CTextObject*> textBlocks = pCurrentScene->GetTextBlocks();
+	std::vector<TextBlock*> textBlocks = pCurrentScene->GetTextBlocks();
 	if (g_bWindowActive && g_bEnableCursor)
 	{
-		textBlocks.push_back(m_pCursorSprite->m_pTextBlock.get());
+		// 마우스 커서 위치 출력
+		if (auto pText = m_pCursorSprite->GetComponent<CTextComponent>()) textBlocks.push_back(pText->GetTextBlock());
 	}
 	if (g_bDebugOutput) {
+		// 디버그 텍스트 출력
 		UpdateDebugTextObjects();
-		for (auto& pDebugText : m_DebugTextObjects)
+		for (auto& pDebugText : m_DebugTextBlocks)
 		{
-			textBlocks.push_back(&pDebugText);
+			textBlocks.push_back(pDebugText);
 		}
 	}
 	m_pUILayer->Render(m_nSwapChainBufferIndex, textBlocks);
 
 	/*if (g_bWindowActive && g_bEnableCursor)
 	{
-		std::vector<std::shared_ptr<CGameObject>> textBlock = { m_pCursorSprite->m_pTextBlock };
+		std::vector<std::shared_ptr<CGameObject>> textBlock = { m_pCursorSprite };
 		m_pUILayer->Render(m_nSwapChainBufferIndex, textBlock);
 	}*/
 #endif
@@ -642,7 +644,7 @@ POINTF CGameFramework::GetTexturePosition(int x, int y) {
 void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (!m_pCursorSprite) {
-		m_pCursorSprite = std::make_shared<CSprite>();
+		m_pCursorSprite = std::make_unique<CSprite>();
 		m_pCursorSprite->Initialize(m_pd3dDevice.Get(), pd3dCommandList);
 
 		std::shared_ptr<CShader> pUIShader = std::make_shared<CTextureToViewportShader>(nullptr);
@@ -668,13 +670,13 @@ void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
 		m_pCursorSprite->SetMaterial(0, pCursorMaterial);
 
 #ifdef _WITH_DIRECT_WRITE_UI
-		m_pCursorSprite->m_pTextBlock = std::make_shared<CTextObject>();
-		m_pCursorSprite->m_pTextBlock->SetText(L"Cursor Position: (0, 0)");
-		m_pCursorSprite->m_pTextBlock->SetActive(true); 
-		m_pCursorSprite->m_pTextBlock->SetSize(0.0f, 0.0f, (float)m_nWndClientWidth, (float)m_nWndClientHeight, false);
-		m_pCursorSprite->m_pTextBlock->SetFont(L"Arial");
-		m_pCursorSprite->m_pTextBlock->SetFontSize(m_nWndClientHeight / 35.0f);
-		m_pCursorSprite->m_pTextBlock->SetBrush(D2D1::ColorF(D2D1::ColorF::Purple, 1.0f));
+		auto ptextcomponent = m_pCursorSprite->CreateComponent<CTextComponent>();
+		ptextcomponent->SetText(L"Cursor Position: (0, 0)");
+		ptextcomponent->SetActive(true);
+		ptextcomponent->SetSize(0.0f, 0.0f, (float)m_nWndClientWidth, (float)m_nWndClientHeight, false);
+		ptextcomponent->SetFont(L"Arial");
+		ptextcomponent->SetFontSize(m_nWndClientHeight / 35.0f);
+		ptextcomponent->SetBrush(D2D1::ColorF(D2D1::ColorF::Purple, 1.0f));
 #endif
 	}
 
@@ -695,7 +697,7 @@ void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
 	}
 #ifdef _WITH_DIRECT_WRITE_UI
 	std::wstring cursorText = L"Cursor Position: (" + std::to_wstring(ptCursorPos.x) + L", " + std::to_wstring(ptCursorPos.y) + L")";
-	m_pCursorSprite->m_pTextBlock->SetText(cursorText);
+	m_pCursorSprite->GetComponent<CTextComponent>()->SetText(cursorText);
 #endif
 
 	m_pCursorSprite->Render(pd3dCommandList, nullptr);
@@ -1016,7 +1018,7 @@ void CGameFramework::BuildSceneMadeThread()
 
 		CloseHandle(m_hSceneMadeEvent);
 
-		sceneUploadContext.Destroy();
+		sceneUploadContext.OnDestroy();
 		m_SceneThreadRunning.store(false);
 		});
 }
@@ -1100,23 +1102,23 @@ void CGameFramework::HandleSceneBuildState()
 void CGameFramework::CreateDebugTextObjects()
 {
 	int nDebugTextObjects = 10;
-	m_DebugTextObjects.reserve(nDebugTextObjects);
+	m_DebugTextBlocks.reserve(nDebugTextObjects);
 	int FontSize = m_nWndClientHeight / 40.0f;
 	for (int i = 0; i < nDebugTextObjects; i++) {
-		CTextObject pDebugTextObject;
-		pDebugTextObject.SetText(L"Debug Info");
-		pDebugTextObject.SetActive(true);
-		pDebugTextObject.SetSize(0.0f, (FontSize) * i, (float)m_nWndClientWidth * 0.2f, (float)m_nWndClientHeight , false);
-		pDebugTextObject.SetFont(L"Consolas");
-		pDebugTextObject.SetFontSize(FontSize);
-		pDebugTextObject.SetBrush(D2D1::ColorF(D2D1::ColorF::LimeGreen, 1.0f));
-		m_DebugTextObjects.push_back(pDebugTextObject);
+		auto pDebugTextObject = new TextBlock;
+		pDebugTextObject->SetText(L"Debug Info");
+		pDebugTextObject->SetActive(true);
+		pDebugTextObject->SetSize(0.0f, (FontSize) * i, (float)m_nWndClientWidth * 0.2f, (float)m_nWndClientHeight , false);
+		pDebugTextObject->SetFont(L"Consolas");
+		pDebugTextObject->SetFontSize(FontSize);
+		pDebugTextObject->SetBrush(D2D1::ColorF(D2D1::ColorF::LimeGreen, 1.0f));
+		m_DebugTextBlocks.push_back(pDebugTextObject);
 	}
 
 	int nIndex = 0;
 	auto debugOutputFunc = [&](const std::wstring& debugString) {
-		if (nIndex < m_DebugTextObjects.size()) {
-			m_DebugTextObjects[nIndex].SetText(debugString + std::to_wstring(nIndex));
+		if (nIndex < m_DebugTextBlocks.size()) {
+			m_DebugTextBlocks[nIndex]->SetText(debugString + std::to_wstring(nIndex));
 			nIndex++;
 		}
 	};
@@ -1125,22 +1127,22 @@ void CGameFramework::CreateDebugTextObjects()
 void CGameFramework::UpdateDebugTextObjects()
 {
 	int index = 0;
-	m_DebugTextObjects[index++].SetText(L"Debug Info");
-	m_DebugTextObjects[index++].SetText(L"Scene Size :" + std::to_wstring(m_Scenes.size()));
+	m_DebugTextBlocks[index++]->SetText(L"Debug Info");
+	m_DebugTextBlocks[index++]->SetText(L"Scene Size :" + std::to_wstring(m_Scenes.size()));
 
 	// 
 	auto requestState = m_RequestState.load(std::memory_order_acquire);
-	m_DebugTextObjects[index++].SetText(L" Scene Request State:" + to_wstring(requestState));
+	m_DebugTextBlocks[index++]->SetText(L" Scene Request State:" + to_wstring(requestState));
 
 	//
 	auto sceneBuildState = m_SceneBuildState.load(std::memory_order_acquire);
-	m_DebugTextObjects[index++].SetText(L" Scene Build State :" + to_wstring(sceneBuildState));
+	m_DebugTextBlocks[index++]->SetText(L" Scene Build State :" + to_wstring(sceneBuildState));
 
-	m_DebugTextObjects[index++].SetText(GetCurrentScene()->to_wstring());
+	m_DebugTextBlocks[index++]->SetText(GetCurrentScene()->to_wstring());
 
-	for(; index < m_DebugTextObjects.size(); index++)
+	for(; index < m_DebugTextBlocks.size(); index++)
 	{
-		m_DebugTextObjects[index].SetText(L"");
+		m_DebugTextBlocks[index]->SetText(L"");
 	}
 
 
@@ -1148,5 +1150,5 @@ void CGameFramework::UpdateDebugTextObjects()
 
 void CGameFramework::ReleaseDebugTextObjects()
 {
-	m_DebugTextObjects.clear();
+	m_DebugTextBlocks.clear();
 }

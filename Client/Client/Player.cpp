@@ -22,22 +22,20 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	CGameObject::Initialize(pd3dDevice, pd3dCommandList);
 
 	// Object Info
-	Init();
-
 	SetName("Player_" + std::to_string(GetID()));
 
 	SetRotationAxisLock(true, false, true);
 
 	// <Components>
 	// Animation Controller
-	m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
+	auto pSkinnedAnimationController = CreateComponent<CAnimationController>();
 
 	// RigidBody 생성
-	std::shared_ptr<CRigidBody> pRigidBody = CreateComponent<CRigidBody>(shared_from_this());
+	auto pRigidBody = CreateComponent<CRigidBody>();
 	pRigidBody->SetVelocity(XMFLOAT3(0.0f, -9.0f, 0.0f));
 
 	// Camera 생성
-	auto pCamera = CreateComponent<CThirdPersonCamera>(shared_from_this());
+	auto pCamera = CreateComponent<CThirdPersonCamera>();
 	pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 	pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 	pCamera->SetOffset(XMFLOAT3(1.0f, 0.7f, -2.5f));
@@ -47,7 +45,7 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	pCamera->SetActive(true);
 
 	// Collider 생성
-	//auto pCollider = CreateComponent<COBBCollider>(shared_from_this());
+	//auto pCollider = CreateComponent<COBBCollider>();
 
 	// Model Info
 	SetSkin(m_nSkinType);
@@ -67,7 +65,7 @@ std::shared_ptr<CPlayer> CPlayer::Create(ID3D12Device* pd3dDevice, ID3D12Graphic
 
 void CPlayer::Update(float fTimeElapsed)
 {
-	if (m_pSkinnedAnimationController) UpdateLowerAnimation();
+	if (auto pSkinnedAnimationController = CreateComponent<CAnimationController>()) UpdateLowerAnimation();
 
 	CGameObject::Update(fTimeElapsed);
 
@@ -187,19 +185,15 @@ void CPlayer::SetSkin(int nSkinType)
 	m_pChilds.clear();
 
 	auto pPlayerModel = CResourceManager::Instance().GetModelInfo(m_ModelName[m_nSkinType]);
-	SetChild(pPlayerModel->m_pModelRootObject);
-	m_pSkinnedAnimationController->SettingByModel(pPlayerModel);
-
-	for (int i = 0; i < m_pSkinnedAnimationController->m_nAnimationTracks; i++)
-	{
-		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
-	}
+	auto pModel = GetComponent<CModelComponent>();
+	pModel->SetModel(pPlayerModel);
+	//SetChild(pPlayerModel->m_pModelRootObject);
 
 	// TODO: 이부분 수정 필요
 	// 바뀐 Model에 맞춰 Component 변경
 	/*for (auto& pComponent : m_pComponents)
 	{
-		pComponent->Init(this);
+		pComponent->Initialize(this);
 	}*/
 
 	//auto pCollider = GetComponent<COBBCollider>();

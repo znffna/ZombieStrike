@@ -2,8 +2,8 @@
 #include "Scene.h"
 #include "GameFramework.h"
 
-CZombieCAnimationController::CZombieCAnimationController()
-	: CAnimationController()
+CZombieCAnimationController::CZombieCAnimationController(CGameObject* pOwner)
+	: CAnimationController(pOwner)
 {
 }
 
@@ -23,24 +23,23 @@ CZombieObject::~CZombieObject()
 {
 }
 
-void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nSkinType)
+void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nSkinType)
 {
 	CGameObject::Initialize(pd3dDevice, pd3dCommandList);
-
-	// Object Info
-	Init();
 
 	SetName("Zombie_" + std::to_string(GetID()));
 
 	SetRotationAxisLock(true, false, true);
 
 	// <Components>
-	std::shared_ptr<CRigidBody> pRigidBody = CreateComponent<CRigidBody>(shared_from_this());
+	auto pRigidBody = CreateComponent<CRigidBody>();
 	pRigidBody->SetGravity(XMFLOAT3(0.0f, -9.0f, 0.0f));
 
-	m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
+	auto pSkinnedAnimationController = CreateComponent<CAnimationController>();
+	// m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
 
-	
+	auto pmodel = CreateComponent<CModelComponent>();
+	pmodel->SetModel(pModel);
 
 	// Model Info
 	SetSkinType(nSkinType);
@@ -50,9 +49,9 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	UpdateTransform();
 }
 
-std::shared_ptr<CZombieObject> CZombieObject::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nSkinType)
+std::unique_ptr<CZombieObject> CZombieObject::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, CLoadedModelInfo* pModel, int nSkinType)
 {
-	std::shared_ptr<CZombieObject> pZombie = std::make_shared<CZombieObject>();
+	auto pZombie = std::unique_ptr<CZombieObject>();
 	pZombie->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pModel, nSkinType);
 	return pZombie;
 }
@@ -89,13 +88,9 @@ void CZombieObject::SetSkin(int nSkinType)
 	m_pChilds.clear();
 
 	auto pZombieModel = CResourceManager::Instance().GetModelInfo(m_strModelName[m_nSkinType]);
-	SetChild(pZombieModel->m_pModelRootObject);
-
-	m_pSkinnedAnimationController->SettingByModel(pZombieModel);
-	for (int i = 0; i < m_pSkinnedAnimationController->m_nAnimationTracks; i++)
-	{
-		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
-	}
+	// SetChild(pZombieModel->m_pModelRootObject);
+	if (auto panimationcontroller = GetComponent<CAnimationController>())
+		panimationcontroller->SettingByModel(pZombieModel);
 
 	m_fMaxDeathTime = 3.0f;
 	//m_fMaxDeathTime = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[(int)CAnimationController::ANIMATION_POSE::ZOMBIE_DEATH]->m_fLength + 3.0f; // 좀비가 죽은 후 사라지기까지의 시간

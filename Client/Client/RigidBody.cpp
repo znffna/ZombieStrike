@@ -7,10 +7,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-void CRigidBody::Init(CGameObject* pObject)
+void CRigidBody::Initialize()
 {
-	CComponent::Init(pObject);
-	m_pTransform = pObject->GetComponent<CTransform>();
+	CComponent::Initialize();
 }
 
 void CRigidBody::UpdateRigidBody(float fTimeElapsed)
@@ -54,7 +53,9 @@ void CRigidBody::ApplyForce(const XMFLOAT3& f)
 void CRigidBody::ApplyForceAtPoint(const XMFLOAT3& f, const XMFLOAT3& point)
 {
 	// Transform에서 World Matrix 가져오기
-	XMFLOAT4X4 xmf4x4worldMatrix = m_pTransform->GetWorldMatrix();
+	auto pTransform = gameObject->GetComponent<CTransform>();
+
+	XMFLOAT4X4 xmf4x4worldMatrix = pTransform->GetWorldMatrix();
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&xmf4x4worldMatrix);
 
 	// 중심 좌표 추출 (Matrix에서 Translation 부분 가져오기)
@@ -77,7 +78,9 @@ void CRigidBody::ApplyForceAtPoint(const XMFLOAT3& f, const XMFLOAT3& point)
 void CRigidBody::Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT4& rotation)
 {
 	// Transform에서 World Matrix 가져오기
-	XMFLOAT4X4 xmf4x4worldMatrix = m_pTransform->GetWorldMatrix();
+	auto pTransform = gameObject->GetComponent<CTransform>();
+
+	XMFLOAT4X4 xmf4x4worldMatrix = pTransform->GetWorldMatrix();
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&xmf4x4worldMatrix);
 	XMVECTOR positionVec = worldMatrix.r[3]; // Translation(위치)
 
@@ -106,7 +109,7 @@ void CRigidBody::Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT4& rotati
 	worldMatrix.r[3] = positionVec;
 
 	// 업데이트된 Matrix 저장
-	m_pTransform->SetWorldMatrix(worldMatrix);
+	pTransform->SetWorldMatrix(worldMatrix);
 
 	// 힘 및 토크 초기화 (순간적인 힘 처리)
 	m_xmf3Force = { 0, 0, 0 };
@@ -115,7 +118,8 @@ void CRigidBody::Integrate(float deltaTime, XMFLOAT3& position, XMFLOAT4& rotati
 
 void CRigidBody::ApplyCorrection(const XMFLOAT3& xmf3Correction)
 {
-	m_pTransform->Move(xmf3Correction);
+	auto pTransform = gameObject->GetComponent<CTransform>();
+	pTransform->Move(xmf3Correction);
 	//m_xmf3Velocity = Vector3::ScalarProduct(m_xmf3Velocity, -1.0f); // 속도 초기화
 	//m_xmf3Velocity = Vector3::Zero(); // 속도 초기화
 }
@@ -143,7 +147,8 @@ void CRigidBody::UpdateVelocity(float fTimeElapsed)
 	XMFLOAT3 xmf3Look = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
 
 	// 이동 거리만큼 이동
-	m_pTransform->Move(xmf3Look);
+	auto pTransform = gameObject->GetComponent<CTransform>();
+	pTransform->Move(xmf3Look);
 }
 
 #include "Camera.h"
@@ -155,7 +160,8 @@ void CRigidBody::OnTerrainUpdateCallback(float fTimeElapsed)
 	int xmf4TerrainSize = pTerrain->GetHeightMapWidth();
 	int xmf4TerrainLength = pTerrain->GetHeightMapLength();
 
-	XMFLOAT3 xmf3PlayerPosition = m_pTransform->GetPosition();
+	auto pTransform = gameObject->GetComponent<CTransform>();
+	XMFLOAT3 xmf3PlayerPosition = pTransform->GetPosition();
 	int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
 	//float fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 6.0f;
@@ -177,7 +183,7 @@ void CRigidBody::OnTerrainUpdateCallback(float fTimeElapsed)
 		xmf3PlayerVelocity.y = 0.0f;
 		SetVelocity(xmf3PlayerVelocity);
 		xmf3PlayerPosition.y = fHeight;
-		m_pTransform->SetPosition(xmf3PlayerPosition);
+		pTransform->SetPosition(xmf3PlayerPosition);
 	}	
 }
 

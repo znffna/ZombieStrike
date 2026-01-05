@@ -21,7 +21,7 @@ public:
 	void CreateFreeCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature) override;
 	
-	virtual void CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
+	virtual void CreateDefaultCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
 
 	virtual void ReleaseObjects() override;
 	virtual void ReleaseUploadBuffers() override;
@@ -72,10 +72,11 @@ public:
 	std::shared_ptr<CCollisionChecker> m_pCollisionChecker;
 	void BuildFiredBullets();
 
-	bool m_bFreeCamera = false; // Free Camera Mode
-	std::shared_ptr<CCamera> m_pFreeCamera;
 
 	bool m_bPrintObjectCount = false; // 디버그 출력용
 
-	std::shared_ptr<CSprite> m_pHealthObject;
+	std::unique_ptr<CGameObject> m_pHealthObject;
+
+	// Free Camera 참조용
+	CGameObject* m_pFreeCamera;
 };

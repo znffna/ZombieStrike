@@ -11,14 +11,15 @@ CTestScene::~CTestScene()
 
 void CTestScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
-	auto pTextObject = std::make_unique<CTextObject>();
+	auto pTextObject = AddObject(std::make_unique<CGameObject>());
+	auto pTextComponent = pTextObject->CreateComponent<CTextComponent>();
 	std::wstring text = L"TestScene " + std::to_wstring(CGameFramework::Instance()->GetSceneSize());
-	pTextObject->SetText(text.data());
-	pTextObject->SetFont(L"Arial");
-	pTextObject->SetColor(D2D1::ColorF::Black);
-	pTextObject->SetFontSize(24.0f);
-	pTextObject->SetSize(100.0f, 100.0f, 400.0f, 50.0f);
-	AddObject(std::move(pTextObject));
+	pTextComponent->SetText(text.data());
+	pTextComponent->SetFont(L"Arial");
+	pTextComponent->SetColor(D2D1::ColorF::Black);
+	pTextComponent->SetFontSize(24.0f);
+	pTextComponent->SetSize(100.0f, 100.0f, 400.0f, 50.0f);
+
 }
 
 void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)

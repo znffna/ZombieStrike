@@ -64,7 +64,7 @@ void CLoadingScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPAR
 
 bool CLoadingScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	CScene::Render(pd3dCommandList, m_pCamera.get());
+	CScene::Render(pd3dCommandList, m_pCamera);
 
 	return true;
 }

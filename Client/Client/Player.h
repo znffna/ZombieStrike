@@ -51,7 +51,7 @@ private:
 	std::vector<std::string> m_ModelName{ "Ch18_nonPBR", "Ch35_nonPBR" };
 	std::vector<std::string> m_MeshBoneName{ "Ch18", "Ch35" };
 
-	std::shared_ptr<CGameObject> m_pGunSlot;
+	CGameObject* m_pGunSlot;
 	std::shared_ptr<CGun> m_pGun;
 
 	std::shared_ptr<CGaugeBar> m_pHealthGauge;

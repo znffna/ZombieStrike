@@ -149,6 +149,12 @@
     <ClInclude Include="TestScene.h">
       <Filter>소스 파일\Game\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="ModelComponent.h">
+      <Filter>소스 파일\Game\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="TextComponent.h">
+      <Filter>소스 파일\Game\Component</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp">
@@ -246,6 +252,12 @@
     </ClCompile>
     <ClCompile Include="TestScene.cpp">
       <Filter>소스 파일\Game\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelComponent.cpp">
+      <Filter>소스 파일\Game\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="TextComponent.cpp">
+      <Filter>소스 파일\Game\Component</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

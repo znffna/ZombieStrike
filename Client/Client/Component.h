@@ -9,8 +9,6 @@
 //#define _WITH_TRANSFORM_HIERARCHY
 
 class CGameObject;
-class CMesh;
-class CCamera;
 
 class CComponent
 {
@@ -18,15 +16,23 @@ public:
 	CComponent(CGameObject* pObject);
 	virtual ~CComponent();
 
-	virtual void Init(CGameObject* pObject) {}
+	CComponent(const CComponent& rhs) : m_bActive(rhs.m_bActive) {};
+	CComponent& operator=(const CComponent& rhs); // owner는 복사하지 않음
 
-	virtual std::shared_ptr<CComponent> Clone(CGameObject* newOwner) const = 0;
+	virtual void Initialize() {}
+	virtual void OnDestroy() {}
 
 	virtual void Update(float fTimeElapsed) { }
 
-	CGameObject* gameObject; // Owner Object
+	virtual std::unique_ptr<CComponent> Clone(CGameObject* pNewOwner) const = 0;
+
+	CGameObject* GetOwner() const { return gameObject; }
+	CGameObject* gameObject = nullptr; // Owner Object
 protected:
 	bool m_bActive; // Active Flag
+
+	void SetOwnerInternal(CGameObject* pObject) { gameObject = pObject; }
+
 public:
 	void SetActive(bool bActive) { m_bActive = bActive; }
 	bool IsActive() const { return m_bActive; }

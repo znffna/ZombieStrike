@@ -47,7 +47,7 @@ public:
 
 		m_bIsCreated = true;
 	}
-	void Destroy()
+	void OnDestroy()
 	{
 		::WaitForGpuComplete(m_pd3dCommandQueue, m_pd3dFence, m_nFenceValue, m_hFenceEvent);
 

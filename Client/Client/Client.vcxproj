@@ -148,6 +148,7 @@
     <ClInclude Include="LoadingScene.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
+    <ClInclude Include="ModelComponent.h" />
     <ClInclude Include="OnlineScene.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Resource.h" />
@@ -160,6 +161,7 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="NetworkClient.h" />
     <ClInclude Include="TestScene.h" />
+    <ClInclude Include="TextComponent.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TitleScene.h" />
     <ClInclude Include="Transform.h" />
@@ -184,6 +186,7 @@
     <ClCompile Include="LoadingScene.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="ModelComponent.cpp" />
     <ClCompile Include="OnlineScene.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
@@ -194,6 +197,7 @@
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="NetworkClient.cpp" />
     <ClCompile Include="TestScene.cpp" />
+    <ClCompile Include="TextComponent.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TitleScene.cpp" />
     <ClCompile Include="Transform.cpp" />

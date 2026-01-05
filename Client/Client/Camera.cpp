@@ -9,9 +9,14 @@
 
 #include "Transform.h"
 
-void CCamera::Init(CGameObject* pObject)
+#include "Scene.h"
+
+void CCamera::Initialize()
 {
-	CComponent::Init(pObject);
+	CComponent::Initialize();
+
+	// 카메라의 등록
+	gameObject->GetScene()->RegisterCamera(this);
 }
 
 void CCamera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -196,7 +201,7 @@ void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 {
 	if (gameObject)
 	{
-		auto& pChaseTransform = gameObject->GetComponent<CTransform>();
+		auto pChaseTransform = gameObject->GetComponent<CTransform>();
 
 		// 카메라의 회전 행렬 계산
 		XMFLOAT4X4 xmf4x4Rotate = Matrix4x4::Identity();

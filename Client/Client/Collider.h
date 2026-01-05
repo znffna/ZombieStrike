@@ -37,10 +37,10 @@ public:
 	virtual ~CCollider() { }  
 
 	// Initialization
-	virtual void Init(CGameObject* pObject);
+	virtual void Initialize();
 
 	// Clone
-	virtual std::shared_ptr<CComponent> Clone(CGameObject* pNewOwner) const = 0;
+	virtual std::unique_ptr<CComponent> Clone(CGameObject* pNewOwner) const = 0;
 
 	// getters  
 	virtual int GetColliderType() = 0;  
@@ -77,14 +77,14 @@ class CSphereCollider : public CCollider
 public:  
 	// Constructor & Destructor  
 	CSphereCollider(CGameObject* pObject) : CCollider(pObject) {}  
-	CSphereCollider(CGameObject* pObject, CSphereCollider* pCollide)
-		: CCollider(pObject),
-		m_xmBoundingSphere(pCollide->m_xmBoundingSphere),
-		m_xmWorldBoundingSphere(pCollide->m_xmWorldBoundingSphere){}
+	CSphereCollider(const CSphereCollider& pCollider)
+		: CCollider(nullptr),
+		m_xmBoundingSphere(pCollider.m_xmBoundingSphere),
+		m_xmWorldBoundingSphere(pCollider.m_xmWorldBoundingSphere) {}
 	virtual ~CSphereCollider() { }  
 
 	// Clone  
-	virtual std::shared_ptr<CComponent> Clone(CGameObject* newOwner) const { return std::make_shared<CSphereCollider>(newOwner, this); };
+	virtual std::unique_ptr<CComponent> Clone(CGameObject* newOwner) const { auto ret = std::make_unique<CSphereCollider>(*this); ret->SetOwnerInternal(newOwner); return (ret); };
 
 	// Getters  
 	virtual XMFLOAT3 GetCenter() override { return m_xmWorldBoundingSphere.Center; }  
@@ -123,11 +123,15 @@ class CAABBCollider : public CCollider
 public:    
 
 	CAABBCollider(CGameObject* pObject) : CCollider(pObject) {}
-	CAABBCollider(CGameObject* pObject, CAABBCollider* pCollide) : CCollider(pObject), m_xmBoundingBox(pCollide->m_xmBoundingBox), m_xmWorldBoundingBox(pCollide->m_xmWorldBoundingBox){}
+	// Copy constructor
+	CAABBCollider(const CAABBCollider& pCollider)
+		: CCollider(nullptr),
+		m_xmBoundingBox(pCollider.m_xmBoundingBox),
+		m_xmWorldBoundingBox(pCollider.m_xmWorldBoundingBox){}
 	virtual ~CAABBCollider() {}
 
 	// Clone    
-	virtual std::shared_ptr<CComponent> Clone(CGameObject* newOwner) const { return std::make_shared<CAABBCollider>(newOwner, this); };
+	virtual std::unique_ptr<CComponent> Clone(CGameObject* newOwner) const { auto ret = std::make_unique<CAABBCollider>(*this); ret->SetOwnerInternal(newOwner); return (ret); };
 
 	// Getters    
 	virtual XMFLOAT3 GetCenter() override { return m_xmWorldBoundingBox.Center; };  
@@ -167,12 +171,14 @@ class COBBCollider : public CCollider
 public:    
 	// Special functions    
 	COBBCollider(CGameObject* pObject) : CCollider(pObject) {}    
-	COBBCollider(CGameObject* pObject, COBBCollider* pCollider)
-		: CCollider(pObject), m_xmBoundingOrientedBox(pCollider->m_xmBoundingOrientedBox), m_xmWorldBoundingOrientedBox(pCollider->m_xmWorldBoundingOrientedBox){}
+	COBBCollider(const COBBCollider& pCollider)
+		: CCollider(nullptr),
+		m_xmBoundingOrientedBox(pCollider.m_xmBoundingOrientedBox),
+		m_xmWorldBoundingOrientedBox(pCollider.m_xmWorldBoundingOrientedBox) {}
 	virtual ~COBBCollider() {}    
 
 	// Clone
-	virtual std::shared_ptr<CComponent> Clone(CGameObject* newOwner) const { return std::make_shared<COBBCollider>(newOwner, this); };
+	virtual std::unique_ptr<CComponent> Clone(CGameObject* newOwner) const { auto ret = std::make_unique<COBBCollider>(*this); ret->SetOwnerInternal(newOwner); return (ret); };
 
 	// Getters    
 	virtual XMFLOAT3 GetCenter() override { return m_xmWorldBoundingOrientedBox.Center; };    

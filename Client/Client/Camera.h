@@ -26,19 +26,33 @@ class CCamera : public CComponent
 {
 public:
 	CCamera(CGameObject* pObject) : CComponent(pObject) {};
-	CCamera(CGameObject* pObject, CCamera* pCamera)
-		: CComponent(pObject), m_fAspectRatio(pCamera->m_fAspectRatio),
-		m_fFovAngle(pCamera->m_fFovAngle), m_fNearZ(pCamera->m_fNearZ), m_fFarZ(pCamera->m_fFarZ),
-		m_xmf3Position(pCamera->m_xmf3Position), m_xmf3Right(pCamera->m_xmf3Right),
-		m_xmf3Up(pCamera->m_xmf3Up), m_xmf3Look(pCamera->m_xmf3Look),
-		m_fPitch(pCamera->m_fPitch), m_fYaw(pCamera->m_fYaw), m_fRoll(pCamera->m_fRoll),
-		m_xmf4x4View(pCamera->m_xmf4x4View), m_xmf4x4Projection(pCamera->m_xmf4x4Projection){}
+	CCamera(const CCamera& rhs) : CComponent(nullptr)
+	{
+		m_d3dViewport = rhs.m_d3dViewport;
+		m_d3dScissorRect = rhs.m_d3dScissorRect;
+		m_fAspectRatio = rhs.m_fAspectRatio;
+		m_fFovAngle = rhs.m_fFovAngle;
+		m_fNearZ = rhs.m_fNearZ;
+		m_fFarZ = rhs.m_fFarZ;
+		m_xmf3Position = rhs.m_xmf3Position;
+		m_xmf3Right = rhs.m_xmf3Right;
+		m_xmf3Up = rhs.m_xmf3Up;
+		m_xmf3Look = rhs.m_xmf3Look;
+		m_fPitch = rhs.m_fPitch;
+		m_fYaw = rhs.m_fYaw;
+		m_fRoll = rhs.m_fRoll;
+		m_xmf4Rotation = rhs.m_xmf4Rotation;
+		m_xmf3Offset = rhs.m_xmf3Offset;
+		m_fTimeLag = rhs.m_fTimeLag;
+		m_xmf4x4View = rhs.m_xmf4x4View;
+		m_xmf4x4Projection = rhs.m_xmf4x4Projection;
+	};
 		
 	virtual ~CCamera() {};
 
-	virtual void Init(CGameObject* pObject);
+	virtual void Initialize();
 
-	virtual std::shared_ptr<CComponent> Clone(CGameObject* newOwner) const { return std::make_shared<CCamera>(newOwner, this); };
+	virtual std::unique_ptr<CComponent> Clone(CGameObject* newOwner) const { auto ret = std::make_unique<CCamera>(*this); ret->SetOwnerInternal(newOwner); return (ret); };
 
 	// Camera Shader Variables
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
@@ -127,8 +141,6 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-
-
 
 class CThirdPersonCamera : public CCamera
 {

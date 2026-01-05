@@ -238,7 +238,7 @@ public:
 	virtual const std::wstring& GetSceneName() const { static std::wstring scenename = L"CScene"; return scenename; }
 
 	// Scene Initialization / Release
-	void Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
+	void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature = nullptr);
 	virtual void ReleaseObjects();
 	virtual void ReleaseUploadBuffers();
 
@@ -252,7 +252,7 @@ public:
 
 	void BuildDefaultLightsAndMaterials();
 
-	virtual void CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void CreateDefaultCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	
 	// static member variable
 	static void DestroyFramework();
@@ -336,59 +336,76 @@ public:
 	void LateUpdate();
 
 	// Camera registry
-	void RegisterCamera(std::shared_ptr<CCamera> pCamera)
+	void RegisterCamera(CCamera* pCamera)
 	{
-		// 빈 자리 정리 및 동일 포인터 중복 방지
-		for (auto it = m_CameraRegistry.begin(); it != m_CameraRegistry.end(); )
+		// 중복 등록 방지
+		for (auto& camera : m_CameraRegistry)
 		{
-			if (it->expired()) it = m_CameraRegistry.erase(it);
-			else
-			{
-				auto locked = it->lock();
-				if (locked == pCamera) return; // 이미 등록되어 있음
-				++it;
-			}
+			if (camera == pCamera) return; // 이미 등록되어 있음
 		}
 		m_CameraRegistry.push_back(pCamera);
+
+		if (m_nSelectedCamera == -1)
+		{
+			m_nSelectedCamera = 0; // 첫 번째 등록된 카메라를 기본으로 선택
+		}
 	}
 
-	void UnregisterCamera(std::shared_ptr<CCamera> pCamera)
+	void UnregisterCamera(CCamera* pCamera)
 	{
-		for (auto it = m_CameraRegistry.begin(); it != m_CameraRegistry.end(); )
+		// 카메라 레지스트리에서 제거
+		auto it = std::find(m_CameraRegistry.begin(), m_CameraRegistry.end(), pCamera);
+		if (it != m_CameraRegistry.end()) m_CameraRegistry.erase(it);
+
+		// 선택된 카메라가 제거된 경우, 인덱스를 재조정
+		if (m_nSelectedCamera >= static_cast<int>(m_CameraRegistry.size()))
 		{
-			if (it->expired()) it = m_CameraRegistry.erase(it);
-			else
-			{
-				auto locked = it->lock();
-				if (locked == pCamera) it = m_CameraRegistry.erase(it);
-				else ++it;
-			}
+			m_nSelectedCamera = static_cast<int>(m_CameraRegistry.size()) - 1;
 		}
 	}
 
 	// 유효한 카메라가 있으면 우선순위에 따라 반환, 없으면 기존 m_pCamera(기본 카메라) 반환
-	std::shared_ptr<CCamera> GetMainCamera() const
+	CCamera* GetMainCamera() 
 	{
-		for (auto& wp : m_CameraRegistry)
+		if (m_nSelectedCamera >= 0 && m_nSelectedCamera < static_cast<int>(m_CameraRegistry.size()))
 		{
-			if (auto sp = wp.lock()) return sp;
+			return m_CameraRegistry[m_nSelectedCamera];
 		}
 		return m_pCamera;
+	}
+
+	// 사용할 카메라 선택
+	void SelectCamera(int nIndex)
+	{
+		if (nIndex >= 0 && nIndex < static_cast<int>(m_CameraRegistry.size()))
+		{
+			m_nSelectedCamera = nIndex;
+		}
+	}
+
+	void SelectCamera(CCamera* pCamera)
+	{
+		auto it = std::find(m_CameraRegistry.begin(), m_CameraRegistry.end(), pCamera);
+		if (it != m_CameraRegistry.end())
+		{
+			m_nSelectedCamera = static_cast<int>(std::distance(m_CameraRegistry.begin(), it));
+		}
 	}
 
 protected:
 	// ----------------------------------------
 	// 내부 멤버
 	// ----------------------------------------
-	std::vector<std::weak_ptr<CCamera>> m_CameraRegistry;
+	std::vector<CCamera*> m_CameraRegistry;
 
 	// 기존에 있던 기본 카메라
-	std::shared_ptr<CCamera> m_pCamera;
+	int m_nSelectedCamera = -1;  // m_CameraRegistry 내에서 선택된 카메라 인덱스
+	CCamera* m_pCamera; // 현재 씬의 렌더링에 사용되는 카메라.
 
+public:
 	// ----------------------------------------
 	// Render
 	// ----------------------------------------
-public:
 	virtual void UpdateLights() {};
 
 	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
@@ -448,17 +465,42 @@ protected:
 	
 
 public:
-	const std::vector<CTextObject*> GetTextBlocks()
+	// ----------------------------------------
+	// TextBlock
+	// ----------------------------------------
+	const std::vector<TextBlock*> GetTextBlocks()
 	{
-		std::vector<CTextObject*> ppVector;
-		ppVector.reserve(m_ppLayerView[GAMEOBJECT_LAYER::LAYER_TEXT].size());
-		for(auto& obj : m_ppLayerView[GAMEOBJECT_LAYER::LAYER_TEXT])
-		{
-			if (CTextObject* textObj = dynamic_cast<CTextObject*>(obj))
-				ppVector.push_back(textObj);
-		}
-		return ppVector;
+		return m_TextBlock;
 	}
+
+	void RegisterText(TextBlock* ptextblock)
+	{
+		// 중복 등록 방지
+		auto it = std::find(m_TextBlock.begin(), m_TextBlock.end(), ptextblock);
+		if (it != m_TextBlock.end()) return; // 이미 등록되어 있음
+		
+		{
+			std::string debugMsg = "Register TextBlock: " + std::to_string((uintptr_t)ptextblock) + "\n";
+			OutputDebugStringA(debugMsg.c_str());
+		}
+		m_TextBlock.push_back(ptextblock);
+	}
+
+	void UnregisterText(TextBlock* ptextblock)
+	{
+		// 카메라 레지스트리에서 제거
+		auto it = std::find(m_TextBlock.begin(), m_TextBlock.end(), ptextblock);
+		if (it != m_TextBlock.end()) m_TextBlock.erase(it);
+
+		{
+			std::string debugMsg = "Unregister TextBlock: " + std::to_string((uintptr_t)ptextblock) + "\n";
+			OutputDebugStringA(debugMsg.c_str());
+		}
+	}
+
+protected:
+	std::vector<TextBlock*> m_TextBlock;
+
 
 public:
 	// Shadow Map

@@ -127,20 +127,18 @@ void CAnimationController::SettingByModel(CLoadedModelInfo* pModel)
 	}
 	CUploadContext.ExecuteAndReset();
 
-
 	m_pAnimationTracks.resize(m_nAnimationTracks);
 	for (int i = 0; i < m_nAnimationTracks; i++)
 	{
-		m_pAnimationTracks[i].SetAnimationSet(0);
+		m_pAnimationTracks[i].SetAnimationSet(i);
 		m_pAnimationTracks[i].SetCallbackKeys(0);
 		m_pAnimationTracks[i].SetAnimationCallbackHandler(NULL);
 	}
-
 }
 
 CAnimationController::~CAnimationController()
 {
-	Clear();
+	OnDestroy();
 }
 
 void CAnimationController::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)

@@ -6,7 +6,7 @@
 class CZombieCAnimationController : public CAnimationController
 {
 public:
-	CZombieCAnimationController();
+	CZombieCAnimationController(CGameObject* pOwner);
 	~CZombieCAnimationController();
 };
 
@@ -17,9 +17,9 @@ public:
 	virtual ~CZombieObject();
 
 	// Object Initialization
-	static std::shared_ptr<CZombieObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nSkinType);
+	static std::unique_ptr<CZombieObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, CLoadedModelInfo* pModel, int nSkinType);
 	
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nSkinType);
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nSkinType);
 	
 	virtual std::string GetDefaultName() override { return "CZombieObject"; }
 
@@ -38,7 +38,7 @@ public:
 	{
 		if(false == m_bDied)
 		{
-			if (m_pSkinnedAnimationController)
+			if (auto pSkinnedAnimationController = CreateComponent<CAnimationController>())
 			{
 				SetState((int)ANIMATION_POSE::ZOMBIE_DEATH);
 			}

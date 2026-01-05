@@ -282,7 +282,7 @@ public:
 	int		m_nSkinningBones = 0;
 
 	std::vector<std::string> m_ppstrSkinningBoneNames; //[m_nSkinningBones]
-	std::vector<std::shared_ptr<CGameObject>> m_ppSkinningBoneFrameCaches; //[m_nSkinningBones]
+	std::vector<CGameObject*> m_ppSkinningBoneFrameCaches; //[m_nSkinningBones]
 	std::vector<XMFLOAT4X4> m_pxmf4x4BindPoseBoneOffsets; //[m_nSkinningBones], Transposed
 
 	ComPtr<ID3D12Resource> m_pd3dcbBindPoseBoneOffsets; //[m_nSkinningBones]

@@ -132,7 +132,7 @@ protected:
 
 private:
 	// Cursor
-	std::shared_ptr<CSprite> m_pCursorSprite; // Cursor Sprite
+	std::unique_ptr<CSprite> m_pCursorSprite; // Cursor Sprite
 	POINTF GetTexturePosition(int x, int y);
 	void RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -253,7 +253,7 @@ private:
 	{
 		// 여기서 Scene을 및 각종 오브젝트들을 생성한다.
 		auto pScene = std::make_unique<T>();
-		pScene->Init(uploadContext.m_pd3dDevice, uploadContext.m_pd3dGraphicCommandList);
+		pScene->Initialize(uploadContext.m_pd3dDevice, uploadContext.m_pd3dGraphicCommandList);
 
 		// ------------- 
 		uploadContext.ExecuteAndReset();
@@ -270,7 +270,7 @@ private:
 
 private:
 	// 디버그용 텍스트 오브젝트들
-	std::vector<CTextObject> m_DebugTextObjects; 
+	std::vector<TextBlock*> m_DebugTextBlocks; 
 
 	void CreateDebugTextObjects();
 	void UpdateDebugTextObjects();

@@ -12,6 +12,7 @@
 #include "Collider.h"
 #include "AnimationController.h"
 #include "ModelComponent.h"
+#include "TextComponent.h"
 
 #include "ResourceManager.h"
 
@@ -72,9 +73,9 @@ public:
 	// Object Initialization
 	// --------------------------------------------
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {};
-	virtual void DeepCopyFromGameObject(std::shared_ptr<CGameObject> rhs);
+	virtual void DeepCopyFromGameObject(CGameObject* rhs);
 	void ClearMemberVariables();
-	void Init();
+	void Initialize();
 
 	// --------------------------------------------
 	// Object methods
@@ -92,7 +93,7 @@ public:
 	UINT GetID() { return m_nID; }
 	void SetID(UINT nObjectID) { m_nID = nObjectID; }
 private:
-	UINT m_nID; 
+	UINT m_nID = 0; 
 
 public:
 	// --------------------------------------------
@@ -102,7 +103,7 @@ public:
 	void SetSID(UINT nServerID) { m_nSID = nServerID; } // 서버 ID는 Object ID와 동일하게 사용
 
 private:
-	UINT m_nSID; // Object Server ID
+	UINT m_nSID = 0; // Object Server ID
 
 public:
 	// --------------------------------------------
@@ -112,8 +113,7 @@ public:
 	void SetActive(bool bActive) { m_bActive = bActive; }
 
 private:
-	bool m_bActive; // Active Flag
-
+	bool m_bActive = true; // Active Flag
 
 public:
 	// --------------------------------------------
@@ -123,7 +123,7 @@ public:
 	void SetName(const std::string& strName);
 	virtual std::string GetDefaultName() { return "CGameObject"; }
 private:
-	std::string m_strName;  // Object Name
+	std::string m_strName = "GameObject";  // Object Name
 
 public:
 	// --------------------------------------------
@@ -131,7 +131,6 @@ public:
 	// --------------------------------------------
 	virtual void SetLayer(GAMEOBJECT_LAYER layer) { m_nLayer = layer; }
 	virtual GAMEOBJECT_LAYER GetLayer() { return m_nLayer; }
-
 	
 private:
 	GAMEOBJECT_LAYER m_nLayer; // Object Layer
@@ -152,24 +151,11 @@ public:
 
 public:
 	// --------------------------------------------
-	// 상속 관계
+	// 소속 Scene 참조
 	// --------------------------------------------
-	CGameObject* GetParent() { return m_pParent; }
-	std::vector<std::shared_ptr<CGameObject>> GetChilds() { return m_pChilds; }
-	std::shared_ptr<CGameObject> GetChild(int nIndex) { return m_pChilds[nIndex]; }
-
-	void SetParent(CGameObject* pParent) { m_pParent = pParent; };
-	void SetChild(std::shared_ptr<CGameObject> pChild) 
-	{ 
-		m_pChilds.push_back(pChild); 
-		pChild->SetParent(this); 
-		// 부모의 scene이 있으면 자식에게 전파
-		if (m_pScene) pChild->SetScene(m_pScene);
-	};
-
-	void SetScene(CScene* pScene) 
-	{ 
-		m_pScene = pScene; 
+	void SetScene(CScene* pScene)
+	{
+		m_pScene = pScene;
 		// 자식들에게도 전파
 		for (auto& pChild : m_pChilds)
 		{
@@ -177,22 +163,47 @@ public:
 		}
 	};
 
+	CScene* GetScene() { return m_pScene; };
+
+protected:
+	// Scene observer pointer (lifetime: Scene owns GameObjects)
+	CScene* m_pScene = nullptr;
+
+public:
+	// --------------------------------------------
+	// 상속 관계
+	// --------------------------------------------
+	CGameObject* GetParent() { return m_pParent; }
+	std::vector<CGameObject*> GetChilds()
+	{
+		std::vector<CGameObject*> m_pChildPtrs;
+		for (auto& child : m_pChilds)
+			m_pChildPtrs.push_back(child.get());
+		return m_pChildPtrs;
+	}
+	CGameObject* GetChild(int nIndex) { return m_pChilds[nIndex].get(); }
+
+	void SetParent(CGameObject* pParent) { m_pParent = pParent; };
+	void SetChild(std::unique_ptr<CGameObject> pChild) 
+	{ 
+		pChild->SetParent(this);
+		m_pChilds.push_back(std::move(pChild));
+		// 부모의 scene이 있으면 자식에게 전파
+		if (m_pScene) pChild->SetScene(m_pScene);
+	};
+
 protected:
 	// Parent
 	CGameObject* m_pParent;
-
 	// Child
-	std::vector<std::shared_ptr<CGameObject>> m_pChilds; // Child Object
-
-	// Scene observer pointer (lifetime: Scene owns GameObjects)
-	CScene* m_pScene = nullptr;
+	std::vector<std::unique_ptr<CGameObject>> m_pChilds; // Child Object
 
 public:
 	// --------------------------------------------
 	// Object Collision
 	// --------------------------------------------
 	virtual void OnCollision(CGameObject* pOther, CCollider* pColliderA, CCollider* pColliderB); // Collision Event
-	CAABBCollider GetMergedCollider();
+	BoundingBox GetMergedCollider() const;
 
 	BoundingBox GetMeshBound() {
 		if (m_pMesh) return m_pMesh->GetBoundingBox();
@@ -272,45 +283,46 @@ public:
 	// Component
 	// --------------------------------------------
 	template <typename T>
-	std::shared_ptr<T> CreateComponent(std::shared_ptr<CGameObject> pOwner)
+	T* CreateComponent()
 	{
-		std::shared_ptr<T> pComponent = std::make_shared<T>(pOwner.get());
-		m_pComponents.push_back(pComponent);
-		pComponent->Init(pOwner.get());
-
-		// 생성 직후에 Scene이 있다면, Camera 타입이면 Scene에 등록
-		if (auto pScene = pOwner->GetScene())
+		// 객체 생성
+		auto pComponent = std::make_unique<T>(this);
+		if (pComponent == nullptr)
 		{
-			if (auto pCamera = std::dynamic_pointer_cast<CCamera>(pComponent))
-			{
-				pScene->RegisterCamera(pCamera);
-			}
+			std::string errorMsg = "Failed to create component of type: " + std::string(typeid(T).name()) + "\n";
+			OutputDebugStringA(errorMsg.c_str());
+			return nullptr;
 		}
+		auto prawPtr = pComponent.get();
+		m_pComponents.push_back(std::move(pComponent));
 
-		return pComponent;
+		// 초기화
+		prawPtr->Initialize();
+
+		return prawPtr;
 	};
 
 	template <typename T>
-	std::shared_ptr<T> GetComponent() const
+	T* GetComponent() const
 	{
 		for (auto& pComponent : m_pComponents)
 		{
-			if (auto p = std::dynamic_pointer_cast<T>(pComponent)) return p;
+			if (auto p = dynamic_cast<T*>(pComponent.get())) return p;
 		}
 		return nullptr;
 	}
 
 	template <>
-	std::shared_ptr<CTransform> GetComponent<CTransform>() const
+	CTransform* GetComponent<CTransform>() const
 	{
-		return m_pTransform;
+		return m_pTransform.get();
 	};
 
 	template <typename T>
-	std::vector<std::shared_ptr<T>> GetComponents() {
-		std::vector<std::shared_ptr<T>> result;
+	std::vector<T*> GetComponents() {
+		std::vector<T*> result;
 		for (auto& pComponent : m_pComponents) {
-			if (auto casted = std::dynamic_pointer_cast<T>(pComponent)) {
+			if (auto casted = dynamic_cast<T*>(pComponent.get())) {
 				result.push_back(casted);
 			}
 		}
@@ -320,8 +332,9 @@ public:
 	template <typename T>
 	void GetComponentsInChildren(std::vector<T*>& pVec) const {
 		for (auto& pComponent : m_pComponents) {
-			if (auto casted = std::dynamic_pointer_cast<T>(pComponent)) {
-				pVec.push_back(casted.get());
+			auto rawptr = pComponent.get();
+			if (auto casted = dynamic_cast<T*>(rawptr)) {
+				pVec.push_back(casted);
 			}
 		}
 
@@ -337,7 +350,7 @@ private:
 	bool m_bRollLock = false;
 
 	// Component
-	std::vector<std::shared_ptr<CComponent>> m_pComponents;
+	std::vector<std::unique_ptr<CComponent>> m_pComponents;
 	std::vector<CCollider*> m_pCachesColliders; // 모든 Children Collide를 복사할당(For CollisionCheck)
 
 public:
@@ -345,25 +358,22 @@ public:
 	// Model
 	// --------------------------------------------
 	
-	// Animation	
-	std::shared_ptr<CAnimationController> m_pSkinnedAnimationController;
-
 	// Load Model
 	void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, std::ifstream& File, std::shared_ptr<CShader> pShader);
 	std::shared_ptr<CTexture> FindReplicatedTexture(const _TCHAR* pstrTextureName);
 	void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& ppSkinnedMeshes, int* pnSkinnedMesh);;
 	
 	static void LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<CLoadedModelInfo> pLoadedModel);
-	static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth = 0);
+	static std::unique_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth = 0);
 	static std::shared_ptr<CLoadedModelInfo> LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* pstrFileName, std::shared_ptr<CShader> pShader);
 	
 	// Clone
-	static bool DeepCopyFromModel(const std::string &strModelName, std::shared_ptr<CGameObject>& pGameObject);
-	static bool DeepCopyFromModel(const CLoadedModelInfo* pLoadModel, std::shared_ptr<CGameObject>& pGameObject);
+	static bool DeepCopyFromModel(const std::string &strModelName, CGameObject* pGameObject);
+	static bool DeepCopyFromModel(const CLoadedModelInfo* pLoadModel, CGameObject* pGameObject);
 	bool DeepCopyFromModel(const std::string& strModelName);
-	bool DeepCopyFromModel(const CLoadedModelInfo* pLoadModel) { auto pThis = shared_from_this(); return DeepCopyFromModel(pLoadModel, pThis); };
+	bool DeepCopyFromModel(const CLoadedModelInfo* pLoadModel) { return DeepCopyFromModel(pLoadModel, this); };
 	
-	std::shared_ptr<CGameObject> FindFrame(std::string strFrameName);
+	CGameObject* FindFrame(std::string strFrameName);
 
 public:
 	// Transform
@@ -418,7 +428,7 @@ public:
 
 
 protected:
-	std::shared_ptr<CTransform> m_pTransform = std::make_shared<CTransform>(this);
+	std::unique_ptr<CTransform> m_pTransform;
 
 public:
 	// 2D Sprite
@@ -591,121 +601,13 @@ public:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-class TextBlock
-{
-public:
-	bool						    m_bActive = true;
-	std::wstring                    m_pstrText;
-	D2D1_RECT_F                     m_d2dLayoutRect;
-	//ComPtr<IDWriteTextFormat> m_pdwFormat;
-	//ComPtr<ID2D1SolidColorBrush> m_pd2dTextBrush;
-	std::wstring m_strFontKey;
-	float  m_fFontSize = 12.0f;
-	D2D1::ColorF m_cBrushKey{0,0,0};
-
-	// Setters
-	void SetActive(bool bActive) {
-		m_bActive = bActive;
-	}
-
-	void SetText(std::wstring pstrUIText) {
-		m_pstrText = pstrUIText;
-	}
-
-	void SetSize(float x, float y, float width, float height, bool isCenter = true) {
-		if(isCenter) {
-			x = x - width / 2;
-			y = y - height / 2;
-		}
-		m_d2dLayoutRect.left = x;
-		m_d2dLayoutRect.top = y;
-		m_d2dLayoutRect.right = x + width;
-		m_d2dLayoutRect.bottom = y + height;
-	}
-
-
-	void SetFont(const std::wstring& strFontKey) {
-		m_strFontKey = strFontKey;
-	}
-
-	void SetFontSize(float fFontSize) {
-		m_fFontSize = fFontSize;
-	}
-
-	void SetBrush(const D2D1::ColorF& cBrushKey) {
-		m_cBrushKey = cBrushKey;
-	}
-
-	void SetColor(const D2D1::ColorF& cBrushKey) {
-		SetBrush(cBrushKey);
-	}
-
-	// Getters
-	bool IsActive() const {
-		return m_bActive;
-	}
-	std::wstring GetText() const {
-		return m_pstrText;
-	}
-	D2D1_RECT_F GetSize() const {
-		return m_d2dLayoutRect;
-	}
-	std::wstring GetFont() const {
-		return m_strFontKey;
-	}
-	float GetFontSize() const {
-		return m_fFontSize;
-	}
-
-	D2D1::ColorF GetBrush() const {
-		return m_cBrushKey;
-	}
-};
-
-class CTextObject : public CGameObject
-{
-private:
-	TextBlock m_TextBlock{};
-
-public:
-	CTextObject() : CGameObject() { SetName(GetDefaultName()); }
-	virtual ~CTextObject() {};
-
-	virtual std::string GetDefaultName() override { return "CTextObject"; }
-	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_TEXT; }
-
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr, bool bDepthWrite = false) override {};
-	virtual TextBlock GetTextBlock() { return m_TextBlock; };
-
-public:
-	// TextBlock Setters
-	void SetActive(bool bActive) { m_TextBlock.SetActive(bActive); }
-	void SetText(std::wstring pstrUIText) { m_TextBlock.SetText(pstrUIText); }
-	void SetSize(float x, float y, float width, float height, bool isCenter = true) { m_TextBlock.SetSize(x, y, width, height, isCenter); }
-	void SetFont(const std::wstring& strFontKey) { m_TextBlock.SetFont(strFontKey); }
-	void SetFontSize(float fFontSize) { m_TextBlock.SetFontSize(fFontSize); }
-	void SetBrush(const D2D1::ColorF& cBrushKey) { m_TextBlock.SetBrush(cBrushKey); }
-	void SetColor(const D2D1::ColorF& cBrushKey) { m_TextBlock.SetColor(cBrushKey); }
-	// TextBlock Getters
-	bool IsActive() const { return m_TextBlock.IsActive(); }
-	std::wstring GetText() const { return m_TextBlock.GetText(); }
-	D2D1_RECT_F GetSize() const { return m_TextBlock.GetSize(); }
-	std::wstring GetFont() const { return m_TextBlock.GetFont(); }
-	float GetFontSize() const { return m_TextBlock.GetFontSize(); }
-	D2D1::ColorF GetBrush() const { return m_TextBlock.GetBrush(); }
-};
-
-class TextBlock;
-
-
-
 class UILayer
 {
 public:
 	UILayer(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight);
 	~UILayer() { ReleaseResources(); }
 
-	void Render(UINT nFrame, const std::vector<CTextObject*>& vecTextObjects);
+	void Render(UINT nFrame, const std::vector<TextBlock*>& vecTextObjects);
 
 public:
 	void InitializeDevice(ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets);

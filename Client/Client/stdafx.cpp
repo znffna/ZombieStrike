@@ -367,4 +367,64 @@ void CloseCommandList(ID3D12GraphicsCommandList* pd3dCommandList)
 	pd3dCommandList->Close();
 }
 
+std::wstring to_wstring(const std::string& str)
+{
+	if (str.empty())
+		return {};
+
+	int len = MultiByteToWideChar(
+		CP_UTF8,
+		0,
+		str.data(),
+		static_cast<int>(str.size()),
+		nullptr,
+		0
+	);
+
+	std::wstring result(len, L'\0');
+
+	MultiByteToWideChar(
+		CP_UTF8,
+		0,
+		str.data(),
+		static_cast<int>(str.size()),
+		result.data(),
+		len
+	);
+
+	return result;
+}
+
+std::string to_string(const std::wstring& wstr)
+{
+	if (wstr.empty())
+		return {};
+
+	int len = WideCharToMultiByte(
+		CP_UTF8,
+		0,
+		wstr.data(),
+		static_cast<int>(wstr.size()),
+		nullptr,
+		0,
+		nullptr,
+		nullptr
+	);
+
+	std::string result(len, '\0');
+
+	WideCharToMultiByte(
+		CP_UTF8,
+		0,
+		wstr.data(),
+		static_cast<int>(wstr.size()),
+		result.data(),
+		len,
+		nullptr,
+		nullptr
+	);
+
+	return result;
+}
+
 

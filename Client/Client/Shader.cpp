@@ -1276,7 +1276,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	// 조명에 의한 렌더링 카메라 생성
 	for (int i = 0; i < MAX_DEPTH_TEXTURES; i++)
 	{
-		m_ppDepthRenderCameras[i] = std::make_shared<CCamera>();
+		m_ppDepthRenderCameras[i] = std::make_shared<CCamera>(nullptr);
 		m_ppDepthRenderCameras[i]->SetViewport(0, 0, m_nDepthbufferWidth, m_nDepthbufferHeight, 0.0f, 1.0f);
 		m_ppDepthRenderCameras[i]->SetScissorRect(0, 0, m_nDepthbufferWidth, m_nDepthbufferHeight);
 		m_ppDepthRenderCameras[i]->CreateShaderVariables(pd3dDevice, pd3dCommandList);

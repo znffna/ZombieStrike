@@ -34,16 +34,13 @@ class CModelComponent : public CComponent
 {
 public:
 	CModelComponent(CGameObject* pObject) : CComponent(pObject) {};
-	CModelComponent(CGameObject* pObject, CLoadedModelInfo* pModel) : CComponent(pObject), m_pModel(pModel){};
+	CModelComponent(const CModelComponent& pModel) : CComponent(nullptr), m_pModel(pModel.m_pModel) {};
 	virtual ~CModelComponent() {};
 
-	virtual std::shared_ptr<CComponent> Clone(CGameObject* newOwner) const override
-	{
-		return std::make_shared<CModelComponent>(newOwner, m_pModel);
-	};
+	virtual std::unique_ptr<CComponent> Clone(CGameObject* newOwner) const { auto ret = std::make_unique<CModelComponent>(*this); ret->SetOwnerInternal(newOwner); return (ret); };
 
 	virtual void Update(float fTimeElapsed) override {};
-	void SetModel(CLoadedModelInfo* pModel) { m_pModel = pModel; }
+	void SetModel(CLoadedModelInfo* pModel);
 	CLoadedModelInfo* GetModel() const { return m_pModel; }
 
 private:

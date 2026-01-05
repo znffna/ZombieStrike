@@ -20,7 +20,5 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override;
 
 	bool IsClicked(float x, float y) const;
-
-	std::shared_ptr<CTextObject> m_pTextBlock;
 };
 

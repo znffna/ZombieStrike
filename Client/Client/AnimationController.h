@@ -112,21 +112,25 @@ class CAnimationController : public CComponent
 {
 public:
 	CAnimationController(CGameObject* pOwner) : CComponent(pOwner) {};
-	CAnimationController(CGameObject* pOwner, CAnimationController* pAnimationController)
-		: CComponent(pOwner),
-		m_pModelRootObject(pAnimationController->m_pModelRootObject),
-		BasePose(pAnimationController->BasePose),
-		UpperPose(pAnimationController->UpperPose),
-		m_fTime(pAnimationController->m_fTime),
-		m_nAnimationTracks(pAnimationController->m_nAnimationTracks),
-		m_pAnimationTracks(pAnimationController->m_pAnimationTracks),
-		m_pAnimationSets(pAnimationController->m_pAnimationSets),
-		m_nSkinnedMeshes(pAnimationController->m_nSkinnedMeshes),
-		m_ppSkinnedMeshes(pAnimationController->m_ppSkinnedMeshes),
-		m_pRootMotionObject(pOwner) {};
+	CAnimationController(const CAnimationController& rhs) : CComponent(nullptr)
+	{
+		// State
+		BasePose = rhs.BasePose;
+		UpperPose = rhs.UpperPose;
+		// Animation 
+		m_fTime = rhs.m_fTime;
+		m_nAnimationTracks = rhs.m_nAnimationTracks;
+		m_pAnimationTracks = rhs.m_pAnimationTracks;
+		m_pAnimationSets = rhs.m_pAnimationSets;
+		m_nSkinnedMeshes = rhs.m_nSkinnedMeshes;
+		m_ppSkinnedMeshes = rhs.m_ppSkinnedMeshes;
+	};
 	~CAnimationController();
 
-	virtual std::shared_ptr<CComponent> Clone(CGameObject* newOwner) const { return std::make_shared<CAnimationController>(newOwner, this); };
+	virtual void Initialize() override { Clear(); }
+	virtual void OnDestroy() override { Clear(); }
+
+	virtual std::unique_ptr<CComponent> Clone(CGameObject* newOwner) const { auto ret = std::make_unique<CAnimationController>(*this); ret->SetOwnerInternal(newOwner); return (ret); };
 
 
 	void Clear();
@@ -176,9 +180,9 @@ public:
 
 public:
 	bool m_bRootMotion = false;
-	std::shared_ptr<CGameObject> m_pModelRootObject;
+	std::shared_ptr<CGameObject> m_pModelRootObject = nullptr;
 
-	CGameObject* m_pRootMotionObject;
+	CGameObject* m_pRootMotionObject = nullptr;
 	XMFLOAT3 m_xmf3FirstRootMotionPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 	void SetRootMotion(bool bRootMotion) { m_bRootMotion = bRootMotion; }

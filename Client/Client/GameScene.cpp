@@ -158,21 +158,24 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	// 마지막 모든 Object의 생성이 끝나면 Player의 카메라를 추적
 	if (m_pPlayer)
 	{
-		m_pCamera = m_pPlayer->GetComponent<CCamera>();
+		auto pCamera = m_pPlayer->GetComponent<CCamera>();
+		SelectCamera(pCamera);
 	}
 }
 
 void CGameScene::CreateFreeCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	// 임시 카메라
-	m_pFreeCamera = std::make_shared<CCamera>();
+	m_pFreeCamera = AddObject(std::make_unique<CGameObject>());
+
 	// Camera 생성
-	m_pFreeCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	m_pFreeCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	m_pFreeCamera->SetOffset(XMFLOAT3(1.0f, 0.7f, -2.5f));
-	m_pFreeCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
-	m_pFreeCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
-	m_pFreeCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	auto pcameracomponent = m_pFreeCamera->CreateComponent<CCamera>();
+	pcameracomponent->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pcameracomponent->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pcameracomponent->SetOffset(XMFLOAT3(1.0f, 0.7f, -2.5f));
+	pcameracomponent->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	pcameracomponent->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
+	pcameracomponent->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	m_pFreeCamera->SetActive(true);
 }
 
@@ -180,16 +183,17 @@ void CGameScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 {
 }
 
-void CGameScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void CGameScene::CreateDefaultCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (m_pCamera) return;
-	m_pCamera = std::make_shared<CThirdPersonCamera>();
-	m_pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	m_pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	m_pCamera->SetOffset(XMFLOAT3(0.0f, 0.0f, -5.0f));
-	m_pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
-	m_pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
-	m_pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	auto pCameraObject = AddObject(std::make_unique<CGameObject>());
+	auto pcameracomponent = pCameraObject->CreateComponent<CThirdPersonCamera>();
+	pcameracomponent->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pcameracomponent->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pcameracomponent->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, -5.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	pcameracomponent->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
+	pcameracomponent->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
 void CGameScene::ReleaseObjects()
@@ -205,7 +209,7 @@ void CGameScene::Update(float deltaTime)
 	CScene::Update(deltaTime);
 
 	std::wstring strHealthText = L"HP : " + std::to_wstring((int)m_pPlayer->GetHealth()) + L" / " + std::to_wstring((int)m_pPlayer->GetMaxHealth());
-	m_pHealthObject->m_pTextBlock->SetText(strHealthText.data());
+	if(auto ptextcomponent = m_pHealthObject->GetComponent<CTextComponent>()) ptextcomponent->SetText(strHealthText.data());
 
 	BuildFiredBullets();
 }
@@ -345,12 +349,10 @@ void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 		switch (wParam)
 		{
 		case 'P':
-			m_bFreeCamera = false;
-			m_pCamera = m_pPlayer->GetComponent<CCamera>();
+			SelectCamera(m_pPlayer->GetComponent<CCamera>());
 			break;
 		case 'C':
-			m_bFreeCamera = true;
-			m_pCamera = m_pFreeCamera;
+			SelectCamera(m_pFreeCamera->GetComponent<CCamera>());
 			break;
 		case VK_F1:
 			m_bPrintObjectCount = true;

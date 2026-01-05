@@ -11,9 +11,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-void CCollider::Init(CGameObject* pObject)
+void CCollider::Initialize()
 {
-	CComponent::Init(pObject);
+	CComponent::Initialize();
 }
 
 

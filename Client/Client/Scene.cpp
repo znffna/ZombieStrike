@@ -39,7 +39,7 @@ CScene::~CScene()
 
 }
 
-void CScene::Init(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
+void CScene::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
 	// Scene √ ±‚»≠
 	PreInitializeObjects(pd3dDevice, pd3dCommandList, pd3dRootSignature);
@@ -52,6 +52,7 @@ void CScene::PreInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 	// Create Default Lights and Materials
 	BuildDefaultLightsAndMaterials();
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	CreateDefaultCamera(pd3dDevice, pd3dCommandList);
 }
 
 void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
@@ -61,19 +62,20 @@ void CScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 void CScene::PostInitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
 	// Fixed Camera
-	CreateFixedCamera(pd3dDevice, pd3dCommandList);
 	SetSceneState(SCENE_STATE_RUNNING);
 }
 
-void CScene::CreateFixedCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void CScene::CreateDefaultCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (m_pCamera) return;
-	m_pCamera = std::make_shared<CCamera>();
-	m_pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	m_pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-	m_pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, -5.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
-	m_pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
-	m_pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	auto pCameraObject = AddObject(std::make_unique<CGameObject>());
+	auto pcameracomponent = pCameraObject->CreateComponent<CCamera>();
+	pcameracomponent->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pcameracomponent->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pcameracomponent->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, -5.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	pcameracomponent->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
+	pcameracomponent->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
 void CScene::DestroyFramework()
@@ -146,7 +148,7 @@ void CScene::ReleaseObjects()
 	ZeroMemory(m_pLights.data(), sizeof(Light) * MAX_LIGHTS);
 
 	// Release Camera
-	m_pCamera.reset();	
+	m_pCamera = nullptr;	
 }
 
 void CScene::ReleaseUploadBuffers()
@@ -243,7 +245,7 @@ void CScene::ResetScene()
 	ReleaseObjects();
 
 	auto& CUploadContext = CUploadContext::Instance();
-	Init(CUploadContext.m_pd3dDevice, CUploadContext.m_pd3dGraphicCommandList, m_pd3dGraphicsRootSignature.Get());
+	Initialize(CUploadContext.m_pd3dDevice, CUploadContext.m_pd3dGraphicCommandList, m_pd3dGraphicsRootSignature.Get());
 }
 
 void CScene::PopScene()
@@ -267,7 +269,7 @@ CGameObject* CScene::AddObject(std::unique_ptr<CGameObject> object)
 	m_ppGameObjects.emplace(rawPtr->GetID(), std::move(object));
 
 	{
-		std::string debugMsg = "CScene::AddObject: Object Added. ID = " + std::to_string(rawPtr->GetID()) + ", Name = " + rawPtr->GetName() + "\n";
+		std::string debugMsg = to_string(GetSceneName()) + " - CScene::AddObject: Object Added. CID = " + std::to_string(rawPtr->GetID()) + ", Name = " + rawPtr->GetName() + "\n";
 		OutputDebugStringA(debugMsg.c_str());
 	}
 	return rawPtr;
@@ -405,7 +407,12 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	{
 		// Set Default Viewport and Scissor
 		if (nullptr == m_pCamera) return false;
-		pCamera = m_pCamera.get();
+		pCamera = m_pCamera;
+
+		{
+			std::string debugMsg = "CScene::Render: Using Default Camera.\n";
+			OutputDebugStringA(debugMsg.c_str());
+		}
 	}
 	if(m_pPlayer) pCamera->Update(m_pPlayer->GetPosition(), 0.0f);
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);

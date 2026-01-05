@@ -11,16 +11,28 @@ class CTransform : public CComponent
 {
 public:
 	CTransform(CGameObject* pObject) : CComponent(pObject) { }
-	CTransform(CGameObject* pObject, CTransform* pTransform)
-		: CComponent(pObject),
-		m_xmf3Position(pTransform->m_xmf3Position),
-		m_xmf3Rotation(pTransform->m_xmf3Rotation),
-		m_xmf3Scale(pTransform->m_xmf3Scale),
-		m_xmf4x4Local(pTransform->m_xmf4x4Local),
-		m_xmf4x4World(pTransform->m_xmf4x4World) { }
+	CTransform(const CTransform& rhs): CComponent(nullptr),
+		m_xmf3Position(rhs.m_xmf3Position),
+		m_xmf3Rotation(rhs.m_xmf3Rotation),
+		m_xmf3Scale(rhs.m_xmf3Scale),
+		m_xmf4x4Local(rhs.m_xmf4x4Local),
+		m_xmf4x4World(rhs.m_xmf4x4World) {}
+
+	CTransform& operator=(const CTransform& rhs)
+	{
+		if (this == &rhs) return *this;
+		// gameObject는 복사하지 않음(= owner 제외)
+		m_xmf3Position = rhs.m_xmf3Position;
+		m_xmf3Rotation = rhs.m_xmf3Rotation;
+		m_xmf3Scale = rhs.m_xmf3Scale;
+		m_xmf4x4Local = rhs.m_xmf4x4Local;
+		m_xmf4x4World = rhs.m_xmf4x4World;
+		return *this;
+	}
 	virtual ~CTransform() { }
 
-	virtual std::shared_ptr<CComponent> Clone(CGameObject* newOwner) const { return std::make_shared< CTransform>(newOwner, this); };
+	virtual std::unique_ptr<CComponent> Clone(CGameObject* newOwner) const { auto ret = std::make_unique<CTransform>(*this); ret->SetOwnerInternal(newOwner); return (ret); };
+
 
 	// Transform Getter
 	DirectX::XMFLOAT3 GetPosition() const { return XMFLOAT3{m_xmf4x4World._41, m_xmf4x4World._42, m_xmf4x4World._43}; }

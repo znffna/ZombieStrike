@@ -18,12 +18,11 @@
 
 CGameObject::CGameObject()	
 {
-	Init();
+	m_pTransform = std::make_unique<CTransform>(this);
 }
 
 CGameObject::CGameObject(const std::string& strName)
 {
-	Init();
 	SetName(strName);
 }
 
@@ -47,9 +46,6 @@ CGameObject::~CGameObject()
 	// Release Materials
 	m_ppMaterials.clear();
 
-	// Release Skinned Animation Controller
-	m_pSkinnedAnimationController.reset();
-
 	// Release Shader Variables
 	ReleaseShaderVariables();
 
@@ -65,18 +61,12 @@ CGameObject::~CGameObject()
 
 }
 
-void CGameObject::Init()
+void CGameObject::Initialize()
 {
-	// Object Info
-	m_bActive = true;
-	m_nID = 0;
-
-	// Default Name
-	m_strName = "Default_GameObject";
-	//m_strName = "GameObject_" + std::to_string(m_nID);
+	
 }
 
-void CGameObject::DeepCopyFromGameObject(std::shared_ptr<CGameObject> rhs)
+void CGameObject::DeepCopyFromGameObject(CGameObject* rhs)
 {
 	// 복사 할당 연산자 호출 (ID는 복제되면 안된다)
 	//*this = *rhs.get();
@@ -96,24 +86,22 @@ void CGameObject::DeepCopyFromGameObject(std::shared_ptr<CGameObject> rhs)
 	m_bPitchLock = rhs->m_bPitchLock;
 	m_bYawLock = rhs->m_bYawLock;
 	m_bRollLock = rhs->m_bRollLock;
-	if (rhs->m_pTransform) m_pTransform = std::dynamic_pointer_cast<CTransform>(rhs->m_pTransform->Clone());
-	m_pTransform->gameObject = this;
+	*m_pTransform = *rhs->m_pTransform;
 
-	// Copy Components
+	// Copy Components (owner-aware / assignment patterns)
 	for (auto& pComponent : rhs->m_pComponents)
 	{
-		auto pclone = pComponent->Clone();
-		m_pComponents.push_back(pclone);
-		pclone->Init(this); // Owner 재할당
+		auto prawptr = pComponent.get();
+		auto pclone = pComponent->Clone(this);
+		m_pComponents.push_back(std::move(pclone));
 	}
 
 	// Copy Childs
-	std::shared_ptr<CGameObject> pnewChild;
 	for (auto& pChild : rhs->m_pChilds)
 	{
-		pnewChild = std::make_shared<CGameObject>();
-		pnewChild->DeepCopyFromGameObject(pChild);
-		SetChild(pnewChild); 
+		auto pnewChild = std::make_unique<CGameObject>();
+		pnewChild->DeepCopyFromGameObject(pChild.get());
+		SetChild(std::move(pnewChild)); 
 	}
 }
 
@@ -216,7 +204,7 @@ void CGameObject::Update(float fTimeElapsed)
 
 	OnPrepareRender();
 
-	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+	if (auto pSkinnedAnimationController = GetComponent<CAnimationController>()) pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 
 	for (auto& pChild : m_pChilds) pChild->Update(fTimeElapsed);
 
@@ -251,8 +239,8 @@ void CGameObject::OnCollision(CGameObject* pOther, CCollider* pColliderA, CColli
 	// Collision Event
 	if (nullptr == pColliderA) return;
 
-	std::shared_ptr<CRigidBody> rigidBody = GetComponent<CRigidBody>();
-	std::shared_ptr<CRigidBody> pOtherRigidBody = pOther->GetComponent<CRigidBody>();
+	auto rigidBody = GetComponent<CRigidBody>();
+	auto pOtherRigidBody = pOther->GetComponent<CRigidBody>();
 	
 	/*{
 		std::string debugoutput = "Collision Root Object Occured: " + GetName() + " - " + pOther->GetName() + " / ";
@@ -293,13 +281,13 @@ void CGameObject::OnCollision(CGameObject* pOther, CCollider* pColliderA, CColli
 	}
 }
 
-CAABBCollider CGameObject::GetMergedCollider()
+BoundingBox CGameObject::GetMergedCollider() const
 {
 	std::vector<CCollider*> pColliders;
 	GetComponentsInChildren<CCollider>(pColliders);
 
-	CAABBCollider mergedBoundingBox{ this };
-	mergedBoundingBox.SetCollider(CAABBCollider::MergeColliders(pColliders));
+	BoundingBox mergedBoundingBox{};
+	mergedBoundingBox = CAABBCollider::MergeColliders(pColliders);
 
 	return mergedBoundingBox;
 }
@@ -363,8 +351,8 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	// Render Object
 
 	// Skinned Animation Update
-	if (m_pSkinnedAnimationController)
-		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
+	if (auto panimationcontroller = GetComponent<CAnimationController>())
+		panimationcontroller->UpdateShaderVariables(pd3dCommandList);
 
 	if (m_pMesh) {
 		// Set Shader Variables
@@ -758,7 +746,7 @@ void CGameObject::LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<
 	}
 }
 
-bool CGameObject::DeepCopyFromModel(const std::string& strModelName, std::shared_ptr<CGameObject>& pGameObject)
+bool CGameObject::DeepCopyFromModel(const std::string& strModelName, CGameObject* pGameObject)
 {
 	if (auto pModel = CResourceManager::Instance().GetModelInfo(strModelName)) {
 		return DeepCopyFromModel(pModel, pGameObject);
@@ -766,17 +754,10 @@ bool CGameObject::DeepCopyFromModel(const std::string& strModelName, std::shared
 	return false;
 }
 
-bool CGameObject::DeepCopyFromModel(const CLoadedModelInfo* pLoadModel, std::shared_ptr<CGameObject>& pGameObject)
+bool CGameObject::DeepCopyFromModel(const CLoadedModelInfo* pLoadModel,CGameObject* pGameObject)
 {
 	if (pLoadModel) {
-		pGameObject->DeepCopyFromGameObject(pLoadModel->m_pModelRootObject);
-		// TODO : 여기서 생성하여 주는 Collider는 Model Collider이기에 Model Colldier를 변수로 추가해야 한다.
-		
-		//pGameObject->m_pModelCollider.SetCollider(pLoadModel->m_MeshBoundingBox); // Mesh Bounding Box 설정
-		// auto pCollider = pCollider->CreateComponent<CAABBCollider>(pCollider); // Collider 추가
-		// pCollider->SetCollider(pLoadModel->m_MeshBoundingBox); // Collider 설정
-		
-		// /TODO
+		pGameObject->DeepCopyFromGameObject(pLoadModel->m_pModelRootObject.get());
 		return true;
 	}
 	return false;
@@ -784,18 +765,17 @@ bool CGameObject::DeepCopyFromModel(const CLoadedModelInfo* pLoadModel, std::sha
 
 bool CGameObject::DeepCopyFromModel(const std::string& strModelName)
 {
-	auto pThis = shared_from_this(); 
-	return DeepCopyFromModel(strModelName, pThis); 
+	return DeepCopyFromModel(strModelName, this); 
 }
 
-std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth)
+std::unique_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth)
 {
 	char pstrToken[64] = { '\0' };
 	UINT nReads = 0;
 
 	int nFrame = 0, nTextures = 0;
 
-	std::shared_ptr<CGameObject> pGameObject = std::make_shared<CGameObject>();
+	auto pGameObject = std::make_unique<CGameObject>();
 	pGameObject->SetParent(pParent);
 
 	bool isGetModel = false;
@@ -812,7 +792,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 			::ReadStringFromFile(file, pGameObject->m_strName);
 
 			// Test용
-			isGetModel = DeepCopyFromModel(pGameObject->m_strName, pGameObject);
+			isGetModel = DeepCopyFromModel(pGameObject->m_strName, pGameObject.get());
 		}
 		else if (!strcmp(pstrToken, "<Tag>:")) {
 			::ReadStringFromFile(file, pGameObject->m_strTag);
@@ -865,7 +845,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 				file.read((char*)&xmf3Extents, sizeof(float) * 3);
 				xmf3Extents = Vector3::ScalarProduct(xmf3Extents, 0.5f, false);
 
-				auto pCollider = pGameObject->CreateComponent<COBBCollider>(pGameObject);
+				auto pCollider = pGameObject->CreateComponent<COBBCollider>();
 				pCollider->SetCollider(xmf3Center, xmf3Extents);
 			}
 		}
@@ -877,8 +857,8 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 				pGameObject->m_pChilds.reserve(nChilds); 
 				for (int i = 0; i < nChilds; i++)
 				{
-					std::shared_ptr<CGameObject> pChild = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject.get(), file, pShader, pnSkinnedMeshes, nDepth + 1);
-					if (pChild) pGameObject->SetChild(pChild);
+					auto pChild = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject.get(), file, pShader, pnSkinnedMeshes, nDepth + 1);
+					if (pChild) pGameObject->SetChild(std::move(pChild));
 
 #ifdef _WITH_DEBUG_FRAME_HIERARCHY
 					std::string strDebug = "(Frame: " + pChild->GetName() + ") (Parent: " + pGameObject->GetName() + ")\n";
@@ -898,7 +878,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 			::ReadStringFromFile(file, strModelName);
 			//if (strModelName == pCollider->m_strName) continue;
 			if (isGetModel) continue;
-			isGetModel = DeepCopyFromModel(strModelName, pGameObject);
+			isGetModel = DeepCopyFromModel(strModelName, pGameObject.get());
 		}
 		else if (!strcmp(pstrToken, "</Frame>"))
 		{
@@ -958,14 +938,13 @@ std::shared_ptr<CLoadedModelInfo> CGameObject::LoadGeometryAndAnimationFromFile(
 	return(pLoadedModel);
 }
 
-std::shared_ptr<CGameObject> CGameObject::FindFrame(std::string strFrameName)
+CGameObject* CGameObject::FindFrame(std::string strFrameName)
 {
-	std::shared_ptr<CGameObject> pFrameObject;
-	if (m_strName == strFrameName) return (shared_from_this());
+	if (m_strName == strFrameName) return this;
 
-	for (auto& pChild : m_pChilds) if (pFrameObject = pChild->FindFrame(strFrameName)) return(pFrameObject);
+	for (auto& pChild : m_pChilds) if (auto pFrameObject = pChild->FindFrame(strFrameName)) return (pFrameObject);
 
-	return(NULL);
+	return(nullptr);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1078,7 +1057,6 @@ void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	else
 	{
 		std::shared_ptr<CMesh> pHeightMapGridMesh;
-		std::shared_ptr<CGameObject> pHeightMapGameObject;
 
 		m_pChilds.reserve(cxBlocks * czBlocks); //지형을 표현하기 위한 격자 메쉬의 개수이다.
 
@@ -1086,13 +1064,13 @@ void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		{
 			for (int x = 0, xStart = 0; x < cxBlocks; x++)
 			{
-				pHeightMapGameObject = std::make_shared<CGameObject>("HeightMapSub");
+				auto pHeightMapGameObject = std::make_unique<CGameObject>("HeightMapSub");
 				pHeightMapGameObject->MaterialResize(0);
 				xStart = x * (nBlockWidth - 1);
 				zStart = z * (nBlockLength - 1);
 				pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(pd3dDevice, pd3dCommandList, xStart, zStart, nBlockWidth, nBlockLength, xmf3Scale, xmf4Color, m_pHeightMapImage.get());
 				pHeightMapGameObject->SetMesh(pHeightMapGridMesh);
-				SetChild(pHeightMapGameObject);
+				SetChild(std::move(pHeightMapGameObject));
 			}
 		}
 	}
@@ -1472,7 +1450,7 @@ ComPtr<IDWriteTextFormat> UILayer::CreateTextFormat(WCHAR* pszFontName, float fF
 	return(pdwDefaultTextFormat);
 }
 
-void UILayer::Render(UINT nFrame, const std::vector<CTextObject*>& vecTextObjects)
+void UILayer::Render(UINT nFrame, const std::vector<TextBlock*>& vecTextBlocks)
 {
 	ID3D11Resource* ppResources[] = { m_ppd3d11WrappedRenderTargets[nFrame] };
 
@@ -1480,20 +1458,18 @@ void UILayer::Render(UINT nFrame, const std::vector<CTextObject*>& vecTextObject
 	m_pd3d11On12Device->AcquireWrappedResources(ppResources, _countof(ppResources));
 
 	m_pd2dDeviceContext->BeginDraw();
-	// vecTextObjects 을 전부 Draw
-	for (auto& pTextObject : vecTextObjects)
+	// vecTextBlocks 을 전부 Draw
+	for (auto& pTextBlock : vecTextBlocks)
 	{
 		{
-			TextBlock pBlock = pTextObject->GetTextBlock();
-			if (pBlock.IsActive()) 
-				m_pd2dDeviceContext->DrawText(
-					pBlock.m_pstrText.c_str(),
-					(UINT)pBlock.m_pstrText.length(),
-					GetTextFormat(pBlock.GetFont().data(),
-					pBlock.GetFontSize()).Get(),
-					pBlock.m_d2dLayoutRect,
-					GetBrush(pBlock.GetBrush()).Get()
-				);
+			m_pd2dDeviceContext->DrawText(
+				pTextBlock->m_pstrText.c_str(),
+				(UINT)pTextBlock->m_pstrText.length(),
+				GetTextFormat(pTextBlock->GetFont().data(),
+				pTextBlock->GetFontSize()).Get(),
+				pTextBlock->m_d2dLayoutRect,
+				GetBrush(pTextBlock->GetBrush()).Get()
+			);
 		}
 	}
 	m_pd2dDeviceContext->EndDraw();
