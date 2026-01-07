@@ -69,7 +69,7 @@ public:
 	};
 
 	std::shared_ptr<CBulletParticleObject> m_pBulletObject;
-	std::shared_ptr<CCollisionChecker> m_pCollisionChecker;
+	CCollisionChecker* m_pCollisionChecker;
 	void BuildFiredBullets();
 
 

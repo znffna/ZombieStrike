@@ -11,13 +11,6 @@ CGun::~CGun()
 {
 }
 
-std::shared_ptr<CGun> CGun::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nWeaponType)
-{
-	std::shared_ptr<CGun> pGun = std::make_shared<CGun>();
-	pGun->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, nWeaponType);
-	return pGun;
-}
-
 void CGun::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nWeaponType)
 {
 	CGameObject::Initialize(pd3dDevice, pd3dCommandList);

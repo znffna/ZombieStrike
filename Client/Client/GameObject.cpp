@@ -350,9 +350,11 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 	// Render Object
 
-	// Skinned Animation Update
-	if (auto panimationcontroller = GetComponent<CAnimationController>())
+	// Skinned Animation Update / Render
+	if (auto panimationcontroller = GetComponent<CAnimationController>()) {
 		panimationcontroller->UpdateShaderVariables(pd3dCommandList);
+		panimationcontroller->m_pModelRootObject->Render(pd3dCommandList, pCamera, bDepthWrite);
+	}
 
 	if (m_pMesh) {
 		// Set Shader Variables

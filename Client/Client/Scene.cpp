@@ -263,6 +263,8 @@ CGameObject* CScene::AddObject(std::unique_ptr<CGameObject> object)
 
 	object->SetID(m_NextGameObjectID++);
 	object->SetScene(this);
+
+
 	CGameObject* rawPtr = object.get();
 
 	RegisterLayerView(rawPtr);
@@ -286,6 +288,8 @@ void CScene::RequestDestroyObject(uint32_t id)
 // --------------------------------------------
 // Pending Request 처리
 // --------------------------------------------
+
+// Object 생성 / 삭제 요청 처리
 void CScene::ProcessPendingRequest()
 {
 	for (auto& object : m_CreateQueue)
@@ -345,11 +349,7 @@ void CScene::UnregisterLayerView(CGameObject* object)
 	);
 }
 
-void CScene::LateUpdate()
-{
-	ProcessPendingRequest();
-}
-
+// Scene Update
 void CScene::Update(float deltaTime)
 {
 	if (false == IsSceneRunning()) return;
@@ -364,7 +364,65 @@ void CScene::Update(float deltaTime)
 
 	UpdateLights();
 
-	LateUpdate();
+	ProcessPendingRequest();
+}
+
+// Camera registry
+void CScene::RegisterCamera(CCamera* pCamera)
+{
+	// 중복 등록 방지
+	for (auto& camera : m_CameraRegistry)
+	{
+		if (camera == pCamera) return; // 이미 등록되어 있음
+	}
+	m_CameraRegistry.push_back(pCamera);
+
+	if (m_nSelectedCamera == -1)
+	{
+		m_nSelectedCamera = 0; // 첫 번째 등록된 카메라를 기본으로 선택
+		m_pCamera = pCamera;
+	}
+}
+
+void CScene::UnregisterCamera(CCamera* pCamera)
+{
+	// 카메라 레지스트리에서 제거
+	auto it = std::find(m_CameraRegistry.begin(), m_CameraRegistry.end(), pCamera);
+	if (it != m_CameraRegistry.end()) m_CameraRegistry.erase(it);
+
+	// 선택된 카메라가 제거된 경우, 인덱스를 재조정
+	if (m_nSelectedCamera >= static_cast<int>(m_CameraRegistry.size()))
+	{
+		m_nSelectedCamera = static_cast<int>(m_CameraRegistry.size()) - 1;
+	}
+}
+
+// 유효한 카메라가 있으면 우선순위에 따라 반환, 없으면 기존 m_pCamera(기본 카메라) 반환
+CCamera* CScene::GetMainCamera()
+{
+	if (m_nSelectedCamera >= 0 && m_nSelectedCamera < static_cast<int>(m_CameraRegistry.size()))
+	{
+		return m_CameraRegistry[m_nSelectedCamera];
+	}
+	return m_pCamera;
+}
+
+// 사용할 카메라 선택
+void CScene::SelectCamera(int nIndex)
+{
+	if (nIndex >= 0 && nIndex < static_cast<int>(m_CameraRegistry.size()))
+	{
+		m_nSelectedCamera = nIndex;
+	}
+}
+
+void CScene::SelectCamera(CCamera* pCamera)
+{
+	auto it = std::find(m_CameraRegistry.begin(), m_CameraRegistry.end(), pCamera);
+	if (it != m_CameraRegistry.end())
+	{
+		m_nSelectedCamera = static_cast<int>(std::distance(m_CameraRegistry.begin(), it));
+	}
 }
 
 bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
@@ -406,15 +464,15 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	if (nullptr == pCamera)
 	{
 		// Set Default Viewport and Scissor
-		if (nullptr == m_pCamera) return false;
-		pCamera = m_pCamera;
-
+		pCamera = GetMainCamera();
 		{
 			std::string debugMsg = "CScene::Render: Using Default Camera.\n";
 			OutputDebugStringA(debugMsg.c_str());
 		}
 	}
-	if(m_pPlayer) pCamera->Update(m_pPlayer->GetPosition(), 0.0f);
+
+	// if(m_pPlayer) pCamera->Update(m_pPlayer->GetPosition(), 0.0f);
+
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 

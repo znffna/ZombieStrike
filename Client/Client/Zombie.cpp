@@ -23,7 +23,7 @@ CZombieObject::~CZombieObject()
 {
 }
 
-void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nSkinType)
+void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nSkinType)
 {
 	CGameObject::Initialize(pd3dDevice, pd3dCommandList);
 
@@ -35,11 +35,11 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	auto pRigidBody = CreateComponent<CRigidBody>();
 	pRigidBody->SetGravity(XMFLOAT3(0.0f, -9.0f, 0.0f));
 
+	auto pModel = CResourceManager::Instance().GetModelInfo(m_strModelName[nSkinType]);
 	auto pSkinnedAnimationController = CreateComponent<CAnimationController>();
+	pSkinnedAnimationController->SetModel(pModel);
 	// m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
 
-	auto pmodel = CreateComponent<CModelComponent>();
-	pmodel->SetModel(pModel);
 
 	// Model Info
 	SetSkinType(nSkinType);
@@ -47,13 +47,6 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	Update(0.0f);
 	UpdateTransform();
-}
-
-std::unique_ptr<CZombieObject> CZombieObject::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, CLoadedModelInfo* pModel, int nSkinType)
-{
-	auto pZombie = std::unique_ptr<CZombieObject>();
-	pZombie->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pModel, nSkinType);
-	return pZombie;
 }
 
 void CZombieObject::Update(float fTimeElapsed)
@@ -90,7 +83,7 @@ void CZombieObject::SetSkin(int nSkinType)
 	auto pZombieModel = CResourceManager::Instance().GetModelInfo(m_strModelName[m_nSkinType]);
 	// SetChild(pZombieModel->m_pModelRootObject);
 	if (auto panimationcontroller = GetComponent<CAnimationController>())
-		panimationcontroller->SettingByModel(pZombieModel);
+		panimationcontroller->SetModel(pZombieModel);
 
 	m_fMaxDeathTime = 3.0f;
 	//m_fMaxDeathTime = m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[(int)CAnimationController::ANIMATION_POSE::ZOMBIE_DEATH]->m_fLength + 3.0f; // 좀비가 죽은 후 사라지기까지의 시간

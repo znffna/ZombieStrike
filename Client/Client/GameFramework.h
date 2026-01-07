@@ -140,7 +140,7 @@ private:
 protected:
 	std::shared_ptr<UILayer> m_pUILayer; // UI Layer for DirectWrite
 public:
-	std::shared_ptr<UILayer> GetUILayer() { return m_pUILayer; }
+	UILayer* GetUILayer() { return m_pUILayer.get(); }
 
 private:
 	// Scene

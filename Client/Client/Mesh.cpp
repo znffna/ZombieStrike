@@ -1081,11 +1081,7 @@ void CSkinnedMesh::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandL
 		D3D12_GPU_VIRTUAL_ADDRESS d3dcbBoneTransformsGpuVirtualAddress = m_pd3dcbSkinningBoneTransforms->GetGPUVirtualAddress();
 		pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_SKINNED_BONE_TRANSFORM, d3dcbBoneTransformsGpuVirtualAddress); //Skinned Bone Transforms
 
-		for (int j = 0; j < m_nSkinningBones; j++)
-		{
-			XMFLOAT4X4 WorldMatrix = m_ppSkinningBoneFrameCaches[j]->GetWorldMatrix();
-			XMStoreFloat4x4(&m_pcbxmf4x4MappedSkinningBoneTransforms[j], XMMatrixTranspose(XMLoadFloat4x4(&WorldMatrix)));
-		}
+		// UpdateSkinningBoneTransforms(m_pcbxmf4x4MappedSkinningBoneTransforms);
 	}
 }
 
@@ -1105,6 +1101,15 @@ void CSkinnedMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void*
 {
 	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[7] = { m_d3dPositionBufferView, m_d3dTextureCoord0BufferView, m_d3dNormalBufferView, m_d3dTangentBufferView, m_d3dBiTangentBufferView, m_d3dBoneIndexBufferView, m_d3dBoneWeightBufferView };
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 7, pVertexBufferViews);
+}
+
+void CSkinnedMesh::UpdateSkinningBoneTransforms(XMFLOAT4X4* pcbxmf4x4MappedSkinningBoneTransforms)
+{
+	for (int j = 0; j < m_nSkinningBones; j++)
+	{
+		XMFLOAT4X4 WorldMatrix = m_ppSkinningBoneFrameCaches[j]->GetWorldMatrix();
+		XMStoreFloat4x4(&pcbxmf4x4MappedSkinningBoneTransforms[j], XMMatrixTranspose(XMLoadFloat4x4(&WorldMatrix)));
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

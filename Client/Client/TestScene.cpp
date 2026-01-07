@@ -20,6 +20,15 @@ void CTestScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	pTextComponent->SetFontSize(24.0f);
 	pTextComponent->SetSize(100.0f, 100.0f, 400.0f, 50.0f);
 
+	// auto pPlayerObject = AddObject(CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0));
+	auto pPlayerObject = AddObject(std::make_unique<CPlayer>());
+	auto pPlayer = dynamic_cast<CPlayer*>(pPlayerObject);
+	pPlayer->Initialize(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
+	pPlayerObject->SetName("Player");
+	pPlayerObject->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	pPlayerObject->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
+
+	m_pPlayer = dynamic_cast<CPlayer*>(pPlayerObject);
 }
 
 void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -34,6 +43,49 @@ void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 		{
 		case VK_ESCAPE:
 			CGameFramework::Instance()->RequestSceneChange(CPopScene());
+			break;
+
+		case 'W': case 'w':
+		{
+			auto camera = GetMainCamera();
+			camera->Move(XMFLOAT3(0.0f, 0.0f, 0.1f));
+			camera->RegenerateViewMatrix();
+		}
+			break;
+		case 'S': case 's':
+		{
+			auto camera = GetMainCamera();
+			camera->Move(XMFLOAT3(0.0f, 0.0f, -0.1f));
+			camera->RegenerateViewMatrix();
+		}
+			break;
+		case 'A': case 'a':
+		{
+			auto camera = GetMainCamera();
+			camera->Move(XMFLOAT3(-0.1f, 0.0f, 0.0f));
+			camera->RegenerateViewMatrix();
+		}
+			break;
+		case 'D': case 'd':
+		{
+			auto camera = GetMainCamera();
+			camera->Move(XMFLOAT3(0.1f, 0.0f, 0.0f));
+			camera->RegenerateViewMatrix();
+		}
+			break;
+		case VK_SPACE:
+			{
+			auto camera = GetMainCamera();
+			camera->Move(XMFLOAT3(0.0f, 0.1f, 0.0f));
+			camera->RegenerateViewMatrix();
+		}
+			break;
+		case VK_LSHIFT:
+		{
+			auto camera = GetMainCamera();
+			camera->Move(XMFLOAT3(0.0f, -0.1f, 0.0f));
+			camera->RegenerateViewMatrix();
+		}
 			break;
 		}
 		break;

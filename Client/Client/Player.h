@@ -9,9 +9,7 @@ public:
 	CPlayer();
 	virtual ~CPlayer();
 	// Object Initialization
-	static std::shared_ptr<CPlayer> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks, int nSkinType = 0);
-	
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nSkinType);
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nSkinIndex);
 	
 	virtual std::string GetDefaultName() override { return "CPlayer"; }
 
@@ -25,17 +23,20 @@ public:
 	void UpdateLowerAnimation();
 	virtual void Move(DWORD dwDirection, float fDistance, float deltaTime) override;
 
+	virtual void OnPrepareAnimate();
+
 	// Object Render
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override;
 
 	// Skin State
-	void SetSkinType(int nSkinType)	{ m_nSkinType = nSkinType % m_ModelName.size();}
+	void SetSkinType(int nSkinType) { m_nSkinType = nSkinType % m_ModelName.size(); } // 여기선 Index만 설정 
 	int GetSkinType() const { return m_nSkinType; }
 	void SetSkin(int nSkinType);
 
 	// Gun
-	void SetGun(const std::shared_ptr<CGun>& pGun) { m_pGun = pGun; }
-	std::shared_ptr<CGun> GetGun() const { return m_pGun; }
+
+	void SetGun(CGun* pGun) { m_pGun = pGun; }
+	CGun* GetGun() const { return m_pGun; }
 
 	bool Fire(FIRE_INFO* pFireInfo);
 
@@ -51,8 +52,10 @@ private:
 	std::vector<std::string> m_ModelName{ "Ch18_nonPBR", "Ch35_nonPBR" };
 	std::vector<std::string> m_MeshBoneName{ "Ch18", "Ch35" };
 
+	// Gun Slot Bone
 	CGameObject* m_pGunSlot;
-	std::shared_ptr<CGun> m_pGun;
+
+	CGun* m_pGun;
 
 	std::shared_ptr<CGaugeBar> m_pHealthGauge;
 

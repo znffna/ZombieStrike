@@ -21,13 +21,15 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 {
 #ifdef _DEBUG
 #endif
+	// 积己矫 RootSignature 瘤沥
+	if (pd3dRootSignature == nullptr) {
+		pd3dRootSignature = m_pd3dGraphicsRootSignature.Get();
+	}
 
 	// Create Objects
 	CResourceManager& resourceManager = CResourceManager::Instance();
 
-	if (pd3dRootSignature == nullptr) {
-		pd3dRootSignature = m_pd3dGraphicsRootSignature.Get();
-	}
+
 
 	// <Environment>
 	//StoreTerrain(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
@@ -50,18 +52,17 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	//StorePlayer(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
 	//
 
-	//// <Initialize GameObjects>
-	//// Player 积己
-	//std::shared_ptr<CPlayer> pPlayer = GetPlayer();
-	////std::shared_ptr<CPlayer> pPlayer = CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, m_pTerrain, nullptr, 2, 0);
-	//pPlayer->SetPosition(DirectX::XMFLOAT3(100.0f, 0.0f, 100.0f));
-	//AddObject(pPlayer);
-	//m_pPlayer = pPlayer;
+	// <Initialize GameObjects>
+	// Player 积己
+	auto pPlayer = AddObject(std::make_unique<CPlayer>());
+	pPlayer->Initialize(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
+	pPlayer->SetPosition(DirectX::XMFLOAT3(100.0f, 0.0f, 100.0f));
+	m_pPlayer = (CPlayer*)pPlayer;
 
-	//// Gun 积己
-	//std::shared_ptr<CGun> pGun = CGun::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
-	//m_pPlayer->SetGun(pGun);
-	//AddObject(pGun);
+	// Gun 积己
+	auto pGun = dynamic_cast<CGun*>(AddObject(std::make_unique<CGun>()));
+	pGun->Initialize(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
+	m_pPlayer->SetGun(pGun);
 
 	//CreateFreeCamera(pd3dDevice, pd3dCommandList);
 
@@ -73,11 +74,10 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	//m_pMap->UpdateBBCache();
 	//AddObject(m_pMap);
 
-	//// Collision Checker
-	//auto pCollisionChecker = std::make_shared<CCollisionChecker>(this);
-	//pCollisionChecker->Initialize(pd3dDevice, pd3dCommandList);
-	//m_pCollisionChecker = pCollisionChecker;
-	//AddObject(pCollisionChecker);
+	// Collision Checker
+	auto pCollisionChecker = (CCollisionChecker*)AddObject(std::make_unique<CCollisionChecker>(this));
+	pCollisionChecker->Initialize(pd3dDevice, pd3dCommandList);
+	m_pCollisionChecker = pCollisionChecker;
 
 	//// BulletObject
 	//std::shared_ptr<CBulletParticleObject> pBullet = std::make_shared<CBulletParticleObject>(pd3dDevice, pd3dCommandList, pd3dRootSignature, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 65.0f, 0.0f), 20.0f, XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT2(8.0f, 8.0f), MAX_BULLETS);
@@ -206,10 +206,7 @@ void CGameScene::ReleaseUploadBuffers()
 
 void CGameScene::Update(float deltaTime)
 {
-	CScene::Update(deltaTime);
-
-	std::wstring strHealthText = L"HP : " + std::to_wstring((int)m_pPlayer->GetHealth()) + L" / " + std::to_wstring((int)m_pPlayer->GetMaxHealth());
-	if(auto ptextcomponent = m_pHealthObject->GetComponent<CTextComponent>()) ptextcomponent->SetText(strHealthText.data());
+	CScene::Update(deltaTime); // Collider check 器窃
 
 	BuildFiredBullets();
 }

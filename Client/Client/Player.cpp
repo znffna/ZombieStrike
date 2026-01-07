@@ -17,7 +17,7 @@ CPlayer::~CPlayer()
 {
 }
 
-void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks)
+void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nSkinIndex)
 {
 	CGameObject::Initialize(pd3dDevice, pd3dCommandList);
 
@@ -29,10 +29,13 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	// <Components>
 	// Animation Controller
 	auto pSkinnedAnimationController = CreateComponent<CAnimationController>();
+	auto pModel = CResourceManager::Instance().GetModelInfo(m_ModelName[nSkinIndex]);
+	pSkinnedAnimationController->SetModel(pModel);
 
 	// RigidBody 생성
 	auto pRigidBody = CreateComponent<CRigidBody>();
-	pRigidBody->SetVelocity(XMFLOAT3(0.0f, -9.0f, 0.0f));
+	pRigidBody->SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	//pRigidBody->SetVelocity(XMFLOAT3(0.0f, -9.0f, 0.0f));
 
 	// Camera 생성
 	auto pCamera = CreateComponent<CThirdPersonCamera>();
@@ -47,20 +50,8 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	// Collider 생성
 	//auto pCollider = CreateComponent<COBBCollider>();
 
-	// Model Info
-	SetSkin(m_nSkinType);
-
 	Update(0.0f);
 	UpdateTransform();
-}
-
-std::shared_ptr<CPlayer> CPlayer::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pTerrain, std::shared_ptr<CLoadedModelInfo> pModel, int nAnimationTracks, int nSkinType)
-{
-	std::shared_ptr<CPlayer> pPlayer = std::make_shared<CPlayer>();
-	pPlayer->SetSkinType(nSkinType);
-	pPlayer->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pModel, nAnimationTracks);
-
-	return pPlayer;
 }
 
 void CPlayer::Update(float fTimeElapsed)
@@ -168,6 +159,18 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, float deltaTime)
 	
 }
 
+void CPlayer::OnPrepareAnimate()
+{
+	if (auto pSkinnedAnimationController = CreateComponent<CAnimationController>())
+	{
+		m_pGunSlot = pSkinnedAnimationController->m_pModelRootObject->FindFrame("GunSlot");
+		if (m_pGunSlot) {
+			auto bound = pSkinnedAnimationController->m_pModelRootObject->FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound();
+			m_fCameraLookY = bound.Center.y + bound.Extents.y;
+		}
+	}
+}
+
 void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
 	CGameObject::Render(pd3dCommandList, pCamera, bDepthWrite);
@@ -181,31 +184,20 @@ void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 void CPlayer::SetSkin(int nSkinType)
 {
 	SetSkinType(nSkinType);
-
-	m_pChilds.clear();
-
 	auto pPlayerModel = CResourceManager::Instance().GetModelInfo(m_ModelName[m_nSkinType]);
-	auto pModel = GetComponent<CModelComponent>();
-	pModel->SetModel(pPlayerModel);
-	//SetChild(pPlayerModel->m_pModelRootObject);
 
-	// TODO: 이부분 수정 필요
 	// 바뀐 Model에 맞춰 Component 변경
-	/*for (auto& pComponent : m_pComponents)
-	{
-		pComponent->Initialize(this);
-	}*/
+	auto animatoncontroller = GetComponent<CAnimationController>();
+	animatoncontroller->SetModel(pPlayerModel);
 
 	//auto pCollider = GetComponent<COBBCollider>();
 	//pCollider->SetCollider(FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound());
 
 	// 바뀐 Model에 맞춰 PrepareSkinning
-	m_pGunSlot = FindFrame("GunSlot");
-	auto bound = FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound();
-	m_fCameraLookY = bound.Center.y + bound.Extents.y;
+	OnPrepareAnimate();
 
-	Update(0.0f);
-	UpdateTransform();
+	//Update(0.0f);
+	//UpdateTransform();
 }
 
 bool CPlayer::Fire(FIRE_INFO* pFireInfo)

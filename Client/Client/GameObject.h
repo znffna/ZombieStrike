@@ -11,7 +11,6 @@
 #include "Rigidbody.h"
 #include "Collider.h"
 #include "AnimationController.h"
-#include "ModelComponent.h"
 #include "TextComponent.h"
 
 #include "ResourceManager.h"
@@ -35,6 +34,26 @@ class CScene; // forward
 
 ////////////////////////////////////////////////////////////////////////////////////////
 //
+
+class CLoadedModelInfo
+{
+public:
+	CLoadedModelInfo() {};
+	~CLoadedModelInfo() {};
+
+	std::string m_strFileName{};
+
+	std::shared_ptr<CGameObject> m_pModelRootObject;
+
+	int m_nSkinnedMeshes = 0;
+	std::vector <std::shared_ptr<CSkinnedMesh>> m_ppSkinnedMeshes; //[SkinnedMeshes], Skinned Mesh Cache
+
+	std::shared_ptr<CAnimationSets> m_pAnimationSets;
+
+	BoundingBox m_MeshBoundingBox;
+public:
+	void PrepareSkinning();
+};
 
 
 struct CB_GAMEOBJECT_INFO
@@ -73,6 +92,7 @@ public:
 	// Object Initialization
 	// --------------------------------------------
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {};
+	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int) {};
 	virtual void DeepCopyFromGameObject(CGameObject* rhs);
 	void ClearMemberVariables();
 	void Initialize();
@@ -81,6 +101,7 @@ public:
 	// Object methods
 	// --------------------------------------------
 	virtual void Update(float fTimeElapsed);
+	virtual void LateUpdate() {};
 	void UpdateBBCache();
 
 	virtual void OnPrepareRender();
@@ -156,6 +177,7 @@ public:
 	void SetScene(CScene* pScene)
 	{
 		m_pScene = pScene;
+
 		// 자식들에게도 전파
 		for (auto& pChild : m_pChilds)
 		{

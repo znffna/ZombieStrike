@@ -1103,15 +1103,15 @@ void CGameFramework::CreateDebugTextObjects()
 {
 	int nDebugTextObjects = 10;
 	m_DebugTextBlocks.reserve(nDebugTextObjects);
-	int FontSize = m_nWndClientHeight / 40.0f;
+	int FontSize = m_nWndClientHeight / 50.0f;
 	for (int i = 0; i < nDebugTextObjects; i++) {
 		auto pDebugTextObject = new TextBlock;
 		pDebugTextObject->SetText(L"Debug Info");
 		pDebugTextObject->SetActive(true);
-		pDebugTextObject->SetSize(0.0f, (FontSize) * i, (float)m_nWndClientWidth * 0.2f, (float)m_nWndClientHeight , false);
+		pDebugTextObject->SetSize(0.0f, (FontSize) * i, (float)m_nWndClientWidth * 0.5f, (float)m_nWndClientHeight , false);
 		pDebugTextObject->SetFont(L"Consolas");
 		pDebugTextObject->SetFontSize(FontSize);
-		pDebugTextObject->SetBrush(D2D1::ColorF(D2D1::ColorF::LimeGreen, 1.0f));
+		pDebugTextObject->SetBrush(D2D1::ColorF(D2D1::ColorF::Black, 1.0f));
 		m_DebugTextBlocks.push_back(pDebugTextObject);
 	}
 
@@ -1138,7 +1138,11 @@ void CGameFramework::UpdateDebugTextObjects()
 	auto sceneBuildState = m_SceneBuildState.load(std::memory_order_acquire);
 	m_DebugTextBlocks[index++]->SetText(L" Scene Build State :" + to_wstring(sceneBuildState));
 
+	m_DebugTextBlocks[index++]->SetText(to_wstring(GetCurrentScene()->GetCameraInfo()));
+	m_DebugTextBlocks[index++]->SetText(to_wstring(GetCurrentScene()->GetPlayerInfo()));
+
 	m_DebugTextBlocks[index++]->SetText(GetCurrentScene()->to_wstring());
+
 
 	for(; index < m_DebugTextBlocks.size(); index++)
 	{

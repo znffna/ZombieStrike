@@ -16,7 +16,7 @@ void CCamera::Initialize()
 	CComponent::Initialize();
 
 	// 카메라의 등록
-	gameObject->GetScene()->RegisterCamera(this);
+	if(auto pScene = gameObject->GetScene()) pScene->RegisterCamera(this);
 }
 
 void CCamera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)

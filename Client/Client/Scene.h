@@ -330,67 +330,48 @@ protected:
 public:
 	// Observer getter (null if not present)
 	CPlayer* GetPlayer() { return m_pPlayer; }
+
+	std::string GetPlayerInfo()
+	{
+		if (m_pPlayer)
+		{
+			auto pos = m_pPlayer->GetPosition();
+
+			std::string ret;
+			ret += "Player ID: " + std::to_string(m_pPlayer->GetID());
+			ret += ", Position: (" + std::to_string(pos.x) + ", " + std::to_string(pos.y) + ", " + std::to_string(pos.z) + ")";
+			return ret;
+		}
+		return "No Player";
+	}
+
 public:
 	// Scene Update
 	virtual void Update(float deltaTime);
-	void LateUpdate();
 
 	// Camera registry
-	void RegisterCamera(CCamera* pCamera)
-	{
-		// 중복 등록 방지
-		for (auto& camera : m_CameraRegistry)
-		{
-			if (camera == pCamera) return; // 이미 등록되어 있음
-		}
-		m_CameraRegistry.push_back(pCamera);
-
-		if (m_nSelectedCamera == -1)
-		{
-			m_nSelectedCamera = 0; // 첫 번째 등록된 카메라를 기본으로 선택
-		}
-	}
-
-	void UnregisterCamera(CCamera* pCamera)
-	{
-		// 카메라 레지스트리에서 제거
-		auto it = std::find(m_CameraRegistry.begin(), m_CameraRegistry.end(), pCamera);
-		if (it != m_CameraRegistry.end()) m_CameraRegistry.erase(it);
-
-		// 선택된 카메라가 제거된 경우, 인덱스를 재조정
-		if (m_nSelectedCamera >= static_cast<int>(m_CameraRegistry.size()))
-		{
-			m_nSelectedCamera = static_cast<int>(m_CameraRegistry.size()) - 1;
-		}
-	}
+	void RegisterCamera(CCamera* pCamera);
+	void UnregisterCamera(CCamera* pCamera);
 
 	// 유효한 카메라가 있으면 우선순위에 따라 반환, 없으면 기존 m_pCamera(기본 카메라) 반환
-	CCamera* GetMainCamera() 
+	CCamera* GetMainCamera();
+
+	std::string GetCameraInfo()
 	{
 		if (m_nSelectedCamera >= 0 && m_nSelectedCamera < static_cast<int>(m_CameraRegistry.size()))
 		{
-			return m_CameraRegistry[m_nSelectedCamera];
+			auto camera = m_CameraRegistry[m_nSelectedCamera];
+			return "Camera Index: " + std::to_string(m_nSelectedCamera) + ", Position: (" +
+				std::to_string(camera->GetPosition().x) + ", " +
+				std::to_string(camera->GetPosition().y) + ", " +
+				std::to_string(camera->GetPosition().z) + ")";
 		}
-		return m_pCamera;
+		return "Default Camera";
 	}
 
 	// 사용할 카메라 선택
-	void SelectCamera(int nIndex)
-	{
-		if (nIndex >= 0 && nIndex < static_cast<int>(m_CameraRegistry.size()))
-		{
-			m_nSelectedCamera = nIndex;
-		}
-	}
-
-	void SelectCamera(CCamera* pCamera)
-	{
-		auto it = std::find(m_CameraRegistry.begin(), m_CameraRegistry.end(), pCamera);
-		if (it != m_CameraRegistry.end())
-		{
-			m_nSelectedCamera = static_cast<int>(std::distance(m_CameraRegistry.begin(), it));
-		}
-	}
+	void SelectCamera(int nIndex);
+	void SelectCamera(CCamera* pCamera);
 
 protected:
 	// ----------------------------------------
@@ -400,12 +381,14 @@ protected:
 
 	// 기존에 있던 기본 카메라
 	int m_nSelectedCamera = -1;  // m_CameraRegistry 내에서 선택된 카메라 인덱스
-	CCamera* m_pCamera; // 현재 씬의 렌더링에 사용되는 카메라.
+	CCamera* m_pCamera; // 이건 현재 카메라가 아닌 기본 카메라
 
 public:
 	// ----------------------------------------
 	// Render
 	// ----------------------------------------
+
+	// Light 정보 갱신
 	virtual void UpdateLights() {};
 
 	bool PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
@@ -461,8 +444,6 @@ protected:
 
 	// Animation
 	float								m_fElapsedTime = 0.0f;
-
-	
 
 public:
 	// ----------------------------------------

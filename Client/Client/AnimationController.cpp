@@ -97,7 +97,7 @@ void CAnimationController::Clear()
 	m_pAnimationTracks.clear();
 }
 
-void CAnimationController::SettingByModel(CLoadedModelInfo* pModel)
+void CAnimationController::SetModel(CLoadedModelInfo* pModel)
 {
 	Clear();
 
@@ -210,10 +210,15 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 		}
 		else
 		{
+			// 임시	저장 공간 확보
+			std::vector<std::vector<XMFLOAT4X4>> localtransform; // AnimationTrack 개수만큼 std::vector 생성
+			localtransform.resize(m_nAnimationTracks);
+			for(auto& vec : localtransform)
+				vec.resize(m_pAnimationSets->m_nBoneFrames, Matrix4x4::Zero()); // 각 std::vector에 BoneFrame 개수만큼 Matrix4x4::Zero()로 초기화된 요소 추가
+
+			// 실제	애니메이션 Pose를 저장
 			for (int k = 0; k < m_nAnimationTracks; k++)
 			{
-				//if(pRootGameObject->GetLayer() == CGameObject::GAMEOBJECT_LAYER::LAYER_PLAYER) Print();
-
 				if (m_pAnimationTracks[k].m_bEnable)
 				{
 					std::shared_ptr<CAnimationSet> pAnimationSet = m_pAnimationSets->m_pAnimationSets[m_pAnimationTracks[k].m_nAnimationSet];
@@ -225,6 +230,7 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 #else
 						XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->GetLocalMatrix();
 #endif
+
 						XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
 						xmf4x4Transform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, m_pAnimationTracks[k].m_fWeight));
 #ifdef _WITH_OBJECT_TRANSFORM
@@ -232,10 +238,12 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 #else
 						m_pAnimationSets->m_ppBoneFrameCaches[j]->SetLocalMatrix(xmf4x4Transform);
 #endif
+						localtransform[k][j] = xmf4x4Transform;
 					}
 					m_pAnimationTracks[k].HandleCallback();
 				}
 			}
+
 		}
 
 		ApplyPitchToSpine(pRootGameObject);
@@ -249,7 +257,14 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 			m_pRootMotionObject->SetLocalMatrix(pTransform);
 		}
 
-		pRootGameObject->UpdateTransform(NULL);
+		// pRootGameObject->UpdateTransform(NULL);
+		m_pModelRootObject->UpdateTransform(pRootGameObject->GetWorldMatrix());
+
+		// 여기에서 직접 자신이 사용하는 Skinned Mesh들에 대해 UpdateSkinningBoneTransforms를 호출해야 함
+		for (int i = 0; i < m_nSkinnedMeshes; i++)
+		{
+			m_ppSkinnedMeshes[i]->UpdateSkinningBoneTransforms(m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
+		}
 
 		OnRootMotion(pRootGameObject);
 		OnAnimationIK(pRootGameObject);

@@ -134,7 +134,7 @@ public:
 
 
 	void Clear();
-	void SettingByModel(CLoadedModelInfo* pModel);
+	void SetModel(CLoadedModelInfo* pModel);
 
 public:
 	// State
@@ -144,7 +144,7 @@ public:
 	// Animation 
 	float 							m_fTime = 0.0f;
 
-	int 							m_nAnimationTracks = 0;
+	int 						m_nAnimationTracks = 0;
 	std::vector<CAnimationTrack> m_pAnimationTracks;
 
 	std::shared_ptr<CAnimationSets> m_pAnimationSets;

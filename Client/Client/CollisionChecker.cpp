@@ -36,8 +36,8 @@ void CCollisionChecker::CollisionCheckFromLayers(std::vector<std::pair<GAMEOBJEC
 
 	std::vector<CollisionInfo> ppCollidedPairs;
 	for (auto& ppLayerPair : ppObjectLayerPairs) {
-		auto pObjectsA = ppObjects[ppLayerPair.first];
-		auto pObjectsB = ppObjects[ppLayerPair.second];
+		auto& pObjectsA = ppObjects[ppLayerPair.first];
+		auto& pObjectsB = ppObjects[ppLayerPair.second];
 		for (auto pObjectA : pObjectsA) {
 			//pObjectA->UpdateTransform();
 			for (auto pObjectB : pObjectsB) {
@@ -47,11 +47,13 @@ void CCollisionChecker::CollisionCheckFromLayers(std::vector<std::pair<GAMEOBJEC
 				// 먼저 model Bound AABB로 체크
 				auto pMergedA = pObjectA->GetMergedMeshBound();
 				auto pMergedB = pObjectB->GetMergedMeshBound();
-				if (!pMergedA.Intersects(pMergedB)) continue;
+
+				// AABB 충돌이 아니면 패스
+				if (false == pMergedA.Intersects(pMergedB)) continue;
 
 				// 그 이후, Collider 를 가져와 체크
-				auto pCollidersA = pObjectA->GetCachedColliders();
-				auto pCollidersB = pObjectB->GetCachedColliders();
+				auto& pCollidersA = pObjectA->GetCachedColliders();
+				auto& pCollidersB = pObjectB->GetCachedColliders();
 
 				//pObjectA->GetComponentsInChildren<CCollider>(pCollidersA);
 				//pObjectB->GetComponentsInChildren<CCollider>(pCollidersB);

@@ -148,7 +148,6 @@
     <ClInclude Include="LoadingScene.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
-    <ClInclude Include="ModelComponent.h" />
     <ClInclude Include="OnlineScene.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Resource.h" />
@@ -186,7 +185,6 @@
     <ClCompile Include="LoadingScene.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
-    <ClCompile Include="ModelComponent.cpp" />
     <ClCompile Include="OnlineScene.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
