@@ -155,6 +155,8 @@ public:
 	std::vector<ComPtr<ID3D12Resource>> m_ppd3dcbSkinningBoneTransforms; //[SkinnedMeshes]
 	std::vector<XMFLOAT4X4*> m_ppcbxmf4x4MappedSkinningBoneTransforms; //[SkinnedMeshes]
 
+	std::vector<std::vector<XMFLOAT4X4>> m_xmf4x4SkinningBoneTransforms; //[SkinnedMeshes], AdvanceTime이후 여기에 저장, 나중에 m_ppcbxmf4x4MappedSkinningBoneTransforms에 복사
+
 public:
 	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);;
 

@@ -112,6 +112,13 @@ void CAnimationController::SetModel(CLoadedModelInfo* pModel)
 	m_ppd3dcbSkinningBoneTransforms.resize(m_nSkinnedMeshes);
 	m_ppcbxmf4x4MappedSkinningBoneTransforms.resize(m_nSkinnedMeshes);
 
+	//
+	m_xmf4x4SkinningBoneTransforms.resize(m_nSkinnedMeshes);
+	for(int i = 0; i < m_nSkinnedMeshes; i++)
+	{
+		m_xmf4x4SkinningBoneTransforms[i].resize(m_ppSkinnedMeshes[i]->m_nSkinningBones);
+	}
+
 	m_nAnimationTracks = m_pAnimationSets->m_nAnimationSets;
 
 	// Create Constant Buffers for Skinned Meshes
@@ -145,6 +152,8 @@ void CAnimationController::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3d
 {
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
+		memcpy(m_ppcbxmf4x4MappedSkinningBoneTransforms[i],	m_xmf4x4SkinningBoneTransforms[i].data(), sizeof(XMFLOAT4X4) * m_xmf4x4SkinningBoneTransforms[i].size());
+
 		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i];
 		m_ppSkinnedMeshes[i]->m_pcbxmf4x4MappedSkinningBoneTransforms = m_ppcbxmf4x4MappedSkinningBoneTransforms[i];
 	}
@@ -263,7 +272,8 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 		// 여기에서 직접 자신이 사용하는 Skinned Mesh들에 대해 UpdateSkinningBoneTransforms를 호출해야 함
 		for (int i = 0; i < m_nSkinnedMeshes; i++)
 		{
-			m_ppSkinnedMeshes[i]->UpdateSkinningBoneTransforms(m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
+			//m_ppSkinnedMeshes[i]->UpdateSkinningBoneTransforms(m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
+			m_ppSkinnedMeshes[i]->UpdateSkinningBoneTransforms(m_xmf4x4SkinningBoneTransforms[i]); 
 		}
 
 		OnRootMotion(pRootGameObject);

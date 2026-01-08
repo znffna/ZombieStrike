@@ -304,6 +304,7 @@ public:
 	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext) override;
 
 	void UpdateSkinningBoneTransforms(XMFLOAT4X4* pcbxmf4x4MappedSkinningBoneTransforms);
+	void UpdateSkinningBoneTransforms(std::vector<XMFLOAT4X4>& m_xmf4x4SkinningBoneTransforms);
 };
 
 ///////////////////////////////////////////////////////////////////////////////

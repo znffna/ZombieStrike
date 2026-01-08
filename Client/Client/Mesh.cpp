@@ -1112,6 +1112,15 @@ void CSkinnedMesh::UpdateSkinningBoneTransforms(XMFLOAT4X4* pcbxmf4x4MappedSkinn
 	}
 }
 
+void CSkinnedMesh::UpdateSkinningBoneTransforms(std::vector<XMFLOAT4X4>& pxmf4x4MappedSkinningBoneTransforms)
+{
+	for (int j = 0; j < m_nSkinningBones; j++)
+	{
+		XMFLOAT4X4 WorldMatrix = m_ppSkinningBoneFrameCaches[j]->GetWorldMatrix();
+		XMStoreFloat4x4(&pxmf4x4MappedSkinningBoneTransforms[j], XMMatrixTranspose(XMLoadFloat4x4(&WorldMatrix)));
+	}
+}
+
 ///////////////////////////////////////////////////////////////////////////////////
 //
 
