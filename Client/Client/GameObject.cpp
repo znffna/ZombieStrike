@@ -249,7 +249,8 @@ void CGameObject::OnCollision(CGameObject* pOther, CCollider* pColliderA, CColli
 	}*/
 
 	// 최소 거리 측정
-	XMFLOAT3 mtv = pColliderA->GetCorrectionVector(pColliderB);
+	//XMFLOAT3 mtv = pColliderA->GetCorrectionVector(pColliderB);
+	XMFLOAT3 mtv{0,0,0};
 
 	// 충돌 Normal을 통한 Y축 보정 추가
 	float yAngle = mtv.y / Vector3::Length(mtv);
@@ -275,9 +276,9 @@ void CGameObject::OnCollision(CGameObject* pOther, CCollider* pColliderA, CColli
 		}
 
 		// Cache Collider 갱신
-		for (auto& pCollider : m_pCachesColliders) {
+		/*for (auto& pCollider : m_pCachesColliders) {
 			pCollider->Move(mtv);
-		}
+		}*/
 	}
 }
 
@@ -287,7 +288,11 @@ BoundingBox CGameObject::GetMergedCollider() const
 	GetComponentsInChildren<CCollider>(pColliders);
 
 	BoundingBox mergedBoundingBox{};
-	mergedBoundingBox = CAABBCollider::MergeColliders(pColliders);
+	for (auto& pCollider : pColliders)
+	{
+		BoundingBox colliderAABB = pCollider->GetBroadPhaseAABB();
+		BoundingBox::CreateMerged(mergedBoundingBox, mergedBoundingBox, colliderAABB);
+	}
 
 	return mergedBoundingBox;
 }
@@ -383,25 +388,25 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		}
 	}
 
-	if (g_bRenderCollider && !bDepthWrite) {
-		auto pColliders = GetComponents<CCollider>();
+	//if (g_bRenderCollider && !bDepthWrite) {
+	//	auto pColliders = GetComponents<CCollider>();
 
-		for (auto pCollider : pColliders)
-		{
-			// Update Shader Variables
-			XMFLOAT4X4 xmf4x4World;
+	//	for (auto pCollider : pColliders)
+	//	{
+	//		// Update Shader Variables
+	//		XMFLOAT4X4 xmf4x4World;
 
-			xmf4x4World = pCollider->GetColliderMatrix();
-			XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4World)));
+	//		xmf4x4World = pCollider->GetColliderMatrix();
+	//		XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&xmf4x4World)));
 
-			pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 16, &xmf4x4World, 0);
+	//		pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 16, &xmf4x4World, 0);
 
-			// Use Collider Shader
-			CMaterial::m_pColliderShader->OnPrepareRender(pd3dCommandList, 0, false);
-			
-			CResourceManager::Instance().GetMesh("CCubeMesh")->Render(pd3dCommandList);
-		}
-	}
+	//		// Use Collider Shader
+	//		CMaterial::m_pColliderShader->OnPrepareRender(pd3dCommandList, 0, false);
+	//		
+	//		CResourceManager::Instance().GetMesh("CCubeMesh")->Render(pd3dCommandList);
+	//	}
+	//}
 
 	// Render Child Object
 	for (auto& pChild : m_pChilds)
@@ -860,7 +865,8 @@ std::unique_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 				xmf3Extents = Vector3::ScalarProduct(xmf3Extents, 0.5f, false);
 
 				auto pCollider = pGameObject->CreateComponent<COBBCollider>();
-				pCollider->SetCollider(xmf3Center, xmf3Extents);
+				pCollider->SetCenter(xmf3Center);
+				pCollider->SetExtents(xmf3Extents);
 			}
 		}
 		else if (!strcmp(pstrToken, "<Children>:"))

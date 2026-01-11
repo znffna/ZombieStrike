@@ -83,12 +83,12 @@ void CCollisionChecker::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 bool CCollisionChecker::IsCollided(CCollider* colliderA, CCollider* colliderB)
 {
-	return colliderA->IsCollided(colliderB);
+	return colliderA->Intersects(colliderB);
 }
 
 bool CCollisionChecker::IsCollided(CCollider& colliderA, CCollider& colliderB)
 {
-	return colliderA.IsCollided(&colliderB);
+	return colliderA.Intersects(&colliderB);
 }
 
 RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Position, const XMFLOAT3& xmf3Direction, float fRange)
@@ -120,32 +120,32 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 	}
 	*/
 
-	for (auto& pObject : pMaps)
-	{
-		auto& pColliders = pObject->GetCachedColliders();
-		for (auto& pCollider : pColliders) {
-			if (auto result = pCollider->RayCast(xmv3Position, xmv3Direction, tempRange)) {
-				isCollided = true;
-				if (tempRange < fImpactDistance) {
-					fImpactDistance = tempRange;
-					resultRaycast.nHitObjectType = HIT_TYPE_ENVIRONMENT; // Environment
-				}
-			}
-		}
-	}
+	//for (auto& pObject : pMaps)
+	//{
+	//	auto& pColliders = pObject->GetCachedColliders();
+	//	for (auto& pCollider : pColliders) {
+	//		if (auto result = pCollider->RayCast(xmv3Position, xmv3Direction, tempRange)) {
+	//			isCollided = true;
+	//			if (tempRange < fImpactDistance) {
+	//				fImpactDistance = tempRange;
+	//				resultRaycast.nHitObjectType = HIT_TYPE_ENVIRONMENT; // Environment
+	//			}
+	//		}
+	//	}
+	//}
 
-	for (auto& pEnemy : pEnemies) {
-		auto& pColliders = pEnemy->GetCachedColliders();
-		for (auto& pCollider : pColliders) {
-			if (auto result = pCollider->RayCast(xmv3Position, xmv3Direction, tempRange)) {
-				isCollided = true;
-				if (tempRange < fImpactDistance) {
-					fImpactDistance = tempRange;
-					resultRaycast.nHitObjectType = HIT_TYPE_ENEMY; // Enemy
-				}
-			}
-		}
-	}
+	//for (auto& pEnemy : pEnemies) {
+	//	auto& pColliders = pEnemy->GetCachedColliders();
+	//	for (auto& pCollider : pColliders) {
+	//		if (auto result = pCollider->RayCast(xmv3Position, xmv3Direction, tempRange)) {
+	//			isCollided = true;
+	//			if (tempRange < fImpactDistance) {
+	//				fImpactDistance = tempRange;
+	//				resultRaycast.nHitObjectType = HIT_TYPE_ENEMY; // Enemy
+	//			}
+	//		}
+	//	}
+	//}
 	
 	return resultRaycast;
 }

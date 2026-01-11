@@ -11,320 +11,88 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-void CCollider::Initialize()
+// CCollider
+void CCollider::Update(float dt)
 {
-	CComponent::Initialize();
-}
-
-
-void CCollider::SetCollider(const BoundingOrientedBox& boundingOrientedBox)
-{
-	SetCollider(boundingOrientedBox.Center, boundingOrientedBox.Extents, boundingOrientedBox.Orientation);
-}
-
-void CCollider::SetCollider(const BoundingBox& boundingOrientedBox)
-{
-	SetCollider(boundingOrientedBox.Center, boundingOrientedBox.Extents, XMFLOAT4{ 0, 0, 0, 1 });
-}
-
-void CCollider::Update(float fTimeElapsed)
-{
-	/*if (m_pTransform)
-	{
-		UpdateCollider(m_pTransform->GetWorldMatrix());
-	}*/
+	if (!IsActive()) return;
+	UpdateCollider(GetOwner()->GetComponent<CTransform>()->GetWorldMatrix());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-void CSphereCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
+// CSphereCollider
+bool CSphereCollider::Intersects(const CCollider* other) const
 {
-	m_xmBoundingSphere = pMesh->GetBoundingSphere();
-}
-
-void CSphereCollider::SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& Extends, const XMFLOAT4& xmf4Orientation)
-{
-	m_xmBoundingSphere.Center = xmf3Center;
-	m_xmBoundingSphere.Radius = Vector3::Length(Extends);
-}
-
-void CSphereCollider::SetCollider(const XMFLOAT3& xmf3Center, float fRadius)
-{
-	m_xmBoundingSphere.Center = xmf3Center;
-	m_xmBoundingSphere.Radius = fRadius;
-}
-
-void CSphereCollider::UpdateCollider(const XMFLOAT4X4& xmf4x4World)
-{
-	m_xmBoundingSphere.Transform(m_xmWorldBoundingSphere, XMLoadFloat4x4(&xmf4x4World));
-}
-bool CSphereCollider::IsCollided(CCollider* pCollider)
-{
-	switch (pCollider->GetColliderType())
+	switch (other->GetType())
 	{
-	case ColliderType::SPHERE:
-	{
-		CSphereCollider* pSphereCollider = dynamic_cast<CSphereCollider*>(pCollider);
-		return m_xmWorldBoundingSphere.Intersects(pSphereCollider->GetBoundingVolume());
-	}
+	case ColliderType::Sphere:
+		return m_world.Intersects(
+			static_cast<const CSphereCollider*>(other)->GetWorldSphere());
+
 	case ColliderType::AABB:
-	{
-		CAABBCollider* pAABBBoxCollider = dynamic_cast<CAABBCollider*>(pCollider);
-		return m_xmWorldBoundingSphere.Intersects(pAABBBoxCollider->GetBoundingVolume());
-	}
+		return static_cast<const CAABBCollider*>(other)
+			->GetWorldAABB().Intersects(m_world);
+
 	case ColliderType::OBB:
-	{
-		COBBCollider* pOBBBoxCollider = dynamic_cast<COBBCollider*>(pCollider);
-		return m_xmWorldBoundingSphere.Intersects(pOBBBoxCollider->GetBoundingVolume());
-	}
+		return static_cast<const COBBCollider*>(other)
+			->GetWorldOBB().Intersects(m_world);
 	}
 	return false;
-}
-
-XMFLOAT3 CSphereCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
-{
-	return GetCorrectionVector(pCollider.get());
-}
-
-XMFLOAT3 CSphereCollider::GetCorrectionVector(CCollider* pCollider)
-{
-	if (pCollider->GetColliderType() == ColliderType::OBB)
-	{
-		return CalculateSphere_MTV(
-			GetCenter(), GetExtends(),
-			pCollider->GetCenter(), pCollider->GetExtends());
-	}
-	else if (pCollider->GetColliderType() == ColliderType::AABB)
-	{
-		return CalculateSphere_MTV(
-			GetCenter(), GetExtends(),
-			pCollider->GetCenter(), pCollider->GetExtends()
-		);
-	}
-	else {
-		return CalculateSphere_MTV(
-			GetCenter(), GetExtends(),
-			pCollider->GetCenter(), pCollider->GetExtends()
-		);
-	}
-}
-
-void CSphereCollider::Move(const XMFLOAT3& xmf3Shift)
-{
-	m_xmWorldBoundingSphere.Center.x += xmf3Shift.x;
-	m_xmWorldBoundingSphere.Center.y += xmf3Shift.y;
-	m_xmWorldBoundingSphere.Center.z += xmf3Shift.z;
-}
-
-bool CSphereCollider::RayCast(const XMVECTOR& xmf3Position, const XMVECTOR& xmf3Direction, float& fRange)
-{
-	return m_xmWorldBoundingSphere.Intersects(xmf3Position, xmf3Direction, fRange);
-}
-
-
-
-XMFLOAT4X4 CSphereCollider::GetColliderMatrix()
-{
-	XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
-		XMFLOAT3(m_xmWorldBoundingSphere.Radius * 2, m_xmWorldBoundingSphere.Radius * 2, m_xmWorldBoundingSphere.Radius * 2),
-		XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),
-		m_xmWorldBoundingSphere.Center
-	);
-	return xmf4x4box;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-void CAABBCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
+// CAABBCollider
+bool CAABBCollider::Intersects(const CCollider* other) const
 {
-	m_xmBoundingBox = pMesh->GetBoundingBox();
-}
-
-void CAABBCollider::SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents, const XMFLOAT4 & xmf4Orientation)
-{
-	m_xmBoundingBox.Center = xmf3Center;
-	m_xmBoundingBox.Extents = xmf3Extents;
-}
-
-void CAABBCollider::UpdateCollider(const XMFLOAT4X4& xmf4x4World)
-{
-	m_xmBoundingBox.Transform(m_xmWorldBoundingBox, XMLoadFloat4x4(&xmf4x4World));
-}
-bool CAABBCollider::IsCollided(CCollider* pCollider)
-{
-	switch (pCollider->GetColliderType())
+	switch (other->GetType())
 	{
-	case ColliderType::SPHERE:
-	{
-		CSphereCollider* pSphereCollider = dynamic_cast<CSphereCollider*>(pCollider);
-		return m_xmWorldBoundingBox.Intersects(pSphereCollider->GetBoundingVolume());
-	}
+	case ColliderType::Sphere:
+		return m_world.Intersects(
+			static_cast<const CSphereCollider*>(other)->GetWorldSphere());
+
 	case ColliderType::AABB:
-	{
-		CAABBCollider* pAABBBoxCollider = dynamic_cast<CAABBCollider*>(pCollider);
-		return m_xmWorldBoundingBox.Intersects(pAABBBoxCollider->GetBoundingVolume());
-	}
+		return m_world.Intersects(
+			static_cast<const CAABBCollider*>(other)->GetWorldAABB());
+
 	case ColliderType::OBB:
-	{
-		COBBCollider* pOBBBoxCollider = dynamic_cast<COBBCollider*>(pCollider);
-		return m_xmWorldBoundingBox.Intersects(pOBBBoxCollider->GetBoundingVolume());
-	}
+		// BoundingOrientedBox::Intersects(BoundingBox) 또는 BoundingBox::Intersects(OBB) 중 구현에 맞는 것을 사용.
+		// CSphereCollider의 OBB 처리와 대칭되도록 OBB 쪽의 Intersects를 호출합니다.
+		return static_cast<const COBBCollider*>(other)
+			->GetWorldOBB().Intersects(m_world);
 	}
 	return false;
-}
-
-XMFLOAT4X4 CAABBCollider::GetColliderMatrix()
-{
-	XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
-		Vector3::ScalarProduct(m_xmWorldBoundingBox.Extents, 2.0f, false),
-		XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),
-		m_xmWorldBoundingBox.Center
-	);
-	return xmf4x4box;
-}
-
-BoundingBox CAABBCollider::MergeColliders(std::vector<CCollider*>& pColliders)
-{ 
-	BoundingBox boundingBox{};
-	for (auto pCollider : pColliders)
-	{
-		BoundingBox::CreateMerged(boundingBox, boundingBox, pCollider->GetBoundingBox());
-	}
-	return boundingBox;
-}
-
-XMFLOAT3 CAABBCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
-{
-	return GetCorrectionVector(pCollider.get());
-}
-
-XMFLOAT3 CAABBCollider::GetCorrectionVector(CCollider* pCollider)
-{
-	if (pCollider->GetColliderType() == ColliderType::OBB)
-	{
-		return CalculateOBB_MTV(GetCenter(), GetExtends(), GetOrientation(),
-			pCollider->GetCenter(), pCollider->GetExtends(), pCollider->GetOrientation());
-	}
-	else if (pCollider->GetColliderType() == ColliderType::AABB)
-	{
-		return CalculateAABB_MTV(
-			GetCenter(), GetExtends(),
-			pCollider->GetCenter(), pCollider->GetExtends()
-		);
-	}
-	else {
-		return CalculateSphere_MTV(
-			GetCenter(), GetExtends(),
-			pCollider->GetCenter(), pCollider->GetExtends()
-		);
-	}
-}
-
-void CAABBCollider::Move(const XMFLOAT3& xmf3Shift)
-{
-	m_xmWorldBoundingBox.Center.x += xmf3Shift.x;
-	m_xmWorldBoundingBox.Center.y += xmf3Shift.y;
-	m_xmWorldBoundingBox.Center.z += xmf3Shift.z;
-}
-
-bool CAABBCollider::RayCast(const XMVECTOR& xmf3Position, const XMVECTOR& xmf3Direction, float& fRange)
-{
-	return m_xmWorldBoundingBox.Intersects(xmf3Position, xmf3Direction, fRange);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //
 
-void COBBCollider::SetCollider(std::shared_ptr<CMesh> pMesh)
+// COBBCollider
+bool COBBCollider::Intersects(const CCollider* other) const
 {
-	m_xmBoundingOrientedBox = pMesh->GetBoundingOrientedBox(XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
-}
-
-void COBBCollider::SetCollider(const XMFLOAT3& xmf3Center, const XMFLOAT3& xmf3Extents, const XMFLOAT4 & xmf4Orientation)
-{
-	m_xmBoundingOrientedBox.Center = xmf3Center;
-	m_xmBoundingOrientedBox.Extents = xmf3Extents;
-	m_xmBoundingOrientedBox.Orientation = xmf4Orientation;
-}
-
-void COBBCollider::UpdateCollider(const XMFLOAT4X4& xmf4x4World)
-{
-	m_xmBoundingOrientedBox.Transform(m_xmWorldBoundingOrientedBox, XMLoadFloat4x4(&xmf4x4World));
-}
-
-bool COBBCollider::IsCollided(CCollider* pCollider)
-{
-	switch (pCollider->GetColliderType())
+	switch (other->GetType())
 	{
-	case ColliderType::SPHERE:
-	{
-		CSphereCollider* pSphereCollider = dynamic_cast<CSphereCollider*>(pCollider);
-		return m_xmWorldBoundingOrientedBox.Intersects(pSphereCollider->GetBoundingVolume());
-	}
+	case ColliderType::Sphere:
+		return m_world.Intersects(
+			static_cast<const CSphereCollider*>(other)->GetWorldSphere());
+
 	case ColliderType::AABB:
-	{
-		CAABBCollider* pAABBBoxCollider = dynamic_cast<CAABBCollider*>(pCollider);
-		return m_xmWorldBoundingOrientedBox.Intersects(pAABBBoxCollider->GetBoundingVolume());
-	}
+		// OBB::Intersects(BoundingBox) 가 제공되지 않는 경우에는
+		// AABB 쪽의 Intersects(OBB)를 호출하도록 변경해도 됩니다.
+		return m_world.Intersects(
+			static_cast<const CAABBCollider*>(other)->GetWorldAABB());
+
 	case ColliderType::OBB:
-	{
-		COBBCollider* pOBBBoxCollider = dynamic_cast<COBBCollider*>(pCollider);
-		return m_xmWorldBoundingOrientedBox.Intersects(pOBBBoxCollider->GetBoundingVolume());
-	}
+		return m_world.Intersects(
+			static_cast<const COBBCollider*>(other)->GetWorldOBB());
 	}
 	return false;
 }
 
-XMFLOAT3 COBBCollider::GetCorrectionVector(std::shared_ptr<CCollider>& pCollider)
-{
-	return GetCorrectionVector(pCollider.get());
-}
-
-XMFLOAT3 COBBCollider::GetCorrectionVector(CCollider* pCollider)
-{
-	if (pCollider->GetColliderType() == ColliderType::OBB)
-	{
-		return CalculateOBB_MTV(GetCenter(), GetExtends(), GetOrientation(),
-			pCollider->GetCenter(), pCollider->GetExtends(), pCollider->GetOrientation());
-	}
-	else if (pCollider->GetColliderType() == ColliderType::AABB)
-	{
-		return CalculateAABB_MTV(
-			GetCenter(), GetExtends(),
-			pCollider->GetCenter(), pCollider->GetExtends()
-		);
-	}
-	else {
-		return CalculateSphere_MTV(
-			GetCenter(), GetExtends(),
-			pCollider->GetCenter(), pCollider->GetExtends()
-		);
-	}
-}
-
-void COBBCollider::Move(const XMFLOAT3& xmf3Shift)
-{
-	m_xmWorldBoundingOrientedBox.Center.x += xmf3Shift.x;
-	m_xmWorldBoundingOrientedBox.Center.y += xmf3Shift.y;
-	m_xmWorldBoundingOrientedBox.Center.z += xmf3Shift.z;
-}
-
-bool COBBCollider::RayCast(const XMVECTOR& xmf3Position, const XMVECTOR& xmf3Direction, float& fRange)
-{
-	return m_xmWorldBoundingOrientedBox.Intersects(xmf3Position, xmf3Direction, fRange);
-}
-
-XMFLOAT4X4 COBBCollider::GetColliderMatrix()
-{
-	XMFLOAT4X4 xmf4x4box = Matrix4x4::TransformMatrix(
-		Vector3::ScalarProduct(m_xmWorldBoundingOrientedBox.Extents, 2.0f, false),
-		m_xmWorldBoundingOrientedBox.Orientation,
-		m_xmWorldBoundingOrientedBox.Center
-	);
-	return xmf4x4box;
-}
+///////////////////////////////////////////////////////////////////////////////
+//
 
 XMFLOAT3 CalculateSphere_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, const XMFLOAT3& centerB, const XMFLOAT3& extentB)
 {
@@ -466,8 +234,5 @@ XMFLOAT3 CalculateOBB_MTV(const XMFLOAT3& centerA, const XMFLOAT3& extentA, cons
 
 	return XMFLOAT3(0, 0, 0);
 }
-
-
-
 
 
