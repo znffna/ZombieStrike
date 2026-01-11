@@ -62,7 +62,7 @@ private:
 
 	void MoveToNextFrame();
 
-	void CreateShaderVariables();
+	void CreateShaderVariables(CUploadContext& uploadcontext);
 	void UpdateShaderVariables();
 	void ReleaseShaderVariables();
 
@@ -102,7 +102,6 @@ private:
 	std::array<ComPtr<ID3D12GraphicsCommandList>, m_nSwapChainBuffers>	m_pd3dCommandList;
 
 	ComPtr<ID3D12Fence>										m_pd3dFence;
-	UINT64													m_nFenceValueForSignal;
 	std::array<UINT64, m_nSwapChainBuffers>					m_nFenceValues;
 	HANDLE													m_hFenceEvent;
 
@@ -116,56 +115,42 @@ private:
 	// Timer
 	CGameTimer												m_GameTimer;
 
-
+	POINT m_ptOldCursorPos;
 public:
+	// ----------------------------------------
 	// D12 Resource 접근용 Static Method
+	// ----------------------------------------
 	static CGameFramework* Instance() { return pGameFramework; }
 	static CGameFramework* pGameFramework;
 
-	POINT m_ptOldCursorPos;
-
 protected:
+	// ----------------------------------------
 	// Framework Info (Shader Variable)
+	// ----------------------------------------
 	ComPtr<ID3D12Resource> m_pd3dcbFrameworkInfo;
 	CB_FRAMEWORK_INFO* m_pcbMappedFrameworkInfo = NULL;
 	float m_fBias = 0.007f; // Depth Bias  0.0001f
 
 private:
+	// ----------------------------------------
 	// Cursor
+	// ----------------------------------------
 	std::unique_ptr<CSprite> m_pCursorSprite; // Cursor Sprite
 	POINTF GetTexturePosition(int x, int y);
 	void RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList);
 
-	// UI
 protected:
+	// ----------------------------------------
+	// UI 
+	// ----------------------------------------
 	std::shared_ptr<UILayer> m_pUILayer; // UI Layer for DirectWrite
 public:
 	UILayer* GetUILayer() { return m_pUILayer.get(); }
 
-private:
-	// Scene
-	std::vector<std::unique_ptr<CScene>>					m_Scenes;
-	std::unique_ptr<CScene>									m_pLoadingScene;  // Loading Scene은 Stack이 비었을 경우에만 사용(이는, Render State인 Scene이 없을 때도 포함한다)
-
-	// Scene Creation on Another Thread
-	std::thread												m_SceneMadeThread;
-
-	HANDLE													m_hSceneMadeEvent;
-	std::atomic_bool										m_SceneThreadRunning{ false };
-
-	std::optional<SceneTypeTag>								m_PendingSceneTag;
-	std::atomic<ESceneBuildState>							m_SceneBuildState{ ESceneBuildState::Idle };
-
-	std::unique_ptr<CScene> m_BuiltScene;
-	std::mutex m_BuiltSceneMutex;
-
-	// Scene Transition
-	std::atomic<ESceneRequestState>							 m_RequestState{ ESceneRequestState::Idle };
-	std::optional<SceneRequest>								 m_PendingRequest;
-
-
 public:
-	// Scene 변경 요청 등록
+	// ----------------------------------------
+	// Scene Management
+	// ----------------------------------------
 	void RequestSceneChange(SceneRequest newReq)
 	{
 		// 이미 처리 중이면 병합
@@ -180,11 +165,9 @@ public:
 		m_PendingRequest = newReq;
 		m_RequestState.store(ESceneRequestState::Pending);
 	}
-
 	int GetSceneSize() const { return static_cast<int>(m_Scenes.size()); }
 
 private:
-	// Scene Management 
 	void ProcessSceneRequest()
 	{
 		const auto& PendingRequest = *m_PendingRequest;
@@ -267,6 +250,26 @@ private:
 	void StopSceneMadeThread();  // Scene 생성 스레드 종료
 	void UpdateSceneTransition();
 	void HandleSceneBuildState(); // Scene 생성상태 처리
+
+	// Scene
+	std::vector<std::unique_ptr<CScene>>					m_Scenes;
+	std::unique_ptr<CScene>									m_pLoadingScene;  // Loading Scene은 Stack이 비었을 경우에만 사용(이는, Render State인 Scene이 없을 때도 포함한다)
+
+	// Scene Creation on Another Thread
+	std::thread												m_SceneMadeThread;
+
+	HANDLE													m_hSceneMadeEvent;
+	std::atomic_bool										m_SceneThreadRunning{ false };
+
+	std::optional<SceneTypeTag>								m_PendingSceneTag;
+	std::atomic<ESceneBuildState>							m_SceneBuildState{ ESceneBuildState::Idle };
+
+	std::unique_ptr<CScene> m_BuiltScene;
+	std::mutex m_BuiltSceneMutex;
+
+	// Scene Transition
+	std::atomic<ESceneRequestState>							 m_RequestState{ ESceneRequestState::Idle };
+	std::optional<SceneRequest>								 m_PendingRequest;
 
 private:
 	// 디버그용 텍스트 오브젝트들

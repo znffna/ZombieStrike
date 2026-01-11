@@ -17,34 +17,16 @@ CLoadingScene::~CLoadingScene()
 void CLoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
 	// Create Objects
-	//std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
-	//pMaterial->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-	//
-	//std::shared_ptr<CShader> pStandardShader = std::make_shared<CStandardShader>();
-	//pStandardShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
-	//std::shared_ptr<CMesh> pCubeMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommandList, 1.0f, 1.0f, 1.0f);
-
-	//std::shared_ptr<CRotatingObject> pRotateGameObject;
-	//pRotateGameObject = CRotatingObject::Create(pd3dDevice, pd3dCommandList);
-	//pRotateGameObject->SetMesh(pCubeMesh);
-	//pRotateGameObject->AddMaterial(pMaterial);
-	//pMaterial->SetShader(pStandardShader);
-	//pRotateGameObject->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f));
-	//pRotateGameObject->SetRotationSpeed(50.0f);
-	//pRotateGameObject->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	//AddObject(pRotateGameObject);
 
 	// Create a Quad for Loading Text
 	{
-		/*std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
-		pMaterial->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+		auto pObject = AddObject(std::make_unique<CGameObject>());
+		auto pText = pObject->CreateComponent<CTextComponent>();
+		pText->SetColor(D2D1::ColorF::White);
+		pText->SetFontSize(50.0f);
+		pText->SetText(L"Loading...");
 
-		std::shared_ptr<CShader> pStandardShader = std::make_shared<CStandardShader>();
-		pStandardShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
-
-		std::shared_ptr<CGameObject> pLoadingBg = std::make_shared<CGameObject>();
-		pLoadingBg->SetMesh(CResourceManager::Instance().GetDefaultQuad());*/
+		m_pTextObject = pObject;
 	}
 
 }
@@ -59,7 +41,35 @@ void CLoadingScene::ReleaseUploadBuffers()
 
 void CLoadingScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
+	switch (nMessageID)
+	{
+		case WM_KEYDOWN:
+		{
+			switch (wParam)
+			{
+			case VK_ESCAPE:
+				// Loading 씬에서는 ESC 키를 누르면 프로그램 종료
+				PostQuitMessage(0);
+				break;
+			}
+		}
+	}
+}
 
+void CLoadingScene::Update(float fTimeElapsed)
+{
+	CScene::Update(fTimeElapsed);
+
+	m_fTimeElapsed += fTimeElapsed;
+
+	{
+		std::string LoadingText = "Loading";
+		for (int i = 0; i < static_cast<int>(m_fTimeElapsed) % 4; ++i)
+		{
+			LoadingText += ".";
+		}
+		m_pTextObject->GetComponent<CTextComponent>()->SetText(::to_wstring(LoadingText));
+	}
 }
 
 bool CLoadingScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)

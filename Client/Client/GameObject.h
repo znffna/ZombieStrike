@@ -382,7 +382,7 @@ public:
 	
 	// Load Model
 	void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, std::ifstream& File, std::shared_ptr<CShader> pShader);
-	std::shared_ptr<CTexture> FindReplicatedTexture(const _TCHAR* pstrTextureName);
+	std::shared_ptr<CTexture> FindReplicatedTexture(const std::wstring pstrTextureName);
 	void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& ppSkinnedMeshes, int* pnSkinnedMesh);;
 	
 	static void LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<CLoadedModelInfo> pLoadedModel);

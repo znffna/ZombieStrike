@@ -152,9 +152,12 @@ void CAnimationController::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3d
 {
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
+		// 실제 저장해놓은 BoneMatrix를 GPU에 복사
+		// 저장해놓는것은 AdvanceTime에서 수행
 		memcpy(m_ppcbxmf4x4MappedSkinningBoneTransforms[i],	m_xmf4x4SkinningBoneTransforms[i].data(), sizeof(XMFLOAT4X4) * m_xmf4x4SkinningBoneTransforms[i].size());
 
-		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i];
+		// SKinnedMesh가 참조할 수 있도록 설정
+		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i].Get();
 		m_ppSkinnedMeshes[i]->m_pcbxmf4x4MappedSkinningBoneTransforms = m_ppcbxmf4x4MappedSkinningBoneTransforms[i];
 	}
 }

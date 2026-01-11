@@ -463,12 +463,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// Set Viewport and Scissor & Update Camera Variables
 	if (nullptr == pCamera)
 	{
-		// Set Default Viewport and Scissor
 		pCamera = GetMainCamera();
-		{
-			std::string debugMsg = "CScene::Render: Using Default Camera.\n";
-			OutputDebugStringA(debugMsg.c_str());
-		}
 	}
 
 	// if(m_pPlayer) pCamera->Update(m_pPlayer->GetPosition(), 0.0f);
@@ -487,7 +482,7 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	{
 		for (auto& pObject : pvecObjects.second)
 		{
-			pObject->Update(0.0f);
+			// pObject->Update(0.0f);
 			pObject->Render(pd3dCommandList, pCamera, false);
 		}
 	}

@@ -169,17 +169,17 @@ protected:
 	UINT m_nType = 0x00; // 메쉬의 종류
 
 	// 포지션 버퍼
-	int	m_nVertices = 0;								// 버텍스의 개수
-	std::vector<XMFLOAT3> m_pxmf3Positions;				// CPU에 저장된 버텍스 데이터
-	ComPtr<ID3D12Resource> m_pd3dPositionBuffer;		// GPU에 저장된 버텍스 데이터
-	ComPtr<ID3D12Resource> m_pd3dPositionUploadBuffer;	// CPU에 저장된 버텍스 데이터를 GPU에 업로드하기 위한 버퍼
-	D3D12_VERTEX_BUFFER_VIEW m_d3dPositionBufferView;	// 버텍스 버퍼 뷰
+	int	m_nVertices = 0;								
+	std::vector<XMFLOAT3> m_pxmf3Positions;				
 
 	// 서브 메쉬(Index Buffer)
-	UINT m_nSubMeshes = 0;	// 서브 메쉬의 개수
-	std::vector<std::vector<UINT>> m_ppnSubSetIndices;  // 서브셋의 인덱스 데이터
-	// m_ppnSubSetIndices.size() = 서브셋의 개수 (서브 셋을 사용하는 이유 : mesh의 primitive마다 Meterial이 다르기 적용하기 위함)
-	// m_ppnSubSetIndices[i].size() = i번째 서브셋의 인덱스 개수
+	UINT m_nSubMeshes = 0;	
+	std::vector<std::vector<UINT>> m_ppnSubSetIndices;  
+
+	// GPU 자원
+	ComPtr<ID3D12Resource> m_pd3dPositionBuffer;
+	ComPtr<ID3D12Resource> m_pd3dPositionUploadBuffer;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dPositionBufferView;
 
 	std::vector<ComPtr<ID3D12Resource>> m_ppd3dSubSetIndexBuffers;
 	std::vector<ComPtr<ID3D12Resource>> m_ppd3dSubSetIndexUploadBuffers;
@@ -191,10 +191,9 @@ protected:
 	UINT m_nStride;		// 한 정점의 크기
 	UINT m_nOffset;		// 시작 오프셋
 
-public:
 	// Index 데이터의 갯수에 따라서 인덱스 버퍼를 생성하는 함수
 	void SetSubMeshCount(int nSubMeshes);
-
+public:
 	BoundingBox GetBoundingBox(const XMFLOAT4X4& xmf4x4WorldMatrix);
 
 protected:
@@ -213,8 +212,9 @@ public:
 	CStandardMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual ~CStandardMesh();
 
-	void LoadMeshFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::ifstream& File);
+	void LoadMeshFromFile(std::ifstream& File);
 
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
 	virtual void ReleaseUploadBuffers() override;
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext) override;
@@ -288,12 +288,12 @@ public:
 	ComPtr<ID3D12Resource> m_pd3dcbBindPoseBoneOffsets; //[m_nSkinningBones]
 	XMFLOAT4X4* m_pcbxmf4x4MappedBindPoseBoneOffsets; //[m_nSkinningBones]
 
-	ComPtr<ID3D12Resource> m_pd3dcbSkinningBoneTransforms; //[m_nSkinningBones], Pointer Only
+	ID3D12Resource* m_pd3dcbSkinningBoneTransforms; //[m_nSkinningBones], Pointer Only
 	XMFLOAT4X4* m_pcbxmf4x4MappedSkinningBoneTransforms; //[m_nSkinningBones]
 
 public:
 	void PrepareSkinning(std::shared_ptr<CGameObject> pModelRootObject);
-	void LoadSkinInfoFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::ifstream& pInFile);
+	void LoadSkinInfoFromFile(std::ifstream& pInFile);
 
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);

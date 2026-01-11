@@ -21,10 +21,16 @@ public:
 
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 
+	virtual void Update(float fTimeElapsed) override;
 	virtual bool Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr) override;
 
 	// Shader Variables
 	//void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
 	//void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList) override;
 	//void ReleaseShaderVariables() override;
+
+private:
+	float m_fTimeElapsed = 0.0f;
+
+	CGameObject* m_pTextObject = nullptr;
 };

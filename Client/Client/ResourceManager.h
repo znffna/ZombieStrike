@@ -4,6 +4,7 @@
 
 class CLoadedModelInfo;
 class CGameObject;
+class CMaterial;
 class CTexture;
 class CShader;
 
@@ -12,19 +13,28 @@ class CUploadContext
 public:
 	// Singleton
 	CUploadContext() {};
+	CUploadContext(std::string name): m_strName(name) {};
 	~CUploadContext() {};
 
 	// 전역 리소스 업로드 컨텍스트
 	static CUploadContext& Instance()
 	{
-		static CUploadContext instance;
+		static CUploadContext instance{"Static Instance"};
 		return instance;
 	}
 
-	void Create(ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue)
+	void Create(ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, HANDLE hFenceEvent)
 	{
+		if (m_bIsCreated) return;
+
 		m_pd3dDevice = pd3dDevice;
 		m_pd3dCommandQueue = pd3dCommandQueue;
+		m_pd3dFence = pd3dFence;
+
+		//m_hFenceEvent = hFenceEvent;
+		
+		// Create Fence Event
+		m_hFenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 
 		HRESULT hResult;
 		// Command Allocator 생성
@@ -36,13 +46,9 @@ public:
 		m_pd3dCommandAllocator->Reset();
 		m_pd3dGraphicCommandList->Reset(m_pd3dCommandAllocator, nullptr);
 
-		hResult = pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_pd3dFence));
-
-		// Fence 생성
-		if (SUCCEEDED(hResult)) {
-			m_nFenceValue = 0;	// Fence 초기화
-			m_hFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-			if (m_hFenceEvent == nullptr) { return; }
+		{
+			std::string debugname = m_strName + "CUploadContext Created\n";
+			OutputDebugStringA(debugname.c_str());
 		}
 
 		m_bIsCreated = true;
@@ -51,17 +57,13 @@ public:
 	{
 		::WaitForGpuComplete(m_pd3dCommandQueue, m_pd3dFence, m_nFenceValue, m_hFenceEvent);
 
-		if (m_hFenceEvent) {
-			CloseHandle(m_hFenceEvent);
-			m_hFenceEvent = nullptr;
-		}
-
 		m_pd3dGraphicCommandList->Release();
 		m_pd3dCommandAllocator->Release();
-		m_pd3dFence->Release();
 
 		m_pd3dCommandQueue = nullptr;
 		m_pd3dDevice = nullptr;
+		m_pd3dFence = nullptr;
+		CloseHandle(m_hFenceEvent);
 
 		m_bIsCreated = false;
 	}
@@ -70,18 +72,17 @@ public:
 	{
 		if (!m_bIsCreated) return;
 
-		// Command List를 닫음.
-		HRESULT hResult = m_pd3dGraphicCommandList->Close();
-		// Command List를 실행함.
-		ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dGraphicCommandList };
-		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
-		// Fence에 신호를 보냄.
-		hResult = m_pd3dCommandQueue->Signal(m_pd3dFence, ++m_nFenceValue);
-		// GPU가 명령을 완료할 때까지 대기함.
-		::WaitForGpuComplete(m_pd3dCommandQueue, m_pd3dFence, m_nFenceValue, m_hFenceEvent);
+		// Command List를 닫고 Execute, Signal 및 wait까지 함.
+		::ExecuteCommandList(m_pd3dGraphicCommandList, m_pd3dCommandQueue, m_pd3dFence, m_nFenceValue, m_hFenceEvent);
+		
 		// Command Allocator와 Command List를 재설정함.
-		hResult = m_pd3dCommandAllocator->Reset();
+		HRESULT hResult = m_pd3dCommandAllocator->Reset();
 		hResult = m_pd3dGraphicCommandList->Reset(m_pd3dCommandAllocator, nullptr);
+
+		{
+			std::string debugname = m_strName + " CUploadContext ExecuteAndReset - FenceValue :" + std::to_string(m_nFenceValue) + "\n";
+			OutputDebugStringA(debugname.c_str());
+		}
 	}
 
 	bool m_bIsCreated = false;
@@ -92,6 +93,10 @@ public:
 	ID3D12Fence* m_pd3dFence = nullptr;
 	UINT64 m_nFenceValue = 0;
 	HANDLE m_hFenceEvent = nullptr;
+
+private:
+	std::string m_strName{"UploadContext"};
+
 };
 
 class CResourceManager
@@ -107,6 +112,7 @@ public:
 	}
 
 	void Initialize(ID3D12RootSignature* rootsignature);
+	void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList, ID3D12RootSignature* rootsignature);
 
 	// 모든 리소스 해제
 	void ReleaseResources();
@@ -119,8 +125,10 @@ public:
 	////////////////////////////////////////////
 	// 모델 정보를 저장
 	void LoadModelList(std::string filepath = "Model/ModelList.txt");
+	void LoadModelList(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList, std::string filepath = "Model/ModelList.txt");
 
 	void SetSkinInfo(const std::string& name, std::shared_ptr<CLoadedModelInfo> modelInfo);
+	CLoadedModelInfo* GetModelInfo(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList, const std::string& name);
 	CLoadedModelInfo* GetModelInfo(const std::string& name);
 
 	// 메쉬 정보를 저장
@@ -135,4 +143,52 @@ private:
 	std::unordered_map<std::string, std::shared_ptr<CTexture>> TextureInfos;
 	std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshInfos;
 
+public:
+	// ----------------------------------------
+	// Register To Upload List
+	// ----------------------------------------
+
+	std::mutex m_UploadMutex; // Upload List에 대한 Mutex
+
+	void SwapRegisterContainer()
+	{
+		std::lock_guard<std::mutex> lock(m_UploadMutex);
+		// Mesh Upload List 교체
+		std::swap(m_MeshRegisterBuffer, m_MeshUploadList);
+		// Material Upload List 교체
+		std::swap(m_MaterialRegisterBuffer, m_MaterialUploadList);
+	}
+
+	void ProcessRegistries(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+	{
+		SwapRegisterContainer();
+		ProcessMeshUpload(pd3dDevice, pd3dCommandList);
+		ProcessMaterialUpload(pd3dDevice, pd3dCommandList);
+	}
+
+	void ReleaseUploadBuffers()
+	{
+		ReleaseMeshUploadBuffers();
+		ReleaseMaterialUploadBuffers();
+	}
+
+	// ----------------------------------------
+	// Mesh Upload 처리
+	// ----------------------------------------
+	void RegisterMeshUpload(CMesh* pMesh);
+	void ProcessMeshUpload(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void ReleaseMeshUploadBuffers();
+
+	std::vector<CMesh*> m_MeshRegisterBuffer;
+	std::vector<CMesh*> m_MeshUploadList;
+	
+	// ----------------------------------------
+	// Material Upload 처리
+	// ----------------------------------------
+	void RegisterMaterialUpload(CMaterial* pMaterial);
+	void ProcessMaterialUpload(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void ReleaseMaterialUploadBuffers();
+
+	std::vector<CMaterial*> m_MaterialRegisterBuffer;
+	std::vector<CMaterial*> m_MaterialUploadList;
 };

@@ -55,8 +55,8 @@ CGameObject::~CGameObject()
 
 	// Debug Output
 #ifdef _DEBUG
-	std::string debugoutput = "Object Name: " + GetName() + " has Destroyed\n";
-	OutputDebugStringA(debugoutput.c_str());
+	/*std::string debugoutput = "Object Name: " + GetName() + " has Destroyed\n";
+	OutputDebugStringA(debugoutput.c_str());*/
 #endif // _DEBUG
 
 }
@@ -500,8 +500,9 @@ void CGameObject::ReleaseUploadBuffers()
 	}
 }
 
-std::shared_ptr<CTexture> CGameObject::FindReplicatedTexture(const _TCHAR* pstrTextureName)
+std::shared_ptr<CTexture> CGameObject::FindReplicatedTexture(const std::wstring pstrTextureName)
 {
+	std::string strTextureName = to_string(pstrTextureName);
 	for (UINT i = 0; i < m_nMaterials; i++)
 	{
 		if (m_ppMaterials[i])
@@ -510,13 +511,13 @@ std::shared_ptr<CTexture> CGameObject::FindReplicatedTexture(const _TCHAR* pstrT
 			{
 				if (m_ppMaterials[i]->m_ppTextures[j])
 				{
-					if (!_tcsncmp(m_ppMaterials[i]->m_strTextureNames[j].data(), pstrTextureName, _tcslen(pstrTextureName))) return(m_ppMaterials[i]->m_ppTextures[j]);
+					if (m_ppMaterials[i]->m_strTextureNames[j] == strTextureName) return(m_ppMaterials[i]->m_ppTextures[j]);
+					// if (!_tcsncmp(m_ppMaterials[i]->m_strTextureNames[j], pstrTextureName, _tcslen(pstrTextureName))) return(m_ppMaterials[i]->m_ppTextures[j]);
 				}
 			}
 		}
 	}
-	std::shared_ptr<CTexture> pTexture;
-	for (auto& pChild : m_pChilds) if (pTexture = pChild->FindReplicatedTexture(pstrTextureName)) return(pTexture);
+	for (auto& pChild : m_pChilds) if (auto pTexture = pChild->FindReplicatedTexture(pstrTextureName)) return(pTexture);
 
 	return(NULL);
 }
@@ -567,6 +568,9 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 			}
 			pMaterial->SetName(GetName());
 			SetMaterial(nMaterial, pMaterial);
+
+			// 실제 Material Upload 등록
+			CResourceManager::Instance().RegisterMaterialUpload(pMaterial.get());
 		}
 		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
 		{
@@ -626,31 +630,39 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_ALBEDO_MAP, ROOT_PARAMETER_ALBEDO_TEXTURE, pMaterial->m_strTextureNames[0], (pMaterial->m_ppTextures[0]), pParent, File, pShader);
+			// TODO : 여기에선 순수 텍스처 이름만 읽어오고, 텍스처 로드는 나중에 수행하도록 변경 필요
+			pMaterial->LoadTextureFromFile(MATERIAL_ALBEDO_MAP, File);
+			// pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_ALBEDO_MAP, ROOT_PARAMETER_ALBEDO_TEXTURE, pMaterial->m_strTextureNames[0], (pMaterial->m_ppTextures[0]), pParent, File, pShader);
 		}
 		else if (!strcmp(pstrToken, "<SpecularMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_SPECULAR_MAP, ROOT_PARAMETER_SPECULAR_TEXTURE, pMaterial->m_strTextureNames[1], (pMaterial->m_ppTextures[1]), pParent, File, pShader);
+			m_ppMaterials[nMaterial]->LoadTextureFromFile(MATERIAL_SPECULAR_MAP, File);
+			//m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_SPECULAR_MAP, ROOT_PARAMETER_SPECULAR_TEXTURE, pMaterial->m_strTextureNames[1], (pMaterial->m_ppTextures[1]), pParent, File, pShader);
 		}
 		else if (!strcmp(pstrToken, "<NormalMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_NORMAL_MAP, ROOT_PARAMETER_NORMAL_TEXTURE, pMaterial->m_strTextureNames[2], (pMaterial->m_ppTextures[2]), pParent, File, pShader);
+			m_ppMaterials[nMaterial]->LoadTextureFromFile(MATERIAL_NORMAL_MAP, File);
+			//m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_NORMAL_MAP, ROOT_PARAMETER_NORMAL_TEXTURE, pMaterial->m_strTextureNames[2], (pMaterial->m_ppTextures[2]), pParent, File, pShader);
 		}
 		else if (!strcmp(pstrToken, "<MetallicMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_METALLIC_MAP, ROOT_PARAMETER_METALLIC_TEXTURE, pMaterial->m_strTextureNames[3], (pMaterial->m_ppTextures[3]), pParent, File, pShader);
+			m_ppMaterials[nMaterial]->LoadTextureFromFile(MATERIAL_METALLIC_MAP, File);
+			//m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_METALLIC_MAP, ROOT_PARAMETER_METALLIC_TEXTURE, pMaterial->m_strTextureNames[3], (pMaterial->m_ppTextures[3]), pParent, File, pShader);
 		}
 		else if (!strcmp(pstrToken, "<EmissionMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_EMISSION_MAP, ROOT_PARAMETER_EMISSION_TEXTURE, pMaterial->m_strTextureNames[4], (pMaterial->m_ppTextures[4]), pParent, File, pShader);
+			m_ppMaterials[nMaterial]->LoadTextureFromFile(MATERIAL_EMISSION_MAP, File);
+			//m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_EMISSION_MAP, ROOT_PARAMETER_EMISSION_TEXTURE, pMaterial->m_strTextureNames[4], (pMaterial->m_ppTextures[4]), pParent, File, pShader);
 		}
 		else if (!strcmp(pstrToken, "<DetailAlbedoMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_ALBEDO_MAP, ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE, pMaterial->m_strTextureNames[5], (pMaterial->m_ppTextures[5]), pParent, File, pShader);
+			m_ppMaterials[nMaterial]->LoadTextureFromFile(MATERIAL_DETAIL_ALBEDO_MAP, File);
+			//m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_ALBEDO_MAP, ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE, pMaterial->m_strTextureNames[5], (pMaterial->m_ppTextures[5]), pParent, File, pShader);
 		}
 		else if (!strcmp(pstrToken, "<DetailNormalMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_NORMAL_MAP, ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE, pMaterial->m_strTextureNames[6], (pMaterial->m_ppTextures[6]), pParent, File, pShader);
+			m_ppMaterials[nMaterial]->LoadTextureFromFile(MATERIAL_DETAIL_NORMAL_MAP, File);
+			//m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_NORMAL_MAP, ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE, pMaterial->m_strTextureNames[6], (pMaterial->m_ppTextures[6]), pParent, File, pShader);
 		}
 		else if (!strcmp(pstrToken, "</Materials>"))
 		{
@@ -794,7 +806,7 @@ std::unique_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 			::ReadStringFromFile(file, pGameObject->m_strName);
 
 			// Test용
-			isGetModel = DeepCopyFromModel(pGameObject->m_strName, pGameObject.get());
+			// isGetModel = DeepCopyFromModel(pGameObject->m_strName, pGameObject.get());
 		}
 		else if (!strcmp(pstrToken, "<Tag>:")) {
 			::ReadStringFromFile(file, pGameObject->m_strTag);
@@ -816,7 +828,7 @@ std::unique_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
 			std::shared_ptr<CStandardMesh> pMesh = std::make_shared<CStandardMesh>(pd3dDevice, pd3dCommandList);
-			pMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, file);
+			pMesh->LoadMeshFromFile(file);
 			pGameObject->SetMesh(pMesh);			
 		}
 		else if (!strcmp(pstrToken, "<SkinningInfo>:"))
@@ -824,11 +836,11 @@ std::unique_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 			if (pnSkinnedMeshes) (*pnSkinnedMeshes)++;
 
 			std::shared_ptr<CSkinnedMesh> pSkinnedMesh = std::make_shared<CSkinnedMesh>(pd3dDevice, pd3dCommandList);
-			pSkinnedMesh->LoadSkinInfoFromFile(pd3dDevice, pd3dCommandList, file);
-			pSkinnedMesh->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+			pSkinnedMesh->LoadSkinInfoFromFile(file);
+			//pSkinnedMesh->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 			::ReadStringFromFile(file, pstrToken); //<Mesh>:
-			if (!strcmp(pstrToken, "<Mesh>:")) pSkinnedMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, file);
+			if (!strcmp(pstrToken, "<Mesh>:")) pSkinnedMesh->LoadMeshFromFile(file);
 
 			pGameObject->SetMesh(pSkinnedMesh);
 		}
@@ -878,9 +890,12 @@ std::unique_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		{
 			std::string strModelName;
 			::ReadStringFromFile(file, strModelName);
-			//if (strModelName == pCollider->m_strName) continue;
-			if (isGetModel) continue;
-			isGetModel = DeepCopyFromModel(strModelName, pGameObject.get());
+
+			if(false){
+				//if (strModelName == pCollider->m_strName) continue;
+				if (isGetModel) continue;
+				isGetModel = DeepCopyFromModel(strModelName, pGameObject.get());
+			}
 		}
 		else if (!strcmp(pstrToken, "</Frame>"))
 		{

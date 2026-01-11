@@ -27,6 +27,10 @@ struct CB_MATERIAL_INFO
 #define MATERIAL_DETAIL_ALBEDO_MAP		0x20
 #define MATERIAL_DETAIL_NORMAL_MAP		0x40
 
+#include <bit>
+
+inline uint32_t MaterialFlagToIndex(uint32_t flag);
+
 class CMaterial
 {
 public:
@@ -86,6 +90,7 @@ public:
 
 	void ReleaseUploadBuffers();
 
+	void LoadTextureFromFile(UINT nType, std::ifstream& File); // 이건 Name만 읽음
 	void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, std::wstring& pwstrTextureName, std::shared_ptr<CTexture>& ppTexture, CGameObject* pParent, std::ifstream& File, std::shared_ptr<CShader> pShader);
 
 private:
@@ -111,7 +116,7 @@ public:
 	CB_MATERIAL_INFO* m_pcbMappedMaterial = nullptr;
 public:
 	UINT m_nTextures = 0;
-	std::vector<std::wstring> m_strTextureNames; // Texture Name
+	std::vector<std::string> m_strTextureNames; // Texture Name
 	std::vector<std::shared_ptr<CTexture>> m_ppTextures; // Texture
 	std::shared_ptr<CShader> m_pShader; // Shader
 
@@ -124,4 +129,4 @@ public:
 	void SetSkinnedAnimationShader();
 };
 
-void LoadTextureFromFile(std::shared_ptr<CTexture>& ppTexture, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring& pwstrTextureName, char  pstrTextureName[64], UINT nRootParameter);
+void LoadTextureFromFile(std::shared_ptr<CTexture>& ppTexture, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring& pwstrTextureName, std::string& strTextureName, UINT nRootParameter);

@@ -29,6 +29,17 @@ void CTestScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	pPlayerObject->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
 
 	m_pPlayer = dynamic_cast<CPlayer*>(pPlayerObject);
+
+	// Player 다중 실행 테스트
+	/*int nPlayerCount = 10;
+	for(int i = 0; i < nPlayerCount; ++i){
+		auto pPlayerObject = AddObject(std::make_unique<CPlayer>());
+		auto pPlayer = dynamic_cast<CPlayer*>(pPlayerObject);
+		pPlayer->Initialize(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
+		pPlayerObject->SetName("Player");
+		pPlayerObject->SetPosition(XMFLOAT3(0.5f + 0.5f * i, 0.0f, 0.0f));
+		pPlayerObject->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
+	}*/
 }
 
 void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)

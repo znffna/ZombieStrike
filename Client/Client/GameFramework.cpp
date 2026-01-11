@@ -90,19 +90,18 @@ void CGameFramework::OnDestroy()
 	// Scene 생성 스레드를 종료한다.
 	StopSceneMadeThread();
 
-	// 전역 리소스 업로드 컨텍스트를 해제한다.
-	ReleaseDefaultObjects();
-
 	// 남은 Command List가 없는지 확인
-	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
+	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
 
 	// Fence Event 객체를 해제한다.
 	::CloseHandle(m_hFenceEvent);
 
 	// Scene들을 해제한다.
-
 	m_Scenes.clear();
 	m_pLoadingScene.reset();
+
+	// 전역 리소스 업로드 컨텍스트를 해제한다.
+	ReleaseDefaultObjects();
 
 	CScene::DestroyFramework();
 
@@ -383,7 +382,7 @@ void CGameFramework::CreateDepthStencilView()
 
 void CGameFramework::ChangeSwapChainState()
 {
-	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
+	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
 
 	BOOL bFullScreenState = FALSE;
 	m_pdxgiSwapChain->GetFullscreenState(&bFullScreenState, NULL);
@@ -406,13 +405,13 @@ void CGameFramework::Resize(int width, int height)
 {
 	if (m_pdxgiSwapChain == nullptr) return;
 
-	ReallocateSwapChain(width, height);
+	// ReallocateSwapChain(width, height);
 }
 
 void CGameFramework::ReallocateSwapChain(int width, int height)
 {
 	// 1) GPU 동기화
-	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
+	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
 
 	m_nWndClientWidth = width;
 	m_nWndClientHeight = height;
@@ -455,19 +454,23 @@ void CGameFramework::BuildDefaultObjects()
 	BuildUILayer();
 #endif
 
-	CUploadContext::Instance().Create(m_pd3dDevice.Get(), m_pd3dCommandQueue.Get());
-
+	// Main Thread용 전역 리소스 업로드 컨텍스트를 생성한다.
 	auto& CUploadContext = CUploadContext::Instance();
+	CUploadContext.Create(m_pd3dDevice.Get(), m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_hFenceEvent);
 
 	CScene::InitStaticMembers(CUploadContext.m_pd3dDevice, CUploadContext.m_pd3dGraphicCommandList);
-	CResourceManager::Instance().Initialize(CScene::GetGraphicRootSignature());
-	CreateShaderVariables();
+	{
+		std::string debug = "[SceneMadeThread] CResourceManager 초기화 시작.\n";
+		OutputDebugStringA(debug.c_str());
+	}
+	// Scene 생성 스레드를 시작한다.
+	CreateShaderVariables(CUploadContext);
+
+	BuildSceneMadeThread();
 
 	CUploadContext.ExecuteAndReset();
 
 	CreateDebugTextObjects();
-
-	BuildSceneMadeThread();
 }
 
 void CGameFramework::ReleaseDefaultObjects()
@@ -487,6 +490,8 @@ void CGameFramework::ReleaseDefaultObjects()
 void CGameFramework::BuildObjects()
 {
 	auto& CUploadContext = CUploadContext::Instance();
+
+	// m_Scenes.push_back(std::move(BuildScene<CTestScene>(CUploadContext::Instance())));
 
 	// RequestBuildScene<CTitleScene>();
 	RequestBuildScene<CTestScene>();
@@ -528,17 +533,26 @@ void CGameFramework::AdvanceFrame()
 	// 이번 프레임에 작업할	Scene 결정
 	UpdateSceneTransition();
 
-	CScene* pCurrentScene{};
 	// 현재 Scene 요청이 들어온 경우 로딩 Scene을 현재 Scene으로 설정
+	CScene* pCurrentScene{};
 	const ESceneRequestState requestState = m_RequestState.load(std::memory_order_acquire);
 	requestState == ESceneRequestState::Processing ? pCurrentScene = m_pLoadingScene.get() : pCurrentScene = GetCurrentScene();
 
 	// 현재 Scene이 없고, 생성중이 아닐 시 종료
-	if(m_Scenes.empty() && requestState == ESceneRequestState::Idle)
-	{
-		PostQuitMessage(0);
-		return;
+	if(false){
+		if (m_Scenes.empty() && requestState == ESceneRequestState::Idle)
+		{
+			{
+				// AdvanceFrame 종료 진단 로그
+				OutputDebugStringA("[AdvanceFrame] No current scene. Exiting.\n");
+			}
+			PostQuitMessage(0);
+			return;
+		}
 	}
+
+	// Update
+	AnimateObjects(pCurrentScene);
 
 	// Command List 재사용
 	ID3D12CommandAllocator* pCommandAllocator = m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get();
@@ -547,8 +561,8 @@ void CGameFramework::AdvanceFrame()
 	pCommandAllocator->Reset();
 	pd3dCommandList->Reset(pCommandAllocator, nullptr);
 
-	// Update
-	AnimateObjects(pCurrentScene);
+	// 전역 리소스 매니저 처리
+	CResourceManager::Instance().ProcessRegistries(m_pd3dDevice.Get(), pd3dCommandList);
 
 	pCurrentScene->PrepareRender(pd3dCommandList);
 	pCurrentScene->OnPreRender(pd3dCommandList);
@@ -582,7 +596,7 @@ void CGameFramework::AdvanceFrame()
 #ifndef _WITH_DIRECT_WRITE_UI
 	::SynchronizeResourceTransition(pd3dCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 #endif
-	::ExecuteCommandList(pd3dCommandList, m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
+	::ExecuteCommandList(pd3dCommandList, m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
 	
 
 #ifdef _WITH_DIRECT_WRITE_UI
@@ -617,6 +631,8 @@ void CGameFramework::AdvanceFrame()
 	++g_nFrameCount;
 
 	// 다음 Frame으로 이동
+	CResourceManager::Instance().ReleaseUploadBuffers();
+
 	MoveToNextFrame();
 
 	// Time / FPS 출력
@@ -718,10 +734,10 @@ void CGameFramework::MoveToNextFrame()
 	}
 }
 
-void CGameFramework::CreateShaderVariables()
+void CGameFramework::CreateShaderVariables(CUploadContext& uploadcontext)
 {
 	UINT ncbElementBytes = ((sizeof(CB_FRAMEWORK_INFO) + 255) & ~255); //256의 배수
-	m_pd3dcbFrameworkInfo = ::CreateBufferResource(m_pd3dDevice.Get(), m_pd3dCommandList[m_nSwapChainBufferIndex].Get(), NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
+	m_pd3dcbFrameworkInfo = ::CreateBufferResource(uploadcontext.m_pd3dDevice, uploadcontext.m_pd3dGraphicCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
 
 	m_pd3dcbFrameworkInfo->Map(0, NULL, (void**)&m_pcbMappedFrameworkInfo);
 	ZeroMemory(m_pcbMappedFrameworkInfo, sizeof(CB_FRAMEWORK_INFO));
@@ -966,24 +982,28 @@ void CGameFramework::BuildSceneMadeThread()
 	m_SceneMadeThread = std::thread([this]() {
 
 		m_SceneThreadRunning.store(true);
-		// Scene 생성 스레드용 Event 생성
+		// 1. Scene 생성 스레드용 Event 생성
 		m_hSceneMadeEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 
-		CUploadContext sceneUploadContext;
-		sceneUploadContext.Create(m_pd3dDevice.Get(), m_pd3dCommandQueue.Get());
+		// 2. Scene 생성 컨텍스트 생성
+		CUploadContext sceneUploadContext{"SceneMadeThread"};
+		sceneUploadContext.Create(m_pd3dDevice.Get(), m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_hFenceEvent);
 
+		CResourceManager::Instance().Initialize(sceneUploadContext.m_pd3dDevice, sceneUploadContext.m_pd3dGraphicCommandList, CScene::GetGraphicRootSignature());
 
+		// Scene 생성 루프
 		while (m_SceneThreadRunning.load()) {
 			// Scene 생성 신호 대기
 			WaitForSingleObject(m_hSceneMadeEvent, INFINITE);
 
-			if (false == isWorked)
-				break;
+			if (false == isWorked) break;
 
 			// Scene 생성 작업 수행
 			m_SceneBuildState.store(
 				ESceneBuildState::Building,
 				std::memory_order_release);
+
+			if (false == isWorked) break;
 
 			std::unique_ptr<CScene> newScene;
 			try
@@ -1003,8 +1023,12 @@ void CGameFramework::BuildSceneMadeThread()
 				continue;
 			}
 
+			if (false == isWorked) break;
+
 			// -------------
 			sceneUploadContext.ExecuteAndReset();
+
+			if (false == isWorked) break;
 
 			{
 				std::lock_guard<std::mutex> lock(m_BuiltSceneMutex);
@@ -1014,6 +1038,10 @@ void CGameFramework::BuildSceneMadeThread()
 			m_SceneBuildState.store(
 				ESceneBuildState::Completed,
 				std::memory_order_release);
+
+			OutputDebugString(L"Scene 생성 스레드 완료.\n");
+
+			if (false == isWorked) break;
 		}
 
 		CloseHandle(m_hSceneMadeEvent);
@@ -1103,7 +1131,7 @@ void CGameFramework::CreateDebugTextObjects()
 {
 	int nDebugTextObjects = 10;
 	m_DebugTextBlocks.reserve(nDebugTextObjects);
-	int FontSize = m_nWndClientHeight / 50.0f;
+	int FontSize = (int)(m_nWndClientHeight / 50.0f);
 	for (int i = 0; i < nDebugTextObjects; i++) {
 		auto pDebugTextObject = new TextBlock;
 		pDebugTextObject->SetText(L"Debug Info");

@@ -98,7 +98,7 @@ void CTexture::ReleaseUploadBuffers()
 {
 	if (false == m_pd3dTextureUploadBuffers.empty())
 	{
-		for (UINT i = 0; i < m_nTextures; i++) if (m_pd3dTextureUploadBuffers[i]) m_pd3dTextureUploadBuffers[i]->Release();
+		for (UINT i = 0; i < m_nTextures; i++) if (m_pd3dTextureUploadBuffers[i]) m_pd3dTextureUploadBuffers[i].Reset();
 	}
 }
 

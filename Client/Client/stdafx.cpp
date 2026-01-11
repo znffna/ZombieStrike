@@ -22,6 +22,7 @@ int g_nFrameCount;
 bool g_bWindowActive = true; // 전역 또는 멤버 변수로 상태 저장
 bool g_bEnableCursor = true; // 커서 활성화 여부
 bool g_bDebugOutput = false; // 디버그 출력 여부
+std::atomic<UINT64> g_nFenceValue;
 
 // Functions
 
@@ -50,7 +51,7 @@ BYTE ReadStringFromFile(std::ifstream& file, char* pstrToken)
 	return(nStrLength);
 }
 
-BYTE ReadStringFromFile(std::ifstream& file, std::string& String)
+BYTE ReadStringFromFile(std::ifstream& file, std::string& pstrToken)
 {
 	BYTE nStrLength = 0;
 	UINT nReads = 0;
@@ -59,7 +60,7 @@ BYTE ReadStringFromFile(std::ifstream& file, std::string& String)
 
 	std::vector<char> strBuffer(nStrLength);
 	file.read(strBuffer.data(), sizeof(char) * nStrLength);
-	String.assign(strBuffer.begin(), strBuffer.end());
+	pstrToken.assign(strBuffer.begin(), strBuffer.end());
 
 	return(nStrLength);
 }
@@ -91,8 +92,13 @@ void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, C
 	SynchronizeResourceTransition(pd3dCommandList, pd3dResource.Get(), d3dStateBefore, d3dStateAfter);
 }
 
-void WaitForGpuComplete(ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent)
+void WaitForGpuComplete(ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64& nFenceValue, HANDLE hFenceEvent)
 {
+	// 전역 단일 펜스 값 증가
+	auto fencevalue = g_nFenceValue.fetch_add(1) + 1;
+	// 업데이트된 펜스 값을 지역 펜스 값에 할당
+	nFenceValue = fencevalue;
+
 	HRESULT hResult = pd3dCommandQueue->Signal(pd3dFence, nFenceValue);
 
 	if (pd3dFence->GetCompletedValue() < nFenceValue)
@@ -102,7 +108,7 @@ void WaitForGpuComplete(ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dF
 	}
 }
 
-void ExecuteCommandList(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent)
+void ExecuteCommandList(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64& nFenceValue, HANDLE hFenceEvent)
 {
 	CloseCommandList(pd3dCommandList);
 

@@ -6,13 +6,13 @@ class TextBlock
 {
 public:
 	bool						    m_bActive = true;
-	std::wstring                    m_pstrText;
-	D2D1_RECT_F                     m_d2dLayoutRect;
+	std::wstring                    m_pstrText = L"Text";
+	D2D1_RECT_F                     m_d2dLayoutRect = {0,0, (float)WINDOW_WIDTH, (float)WINDOW_HEIGHT };
 	//ComPtr<IDWriteTextFormat> m_pdwFormat;
 	//ComPtr<ID2D1SolidColorBrush> m_pd2dTextBrush;
-	std::wstring m_strFontKey;
-	float  m_fFontSize = 12.0f;
-	D2D1::ColorF m_cBrushKey{ 0,0,0 };
+	std::wstring					m_strFontKey = L"Consolas";
+	float							m_fFontSize = 12.0f;
+	D2D1::ColorF					m_cBrushKey{ 0,0,0 };
 
 	// Setters
 	void SetActive(bool bActive) {

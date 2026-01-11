@@ -51,6 +51,27 @@ void CMaterial::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	m_pd3dcbMaterial->Map(0, nullptr, (void**)&m_pcbMappedMaterial);
 	ZeroMemory(m_pcbMappedMaterial, sizeof(CB_MATERIAL_INFO));
 #endif // _USE_OBJECT_MATERIAL_CBV
+
+	// Material이 가지고 있는 텍스쳐 로드
+	std::string strTextureDirectory = { "Model/Textures/" }; // 텍스쳐 폴더 경로
+	int pstrDirectoryPath = strTextureDirectory.size();
+
+	for (int idx = 0; idx < m_ppTextures.size(); ++idx)
+	{
+		if (m_strTextureNames[idx].empty()) continue;
+
+		if(auto pTexture = CResourceManager::Instance().GetTexture(m_strTextureNames[idx]))
+		{
+			m_ppTextures[idx] = pTexture;
+			continue;
+		}
+
+		std::string strFilePath = strTextureDirectory;
+		strFilePath += m_strTextureNames[idx] + ".dds";
+
+		::LoadTextureFromFile(m_ppTextures[idx], pd3dDevice, pd3dCommandList, to_wstring(strFilePath), m_strTextureNames[idx], ROOT_PARAMETER_ALBEDO_TEXTURE + idx);
+		CResourceManager::Instance().SetTexture(m_strTextureNames[idx], m_ppTextures[idx]);
+	}
 }
 
 void CMaterial::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
@@ -106,63 +127,87 @@ void CMaterial::ReleaseUploadBuffers()
 
 }
 
-void LoadTextureFromFile(std::shared_ptr<CTexture>& ppTexture, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring& pwstrTexturePath, char  pstrTextureName[64], UINT nRootParameter)
+inline uint32_t MaterialFlagToIndex(uint32_t flag)
+{
+	return std::countr_zero(flag);
+}
+
+void LoadTextureFromFile(std::shared_ptr<CTexture>& ppTexture, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring& pwstrTexturePath, std::string& strTextureName, UINT nRootParameter)
 {
 	ppTexture = std::make_shared <CTexture>(1, RESOURCE_TEXTURE2D, 1);
 	
 	(ppTexture)->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, pwstrTexturePath, RESOURCE_TEXTURE2D, 0);
-	ppTexture->SetName(pstrTextureName);
 	
 	CScene::CreateShaderResourceViews(pd3dDevice, ppTexture.get(), 0, nRootParameter);
 }
 
-void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, std::wstring& pwstrTextureName, std::shared_ptr<CTexture>& ppTexture, CGameObject* pParent, std::ifstream& File, std::shared_ptr<CShader> pShader)
+void CMaterial::LoadTextureFromFile(UINT nType, std::ifstream& File)
 {
-	char pstrTextureName[64] = { '\0' };
+	// Load Texture Name
+	std::string strTextureName;
+	ReadStringFromFile(File, strTextureName);
 
-	BYTE nStrLength = 64;
-	//UINT nReads;
-	File.read((char*)&nStrLength, sizeof(BYTE));
-	File.read((char*)&pstrTextureName, sizeof(char) * nStrLength);
-	pstrTextureName[nStrLength] = '\0';
-
-	bool bDuplicated = false;
-	if (strcmp(pstrTextureName, "null"))
+	// 실제 텍스쳐가 있을때만 추가.
+	if (strTextureName != "null")
 	{
 		SetMaterialType(nType);
 
-		constexpr int nFilePathLength = 128; // 최종 버퍼 크기
-		std::string strTextureDirectory = {"Model/Textures/"}; // 텍스쳐 폴더 경로
-		int pstrDirectoryPath = strTextureDirectory.size(); 
+		bool bDuplicated = (strTextureName[0] == '@');
+		strTextureName = (bDuplicated) ? (strTextureName.substr(1)) : strTextureName;
 
-		char pstrFilePath[nFilePathLength] = { '\0' };
-		strcpy_s(pstrFilePath, nFilePathLength, "Model/Textures/");
-		//strcpy_s(pstrFilePath, nFilePathLength, "Model/Textures/");
+		int nTextureIndex = MaterialFlagToIndex(nType);
+		m_strTextureNames[nTextureIndex] = strTextureName;
+	}
+}
 
-		bDuplicated = (pstrTextureName[0] == '@');
-		strcpy_s(pstrFilePath + pstrDirectoryPath, nFilePathLength - pstrDirectoryPath, (bDuplicated) ? (pstrTextureName + 1) : pstrTextureName);
-		strcpy_s(pstrFilePath + pstrDirectoryPath + ((bDuplicated) ? (nStrLength - 1) : nStrLength), nFilePathLength - pstrDirectoryPath - ((bDuplicated) ? (nStrLength - 1) : nStrLength), ".dds");
+void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, std::wstring& pwstrTextureName, std::shared_ptr<CTexture>& ppTexture, CGameObject* pParent, std::ifstream& File, std::shared_ptr<CShader> pShader)
+{
+	//char pstrTextureName[64] = { '\0' };
 
-		size_t nConverted = 0;
+	//BYTE nStrLength = 64;
+	//UINT nReads;
 
-		wchar_t pwstrName[nFilePathLength] = { '\0' };
-		mbstowcs_s(&nConverted, pwstrName, nFilePathLength, pstrFilePath, _TRUNCATE);
-		pwstrTextureName = pwstrName;
-		//#define _WITH_DISPLAY_TEXTURE_NAME
+	std::string strTextureName;
+
+	ReadStringFromFile(File, strTextureName);
+	//File.read((char*)&nStrLength, sizeof(BYTE));
+	//File.read((char*)&pstrTextureName, sizeof(char) * nStrLength);
+	//pstrTextureName[nStrLength] = '\0';
+
+	bool bDuplicated = false;
+	if (strTextureName != "null")
+	//if (strcmp(pstrTextureName, "null"))
+	{
+		SetMaterialType(nType);
+
+		std::string strTextureDirectory = { "Model/Textures/" }; // 텍스쳐 폴더 경로
+		int pstrDirectoryPath = strTextureDirectory.size();
+
+		std::string strFilePath = strTextureDirectory;
+
+		// 복제여부 확인 및 복제 시 @ 제거
+		bDuplicated = (strTextureName[0] == '@');
+		strTextureName = (bDuplicated) ? (strTextureName.substr(1)) : strTextureName;
+
+		strFilePath += strTextureName + ".dds";
+
+		pwstrTextureName = to_wstring(strFilePath);
+
+		#define _WITH_DISPLAY_TEXTURE_NAME
 
 #ifdef _WITH_DISPLAY_TEXTURE_NAME
 		static int nTextures = 0, nRepeatedTextures = 0;
 		TCHAR pstrDebug[256] = { 0 };
-		_stprintf_s(pstrDebug, 256, _T("Texture Name: %d %c %s\n"), (pstrTextureName[0] == '@') ? nRepeatedTextures++ : nTextures++, (pstrTextureName[0] == '@') ? '@' : ' ', pwstrTextureName);
+		_stprintf_s(pstrDebug, 256, _T("Texture Name: %d %c %s\n"), (bDuplicated) ? nRepeatedTextures++ : nTextures++, (bDuplicated) ? '@' : ' ', pwstrTextureName.data());
 		OutputDebugString(pstrDebug);
 #endif
 		if (!bDuplicated)
 		{
-			ppTexture = CResourceManager::Instance().GetTexture(pstrTextureName);
+			ppTexture = CResourceManager::Instance().GetTexture(strTextureName);
 			if (nullptr == ppTexture)
 			{
-				::LoadTextureFromFile(ppTexture, pd3dDevice, pd3dCommandList, pwstrTextureName, pstrTextureName, nRootParameter);
-				CResourceManager::Instance().SetTexture(pstrTextureName, ppTexture);
+				::LoadTextureFromFile(ppTexture, pd3dDevice, pd3dCommandList, pwstrTextureName, strTextureName, nRootParameter);
+				CResourceManager::Instance().SetTexture(strTextureName, ppTexture);
 			}
 		}
 		else
@@ -176,7 +221,7 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 					pParent = pGrandParent;
 				}
 				auto pRootGameObject = pParent;
-				ppTexture = pRootGameObject->FindReplicatedTexture(pwstrTextureName.data());
+				ppTexture = pRootGameObject->FindReplicatedTexture(pwstrTextureName);
 			}
 		}
 	}
