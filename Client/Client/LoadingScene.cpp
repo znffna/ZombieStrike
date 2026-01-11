@@ -5,6 +5,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 #include "LoadingScene.h"
 
+#include "GameFramework.h"
 
 CLoadingScene::CLoadingScene()
 {
@@ -25,6 +26,7 @@ void CLoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		pText->SetColor(D2D1::ColorF::White);
 		pText->SetFontSize(50.0f);
 		pText->SetText(L"Loading...");
+		pText->SetSize((float)WINDOW_WIDTH / 2, (float)WINDOW_HEIGHT / 2, WINDOW_WIDTH, 100.0f, true);
 
 		m_pTextObject = pObject;
 	}
@@ -68,6 +70,44 @@ void CLoadingScene::Update(float fTimeElapsed)
 		{
 			LoadingText += ".";
 		}
+
+		auto loadinfo = CGameFramework::Instance()->GetSceneLoadInfo();
+		// CPU Process 계산
+		float cpuratio{};
+		switch (loadinfo.buildstate)
+		{
+		case ESceneBuildState::Idle:
+			cpuratio = 0.0f;
+			break;
+		case ESceneBuildState::Requested:
+			cpuratio = 20.0f;
+			break;
+		case ESceneBuildState::Building:
+			cpuratio = 50.0f;
+			break;
+		case ESceneBuildState::CPU_Completed:
+			cpuratio = 100.0f;
+			break;
+		default:
+			cpuratio = 100.0f;
+			break;
+		}
+
+		// GPU Process 계산
+		float gpuratio{};
+		auto prevloadedCount = loadinfo.GetPreviousLoadedCount();
+		auto totalCount = loadinfo.GetTotalResourceCount() - prevloadedCount;
+		auto currentLoad = CResourceManager::Instance().m_nUploadMeshCount.load() + CResourceManager::Instance().m_nUploadMaterialCount.load() - prevloadedCount;
+		gpuratio = (float)(currentLoad) / (float)(totalCount) * 100.0f;
+
+		if (totalCount == 0) {
+			LoadingText += "   0.0%";
+		}
+		else
+		{
+			LoadingText += "   " + std::to_string(cpuratio * 0.5f + gpuratio * 0.5f) + "%";
+		}
+
 		m_pTextObject->GetComponent<CTextComponent>()->SetText(::to_wstring(LoadingText));
 	}
 }

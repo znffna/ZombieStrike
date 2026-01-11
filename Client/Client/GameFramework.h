@@ -16,6 +16,27 @@
 #include "TitleScene.h"
 #include "TestScene.h"
 
+struct CLoadInfo
+{
+	ESceneBuildState buildstate;
+
+	UINT m_nMeshCount;
+	UINT m_nMaterialCount;
+
+	UINT m_nPrevMeshLoaded;
+	UINT m_nPrevMaterialLoaded;
+
+	UINT GetTotalResourceCount() const
+	{
+		return m_nMeshCount + m_nMaterialCount;
+	}
+
+	UINT GetPreviousLoadedCount() const
+	{
+		return m_nPrevMeshLoaded + m_nPrevMaterialLoaded;
+	}
+};
+
 struct CB_FRAMEWORK_INFO
 {
 	float					m_fCurrentTime;
@@ -167,6 +188,19 @@ public:
 	}
 	int GetSceneSize() const { return static_cast<int>(m_Scenes.size()); }
 
+	CLoadInfo GetSceneLoadInfo() const {
+		CLoadInfo loadInfo{};
+		// CPU Info
+		loadInfo.buildstate = m_SceneBuildState.load();
+
+		// GPU Info
+		loadInfo.m_nMeshCount = m_nRegisterMeshCount;
+		loadInfo.m_nMaterialCount = m_nRegisterMaterialCount;
+		loadInfo.m_nPrevMeshLoaded = m_nPrevLoadedMeshCount;
+		loadInfo.m_nPrevMaterialLoaded = m_nPrevLoadedMaterialCount;
+		return loadInfo;
+	}
+
 private:
 	void ProcessSceneRequest()
 	{
@@ -270,6 +304,10 @@ private:
 	// GPU 완료 확인을 위한	카운터
 	UINT m_nRegisterMeshCount = 0;
 	UINT m_nRegisterMaterialCount = 0;
+
+	// 이전 Scene까지 로드한 리소스 카운터
+	UINT m_nPrevLoadedMeshCount = 0;
+	UINT m_nPrevLoadedMaterialCount = 0;
 
 
 	// Scene Transition

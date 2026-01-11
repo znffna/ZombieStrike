@@ -156,10 +156,10 @@ void CResourceManager::ProcessMaterialUpload(ID3D12Device* pd3dDevice, ID3D12Gra
 {
 	for (auto& pMaterial : m_MaterialUploadList)
 	{
-		{
+		/*{
 			std::string debugname = "Processing Material Upload: " + pMaterial->GetName() + "\n";
 			OutputDebugStringA(debugname.c_str());
-		}
+		}*/
 		pMaterial->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 }
