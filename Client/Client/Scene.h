@@ -35,7 +35,8 @@ enum class ESceneBuildState : uint8_t
 	Idle,
 	Requested,
 	Building,
-	Completed,
+	CPU_Completed,
+	All_Completed,
 	Failed
 };
 
@@ -46,7 +47,7 @@ constexpr const std::string to_string(const ESceneBuildState& type)
 	case ESceneBuildState::Idle:  return "Idle";
 	case ESceneBuildState::Requested:  return "Requested";
 	case ESceneBuildState::Building:   return "Building";
-	case ESceneBuildState::Completed:   return "Completed";
+	case ESceneBuildState::All_Completed:   return "Completed";
 	case ESceneBuildState::Failed: return "Failed";
 	default:                 return "Unknown";
 	}
@@ -59,7 +60,7 @@ constexpr const std::wstring to_wstring(const ESceneBuildState& type)
 	case ESceneBuildState::Idle:  return L"Idle";
 	case ESceneBuildState::Requested:  return L"Requested";
 	case ESceneBuildState::Building:   return L"Building";
-	case ESceneBuildState::Completed:   return L"Completed";
+	case ESceneBuildState::All_Completed:   return L"Completed";
 	case ESceneBuildState::Failed: return L"Failed";
 	default:                 return L"Unknown";
 	}

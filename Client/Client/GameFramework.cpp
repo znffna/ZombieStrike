@@ -1030,13 +1030,17 @@ void CGameFramework::BuildSceneMadeThread()
 
 			if (false == isWorked) break;
 
+			m_nRegisterMeshCount = CResourceManager::Instance().m_nRegisterMeshCount.load();
+			m_nRegisterMaterialCount = CResourceManager::Instance().m_nRegisterMaterialCount.load();
+
+			// GPU까지 끝났기 때문에 씬을 변경한다.
 			{
 				std::lock_guard<std::mutex> lock(m_BuiltSceneMutex);
 				m_BuiltScene = std::move(newScene);
 			}
 
 			m_SceneBuildState.store(
-				ESceneBuildState::Completed,
+				ESceneBuildState::CPU_Completed,
 				std::memory_order_release);
 
 			OutputDebugString(L"Scene 생성 스레드 완료.\n");
@@ -1112,7 +1116,28 @@ void CGameFramework::HandleSceneBuildState()
 		// 로딩 씬 출력
 		break;
 
-	case ESceneBuildState::Completed:
+	case ESceneBuildState::CPU_Completed:
+		// GPU 단계 대기 중
+		{
+			auto nUploadMeshCount = CResourceManager::Instance().m_nUploadMeshCount.load();
+			auto nUploadMaterialCount = CResourceManager::Instance().m_nUploadMaterialCount.load();
+
+			{
+				std::wstring debug = L"[HandleSceneBuildState] CPU_Completed Mesh:" + std::to_wstring(nUploadMeshCount) + L"/ " + std::to_wstring(m_nRegisterMeshCount) + L"개 완료\n";
+				debug += L"[HandleSceneBuildState] CPU_Completed Material:" + std::to_wstring(nUploadMaterialCount) + L"/ " + std::to_wstring(m_nRegisterMaterialCount) + L"개 완료\n";
+				OutputDebugString(debug.data());
+			}
+
+			if (nUploadMeshCount >= m_nRegisterMeshCount && nUploadMaterialCount >= m_nRegisterMaterialCount)
+			{
+				m_SceneBuildState.store(
+					ESceneBuildState::All_Completed,
+					std::memory_order_release);
+				[[fallthrough]];
+			}
+			else break;
+		}
+	case ESceneBuildState::All_Completed:
 		{
 			std::wstring debug = L"[HandleSceneBuildState]" + m_BuiltScene->GetSceneName() + L" 빌드 완료.\n";
 			OutputDebugString(debug.data());

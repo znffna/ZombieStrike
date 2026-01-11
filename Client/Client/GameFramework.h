@@ -267,6 +267,11 @@ private:
 	std::unique_ptr<CScene> m_BuiltScene;
 	std::mutex m_BuiltSceneMutex;
 
+	// GPU 완료 확인을 위한	카운터
+	UINT m_nRegisterMeshCount = 0;
+	UINT m_nRegisterMaterialCount = 0;
+
+
 	// Scene Transition
 	std::atomic<ESceneRequestState>							 m_RequestState{ ESceneRequestState::Idle };
 	std::optional<SceneRequest>								 m_PendingRequest;

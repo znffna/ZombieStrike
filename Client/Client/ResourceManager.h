@@ -150,22 +150,41 @@ public:
 
 	std::mutex m_UploadMutex; // Upload List에 대한 Mutex
 
-	void SwapRegisterContainer()
+	void CollectRegister(int maxcount)
 	{
 		std::lock_guard<std::mutex> lock(m_UploadMutex);
-		// Mesh Upload List 교체
-		std::swap(m_MeshRegisterBuffer, m_MeshUploadList);
-		// Material Upload List 교체
-		std::swap(m_MaterialRegisterBuffer, m_MaterialUploadList);
-	}
+		// Mesh Upload List 일부 추출
+		//std::swap(m_MeshRegisterBuffer, m_MeshUploadList);
+		{
+			int count{};
+			while (false == m_MeshRegisterBuffer.empty() && count < maxcount)
+			{
+				m_MeshUploadList.push_back(m_MeshRegisterBuffer.back());
+				m_MeshRegisterBuffer.pop_back();
+				++count;
+			}
 
+			m_nUploadMeshCount.fetch_add(count);
+		}
+		// Material Upload List 교체
+		//std::swap(m_MaterialRegisterBuffer, m_MaterialUploadList);
+		{
+			int count{};
+			while (false == m_MaterialRegisterBuffer.empty() && count < maxcount)
+			{
+				m_MaterialUploadList.push_back(m_MaterialRegisterBuffer.back());
+				m_MaterialRegisterBuffer.pop_back();
+				++count;
+			}
+			m_nUploadMaterialCount.fetch_add(count);
+		}
+	}
 	void ProcessRegistries(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 	{
-		SwapRegisterContainer();
+		CollectRegister(8);
 		ProcessMeshUpload(pd3dDevice, pd3dCommandList);
 		ProcessMaterialUpload(pd3dDevice, pd3dCommandList);
 	}
-
 	void ReleaseUploadBuffers()
 	{
 		ReleaseMeshUploadBuffers();
@@ -179,7 +198,9 @@ public:
 	void ProcessMeshUpload(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseMeshUploadBuffers();
 
-	std::vector<CMesh*> m_MeshRegisterBuffer;
+	std::atomic<UINT> m_nRegisterMeshCount = 0;
+	std::atomic<UINT> m_nUploadMeshCount = 0;
+	std::deque<CMesh*> m_MeshRegisterBuffer;
 	std::vector<CMesh*> m_MeshUploadList;
 	
 	// ----------------------------------------
@@ -189,6 +210,8 @@ public:
 	void ProcessMaterialUpload(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseMaterialUploadBuffers();
 
-	std::vector<CMaterial*> m_MaterialRegisterBuffer;
+	std::atomic<UINT> m_nRegisterMaterialCount = 0;
+	std::atomic<UINT> m_nUploadMaterialCount = 0;
+	std::deque<CMaterial*> m_MaterialRegisterBuffer;
 	std::vector<CMaterial*> m_MaterialUploadList;
 };

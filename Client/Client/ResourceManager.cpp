@@ -111,6 +111,9 @@ std::shared_ptr<CMesh> CResourceManager::GetMesh(const std::string& name) {
 // ----------------------------------------
 void CResourceManager::RegisterMeshUpload(CMesh* pMesh)
 {
+	// 등록 갯수 증가
+	m_nRegisterMeshCount.fetch_add(1);
+
 	std::lock_guard<std::mutex> lock(m_UploadMutex);
 	m_MeshRegisterBuffer.push_back(pMesh);
 }
@@ -142,6 +145,9 @@ void CResourceManager::ReleaseMeshUploadBuffers()
 // ----------------------------------------
 void CResourceManager::RegisterMaterialUpload(CMaterial* pMaterial)
 {
+	// 등록 갯수 증가
+	m_nRegisterMaterialCount.fetch_add(1);
+
 	std::lock_guard<std::mutex> lock(m_UploadMutex);
 	m_MaterialRegisterBuffer.push_back(pMaterial);
 }
