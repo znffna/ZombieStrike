@@ -100,6 +100,9 @@ void CGameFramework::OnDestroy()
 	m_Scenes.clear();
 	m_pLoadingScene.reset();
 
+	// Cursor 관련 요소 제거
+	if (m_pCursorSprite) m_pCursorSprite.reset();
+
 	// 전역 리소스 업로드 컨텍스트를 해제한다.
 	ReleaseDefaultObjects();
 
@@ -126,6 +129,7 @@ void CGameFramework::OnDestroy()
 	if (m_pd3dDevice) m_pd3dDevice.Reset();
 	if (m_pdxgiFactory) m_pdxgiFactory.Reset();
 #ifdef _DEBUG
+	// ReportLiveObjects();
 	if (m_pd3dDebugController) m_pd3dDebugController.Reset();
 #endif
 
@@ -493,8 +497,9 @@ void CGameFramework::BuildObjects()
 
 	// m_Scenes.push_back(std::move(BuildScene<CTestScene>(CUploadContext::Instance())));
 
-	// RequestBuildScene<CTitleScene>();
-	RequestBuildScene<CTestScene>();
+	SceneRequest newReq{ CPushScene(TypeTag<CTestScene>{})};
+	RequestSceneChange(newReq);
+	// RequestBuildScene<CTestScene>();
 
 	// m_Scenes.push_back(std::move(BuildScene<CTitleScene>(CUploadContext)));
 }
@@ -539,16 +544,14 @@ void CGameFramework::AdvanceFrame()
 	requestState == ESceneRequestState::Processing ? pCurrentScene = m_pLoadingScene.get() : pCurrentScene = GetCurrentScene();
 
 	// 현재 Scene이 없고, 생성중이 아닐 시 종료
-	if(false){
-		if (m_Scenes.empty() && requestState == ESceneRequestState::Idle)
+	if (m_Scenes.empty() && requestState == ESceneRequestState::Idle)
+	{
 		{
-			{
-				// AdvanceFrame 종료 진단 로그
-				OutputDebugStringA("[AdvanceFrame] No current scene. Exiting.\n");
-			}
-			PostQuitMessage(0);
-			return;
+			// AdvanceFrame 종료 진단 로그
+			OutputDebugStringA("[AdvanceFrame] No current scene. Exiting.\n");
 		}
+		PostQuitMessage(0);
+		return;
 	}
 
 	// Update

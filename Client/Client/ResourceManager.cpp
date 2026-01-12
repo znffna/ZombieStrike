@@ -48,6 +48,9 @@ void CResourceManager::ReleaseResources() {
 	ModelInfos.clear();
 	TextureInfos.clear();
 	MeshInfos.clear();
+
+	// Shader Resource Release
+	ShaderInfos.clear();
 }
 
 // ----------------------------------------
