@@ -273,46 +273,64 @@ void CStandardMesh::LoadMeshFromFile(std::ifstream& File)
 void CStandardMesh::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	// Create Position Buffer
-	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+	if(!m_pxmf3Positions.empty())
+	{
+		m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
 
-	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
-	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
-	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+		m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+		m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+		m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+	}
 
 	// Create TextureCoord0 Buffer
-	m_pd3dTextureCoord0Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0.data(), sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord0UploadBuffer);
+	if (!m_pxmf2TextureCoords0.empty())
+	{
+		m_pd3dTextureCoord0Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0.data(), sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord0UploadBuffer);
 
-	m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
-	m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
-	m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+		m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
+		m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
+		m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+	}
 
 	// Create TextureCoord1 Buffer
-	m_pd3dTextureCoord1Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords1.data(), sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord1UploadBuffer);
+	if (!m_pxmf2TextureCoords1.empty())
+	{
+		m_pd3dTextureCoord1Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords1.data(), sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord1UploadBuffer);
 
-	m_d3dTextureCoord1BufferView.BufferLocation = m_pd3dTextureCoord1Buffer->GetGPUVirtualAddress();
-	m_d3dTextureCoord1BufferView.StrideInBytes = sizeof(XMFLOAT2);
-	m_d3dTextureCoord1BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+		m_d3dTextureCoord1BufferView.BufferLocation = m_pd3dTextureCoord1Buffer->GetGPUVirtualAddress();
+		m_d3dTextureCoord1BufferView.StrideInBytes = sizeof(XMFLOAT2);
+		m_d3dTextureCoord1BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+	}
 	
 	// Create Normal Buffer
-	m_pd3dNormalBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Normals.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dNormalUploadBuffer);
+	if (!m_pxmf3Normals.empty())
+	{
+		m_pd3dNormalBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Normals.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dNormalUploadBuffer);
 
-	m_d3dNormalBufferView.BufferLocation = m_pd3dNormalBuffer->GetGPUVirtualAddress();
-	m_d3dNormalBufferView.StrideInBytes = sizeof(XMFLOAT3);
-	m_d3dNormalBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+		m_d3dNormalBufferView.BufferLocation = m_pd3dNormalBuffer->GetGPUVirtualAddress();
+		m_d3dNormalBufferView.StrideInBytes = sizeof(XMFLOAT3);
+		m_d3dNormalBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+	}
 
 	// Create Tangent Buffer
-	m_pd3dTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Tangents.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTangentUploadBuffer);
+	if (!m_pxmf3Tangents.empty())
+	{
+		m_pd3dTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Tangents.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTangentUploadBuffer);
 
-	m_d3dTangentBufferView.BufferLocation = m_pd3dTangentBuffer->GetGPUVirtualAddress();
-	m_d3dTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
-	m_d3dTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+		m_d3dTangentBufferView.BufferLocation = m_pd3dTangentBuffer->GetGPUVirtualAddress();
+		m_d3dTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
+		m_d3dTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+	}
 
 	// Create BiTangent Buffer
-	m_pd3dBiTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3BiTangents.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dBiTangentUploadBuffer);
+	if (!m_pxmf3BiTangents.empty())
+	{
+		m_pd3dBiTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3BiTangents.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dBiTangentUploadBuffer);
 
-	m_d3dBiTangentBufferView.BufferLocation = m_pd3dBiTangentBuffer->GetGPUVirtualAddress();
-	m_d3dBiTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
-	m_d3dBiTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+		m_d3dBiTangentBufferView.BufferLocation = m_pd3dBiTangentBuffer->GetGPUVirtualAddress();
+		m_d3dBiTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
+		m_d3dBiTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+	}
 
 	// Create SubSet Index Buffers
 	for (UINT i = 0; i < m_nSubMeshes; i++)
@@ -366,7 +384,73 @@ void CStandardMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubS
 	}
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//
 
+CQuadMesh::CQuadMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fWidth, float fHeight)
+	: CStandardMesh(pd3dDevice, pd3dCommandList)
+{
+	// position
+	m_nVertices = 4;
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+
+	float halfWidth = fWidth * 0.5f;
+	float halfHeight = fHeight * 0.5f;
+	std::vector<XMFLOAT3> xmf3Positions = {
+		{-halfWidth, -halfHeight, 0.0f},
+		{ halfWidth, -halfHeight, 0.0f},
+		{-halfWidth,  halfHeight, 0.0f},
+		{ halfWidth,  halfHeight, 0.0f}
+	};
+	m_pxmf3Positions = std::move(xmf3Positions);
+
+	// index buffer
+	m_ppnSubSetIndices.resize(1);
+	m_ppnSubSetIndices[0] = { 0, 1, 2, 3 };
+
+	// normal
+	std::vector<XMFLOAT3> pxmf3Normals = {
+		{0.0f, 0.0f, -1.0f},
+		{0.0f, 0.0f, -1.0f},
+		{0.0f, 0.0f, -1.0f},
+		{0.0f, 0.0f, -1.0f}
+	};
+	m_pxmf3Normals = std::move(pxmf3Normals);
+
+	// texture coord
+	std::vector<XMFLOAT2> pxmf2TextureCoords0 = {
+		{0.0f, 1.0f},
+		{1.0f, 1.0f},
+		{0.0f, 0.0f},
+		{1.0f, 0.0f}
+	};
+
+	m_pxmf2TextureCoords0 = std::move(pxmf2TextureCoords0);
+
+	// tangent
+	std::vector<XMFLOAT3> pxmf3Tangents = {
+		{1.0f, 0.0f, 0.0f},
+		{1.0f, 0.0f, 0.0f},
+		{1.0f, 0.0f, 0.0f},
+		{1.0f, 0.0f, 0.0f}
+	};
+
+	m_pxmf3Tangents = std::move(pxmf3Tangents);
+
+	// bitangent
+	std::vector<XMFLOAT3> pxmf3BiTangents = {
+		{0.0f, 1.0f, 0.0f},
+		{0.0f, 1.0f, 0.0f},
+		{0.0f, 1.0f, 0.0f},
+		{0.0f, 1.0f, 0.0f}
+	};
+
+	m_pxmf3BiTangents = std::move(pxmf3BiTangents);
+}
+
+CQuadMesh::~CQuadMesh()
+{
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -1120,43 +1204,128 @@ void CSkinnedMesh::UpdateSkinningBoneTransforms(std::vector<XMFLOAT4X4>& pxmf4x4
 //
 
 CSphereMesh::CSphereMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fRadius, int nSlices, int nStacks)
-	: CMesh(pd3dDevice, pd3dCommandList)
+	: CStandardMesh(pd3dDevice, pd3dCommandList)
 {
-	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+	// 최소 값 보정
+	if (nSlices < 3) nSlices = 3;
+	if (nStacks < 2) nStacks = 2;
 
-	std::ifstream pInFile("SphereCollider.bin", std::ios::binary);
-	if (!pInFile.is_open())
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	// 로컬 버퍼들
+	std::vector<XMFLOAT3> xmf3Positions;
+	std::vector<XMFLOAT3> xmf3Normals;
+	std::vector<XMFLOAT3> xmf3Tangents;
+	std::vector<XMFLOAT3> xmf3BiTangents;
+	std::vector<XMFLOAT2> xmf2TextureCoords;
+	std::vector<UINT> pnIndices;
+
+	float phiStep = XM_PI / nStacks;					// 위도 (0..PI)
+	float thetaStep = 2.0f * XM_PI / nSlices;		// 경도 (0..2PI)
+
+	// 정점 생성: (nStacks + 1) x (nSlices + 1) (wrap을 위해 +1)
+	int nVerticesPerRow = nSlices + 1;
+	int nVertexCount = (nStacks + 1) * nVerticesPerRow;
+	xmf3Positions.reserve(nVertexCount);
+	xmf3Normals.reserve(nVertexCount);
+	xmf3Tangents.reserve(nVertexCount);
+	xmf3BiTangents.reserve(nVertexCount);
+	xmf2TextureCoords.reserve(nVertexCount);
+
+	for (int i = 0; i <= nStacks; ++i)
 	{
-		MessageBox(0, L"SphereCollider.bin not found", L"Error", MB_OK);
-		return;
+		float phi = i * phiStep;					// 0..PI
+		float cosPhi = cosf(phi);
+		float sinPhi = sinf(phi);
+
+		for (int j = 0; j <= nSlices; ++j)
+		{
+			float theta = j * thetaStep;			// 0..2PI
+			float cosTheta = cosf(theta);
+			float sinTheta = sinf(theta);
+
+			// position
+			float x = fRadius * sinPhi * cosTheta;
+			float y = fRadius * cosPhi;
+			float z = fRadius * sinPhi * sinTheta;
+			XMFLOAT3 position = XMFLOAT3(x, y, z);
+			xmf3Positions.push_back(position);
+
+			// normal (정규화된 위치 벡터)
+			XMVECTOR vPos = XMVectorSet(x, y, z, 0.0f);
+			XMVECTOR vNormal = XMVector3Normalize(vPos);
+			XMFLOAT3 normal;
+			XMStoreFloat3(&normal, vNormal);
+			xmf3Normals.push_back(normal);
+
+			// tangent: ∂P/∂θ = r * sin(phi) * (-sinθ, 0, cosθ)
+			XMVECTOR vT = XMVectorSet(-fRadius * sinPhi * sinTheta, 0.0f, fRadius * sinPhi * cosTheta, 0.0f);
+			float tlen = XMVectorGetX(XMVector3Length(vT));
+			if (tlen > 1e-6f)
+			{
+				vT = XMVector3Normalize(vT);
+			}
+			else
+			{
+				// 극지방(폴)에서의 fallback tangent
+				vT = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+			}
+			XMFLOAT3 tangent;
+			XMStoreFloat3(&tangent, vT);
+			xmf3Tangents.push_back(tangent);
+
+			// bitangent = cross(normal, tangent) (정규화)
+			XMVECTOR vB = XMVector3Cross(vNormal, vT);
+			vB = XMVector3Normalize(vB);
+			XMFLOAT3 bitangent;
+			XMStoreFloat3(&bitangent, vB);
+			xmf3BiTangents.push_back(bitangent);
+
+			// UV0, UV1 (UV1을 동일하게 복사)
+			float u = (float)j / (float)nSlices;		// 0..1
+			float v = 1.0f - (float)i / (float)nStacks; // 위/아래 텍스처 정렬을 기존 코드 스타일에 맞춰 뒤집음
+			xmf2TextureCoords.push_back(XMFLOAT2(u, v));
+		}
 	}
 
-	pInFile.read((char*)&m_nVertices, sizeof(UINT));
+	// 인덱스 생성 (triangle list)
+	for (int i = 0; i < nStacks; ++i)
+	{
+		for (int j = 0; j < nSlices; ++j)
+		{
+			UINT first = (UINT)(i * nVerticesPerRow + j);
+			UINT second = (UINT)(first + nVerticesPerRow);
 
-	m_pxmf3Positions.resize(m_nVertices);
-	pInFile.read((char*)m_pxmf3Positions.data(), sizeof(XMFLOAT3) * m_nVertices);
+			// triangle 1
+			pnIndices.push_back(first);
+			pnIndices.push_back(second);
+			pnIndices.push_back(first + 1);
 
-	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+			// triangle 2
+			pnIndices.push_back(first + 1);
+			pnIndices.push_back(second);
+			pnIndices.push_back(second + 1);
+		}
+	}
 
-	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
-	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
-	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+	// 멤버에 이동(생성한 데이터 연결)
+	m_nVertices = (UINT)xmf3Positions.size();
+	m_pxmf3Positions = std::move(xmf3Positions);
+	m_pxmf3Normals = std::move(xmf3Normals);
+	m_pxmf3Tangents = std::move(xmf3Tangents);
+	m_pxmf3BiTangents = std::move(xmf3BiTangents);
+	m_pxmf2TextureCoords0 = std::move(xmf2TextureCoords);
+	m_pxmf2TextureCoords1 = m_pxmf2TextureCoords0; // UV1을 동일하게 사용
+
+	// subset / index 설정
 
 	SetSubMeshCount(1);
+	m_ppnSubSetIndices[0] = std::move(pnIndices);
 
-	for (UINT i = 0; i < m_nSubMeshes; i++)
-	{
-		UINT nIndices = ReadIntegerFromFile(pInFile);
-
-		m_ppnSubSetIndices[i].resize(nIndices);
-		pInFile.read((char*)m_ppnSubSetIndices[i].data(), sizeof(UINT) * nIndices);
-
-		m_ppd3dSubSetIndexBuffers[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[i].data(), sizeof(UINT) * (UINT)m_ppnSubSetIndices[i].size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[i]);
-
-		m_pd3dSubSetIndexBufferViews[i].BufferLocation = m_ppd3dSubSetIndexBuffers[i]->GetGPUVirtualAddress();
-		m_pd3dSubSetIndexBufferViews[i].Format = DXGI_FORMAT_R32_UINT;
-		m_pd3dSubSetIndexBufferViews[i].SizeInBytes = (UINT)(sizeof(UINT) * m_ppnSubSetIndices[i].size());
-	}
+	// AABB / BoundingBox 설정
+	m_xmf3AABBCenter = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	m_xmf3AABBExtents = XMFLOAT3(fRadius, fRadius, fRadius);
+	m_xmBoundingBox = BoundingBox(m_xmf3AABBCenter, m_xmf3AABBExtents);
 }
 
 CSphereMesh::~CSphereMesh()
@@ -1404,3 +1573,4 @@ void CBulletMesh::AddBullets(const std::vector<CBulletVertex>& Bullets)
 	// 정점 갯수를 증가시킨다.
 	::gnCurrentBullets = m_nVertices = (m_nVertices + Bullets.size());
 }
+

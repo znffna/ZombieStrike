@@ -105,7 +105,8 @@ void CLoadingScene::Update(float fTimeElapsed)
 		}
 		else
 		{
-			LoadingText += "   " + std::to_string(cpuratio * 0.5f + gpuratio * 0.5f) + "%";
+			// LoadingText += "   " + std::to_string(cpuratio * 0.5f + gpuratio * 0.5f) + "%";
+			LoadingText += "   " + std::format("{:.2f}", cpuratio * 0.5f + gpuratio * 0.5f) + "%";
 		}
 
 		m_pTextObject->GetComponent<CTextComponent>()->SetText(::to_wstring(LoadingText));

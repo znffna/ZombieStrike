@@ -16,11 +16,10 @@ void CTitleScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 		pd3dRootSignature = m_pd3dGraphicsRootSignature.Get();
 	}
 
-	//std::shared_ptr<CMesh> pRectangleMesh = CResourceManager::Instance().GetMesh("UI");
-	//
-	//std::shared_ptr<CShader> pUIShader = std::make_shared<CTextureToViewportShader>(nullptr);
-	//pUIShader->CreateShader(pd3dDevice, pd3dRootSignature);
+	auto pRectangleMesh = CResourceManager::Instance().GetMesh("Quad");
 
+	// UI Shader
+	auto pQuadShader = CResourceManager::Instance().GetShader<CTextureToViewportShader>();
 
 	//// Title / Background
 	//{

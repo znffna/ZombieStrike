@@ -310,6 +310,13 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 //
 
+class CQuadMesh : public CStandardMesh
+{
+public:
+	CQuadMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fWidth = 2.0f, float fHeight = 2.0f);
+	virtual ~CQuadMesh();
+};
+
 class CCubeMesh : public CStandardMesh
 {
 public:
@@ -317,7 +324,7 @@ public:
 	virtual ~CCubeMesh();
 };
 
-class CSphereMesh : public CMesh
+class CSphereMesh : public CStandardMesh
 {
 public:
 	CSphereMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fRadius = 1.0f, int nSlices = 16, int nStacks = 16);

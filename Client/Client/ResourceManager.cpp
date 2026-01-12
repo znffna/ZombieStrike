@@ -4,14 +4,43 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-void CResourceManager::Initialize(ID3D12RootSignature* rootsignature) {
-	m_d3dGraphicRootSignature = rootsignature;
-	LoadModelList();
-}
-
 void CResourceManager::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList, ID3D12RootSignature* rootsignature) {
 	m_d3dGraphicRootSignature = rootsignature;
+	CreateDefaultMesh(pd3dDevice, pd3dCommnadList);
 	LoadModelList(pd3dDevice, pd3dCommnadList);
+}
+
+void CResourceManager::CreateDefaultMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList)
+{
+	CreateDefualtQuad(pd3dDevice, pd3dCommnadList);
+	CreateDefaultCube(pd3dDevice, pd3dCommnadList);
+	CreateDefualtSphere(pd3dDevice, pd3dCommnadList);
+}
+
+void CResourceManager::CreateDefualtQuad(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList)
+{
+	// Quad Mesh 생성
+	auto pMesh = std::make_shared<CQuadMesh>(pd3dDevice, pd3dCommnadList);
+	pMesh->SetName("Quad");
+	SetMesh("Quad", pMesh);
+	CResourceManager::Instance().RegisterMeshUpload(pMesh.get());
+}
+
+void CResourceManager::CreateDefaultCube(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList)
+{
+	// Cube Mesh 생성
+	auto pMesh = std::make_shared<CCubeMesh>(pd3dDevice, pd3dCommnadList);
+	pMesh->SetName("Cube");
+	SetMesh("Cube", pMesh);
+	CResourceManager::Instance().RegisterMeshUpload(pMesh.get());
+}
+
+void CResourceManager::CreateDefualtSphere(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList)
+{
+	auto pMesh = std::make_shared<CSphereMesh>(pd3dDevice, pd3dCommnadList);
+	pMesh->SetName("Sphere");
+	SetMesh("Sphere", pMesh);
+	CResourceManager::Instance().RegisterMeshUpload(pMesh.get());
 }
 
 // 모든 리소스 해제
@@ -21,8 +50,9 @@ void CResourceManager::ReleaseResources() {
 	MeshInfos.clear();
 }
 
-////////////////////////////////////////////
+// ----------------------------------------
 // 텍스쳐 정보를 저장
+// ----------------------------------------
 void CResourceManager::SetTexture(const std::string& name, std::shared_ptr<CTexture> texture) {
 	if (texture == nullptr) return;
 	TextureInfos[name] = texture;
@@ -94,7 +124,9 @@ inline CLoadedModelInfo* CResourceManager::GetModelInfo(const std::string& name)
 	return ret;
 }
 
+// ----------------------------------------
 // 메쉬 정보를 저장
+// ----------------------------------------
 void CResourceManager::SetMesh(const std::string& name, std::shared_ptr<CMesh> pMesh) {
 	MeshInfos[name] = pMesh;
 }
@@ -105,6 +137,10 @@ std::shared_ptr<CMesh> CResourceManager::GetMesh(const std::string& name) {
 	}
 	return nullptr;
 }
+
+// ----------------------------------------
+// 셰이더 정보를 저장
+// ----------------------------------------
 
 // ----------------------------------------
 // Mesh Upload 처리
@@ -125,6 +161,11 @@ void CResourceManager::ProcessMeshUpload(ID3D12Device* pd3dDevice, ID3D12Graphic
 		{
 			std::string debugname = "Processing Mesh Upload: " + pMesh->GetName() + "\n";
 			OutputDebugStringA(debugname.c_str());
+		}
+
+		if (pMesh->GetName() == "Sphere")
+		{
+			int a = 0;
 		}
 		pMesh->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
@@ -172,5 +213,25 @@ void CResourceManager::ReleaseMaterialUploadBuffers()
 		pMaterial->ReleaseUploadBuffers();
 	}
 	m_MaterialUploadList.clear();
+}
+
+void CResourceManager::RegisterShaderUpload(CShader* pShader)
+{
+	std::lock_guard<std::mutex> lock(m_UploadMutex);
+	m_ShaderRegisterBuffer.push_back(pShader);
+}
+
+void CResourceManager::ProcessShaderCreate(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	for (auto& pShader : m_ShaderToCreateList)
+	{
+		{
+			std::string debugname = "Processing Shader Upload: " + to_string(pShader->GetShaderName()) + "\n";
+			OutputDebugStringA(debugname.c_str());
+		}
+		pShader->CreateShader(pd3dDevice, m_d3dGraphicRootSignature);
+	}
+
+	m_ShaderToCreateList.clear();
 }
 

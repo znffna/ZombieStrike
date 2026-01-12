@@ -443,7 +443,7 @@ bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
 bool CScene::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	if (m_pDepthRenderShader) {
-		m_pDepthRenderShader->PrepareShadowMap(pd3dCommandList, pCamera);
+		m_pDepthRenderShader->PrepareShadowMap(pd3dCommandList, pCamera, this);
 		return true;
 	}
 	return false;
@@ -486,19 +486,6 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 			pObject->Render(pd3dCommandList, pCamera, false);
 		}
 	}
-
-	/*if (m_pPlayer)
-	{
-		m_pPlayer->Update(m_fElapsedTime);
-		if (!m_pPlayer->m_pSkinnedAnimationController) m_pPlayer->UpdateTransform(NULL);
-		m_pPlayer->Render(pd3dCommandList, pCamera);
-	}*/
-
-	// Render SkyBox
-	/*if (m_pSkyBox)
-	{
-		m_pSkyBox->Render(pd3dCommandList, pCamera);
-	}*/
 
 	if (m_pShadowMapToViewport)
 	{

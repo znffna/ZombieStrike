@@ -20,6 +20,8 @@ CShader::~CShader()
 
 void CShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
+	if (b_Initialized) return;
+
 	// Resize Pipeline State Vector
 	m_pd3dPipelineStates.resize(m_nPipelineStates);
 
@@ -32,6 +34,8 @@ void CShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGr
 		// Create Shadow Pipeline State
 		CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, m_nPipelineStates, true);
 	}
+
+	b_Initialized = true;
 }
 
 void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState, bool bDepthWrite)
@@ -1072,8 +1076,8 @@ D3D12_SHADER_BYTECODE CIlluminatedShader::CreatePixelShader(int nPipelineState)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-CDepthRenderShader::CDepthRenderShader(CScene* pScene)
-	: CSkinnedAnimationStandardShader(), m_pScene(pScene), m_pd3dcbToLightSpaces(nullptr), m_pcbMappedToLightSpaces(nullptr)
+CDepthRenderShader::CDepthRenderShader()
+	: CSkinnedAnimationStandardShader(), m_pd3dcbToLightSpaces(nullptr), m_pcbMappedToLightSpaces(nullptr)
 {
 	m_bAllowShadow = false;
 
@@ -1286,7 +1290,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	//CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, m_pDepthFromLightTexture->GetTextures());
 	//CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture.get(), 0, ROOT_PARAMETER_DEPTH_WRITE);
 	//m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->SetName(L"CDepthRenderShader::DescriptorHeap(CBV/SRV Heap)");
-	m_pScene->CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture.get(), 0, ROOT_PARAMETER_DEPTH_WRITE);
+	CScene::CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture.get(), 0, ROOT_PARAMETER_DEPTH_WRITE);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
@@ -1656,12 +1660,12 @@ XMMATRIX CreateOrthographicProjectionMatrix(XMMATRIX& xmmtxLightView, CCamera* p
 	return(xmmtxProjection);
 }
 
-void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene)
 {
-	if (!m_pScene) return;
+	if (!pScene) return;
 
-	BoundingBox xmBoundingBox = m_pScene->CalculateBoundingBox();
-	auto pLights = m_pScene->GetLights();
+	BoundingBox xmBoundingBox = pScene->CalculateBoundingBox();
+	auto pLights = pScene->GetLights();
 
 	for (int j = 0; j < MAX_LIGHTS; j++)
 	{
@@ -1706,7 +1710,7 @@ void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommand
 			pd3dCommandList->ClearDepthStencilView(m_d3dDsvDescriptorCPUHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, NULL);
 			pd3dCommandList->OMSetRenderTargets(1, &m_pd3dRtvCPUDescriptorHandles[j], TRUE, &m_d3dDsvDescriptorCPUHandle);
 
-			Render(pd3dCommandList, m_ppDepthRenderCameras[j].get());
+			Render(pd3dCommandList, m_ppDepthRenderCameras[j].get(), pScene);
 
 			::SynchronizeResourceTransition(pd3dCommandList, m_pDepthFromLightTexture->GetResource(j), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON);
 		}
@@ -1717,16 +1721,16 @@ void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommand
 	}
 }
 
-void CDepthRenderShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CDepthRenderShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene)
 {
+	if (!pScene) return;
+
 	CShader::OnPrepareRender(pd3dCommandList, 0, false);
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
-	if (!m_pScene) return;
-
-	m_pScene->RenderDepthWrite(pd3dCommandList, pCamera);
+	pScene->RenderDepthWrite(pd3dCommandList, pCamera);
 }
 
 std::shared_ptr<CTexture> CDepthRenderShader::GetDepthTexture()
@@ -1742,8 +1746,8 @@ ID3D12Resource* CDepthRenderShader::GetDepthTextureResource(UINT nIndex)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-CShadowMapShader::CShadowMapShader(CScene* pScene)
-	: CSkinnedAnimationStandardShader(), m_pScene(pScene)
+CShadowMapShader::CShadowMapShader()
+	: CSkinnedAnimationStandardShader()
 {
 }
 
@@ -1820,14 +1824,14 @@ void CShadowMapShader::ReleaseObjects()
 	if (m_pDepthFromLightTexture) m_pDepthFromLightTexture.reset();
 }
 
-void CShadowMapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CShadowMapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene)
 {
-	if (!m_pScene) return;
+	if (!pScene) return;
 	CShader::Render(pd3dCommandList, pCamera);
 
 	UpdateShaderVariables(pd3dCommandList);
 
-	m_pScene->RenderDepthWrite(pd3dCommandList, pCamera);
+	pScene->RenderDepthWrite(pd3dCommandList, pCamera);
 	//m_pObjectsShader->m_pDirectionalLight->UpdateShaderVariables(pd3dCommandList);
 	//m_pObjectsShader->m_pDirectionalLight->Render(pd3dCommandList, pCamera);
 }
@@ -1835,8 +1839,8 @@ void CShadowMapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-CTextureToViewportShader::CTextureToViewportShader(CScene* pScene)
-	: CShader(), m_pScene(pScene)
+CTextureToViewportShader::CTextureToViewportShader()
+	: CShader()
 {
 	m_bAllowShadow = false;
 }

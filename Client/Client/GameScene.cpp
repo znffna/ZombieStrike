@@ -143,15 +143,15 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	//}
 	
 	// Shader
-	m_pDepthRenderShader = std::make_shared<CDepthRenderShader>(this);
+	m_pDepthRenderShader = std::make_shared<CDepthRenderShader>();
 	m_pDepthRenderShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
 	m_pDepthRenderShader->BuildObjects(pd3dDevice, pd3dCommandList);
 
-	m_pShadowShader = std::make_shared<CShadowMapShader>(this);
+	m_pShadowShader = std::make_shared<CShadowMapShader>();
 	m_pShadowShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
 	m_pShadowShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture());
 
-	m_pShadowMapToViewport = std::make_shared<CShadowToViewportShader>(this);
+	m_pShadowMapToViewport = std::make_shared<CShadowToViewportShader>();
 	m_pShadowMapToViewport->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
 	m_pShadowMapToViewport->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture());
 

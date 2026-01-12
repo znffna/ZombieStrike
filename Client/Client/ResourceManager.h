@@ -1,7 +1,7 @@
 #pragma once
 
+#include <typeindex>
 #include "GameObject.h"
-
 class CLoadedModelInfo;
 class CGameObject;
 class CMaterial;
@@ -111,19 +111,34 @@ public:
 		return instance;
 	}
 
-	void Initialize(ID3D12RootSignature* rootsignature);
 	void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList, ID3D12RootSignature* rootsignature);
+	void CreateDefaultMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList);
+
+	void CreateDefualtQuad(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList);
+	void CreateDefaultCube(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList);
+	void CreateDefualtSphere(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList);
 
 	// 모든 리소스 해제
 	void ReleaseResources();
 
-	////////////////////////////////////////////
+private:
+	// CSCene에서 상속받는다. (또는 생성을 CGameFramework에서 하고 넘겨받는다.)
+	ID3D12RootSignature* m_d3dGraphicRootSignature = nullptr;
+	
+public:
+	// ----------------------------------------
 	// 텍스쳐 정보를 저장
+	// ----------------------------------------
 	void SetTexture(const std::string& name, std::shared_ptr<CTexture> texture);
 	std::shared_ptr<CTexture> GetTexture(const std::string& name);
 
-	////////////////////////////////////////////
+private:
+	std::unordered_map<std::string, std::shared_ptr<CTexture>> TextureInfos;
+
+public:
+	// ----------------------------------------
 	// 모델 정보를 저장
+	// ----------------------------------------
 	void LoadModelList(std::string filepath = "Model/ModelList.txt");
 	void LoadModelList(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList, std::string filepath = "Model/ModelList.txt");
 
@@ -131,17 +146,56 @@ public:
 	CLoadedModelInfo* GetModelInfo(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList, const std::string& name);
 	CLoadedModelInfo* GetModelInfo(const std::string& name);
 
+private:
+	std::unordered_map<std::string, std::shared_ptr<CLoadedModelInfo>> ModelInfos;
+
+public:
+	// ----------------------------------------
 	// 메쉬 정보를 저장
+	// ----------------------------------------
 	void SetMesh(const std::string& name, std::shared_ptr<CMesh> pMesh);
 	std::shared_ptr<CMesh> GetMesh(const std::string& name);
 
 private:
-	// CSCene에서 상속받는다. (또는 생성을 CGameFramework에서 하고 넘겨받는다.)
-	ID3D12RootSignature* m_d3dGraphicRootSignature = nullptr;
-
-	std::unordered_map<std::string, std::shared_ptr<CLoadedModelInfo>> ModelInfos;
-	std::unordered_map<std::string, std::shared_ptr<CTexture>> TextureInfos;
 	std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshInfos;
+
+public:
+	// ----------------------------------------
+	// 셰이더 정보를 저장
+	// ----------------------------------------
+	template <typename TShader>
+	std::shared_ptr<CShader> GetShader()
+	{
+		static_assert(std::is_base_of_v<CShader, TShader>);
+		return GetOrCreate<TShader>();
+	}
+
+	template <typename TShader>
+	std::shared_ptr<CShader> GetOrCreate()
+	{
+		auto findIt = ShaderInfos.find(std::type_index(typeid(TShader)));
+		if (findIt != ShaderInfos.end())
+		{
+			return findIt->second;
+		}
+		return CreateShader<TShader>();
+	}
+
+	template <typename TShader>
+	std::shared_ptr<CShader> CreateShader()
+	{
+		static_assert(std::is_base_of_v<CShader, TShader>);
+
+		auto shader = std::make_shared<TShader>();
+		ShaderInfos[std::type_index(typeid(TShader))] = shader;
+		RegisterShaderUpload(shader.get());
+
+		return shader;
+	}
+
+private:
+	std::unordered_map<std::type_index, std::shared_ptr<CShader>> ShaderInfos; // typeid(TShader).hash_code(), std::shared_ptr<CShader>
+
 
 public:
 	// ----------------------------------------
@@ -159,8 +213,8 @@ public:
 			int count{};
 			while (false == m_MeshRegisterBuffer.empty() && count < maxcount)
 			{
-				m_MeshUploadList.push_back(m_MeshRegisterBuffer.back());
-				m_MeshRegisterBuffer.pop_back();
+				m_MeshUploadList.push_back(m_MeshRegisterBuffer.front());
+				m_MeshRegisterBuffer.pop_front();
 				++count;
 			}
 
@@ -172,11 +226,21 @@ public:
 			int count{};
 			while (false == m_MaterialRegisterBuffer.empty() && count < maxcount)
 			{
-				m_MaterialUploadList.push_back(m_MaterialRegisterBuffer.back());
-				m_MaterialRegisterBuffer.pop_back();
+				m_MaterialUploadList.push_back(m_MaterialRegisterBuffer.front());
+				m_MaterialRegisterBuffer.pop_front();
 				++count;
 			}
 			m_nUploadMaterialCount.fetch_add(count);
+		}
+		// Shader Create List 교체
+		{
+			int count{};
+			while (false == m_ShaderRegisterBuffer.empty())
+			{
+				m_ShaderToCreateList.push_back(m_ShaderRegisterBuffer.front());
+				m_ShaderRegisterBuffer.pop_front();
+				++count;
+			}
 		}
 	}
 	void ProcessRegistries(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -184,6 +248,7 @@ public:
 		CollectRegister(8);
 		ProcessMeshUpload(pd3dDevice, pd3dCommandList);
 		ProcessMaterialUpload(pd3dDevice, pd3dCommandList);
+		ProcessShaderCreate(pd3dDevice, pd3dCommandList);
 	}
 	void ReleaseUploadBuffers()
 	{
@@ -214,4 +279,14 @@ public:
 	std::atomic<UINT> m_nUploadMaterialCount = 0;
 	std::deque<CMaterial*> m_MaterialRegisterBuffer;
 	std::vector<CMaterial*> m_MaterialUploadList;
+
+	// ----------------------------------------
+	// Create Shader
+	// ----------------------------------------
+
+	void RegisterShaderUpload(CShader* pShader);
+	void ProcessShaderCreate(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	std::deque<CShader*> m_ShaderRegisterBuffer;
+	std::vector<CShader*> m_ShaderToCreateList;
 };

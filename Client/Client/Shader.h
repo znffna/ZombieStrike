@@ -69,8 +69,10 @@ public:
 
 	virtual void ReleaseUploadBuffers() {}
 
-
 protected:
+	// Initialization
+	bool b_Initialized = false;
+
 	// Shader Variables
 	int m_nPipelineStates = 1;
 	std::vector<ComPtr<ID3D12PipelineState>> m_pd3dPipelineStates; // [m_nPipelineStates]
@@ -278,7 +280,7 @@ struct CB_TO_LIGHTSPACES
 class CDepthRenderShader : public CSkinnedAnimationStandardShader
 {
 public:
-	CDepthRenderShader(CScene* pScene);
+	CDepthRenderShader();
 	virtual ~CDepthRenderShader();
 
 	virtual std::wstring GetShaderName() override { return L"CDepthRenderShader"; }
@@ -297,9 +299,9 @@ public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pContext = NULL);
 	virtual void ReleaseObjects();
 
-	void PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+	void PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene);
 
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene);
 
 protected:
 	std::shared_ptr<CTexture> m_pDepthFromLightTexture;
@@ -328,14 +330,12 @@ protected:
 protected:
 	int m_nDepthbufferWidth;
 	int m_nDepthbufferHeight;
-
-	CScene* m_pScene;
 };
 
 class CShadowMapShader : public CSkinnedAnimationStandardShader
 {
 public:
-	CShadowMapShader(CScene* pScene);
+	CShadowMapShader();
 	virtual ~CShadowMapShader();
 
 	virtual std::wstring GetShaderName() override { return L"CShadowMapShader"; }
@@ -355,12 +355,10 @@ public:
 
 	virtual void ReleaseUploadBuffers();
 
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene);
 
 public:
 	std::shared_ptr<CTexture> m_pDepthFromLightTexture;
-
-	CScene* m_pScene;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -368,7 +366,7 @@ public:
 class CTextureToViewportShader : public CShader
 {
 public:
-	CTextureToViewportShader(CScene* pScene);
+	CTextureToViewportShader();
 	virtual ~CTextureToViewportShader();
 
 	virtual std::wstring GetShaderName() override { return L"CTextureToViewportShader"; }
@@ -387,14 +385,12 @@ public:
 
 protected:
 	std::shared_ptr<CTexture> m_pDepthFromLightTexture;
-
-	CScene* m_pScene;
 };
 
 class CShadowToViewportShader : public CTextureToViewportShader
 {
 public:
-	CShadowToViewportShader(CScene* pScene) : CTextureToViewportShader(pScene) {};
+	CShadowToViewportShader() : CTextureToViewportShader() {};
 	virtual ~CShadowToViewportShader() {};
 
 	virtual std::wstring GetShaderName() override { return L"CShadowToViewportShader"; }

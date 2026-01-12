@@ -663,8 +663,7 @@ void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
 		m_pCursorSprite = std::make_unique<CSprite>();
 		m_pCursorSprite->Initialize(m_pd3dDevice.Get(), pd3dCommandList);
 
-		std::shared_ptr<CShader> pUIShader = std::make_shared<CTextureToViewportShader>(nullptr);
-		pUIShader->CreateShader(m_pd3dDevice.Get(), CScene::GetGraphicsRootSignature().Get());
+		auto pUIShader = CResourceManager::Instance().GetShader<CTextureToViewportShader>();
 
 		std::shared_ptr<CMesh> pRectangleMesh = CResourceManager::Instance().GetMesh("UI");
 
