@@ -55,7 +55,7 @@ public:
 	void SetTextureType(UINT nTextureType) { m_nTextureType = nTextureType; }
 
 	// Texture
-	ComPtr<ID3D12Resource> LoadOrCreateTexture(int nIndex = 0) { return m_pd3dTextures[nIndex]; }
+	ComPtr<ID3D12Resource> GetTexture(int nIndex = 0) { return m_pd3dTextures[nIndex]; }
 	void SetTexture(ComPtr<ID3D12Resource> pd3dTexture, int nIndex = 0) { m_pd3dTextures[nIndex] = pd3dTexture; }
 
 	// Getter / Setter

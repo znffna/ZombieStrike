@@ -676,7 +676,7 @@ void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
 
 			cursorTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
 			cursorTexture->LoadTextureFromDDSFile(m_pd3dDevice.Get(), pd3dCommandList, L"Image/cursor.dds", RESOURCE_TEXTURE2D, 0);
-			CScene::CreateShaderResourceViews(m_pd3dDevice.Get(), cursorTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+			CResourceManager::Instance().CreateShaderResourceViews(m_pd3dDevice.Get(), cursorTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
 			CResourceManager::Instance().SetTexture(L"Image/cursor.dds", cursorTexture);
 		}
 

@@ -7,7 +7,6 @@
 #include "Scene.h"
 #include "GameFramework.h"
 
-std::unique_ptr<CDescirptorHeap> CScene::m_pDescriptorHeap;
 ComPtr<ID3D12RootSignature> CScene::m_pd3dGraphicsRootSignature;
 ComPtr<ID3D12RootSignature> CScene::m_pd3dComputeRootSignature;
 
@@ -84,24 +83,12 @@ void CScene::DestroyFramework()
 	m_pd3dGraphicsRootSignature.Reset();
 	m_pd3dComputeRootSignature.Reset();
 
-	// Release Descriptor Heap
-	m_pDescriptorHeap->~CDescirptorHeap();
 }
 
 void CScene::CreateRootSignature(ID3D12RootSignature* pd3dRootSignature, ID3D12Device* pd3dDevice)
 {
 	if (!pd3dRootSignature) m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 	else m_pd3dGraphicsRootSignature = pd3dRootSignature;
-}
-
-void CScene::CreateDescriptorHeap(ID3D12Device* pd3dDevice)
-{
-	if (!m_pDescriptorHeap)
-	{
-		m_pDescriptorHeap = std::make_unique<CDescirptorHeap>();
-		CreateCbvSrvDescriptorHeaps(pd3dDevice, 100, 3000);
-		m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->SetName(L"CScene::m_pd3dCbvSrvDescriptorHeap");
-	}
 }
 
 void CScene::CreateStaticShader(ID3D12Device* pd3dDevice)
@@ -166,11 +153,7 @@ void CScene::ReleaseUploadBuffers()
 void CScene::InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
 	CreateRootSignature(pd3dRootSignature, pd3dDevice);
-	CreateDescriptorHeap(pd3dDevice);
 	CreateStaticShader(pd3dDevice);
-	// CreateStaticMesh(pd3dDevice, pd3dCommandList);
-
-	//CResourceManager::Instance().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 }
 
 void CScene::BuildDefaultLightsAndMaterials()
@@ -431,10 +414,9 @@ bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
 	if (false == IsSceneRunning()){	return false;}
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature.Get());
 
-	if (m_pDescriptorHeap) {
-		ID3D12DescriptorHeap* ppHeaps[] = { m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap.Get() };
-		pd3dCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-	}
+	// Set Descriptor Heap
+	CResourceManager::Instance().PrepareRender(pd3dCommandList);
+
 	UpdateShaderVariables(pd3dCommandList);
 
 	return true;
@@ -872,122 +854,6 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	if (pd3dErrorBlob) pd3dErrorBlob->Release();
 
 	return (pd3dRootSignature);
-}
-
-void CScene::CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews)
-{
-	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
-	d3dDescriptorHeapDesc.NumDescriptors = nConstantBufferViews + nShaderResourceViews; //CBVs + SRVs 
-	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	d3dDescriptorHeapDesc.NodeMask = 0;
-	pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap);
-
-	m_pDescriptorHeap->m_d3dCbvCPUDescriptorStartHandle = m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	m_pDescriptorHeap->m_d3dCbvGPUDescriptorStartHandle = m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-	m_pDescriptorHeap->m_d3dSrvCPUDescriptorStartHandle.ptr = m_pDescriptorHeap->m_d3dCbvCPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * nConstantBufferViews);
-	m_pDescriptorHeap->m_d3dSrvGPUDescriptorStartHandle.ptr = m_pDescriptorHeap->m_d3dCbvGPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * nConstantBufferViews);
-
-	m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dCbvCPUDescriptorStartHandle;
-	m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dCbvGPUDescriptorStartHandle;
-	m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dSrvCPUDescriptorStartHandle;
-	m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle = m_pDescriptorHeap->m_d3dSrvGPUDescriptorStartHandle;
-}
-
-void CScene::CreateConstantBufferViews(ID3D12Device* pd3dDevice, int nConstantBufferViews, ID3D12Resource* pd3dConstantBuffers, UINT nStride)
-{
-	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = pd3dConstantBuffers->GetGPUVirtualAddress();
-	D3D12_CONSTANT_BUFFER_VIEW_DESC d3dCBVDesc;
-	d3dCBVDesc.SizeInBytes = nStride;
-	for (int j = 0; j < nConstantBufferViews; j++)
-	{
-		d3dCBVDesc.BufferLocation = d3dGpuVirtualAddress + (nStride * j);
-		pd3dDevice->CreateConstantBufferView(&d3dCBVDesc, m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle);
-		m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-		m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-	}
-}
-
-D3D12_GPU_DESCRIPTOR_HANDLE CScene::CreateConstantBufferView(ID3D12Device* pd3dDevice, ID3D12Resource* pd3dConstantBuffer, UINT nStride)
-{
-	D3D12_CONSTANT_BUFFER_VIEW_DESC d3dCBVDesc;
-	d3dCBVDesc.SizeInBytes = nStride;
-	d3dCBVDesc.BufferLocation = pd3dConstantBuffer->GetGPUVirtualAddress();
-	pd3dDevice->CreateConstantBufferView(&d3dCBVDesc, m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle);
-	D3D12_GPU_DESCRIPTOR_HANDLE d3dCbvGPUDescriptorHandle = m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle;
-	m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-	m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-
-	return(d3dCbvGPUDescriptorHandle);
-}
-
-D3D12_GPU_DESCRIPTOR_HANDLE CScene::CreateConstantBufferView(ID3D12Device* pd3dDevice, D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress, UINT nStride)
-{
-	D3D12_CONSTANT_BUFFER_VIEW_DESC d3dCBVDesc;
-	d3dCBVDesc.SizeInBytes = nStride;
-	d3dCBVDesc.BufferLocation = d3dGpuVirtualAddress;
-	pd3dDevice->CreateConstantBufferView(&d3dCBVDesc, m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle);
-	D3D12_GPU_DESCRIPTOR_HANDLE d3dCbvGPUDescriptorHandle = m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle;
-	m_pDescriptorHeap->m_d3dCbvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-	m_pDescriptorHeap->m_d3dCbvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-	
-	return(d3dCbvGPUDescriptorHandle);
-}
-
-void CScene::CreateShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex)
-{
-	m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle.ptr += (::gnCbvSrvDescriptorIncrementSize * nDescriptorHeapIndex);
-	m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle.ptr += (::gnCbvSrvDescriptorIncrementSize * nDescriptorHeapIndex);
-
-	int nTextures = pTexture->GetTextures();
-	for (int i = 0; i < nTextures; i++)
-	{
-		ID3D12Resource* pShaderResource = pTexture->GetResource(i);
-		D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc = pTexture->GetShaderResourceViewDesc(i);
-		pd3dDevice->CreateShaderResourceView(pShaderResource, &d3dShaderResourceViewDesc, m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle);
-		m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-
-		pTexture->SetGpuDescriptorHandle(i, m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle);
-		m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-
-	}
-	int nRootParameters = pTexture->GetRootParameters();
-	for (int i = 0; i < nRootParameters; i++) pTexture->SetRootParameterIndex(i, nRootParameterStartIndex + i);
-}
-
-void CScene::CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, int nIndex, UINT nRootParameterStartIndex)
-{
-	ID3D12Resource* pShaderResource = pTexture->GetResource(nIndex);
-	D3D12_GPU_DESCRIPTOR_HANDLE d3dGpuDescriptorHandle = pTexture->GetGpuDescriptorHandle(nIndex);
-	if (pShaderResource && !d3dGpuDescriptorHandle.ptr)
-	{
-		D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc = pTexture->GetShaderResourceViewDesc(nIndex);
-		pd3dDevice->CreateShaderResourceView(pShaderResource, &d3dShaderResourceViewDesc, m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle);
-		m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-
-		pTexture->SetGpuDescriptorHandle(nIndex, m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle);
-		m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-
-		pTexture->SetRootParameterIndex(nIndex, nRootParameterStartIndex + nIndex);
-	}
-
-}
-
-void CScene::CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, int nIndex)
-{
-	ID3D12Resource* pShaderResource = pTexture->GetResource(nIndex);
-	D3D12_GPU_DESCRIPTOR_HANDLE d3dGpuDescriptorHandle = pTexture->GetGpuDescriptorHandle(nIndex);
-	if (pShaderResource && !d3dGpuDescriptorHandle.ptr)
-	{
-		D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc = pTexture->GetShaderResourceViewDesc(nIndex);
-		pd3dDevice->CreateShaderResourceView(pShaderResource, &d3dShaderResourceViewDesc, m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle);
-		m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-
-		pTexture->SetGpuDescriptorHandle(nIndex, m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle);
-		m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-
-	}
-
 }
 
 void CScene::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)

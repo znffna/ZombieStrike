@@ -997,7 +997,7 @@ void CSkyBox::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	// pSkyBoxShader->CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 1);
 	
-	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture.get(), 0, ROOT_PARAMETER_SKYBOX);
+	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture.get(), 0, ROOT_PARAMETER_SKYBOX);
 	{
 		std::string strDebugName = "After CScene::CreateShaderResourceViews\n";
 		OutputDebugStringA(strDebugName.c_str());
@@ -1124,7 +1124,7 @@ void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Stone01.jpg", RESOURCE_TEXTURE2D, 0);
 	pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Grass.jpg", RESOURCE_TEXTURE2D, 1);
 
-	CScene::CreateShaderResourceViews(pd3dDevice, pTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, pTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
 
 	MaterialResize(1);
 	m_ppMaterials[0]->SetTexture(pTexture);
@@ -1202,7 +1202,7 @@ std::shared_ptr<CHeightMapTerrain> CHeightMapTerrain::InitializeByBinary(ID3D12D
 	pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Grass.jpg", RESOURCE_TEXTURE2D, 0);
 	pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Stone01.jpg", RESOURCE_TEXTURE2D, 1);
 	
-	CScene::CreateShaderResourceViews(pd3dDevice, pTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, pTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
 
 	pHeightMapTerrain->m_ppMaterials.resize(1);
 	pHeightMapTerrain->m_ppMaterials[0]->SetTexture(pTexture);
@@ -1244,7 +1244,8 @@ CBulletParticleObject::CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12Gra
 	pParticleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Blood.dds", RESOURCE_TEXTURE2D, 2);
 	pParticleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/StoneFragment.dds", RESOURCE_TEXTURE2D, 3);
 	pParticleTexture->SetName("CBulletParticleObject");
-	CScene::CreateShaderResourceViews(pd3dDevice, pParticleTexture.get(), 0, ROOT_PARAMETER_ALBEDO_TEXTURE);
+	
+	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, pParticleTexture.get(), 0, ROOT_PARAMETER_ALBEDO_TEXTURE);
 
 	std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
 	pMaterial->SetTexture(pParticleTexture);
@@ -1263,8 +1264,8 @@ CBulletParticleObject::CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12Gra
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CScene::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueTexture.get(), 0, ROOT_PARAMETER_RANDOMBUFFER);
-	CScene::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueOnSphereTexture.get(), 0, ROOT_PARAMETER_RANDOM_SPHERE_BUFFER);
+	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, m_pRandowmValueTexture.get(), 0, ROOT_PARAMETER_RANDOMBUFFER);
+	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, m_pRandowmValueOnSphereTexture.get(), 0, ROOT_PARAMETER_RANDOM_SPHERE_BUFFER);
 
 	std::shared_ptr<CBulletShader> pShader = std::make_shared<CBulletShader>();
 	pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature);

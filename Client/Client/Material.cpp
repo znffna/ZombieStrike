@@ -148,7 +148,7 @@ void LoadTextureFromFile(std::shared_ptr<CTexture>& ppTexture, ID3D12Device* pd3
 	if (nullptr == ppTexture)ppTexture = std::make_shared <CTexture>(1, RESOURCE_TEXTURE2D, 1);
 	
 	(ppTexture)->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, pwstrTexturePath, RESOURCE_TEXTURE2D, 0);
-	CScene::CreateShaderResourceViews(pd3dDevice, ppTexture.get(), 0, nRootParameter);
+	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, ppTexture.get(), 0, nRootParameter);
 }
 
 void CMaterial::LoadTextureFromFile(UINT nType, std::ifstream& File)

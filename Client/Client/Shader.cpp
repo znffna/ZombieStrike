@@ -1290,7 +1290,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	//CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, m_pDepthFromLightTexture->GetTextures());
 	//CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture.get(), 0, ROOT_PARAMETER_DEPTH_WRITE);
 	//m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->SetName(L"CDepthRenderShader::DescriptorHeap(CBV/SRV Heap)");
-	CScene::CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture.get(), 0, ROOT_PARAMETER_DEPTH_WRITE);
+	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture.get(), 0, ROOT_PARAMETER_DEPTH_WRITE);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
