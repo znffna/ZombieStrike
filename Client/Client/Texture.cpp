@@ -73,6 +73,23 @@ D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int nIndex)
 
 // Shader Variables
 
+
+// Shader Variables
+void CTexture::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// Already Initialized Check
+	if (m_bInitialized) return;
+
+	// Create Buffer 
+
+
+	// Create Shader Resource View Descriptor Heap
+
+
+	// Set Initialized Flag
+	m_bInitialized = true;
+}
+
 void CTexture::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int nParameterIndex, int nTextureIndex)
 {
 	pd3dCommandList->SetGraphicsRootDescriptorTable(m_nRootParameterIndices[nParameterIndex], m_d3dSrvGpuDescriptorHandles[nTextureIndex]);
@@ -110,7 +127,6 @@ void CTexture::LoadTextureFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		OutputDebugString(L"Texture index out of range\n");
 		return;
 	};
-
 
 	m_nTextureType = nResourceType;
 	m_strTextureNames[nIndex] = strTextureName;

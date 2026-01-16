@@ -129,11 +129,11 @@ public:
 	// ----------------------------------------
 	// 텍스쳐 정보를 저장
 	// ----------------------------------------
-	void SetTexture(const std::string& name, std::shared_ptr<CTexture> texture);
-	std::shared_ptr<CTexture> GetTexture(const std::string& name);
+	void SetTexture(const std::wstring& path, std::shared_ptr<CTexture> texture);
+	std::shared_ptr<CTexture> LoadOrCreateTexture(const std::wstring& path);
 
 private:
-	std::unordered_map<std::string, std::shared_ptr<CTexture>> TextureInfos;
+	std::unordered_map<std::wstring, std::shared_ptr<CTexture>> TextureInfos;
 
 public:
 	// ----------------------------------------
@@ -208,41 +208,16 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(m_UploadMutex);
 		// Mesh Upload List 일부 추출
-		//std::swap(m_MeshRegisterBuffer, m_MeshUploadList);
-		{
-			int count{};
-			while (false == m_MeshRegisterBuffer.empty() && count < maxcount)
-			{
-				m_MeshUploadList.push_back(m_MeshRegisterBuffer.front());
-				m_MeshRegisterBuffer.pop_front();
-				++count;
-			}
-
-			m_nUploadMeshCount.fetch_add(count);
-		}
+		CollectMeshRegister(maxcount);
 		// Material Upload List 교체
-		//std::swap(m_MaterialRegisterBuffer, m_MaterialUploadList);
-		{
-			int count{};
-			while (false == m_MaterialRegisterBuffer.empty() && count < maxcount)
-			{
-				m_MaterialUploadList.push_back(m_MaterialRegisterBuffer.front());
-				m_MaterialRegisterBuffer.pop_front();
-				++count;
-			}
-			m_nUploadMaterialCount.fetch_add(count);
-		}
+		CollectMaterialRegister(maxcount);
 		// Shader Create List 교체
-		{
-			int count{};
-			while (false == m_ShaderRegisterBuffer.empty())
-			{
-				m_ShaderToCreateList.push_back(m_ShaderRegisterBuffer.front());
-				m_ShaderRegisterBuffer.pop_front();
-				++count;
-			}
-		}
+		CollectShaderRegister();
+		// Texture Upload List 교체
+		CollectTextureRegister(maxcount);
 	}
+
+
 	void ProcessRegistries(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 	{
 		CollectRegister(8);
@@ -260,6 +235,7 @@ public:
 	// Mesh Upload 처리
 	// ----------------------------------------
 	void RegisterMeshUpload(CMesh* pMesh);
+	void CollectMeshRegister(int maxcount = INT_MAX);
 	void ProcessMeshUpload(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseMeshUploadBuffers();
 
@@ -272,6 +248,7 @@ public:
 	// Material Upload 처리
 	// ----------------------------------------
 	void RegisterMaterialUpload(CMaterial* pMaterial);
+	void CollectMaterialRegister(int maxcount = INT_MAX);
 	void ProcessMaterialUpload(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseMaterialUploadBuffers();
 
@@ -281,10 +258,23 @@ public:
 	std::vector<CMaterial*> m_MaterialUploadList;
 
 	// ----------------------------------------
+	// Texture Upload 처리
+	// ----------------------------------------
+	void RegisterTextureUpload(CTexture* pTexture);
+	void CollectTextureRegister(int maxcount = INT_MAX);
+	void ProcessTextureUpload(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void ReleaseTextureUploadBuffers();
+
+	std::atomic<UINT> m_nRegisterTextureCount = 0;
+	std::atomic<UINT> m_nUploadTextureCount = 0;
+	std::deque<CTexture*> m_TextureRegisterBuffer;
+	std::vector<CTexture*> m_TextureUploadList;
+
+	// ----------------------------------------
 	// Create Shader
 	// ----------------------------------------
-
 	void RegisterShaderUpload(CShader* pShader);
+	void CollectShaderRegister(int maxcount = INT_MAX);
 	void ProcessShaderCreate(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	std::deque<CShader*> m_ShaderRegisterBuffer;

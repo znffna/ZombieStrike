@@ -178,6 +178,7 @@ extern float ReadFloatFromFile(std::ifstream& file);
 
 // Functions
 extern void ReportLiveObjects();
+extern std::wstring GetFileName(const std::wstring& wstrfilepath);
 
 extern void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter);
 extern void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ComPtr<ID3D12Resource> pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter);

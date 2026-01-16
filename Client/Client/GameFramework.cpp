@@ -670,13 +670,14 @@ void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
 
 		std::shared_ptr<CMesh> pRectangleMesh = CResourceManager::Instance().GetMesh("UI");
 
-		auto cursorTexture = CResourceManager::Instance().GetTexture("Cursor");
+		auto cursorTexture = CResourceManager::Instance().LoadOrCreateTexture(L"Image/cursor.dds");
 		if(nullptr == cursorTexture)
 		{
+
 			cursorTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
 			cursorTexture->LoadTextureFromDDSFile(m_pd3dDevice.Get(), pd3dCommandList, L"Image/cursor.dds", RESOURCE_TEXTURE2D, 0);
 			CScene::CreateShaderResourceViews(m_pd3dDevice.Get(), cursorTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
-			CResourceManager::Instance().SetTexture("Cursor", cursorTexture);
+			CResourceManager::Instance().SetTexture(L"Image/cursor.dds", cursorTexture);
 		}
 
 		std::shared_ptr<CMaterial> pCursorMaterial = std::make_shared<CMaterial>();

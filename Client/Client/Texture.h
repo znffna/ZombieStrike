@@ -29,11 +29,11 @@ public:
 	{
 		m_pd3dTextures.clear();
 		m_pd3dTextureUploadBuffers.clear();
-		for (auto& name : m_strTextureNames)
+		/*for (auto& name : m_strTextureNames)
 		{
 			std::wstring debugoutput = L"Texture Name: " + name + L" has destroyed\n";
 			OutputDebugString(debugoutput.c_str());
-		}
+		}*/
 		m_strTextureNames.clear();
 		m_pdxgiBufferFormats.clear();
 		m_nBufferElements.clear();
@@ -47,12 +47,15 @@ public:
 	std::string GetName() { return m_strName; }
 	void SetName(std::string strName) { m_strName = strName; }
 
+	std::wstring GetPath(int nIndex) { return m_pwstrPaths[nIndex]; }
+	void SetPath(std::wstring pwstrPath, int nIndex) { m_pwstrPaths[nIndex] = pwstrPath; }
+
 	// Texture Type
 	UINT GetTextureType() { return m_nTextureType; }
 	void SetTextureType(UINT nTextureType) { m_nTextureType = nTextureType; }
 
 	// Texture
-	ComPtr<ID3D12Resource> GetTexture(int nIndex = 0) { return m_pd3dTextures[nIndex]; }
+	ComPtr<ID3D12Resource> LoadOrCreateTexture(int nIndex = 0) { return m_pd3dTextures[nIndex]; }
 	void SetTexture(ComPtr<ID3D12Resource> pd3dTexture, int nIndex = 0) { m_pd3dTextures[nIndex] = pd3dTexture; }
 
 	// Getter / Setter
@@ -72,6 +75,7 @@ public:
 	D3D12_SHADER_RESOURCE_VIEW_DESC GetShaderResourceViewDesc(int nIndex);;
 
 	// Shader Variables
+	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);;
 	void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int nParameterIndex, int nTextureIndex);;
 	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);;
 
@@ -85,7 +89,9 @@ public:
 	void CreateBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, DXGI_FORMAT ndxgiFormat, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, UINT nIndex);;
 
 private:
+	bool m_bInitialized = false;
 	std::string m_strName; // Texture Name
+	std::vector<std::wstring> m_pwstrPaths; // Texture Path
 
 	UINT m_nTextureType = 0x00; // Texture Type
 

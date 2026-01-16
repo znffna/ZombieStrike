@@ -168,7 +168,7 @@ void CScene::InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	CreateRootSignature(pd3dRootSignature, pd3dDevice);
 	CreateDescriptorHeap(pd3dDevice);
 	CreateStaticShader(pd3dDevice);
-	CreateStaticMesh(pd3dDevice, pd3dCommandList);
+	// CreateStaticMesh(pd3dDevice, pd3dCommandList);
 
 	//CResourceManager::Instance().Initialize(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 }

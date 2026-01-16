@@ -136,7 +136,34 @@ public:
 	std::string GetName() const { return(m_strMeshName); }
 
 	// method
-	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) { }
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+	{ 
+		// Create Position Buffer
+		if (!m_pxmf3Positions.empty())
+		{
+			m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+			std::wstring wstrName = to_wstring(GetName()) + L" : m_pd3dPositionBuffer";
+			m_pd3dPositionBuffer->SetName(wstrName.c_str());
+
+			m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+			m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+			m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+		}
+
+		// Create SubSet Index Buffers
+		for (UINT i = 0; i < m_nSubMeshes; i++)
+		{
+			m_ppd3dSubSetIndexBuffers[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[i].data(), sizeof(UINT) * (UINT)m_ppnSubSetIndices[i].size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[i]);
+
+			std::wstring wstrName = to_wstring(GetName()) + L" : m_ppd3dSubSetIndexBuffers[" + std::to_wstring(i) + L"]";
+			m_ppd3dSubSetIndexBuffers[i]->SetName(wstrName.c_str());
+
+			m_pd3dSubSetIndexBufferViews[i].BufferLocation = m_ppd3dSubSetIndexBuffers[i]->GetGPUVirtualAddress();
+			m_pd3dSubSetIndexBufferViews[i].Format = DXGI_FORMAT_R32_UINT;
+			m_pd3dSubSetIndexBufferViews[i].SizeInBytes = (UINT)(sizeof(UINT) * m_ppnSubSetIndices[i].size());
+		}
+	}
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList) { }
 	virtual void ReleaseShaderVariables() { }
 

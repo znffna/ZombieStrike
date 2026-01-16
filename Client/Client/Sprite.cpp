@@ -7,6 +7,25 @@
 CSprite::CSprite() : CGameObject()
 {
 	SetLayer(LAYER_UI);
+
+	auto pUIShader = CResourceManager::Instance().GetShader<CTextureToViewportShader>();
+	std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>(1);
+	pMaterial->SetShader(pUIShader);
+	m_ppMaterials.push_back(pMaterial);
+}
+
+CSprite::CSprite(std::wstring wstrFilepath)
+	: CSprite()
+{
+	auto cursorTexture = CResourceManager::Instance().LoadOrCreateTexture(wstrFilepath);
+	if(cursorTexture == nullptr)
+	{
+		m_ppMaterials[0]->m_strTexturePaths[0] = wstrFilepath;
+		m_ppMaterials[0]->m_strTextureNames[0] = to_string(::GetFileName(wstrFilepath));
+	}
+
+	m_ppMaterials[0]->SetTexture(cursorTexture);
+	CResourceManager::Instance().RegisterMaterialUpload(m_ppMaterials[0].get());
 }
 
 // 2D Sprite

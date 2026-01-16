@@ -117,6 +117,7 @@ public:
 public:
 	UINT m_nTextures = 0;
 	std::vector<std::string> m_strTextureNames; // Texture Name
+	std::vector<std::wstring> m_strTexturePaths; // Texture Path
 	std::vector<std::shared_ptr<CTexture>> m_ppTextures; // Texture
 	std::shared_ptr<CShader> m_pShader; // Shader
 
@@ -129,4 +130,4 @@ public:
 	void SetSkinnedAnimationShader();
 };
 
-void LoadTextureFromFile(std::shared_ptr<CTexture>& ppTexture, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring& pwstrTextureName, std::string& strTextureName, UINT nRootParameter);
+void LoadTextureFromFile(std::shared_ptr<CTexture>& ppTexture, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::wstring& pwstrTextureName, UINT nRootParameter);

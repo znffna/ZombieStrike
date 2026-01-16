@@ -75,6 +75,18 @@ void ReportLiveObjects()
 #endif
 }
 
+std::wstring GetFileName(const std::wstring& wstrfilepath)
+{
+	if (wstrfilepath.empty())
+		return L"";
+
+	// 마지막 경로 구분자 찾기 (Windows / Unix 모두 대응)
+	size_t pos = wstrfilepath.find_last_of(L"/\\");
+	return (pos == std::wstring::npos)
+		? wstrfilepath
+		: wstrfilepath.substr(pos + 1);
+}
+
 void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter)
 {
 	D3D12_RESOURCE_BARRIER d3dResourceBarrier;

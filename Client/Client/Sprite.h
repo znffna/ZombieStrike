@@ -13,6 +13,7 @@ protected:
 public:
 	// 2D Sprite
 	CSprite();
+	CSprite(std::wstring wstrFilepath);
 
 	virtual void SetSize(float cx, float cy, float width, float height) override;
 	virtual void SetSizeLT(float left, float top, float width, float height);

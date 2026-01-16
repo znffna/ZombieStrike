@@ -56,15 +56,15 @@ void CResourceManager::ReleaseResources() {
 // ----------------------------------------
 // 텍스쳐 정보를 저장
 // ----------------------------------------
-void CResourceManager::SetTexture(const std::string& name, std::shared_ptr<CTexture> texture) {
+void CResourceManager::SetTexture(const std::wstring& path, std::shared_ptr<CTexture> texture) {
 	if (texture == nullptr) return;
-	TextureInfos[name] = texture;
+	TextureInfos[path] = texture;
 }
 
-std::shared_ptr<CTexture> CResourceManager::GetTexture(const std::string& name) {
-	if (TextureInfos.find(name) != TextureInfos.end()) {
+std::shared_ptr<CTexture> CResourceManager::LoadOrCreateTexture(const std::wstring& path) {
+	if (TextureInfos.find(path) != TextureInfos.end()) {
 		// 이미 로드된 모델이 있는 경우
-		return TextureInfos[name];
+		return TextureInfos[path];
 	}
 	return nullptr;
 }
@@ -157,6 +157,21 @@ void CResourceManager::RegisterMeshUpload(CMesh* pMesh)
 	m_MeshRegisterBuffer.push_back(pMesh);
 }
 
+void CResourceManager::CollectMeshRegister(int maxcount)
+{
+	{
+		int count{};
+		while (false == m_MeshRegisterBuffer.empty() && count < maxcount)
+		{
+			m_MeshUploadList.push_back(m_MeshRegisterBuffer.front());
+			m_MeshRegisterBuffer.pop_front();
+			++count;
+		}
+
+		m_nUploadMeshCount.fetch_add(count);
+	}
+}
+
 void CResourceManager::ProcessMeshUpload(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	for (auto pMesh : m_MeshUploadList)
@@ -166,10 +181,6 @@ void CResourceManager::ProcessMeshUpload(ID3D12Device* pd3dDevice, ID3D12Graphic
 			OutputDebugStringA(debugname.c_str());
 		}
 
-		if (pMesh->GetName() == "Sphere")
-		{
-			int a = 0;
-		}
 		pMesh->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 }
@@ -196,6 +207,20 @@ void CResourceManager::RegisterMaterialUpload(CMaterial* pMaterial)
 	m_MaterialRegisterBuffer.push_back(pMaterial);
 }
 
+void CResourceManager::CollectMaterialRegister(int maxcount)
+{
+	{
+		int count{};
+		while (false == m_MaterialRegisterBuffer.empty() && count < maxcount)
+		{
+			m_MaterialUploadList.push_back(m_MaterialRegisterBuffer.front());
+			m_MaterialRegisterBuffer.pop_front();
+			++count;
+		}
+		m_nUploadMaterialCount.fetch_add(count);
+	}
+}
+
 void CResourceManager::ProcessMaterialUpload(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	for (auto& pMaterial : m_MaterialUploadList)
@@ -218,10 +243,74 @@ void CResourceManager::ReleaseMaterialUploadBuffers()
 	m_MaterialUploadList.clear();
 }
 
+// ----------------------------------------
+// Texture Upload 처리
+// ----------------------------------------
+void CResourceManager::RegisterTextureUpload(CTexture* pTexture)
+{
+	// 등록 갯수 증가
+	m_nRegisterTextureCount.fetch_add(1);
+
+	std::lock_guard<std::mutex> lock(m_UploadMutex);
+	m_TextureRegisterBuffer.push_back(pTexture);
+}
+
+void CResourceManager::CollectTextureRegister(int maxcount)
+{
+	{
+		int count{};
+		while (false == m_TextureRegisterBuffer.empty() && count < maxcount)
+		{
+			m_TextureUploadList.push_back(m_TextureRegisterBuffer.front());
+			m_TextureRegisterBuffer.pop_front();
+			++count;
+		}
+		m_nUploadTextureCount.fetch_add(count);
+	}
+}
+
+void CResourceManager::ProcessTextureUpload(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	for (auto& pTexture : m_TextureUploadList)
+	{
+		/*{
+			std::string debugname = "Processing Texture Upload: " + pTexture->GetName() + "\n";
+			OutputDebugStringA(debugname.c_str());
+		}*/
+		pTexture->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+}
+
+void CResourceManager::ReleaseTextureUploadBuffers()
+{
+	// Release Texture Upload Buffers
+	for (auto pTexture : m_TextureUploadList)
+	{
+		pTexture->ReleaseUploadBuffers();
+	}
+	m_TextureUploadList.clear();
+}
+
+// ----------------------------------------
+// Shader Upload 처리
+// ----------------------------------------
 void CResourceManager::RegisterShaderUpload(CShader* pShader)
 {
 	std::lock_guard<std::mutex> lock(m_UploadMutex);
 	m_ShaderRegisterBuffer.push_back(pShader);
+}
+
+void CResourceManager::CollectShaderRegister(int maxcount)
+{
+	{
+		int count{};
+		while (false == m_ShaderRegisterBuffer.empty() && count < maxcount)
+		{
+			m_ShaderToCreateList.push_back(m_ShaderRegisterBuffer.front());
+			m_ShaderRegisterBuffer.pop_front();
+			++count;
+		}
+	}
 }
 
 void CResourceManager::ProcessShaderCreate(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
