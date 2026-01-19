@@ -318,6 +318,7 @@ public:
 	ID3D12Resource* m_pd3dcbSkinningBoneTransforms; //[m_nSkinningBones], Pointer Only
 	XMFLOAT4X4* m_pcbxmf4x4MappedSkinningBoneTransforms; //[m_nSkinningBones]
 
+	UINT m_nSkinningBoneTransformsOffset = 0;
 public:
 	void PrepareSkinning(std::shared_ptr<CGameObject> pModelRootObject);
 	void LoadSkinInfoFromFile(std::ifstream& pInFile);

@@ -224,11 +224,8 @@ void CScene::BuildDefaultLightsAndMaterials()
 
 void CScene::ResetScene()
 {
-	// TODO : Object의 전부 삭제 후 생성이 아닌, 각 오브젝트의 Reset 함수 호출로 변경 필요
-	ReleaseObjects();
-
-	auto& CUploadContext = CUploadContext::Instance();
-	Initialize(CUploadContext.m_pd3dDevice, CUploadContext.m_pd3dGraphicCommandList, m_pd3dGraphicsRootSignature.Get());
+	//TODO : Scene의 모든 Object를 삭제가 아닌 초기화
+	//ReleaseObjects(); <- 이게 아님
 }
 
 void CScene::PopScene()
@@ -647,7 +644,7 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	// Object
 	pd3dRootParameters[ROOT_PARAMETER_OBJECT].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
 	//pd3dRootParameters[ROOT_PARAMETER_OBJECT].Constants.Num32BitValues = 16;
-	pd3dRootParameters[ROOT_PARAMETER_OBJECT].Constants.Num32BitValues = 20;
+	pd3dRootParameters[ROOT_PARAMETER_OBJECT].Constants.Num32BitValues = 21;
 	pd3dRootParameters[ROOT_PARAMETER_OBJECT].Constants.ShaderRegister = ROOT_PARAMETER_OBJECT; // b0 : GameObject
 	pd3dRootParameters[ROOT_PARAMETER_OBJECT].Constants.RegisterSpace = 0;
 	//pd3dRootParameters[ROOT_PARAMETER_OBJECT].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;

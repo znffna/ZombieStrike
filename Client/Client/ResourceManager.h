@@ -14,7 +14,7 @@ public:
 	// Singleton
 	CUploadContext() {};
 	CUploadContext(std::string name): m_strName(name) {};
-	~CUploadContext() {};
+	~CUploadContext() { OnDestroy(); };
 
 	// 전역 리소스 업로드 컨텍스트
 	static CUploadContext& Instance()
@@ -55,6 +55,8 @@ public:
 	}
 	void OnDestroy()
 	{
+		if (false == m_bIsCreated) return;
+
 		::WaitForGpuComplete(m_pd3dCommandQueue, m_pd3dFence, m_nFenceValue, m_hFenceEvent);
 
 		m_pd3dGraphicCommandList->Release();

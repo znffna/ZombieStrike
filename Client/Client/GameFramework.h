@@ -77,6 +77,7 @@ private:
 	void ReallocateSwapChain(int width, int height);
 
 	void BuildDefaultObjects();
+	void BuildLoadingScene(CUploadContext& uploadcontext);
 	void ReleaseDefaultObjects();
 	void BuildObjects();
 	void BuildUILayer();
@@ -128,11 +129,7 @@ private:
 		UINT64								nFenceValue;
 	};
 
-	std::array<CommandListContext, m_nSwapChainBuffers> m_CommandListContexts;
-
-	//std::array<ComPtr<ID3D12CommandAllocator>, m_nSwapChainBuffers>		m_pd3dCommandAllocator;
-	//std::array<ComPtr<ID3D12GraphicsCommandList>, m_nSwapChainBuffers>	m_pd3dCommandList;
-	//std::array<UINT64, m_nSwapChainBuffers>								m_nFenceValues;
+	std::array<CommandListContext, m_nSwapChainBuffers>		m_CommandListContexts;
 
 	ComPtr<ID3D12Fence>										m_pd3dFence;
 	HANDLE													m_hFenceEvent;

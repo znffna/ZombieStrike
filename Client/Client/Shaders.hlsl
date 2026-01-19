@@ -11,6 +11,7 @@ cbuffer cbGameObjectInfo : register(b0)
 {
     matrix gmtxGameObject : packoffset(c0);
     float4 gf4ObjectColor : packoffset(c4);
+    uint gnBoneOffset : packoffset(c5.x);
 };
 
 cbuffer cbCameraInfo : register(b2)
@@ -359,7 +360,7 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
     for (int i = 0; i < MAX_VERTEX_INFLUENCES; i++)
     {
 //		mtxVertexToBoneWorld += input.weights[i] * gpmtxBoneTransforms[input.indices[i]];
-        mtxVertexToBoneWorld += input.weights[i] * mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i]]);
+        mtxVertexToBoneWorld += input.weights[i] * mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i] + gnBoneOffset]);
     }
     
     float4 positionW = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld);

@@ -50,8 +50,8 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	// Collider »ý¼º
 	//auto pCollider = CreateComponent<COBBCollider>();
 
-	Update(0.0f);
-	UpdateTransform();
+	//Update(0.0f);
+	//UpdateTransform();
 }
 
 void CPlayer::Update(float fTimeElapsed)

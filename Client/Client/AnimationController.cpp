@@ -80,13 +80,98 @@ void CAnimationTrack::HandleCallback()
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
+#define MAX_INSTANCE_SKINNED_OBJECT		128
+
+
+void CGlobalBoneTransformManager::Initialize(ID3D12Device* pd3dDevice)
+{
+	//Create Shader Buffers for Skinned Meshes [Global]
+	// Upload Buffer for Global Bone Transform
+	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES * MAX_INSTANCE_SKINNED_OBJECT) + 255) & ~255); //256의 배수
+	m_pd3dGlobalBoneTransformBuffer = ::CreateBufferResource(pd3dDevice, nullptr, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	std::wstring name = L"Global Skinning Bone Transforms Upload Buffer";
+	m_pd3dGlobalBoneTransformBuffer->SetName(name.c_str());
+
+	// Map the buffer
+	m_pd3dGlobalBoneTransformBuffer->Map(0, NULL, (void**)&m_pMappedGlobalBoneTransforms);
+
+	// Default Buffer for Global Bone Transform
+	m_pd3dDefaultGlobalBoneTransformBuffer = ::CreateBufferResource(pd3dDevice, nullptr, NULL, ncbElementBytes, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	name = L"Global Skinning Bone Transforms Default Buffer";
+	m_pd3dGlobalBoneTransformBuffer->SetName(name.c_str());
+
+	m_nMaxBoneOffset = ncbElementBytes;
+}
+
+void CGlobalBoneTransformManager::Shutdown()
+{
+	if (m_pd3dGlobalBoneTransformBuffer)
+	{
+		m_pd3dGlobalBoneTransformBuffer->Unmap(0, NULL);
+		m_pd3dGlobalBoneTransformBuffer.Reset();
+	}
+	if (m_pd3dDefaultGlobalBoneTransformBuffer)
+	{
+		m_pd3dDefaultGlobalBoneTransformBuffer.Reset();
+	}
+}
+
+UINT CGlobalBoneTransformManager::AllocateBoneRange(int nBoneCount)
+{
+	UINT nOffset = m_nCurrentBoneOffset;
+	m_nCurrentBoneOffset += nBoneCount;
+	return nOffset;
+}
+
+void CGlobalBoneTransformManager::WriteBoneTransforms(UINT offset, const XMFLOAT4X4* pTransforms, UINT count)
+{
+	memcpy(&m_pMappedGlobalBoneTransforms[offset], pTransforms, sizeof(XMFLOAT4X4) * count);
+
+#ifdef _DEBUG
+	{
+		std::string debugOutput = "WriteBoneTransforms called : offset=" + std::to_string(offset) + ", count=" + std::to_string(count) + "\n";
+		//OutputDebugStringA(debugOutput.c_str());
+	}
+#endif
+}
+
+void CGlobalBoneTransformManager::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// Set Resource Barrier for Copy
+	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
+	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
+	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	d3dResourceBarrier.Transition.pResource = m_pd3dDefaultGlobalBoneTransformBuffer.Get();
+	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+
+	// Copy from Upload Buffer to Default Buffer
+	pd3dCommandList->CopyResource(m_pd3dDefaultGlobalBoneTransformBuffer.Get(), m_pd3dGlobalBoneTransformBuffer.Get());
+
+	// Set Resource Barrier for Vertex and Constant Buffer
+	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+	pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+
+	// 다음 프레임을위해 Index 초기화
+	m_nPrevBoneOffset = m_nCurrentBoneOffset;
+	m_nCurrentBoneOffset = 0;
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
 void CAnimationController::Clear()
 {
 	m_fTime = 0.0f;
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
-		if (m_ppd3dcbSkinningBoneTransforms[i]) m_ppd3dcbSkinningBoneTransforms[i]->Release();
-		if (m_ppcbxmf4x4MappedSkinningBoneTransforms[i]) m_ppcbxmf4x4MappedSkinningBoneTransforms[i] = NULL;
+		//if (m_ppd3dcbSkinningBoneTransforms[i]) m_ppd3dcbSkinningBoneTransforms[i]->Release();
+		//if (m_ppcbxmf4x4MappedSkinningBoneTransforms[i]) m_ppcbxmf4x4MappedSkinningBoneTransforms[i] = NULL;
 	}
 
 	m_pModelRootObject = NULL;
@@ -109,8 +194,9 @@ void CAnimationController::SetModel(CLoadedModelInfo* pModel)
 
 	m_pAnimationSets = pModel->m_pAnimationSets;
 
-	m_ppd3dcbSkinningBoneTransforms.resize(m_nSkinnedMeshes);
-	m_ppcbxmf4x4MappedSkinningBoneTransforms.resize(m_nSkinnedMeshes);
+	//m_ppd3dcbSkinningBoneTransforms.resize(m_nSkinnedMeshes);
+	//m_ppcbxmf4x4MappedSkinningBoneTransforms.resize(m_nSkinnedMeshes);
+	m_vSkinnedMeshBoneOffsets.resize(m_nSkinnedMeshes);
 
 	//
 	m_xmf4x4SkinningBoneTransforms.resize(m_nSkinnedMeshes);
@@ -122,17 +208,21 @@ void CAnimationController::SetModel(CLoadedModelInfo* pModel)
 	m_nAnimationTracks = m_pAnimationSets->m_nAnimationSets;
 
 	// Create Constant Buffers for Skinned Meshes
-	auto& CUploadContext = CUploadContext::Instance();
-	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256의 배수
-	for (int i = 0; i < m_nSkinnedMeshes; i++)
-	{
-		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(CUploadContext.m_pd3dDevice, CUploadContext.m_pd3dGraphicCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-		m_ppd3dcbSkinningBoneTransforms[i]->Map(0, NULL, (void**)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
+	// TODO : 이과정을 생략, 실제 m_ppd3dcbSkinningBoneTransforms는 내 게임내에선 오직 1개만 생성, 추후 Indexing기법등으로 여러개를 지원할 수 있도록 개선
+	// 이때, 실제 Skinning Bone Transform을 Skinned Mesh에서 자신의 Bone Count만큼만 사용하고 Index를 수정하고 AnimationController에선 Final Pose를 계산후 Index까지 받아오면 실제 REnder 루프때 이 Index를 Shader에 넘기는 방식을 생각해 봐야함.
+	
+	//auto& CUploadContext = CUploadContext::Instance();
+	//UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256의 배수
+	//for (int i = 0; i < m_nSkinnedMeshes; i++)
+	//{
+	//	m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(CUploadContext.m_pd3dDevice, CUploadContext.m_pd3dGraphicCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	//	m_ppd3dcbSkinningBoneTransforms[i]->Map(0, NULL, (void**)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
 
-		std::wstring name = L"Skinning Bone Transforms [" + std::to_wstring(i) + L"]";
-		m_ppd3dcbSkinningBoneTransforms[i]->SetName(name.c_str());
-	}
-	CUploadContext.ExecuteAndReset();
+	//	std::wstring name = L"Skinning Bone Transforms [" + std::to_wstring(i) + L"]";
+	//	m_ppd3dcbSkinningBoneTransforms[i]->SetName(name.c_str());
+	//}
+	//CUploadContext.ExecuteAndReset();
+
 
 	m_pAnimationTracks.resize(m_nAnimationTracks);
 	for (int i = 0; i < m_nAnimationTracks; i++)
@@ -150,16 +240,22 @@ CAnimationController::~CAnimationController()
 
 void CAnimationController::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	//for (int i = 0; i < m_nSkinnedMeshes; i++)
+	//{
+	//	// 실제 저장해놓은 BoneMatrix를 GPU에 복사
+	//	// 저장해놓는것은 AdvanceTime에서 수행
+	//	memcpy(m_ppcbxmf4x4MappedSkinningBoneTransforms[i],	m_xmf4x4SkinningBoneTransforms[i].data(), sizeof(XMFLOAT4X4) * m_xmf4x4SkinningBoneTransforms[i].size());
+
+	//	// SKinnedMesh가 참조할 수 있도록 설정
+	//	m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i].Get();
+	//	m_ppSkinnedMeshes[i]->m_pcbxmf4x4MappedSkinningBoneTransforms = m_ppcbxmf4x4MappedSkinningBoneTransforms[i];
+	//}
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
-		// 실제 저장해놓은 BoneMatrix를 GPU에 복사
-		// 저장해놓는것은 AdvanceTime에서 수행
-		memcpy(m_ppcbxmf4x4MappedSkinningBoneTransforms[i],	m_xmf4x4SkinningBoneTransforms[i].data(), sizeof(XMFLOAT4X4) * m_xmf4x4SkinningBoneTransforms[i].size());
-
-		// SKinnedMesh가 참조할 수 있도록 설정
-		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i].Get();
-		m_ppSkinnedMeshes[i]->m_pcbxmf4x4MappedSkinningBoneTransforms = m_ppcbxmf4x4MappedSkinningBoneTransforms[i];
+		m_ppSkinnedMeshes[i]->m_nSkinningBoneTransformsOffset = m_vSkinnedMeshBoneOffsets[i];
+		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = CGlobalBoneTransformManager::Instance().GetBoneTransformBuffer();
 	}
+
 }
 
 void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGameObject)
@@ -273,10 +369,15 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 		m_pModelRootObject->UpdateTransform(pRootGameObject->GetWorldMatrix());
 
 		// 여기에서 직접 자신이 사용하는 Skinned Mesh들에 대해 UpdateSkinningBoneTransforms를 호출해야 함
+		auto& globalbone = CGlobalBoneTransformManager::Instance();
 		for (int i = 0; i < m_nSkinnedMeshes; i++)
 		{
+			auto index = globalbone.AllocateBoneRange(m_ppSkinnedMeshes[i]->m_nSkinningBones);
+			m_ppSkinnedMeshes[i]->UpdateSkinningBoneTransforms(m_xmf4x4SkinningBoneTransforms[i]);
+			globalbone.WriteBoneTransforms(index, m_xmf4x4SkinningBoneTransforms[i].data(), m_ppSkinnedMeshes[i]->m_nSkinningBones);
 			//m_ppSkinnedMeshes[i]->UpdateSkinningBoneTransforms(m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
-			m_ppSkinnedMeshes[i]->UpdateSkinningBoneTransforms(m_xmf4x4SkinningBoneTransforms[i]); 
+
+			m_vSkinnedMeshBoneOffsets[i] = index;
 		}
 
 		OnRootMotion(pRootGameObject);
@@ -307,3 +408,4 @@ void CAnimationController::ApplyPitchToSpine(CGameObject* pRootGameObject)
 		}
 	}
 }
+

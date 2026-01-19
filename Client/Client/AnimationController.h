@@ -107,6 +107,52 @@ enum ANIMATION_POSE // Number == Animation Track Index
 
 };
 
+// 전역 본 변환 버퍼 관리자 (싱글톤)
+class CGlobalBoneTransformManager
+{
+private:
+	CGlobalBoneTransformManager() = default;
+	~CGlobalBoneTransformManager() { Shutdown(); }
+
+public:
+	static CGlobalBoneTransformManager& Instance()
+	{
+		static CGlobalBoneTransformManager instance;
+		return instance;
+	}
+
+	// 복사/이동 방지
+	CGlobalBoneTransformManager(const CGlobalBoneTransformManager&) = delete;
+	CGlobalBoneTransformManager& operator=(const CGlobalBoneTransformManager&) = delete;
+
+	void Initialize(ID3D12Device* pd3dDevice);
+	void Shutdown();
+
+	// Bone 범위 할당 (시작 인덱스 반환)
+	UINT AllocateBoneRange(int nBoneCount);
+
+	// Bone Transform 쓰기
+	void WriteBoneTransforms(UINT offset, const XMFLOAT4X4* pTransforms, UINT count);
+
+	// GPU 리소스 가져오기
+	ID3D12Resource* GetBoneTransformBuffer() const { return m_pd3dDefaultGlobalBoneTransformBuffer.Get(); }
+
+	UINT GetMaxIndex() const { return m_nMaxBoneOffset; }
+	UINT GetLastAlloactedIndex() const { return m_nPrevBoneOffset; }
+
+	void PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList);
+private:
+	static constexpr UINT MAX_TOTAL_BONES = 8192; // 전체 게임에서 사용할 최대 본 개수
+
+	ComPtr<ID3D12Resource> m_pd3dDefaultGlobalBoneTransformBuffer; // StructuredBuffer<float4x4>
+	ComPtr<ID3D12Resource> m_pd3dGlobalBoneTransformBuffer;		   // StructuredBuffer<float4x4> 
+	XMFLOAT4X4* m_pMappedGlobalBoneTransforms = nullptr;		   // Mapped pointer
+	UINT m_nCurrentBoneOffset = 0;								   // 현재 할당된 본 오프셋
+	UINT m_nPrevBoneOffset = 0;									   // 이전 프레임에 할당된 본 오프셋
+	UINT m_nMaxBoneOffset = 0;									   // 생성된 최대 본 오프셋
+	bool m_bInitialized = false;
+};
+
 // Animation Set과 Animation Track을 모아놓는 클래스
 class CAnimationController : public CComponent
 {
@@ -152,9 +198,13 @@ public:
 	int m_nSkinnedMeshes = 0;
 	std::vector<std::shared_ptr<CSkinnedMesh>> m_ppSkinnedMeshes; //[SkinnedMeshes], Skinned Mesh Cache
 
-	std::vector<ComPtr<ID3D12Resource>> m_ppd3dcbSkinningBoneTransforms; //[SkinnedMeshes]
-	std::vector<XMFLOAT4X4*> m_ppcbxmf4x4MappedSkinningBoneTransforms; //[SkinnedMeshes]
+	//std::vector<ComPtr<ID3D12Resource>> m_ppd3dcbSkinningBoneTransforms; //[SkinnedMeshes]
+	//std::vector<XMFLOAT4X4*> m_ppcbxmf4x4MappedSkinningBoneTransforms; //[SkinnedMeshes]
 
+	// 각 SkinnedMesh의 전역 버퍼 내 시작 인덱스
+	std::vector<UINT> m_vSkinnedMeshBoneOffsets;
+
+	// CPU 캐시: [SkinnedMeshes][Bones]
 	std::vector<std::vector<XMFLOAT4X4>> m_xmf4x4SkinningBoneTransforms; //[SkinnedMeshes], AdvanceTime이후 여기에 저장, 나중에 m_ppcbxmf4x4MappedSkinningBoneTransforms에 복사
 
 public:

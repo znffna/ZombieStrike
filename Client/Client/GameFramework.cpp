@@ -75,7 +75,6 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	// 전역 변수들 생성 및 초기화
 	BuildDefaultObjects();
 
-	m_pLoadingScene = std::move(BuildScene<CLoadingScene>(CUploadContext::Instance()));
 	isWorked = true;
 
 	// 씬들을 생성한다.
@@ -84,6 +83,11 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	m_GameTimer.Reset();
 
 	return true;
+}
+
+void CGameFramework::BuildLoadingScene(CUploadContext& uploadContext)
+{
+	m_pLoadingScene = std::move(BuildScene<CLoadingScene>(uploadContext));
 }
 
 void CGameFramework::OnDestroy()
@@ -268,24 +272,6 @@ void CGameFramework::CreateCommandQueueAndList()
 		// Command List를 닫음.
 		CloseCommandList(m_CommandListContexts[i].pd3dCommandList.Get());
 	}
-
-	//// Command Allocator 생성
-	//for (int i = 0; i < m_nSwapChainBuffers; ++i) {
-	//	hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_pd3dCommandAllocator[i]));
-	//	if (FAILED(hResult)) {
-	//		OutputDebugString(L"Failed to create command allocator\n");
-	//	}
-	//}
-
-	//// Command List 생성
-	//for (int i = 0; i < m_nSwapChainBuffers; ++i) {
-	//	hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dCommandAllocator[i].Get(), nullptr, IID_PPV_ARGS(&m_pd3dCommandList[i]));
-	//	if (FAILED(hResult)) {
-	//		OutputDebugString(L"Failed to create command list\n");
-	//	}
-	//	// Command List를 닫음.
-	//	CloseCommandList(m_pd3dCommandList[i].Get());
-	//}
 }
 
 void CGameFramework::CreateRtvAndDsvDescriptorHeap()
@@ -441,7 +427,6 @@ void CGameFramework::ReallocateSwapChain(int width, int height)
 {
 	// 1) GPU 동기화
 	::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_CommandListContexts[m_nSwapChainBufferIndex].nFenceValue, m_hFenceEvent);
-	//::WaitForGpuComplete(m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
 
 	m_nWndClientWidth = width;
 	m_nWndClientHeight = height;
@@ -483,27 +468,32 @@ void CGameFramework::BuildDefaultObjects()
 #ifdef _WITH_DIRECT_WRITE_UI
 	BuildUILayer();
 #endif
+	// BuildDefaultObjects용 리소스 업로드 컨텍스트를 생성한다.
+	CUploadContext uploadContext{ "Only For BuildDefaultObjects" };
+	uploadContext.Create(m_pd3dDevice.Get(), m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_hFenceEvent);
 
-	// Main Thread용 전역 리소스 업로드 컨텍스트를 생성한다.
-	auto pd3dDevice = m_pd3dDevice.Get();
-	auto pd3dcmdlist = m_CommandListContexts[m_nSwapChainBufferIndex].pd3dCommandList.Get();
+	// Bond Transform Manager를 초기화한다.
+	CGlobalBoneTransformManager::Instance().Initialize(m_pd3dDevice.Get());
 
-	auto& CUploadContext = CUploadContext::Instance();
-	CUploadContext.Create(pd3dDevice, m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_hFenceEvent);
+	CScene::InitStaticMembers(uploadContext.m_pd3dDevice, uploadContext.m_pd3dGraphicCommandList);
 
-	CScene::InitStaticMembers(pd3dDevice, pd3dcmdlist);
-	{
-		std::string debug = "[SceneMadeThread] CResourceManager 초기화 시작.\n";
-		OutputDebugStringA(debug.c_str());
-	}
+	CreateShaderVariables(uploadContext.m_pd3dDevice, uploadContext.m_pd3dGraphicCommandList);
+
 	// Scene 생성 스레드를 시작한다.
-	CreateShaderVariables(pd3dDevice, pd3dcmdlist);
-
 	BuildSceneMadeThread();
 
-	::ExecuteCommandList(pd3dcmdlist, m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_CommandListContexts[m_nSwapChainBufferIndex].nFenceValue, m_hFenceEvent);
+	// 로딩 Scene을 생성한다.
+	BuildLoadingScene(uploadContext);
 
+	// 업로드 커맨드 리스트를 실행하고 리셋한다.
+	uploadContext.ExecuteAndReset();
+	// ::ExecuteCommandList(uploadContext.m_pd3dGraphicCommandList, m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_CommandListContexts[m_nSwapChainBufferIndex].nFenceValue, m_hFenceEvent);
+	uploadContext.OnDestroy();
+
+	// 디버그용 텍스트 오브젝트들을 생성한다.
+#ifdef _DEBUG
 	CreateDebugTextObjects();
+#endif  // _DEBUG
 }
 
 void CGameFramework::ReleaseDefaultObjects()
@@ -511,6 +501,8 @@ void CGameFramework::ReleaseDefaultObjects()
 #ifdef _WITH_DIRECT_WRITE_UI
 	m_pUILayer.reset();
 #endif
+
+	CGlobalBoneTransformManager::Instance().Shutdown();
 
 	// Shader 변수들을 해제한다.
 	ReleaseShaderVariables();
@@ -522,15 +514,8 @@ void CGameFramework::ReleaseDefaultObjects()
 
 void CGameFramework::BuildObjects()
 {
-	auto& CUploadContext = CUploadContext::Instance();
-
-	// m_Scenes.push_back(std::move(BuildScene<CTestScene>(CUploadContext::Instance())));
-
 	SceneRequest newReq{ CPushScene(TypeTag<CTestScene>{})};
 	RequestSceneChange(newReq);
-	// RequestBuildScene<CTestScene>();
-
-	// m_Scenes.push_back(std::move(BuildScene<CTitleScene>(CUploadContext)));
 }
 
 
@@ -599,6 +584,7 @@ void CGameFramework::AdvanceFrame()
 
 	// 전역 리소스 매니저 처리
 	CResourceManager::Instance().ProcessRegistries(m_pd3dDevice.Get(), pd3dCommandList);
+	CGlobalBoneTransformManager::Instance().PrepareRender(pd3dCommandList);
 
 	pCurrentScene->PrepareRender(pd3dCommandList);
 	pCurrentScene->OnPreRender(pd3dCommandList);
@@ -1190,6 +1176,8 @@ void CGameFramework::HandleSceneBuildState()
 		m_BuiltScene.reset();
 		ClearSceneRequest();
 		break;
+	default:
+		break;
 	}
 }
 
@@ -1234,6 +1222,8 @@ void CGameFramework::UpdateDebugTextObjects()
 
 	m_DebugTextBlocks[index++]->SetText(to_wstring(GetCurrentScene()->GetCameraInfo()));
 	m_DebugTextBlocks[index++]->SetText(to_wstring(GetCurrentScene()->GetPlayerInfo()));
+
+	m_DebugTextBlocks[index++]->SetText(L"Bone Matrix : " + std::to_wstring(CGlobalBoneTransformManager::Instance().GetLastAlloactedIndex()) + L" / " + std::to_wstring(CGlobalBoneTransformManager::Instance().GetMaxIndex()));
 
 	m_DebugTextBlocks[index++]->SetText(GetCurrentScene()->to_wstring());
 
