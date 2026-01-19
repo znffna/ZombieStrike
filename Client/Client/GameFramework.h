@@ -84,6 +84,7 @@ private:
 	void MoveToNextFrame();
 
 	void CreateShaderVariables(CUploadContext& uploadcontext);
+	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void UpdateShaderVariables();
 	void ReleaseShaderVariables();
 
@@ -119,11 +120,21 @@ private:
 	ComPtr<ID3D12DescriptorHeap>							m_pd3dDsvDescriptorHeap;
 
 	ComPtr<ID3D12CommandQueue>								m_pd3dCommandQueue;
-	std::array<ComPtr<ID3D12CommandAllocator>, m_nSwapChainBuffers>		m_pd3dCommandAllocator;
-	std::array<ComPtr<ID3D12GraphicsCommandList>, m_nSwapChainBuffers>	m_pd3dCommandList;
+
+	struct CommandListContext
+	{
+		ComPtr<ID3D12CommandAllocator>		pd3dCommandAllocator;
+		ComPtr<ID3D12GraphicsCommandList>	pd3dCommandList;
+		UINT64								nFenceValue;
+	};
+
+	std::array<CommandListContext, m_nSwapChainBuffers> m_CommandListContexts;
+
+	//std::array<ComPtr<ID3D12CommandAllocator>, m_nSwapChainBuffers>		m_pd3dCommandAllocator;
+	//std::array<ComPtr<ID3D12GraphicsCommandList>, m_nSwapChainBuffers>	m_pd3dCommandList;
+	//std::array<UINT64, m_nSwapChainBuffers>								m_nFenceValues;
 
 	ComPtr<ID3D12Fence>										m_pd3dFence;
-	std::array<UINT64, m_nSwapChainBuffers>					m_nFenceValues;
 	HANDLE													m_hFenceEvent;
 
 #if defined(_DEBUG)
