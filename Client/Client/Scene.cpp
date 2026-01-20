@@ -244,7 +244,6 @@ CGameObject* CScene::AddObject(std::unique_ptr<CGameObject> object)
 	object->SetID(m_NextGameObjectID++);
 	object->SetScene(this);
 
-
 	CGameObject* rawPtr = object.get();
 
 	RegisterLayerView(rawPtr);
@@ -272,10 +271,17 @@ void CScene::RequestDestroyObject(uint32_t id)
 // Object 생성 / 삭제 요청 처리
 void CScene::ProcessPendingRequest()
 {
+#ifdef _DEBUG
+	if(m_CreateQueue.size() + m_RemoveQueue.size() > 0)
+	{
+		std::string debugMsg = to_string(GetSceneName()) + " - CScene::ProcessPendingRequest: Creating " + std::to_string(m_CreateQueue.size()) + " Objects, Removing " + std::to_string(m_RemoveQueue.size()) + " Objects.\n";
+		OutputDebugStringA(debugMsg.c_str());
+	}
+#endif
+
 	for (auto& object : m_CreateQueue)
 	{
 		// TODO : Initialize 시점에 ID3D12 요소	전달 필요 또는 별도로 가져오는 Init 함수 필요
-		// object->Initialize();
 		object->SetScene(this);
 
 		CGameObject* rawPtr = object.get();
@@ -362,7 +368,11 @@ void CScene::RegisterCamera(CCamera* pCamera)
 		m_nSelectedCamera = 0; // 첫 번째 등록된 카메라를 기본으로 선택
 		m_pCamera = pCamera;
 	}
+
+	// 리소스 매니저에도 등록
+	CResourceManager::Instance().RegisterCamera(pCamera);
 }
+
 
 void CScene::UnregisterCamera(CCamera* pCamera)
 {
@@ -404,6 +414,8 @@ void CScene::SelectCamera(CCamera* pCamera)
 		m_nSelectedCamera = static_cast<int>(std::distance(m_CameraRegistry.begin(), it));
 	}
 }
+
+// Scene Render
 
 bool CScene::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
 {

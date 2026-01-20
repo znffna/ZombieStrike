@@ -194,11 +194,8 @@ void CAnimationController::SetModel(CLoadedModelInfo* pModel)
 
 	m_pAnimationSets = pModel->m_pAnimationSets;
 
-	//m_ppd3dcbSkinningBoneTransforms.resize(m_nSkinnedMeshes);
-	//m_ppcbxmf4x4MappedSkinningBoneTransforms.resize(m_nSkinnedMeshes);
 	m_vSkinnedMeshBoneOffsets.resize(m_nSkinnedMeshes);
 
-	//
 	m_xmf4x4SkinningBoneTransforms.resize(m_nSkinnedMeshes);
 	for(int i = 0; i < m_nSkinnedMeshes; i++)
 	{
@@ -207,30 +204,15 @@ void CAnimationController::SetModel(CLoadedModelInfo* pModel)
 
 	m_nAnimationTracks = m_pAnimationSets->m_nAnimationSets;
 
-	// Create Constant Buffers for Skinned Meshes
-	// TODO : 이과정을 생략, 실제 m_ppd3dcbSkinningBoneTransforms는 내 게임내에선 오직 1개만 생성, 추후 Indexing기법등으로 여러개를 지원할 수 있도록 개선
-	// 이때, 실제 Skinning Bone Transform을 Skinned Mesh에서 자신의 Bone Count만큼만 사용하고 Index를 수정하고 AnimationController에선 Final Pose를 계산후 Index까지 받아오면 실제 REnder 루프때 이 Index를 Shader에 넘기는 방식을 생각해 봐야함.
-	
-	//auto& CUploadContext = CUploadContext::Instance();
-	//UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256의 배수
-	//for (int i = 0; i < m_nSkinnedMeshes; i++)
-	//{
-	//	m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(CUploadContext.m_pd3dDevice, CUploadContext.m_pd3dGraphicCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-	//	m_ppd3dcbSkinningBoneTransforms[i]->Map(0, NULL, (void**)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
-
-	//	std::wstring name = L"Skinning Bone Transforms [" + std::to_wstring(i) + L"]";
-	//	m_ppd3dcbSkinningBoneTransforms[i]->SetName(name.c_str());
-	//}
-	//CUploadContext.ExecuteAndReset();
-
-
 	m_pAnimationTracks.resize(m_nAnimationTracks);
 	for (int i = 0; i < m_nAnimationTracks; i++)
 	{
 		m_pAnimationTracks[i].SetAnimationSet(i);
 		m_pAnimationTracks[i].SetCallbackKeys(0);
 		m_pAnimationTracks[i].SetAnimationCallbackHandler(NULL);
+		m_pAnimationTracks[i].SetEnable(false);
 	}
+	m_pAnimationTracks[0].SetEnable(true);
 }
 
 CAnimationController::~CAnimationController()

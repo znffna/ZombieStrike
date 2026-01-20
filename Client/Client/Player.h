@@ -10,6 +10,7 @@ public:
 	virtual ~CPlayer();
 	// Object Initialization
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nSkinIndex);
+	virtual void Initialize();
 	
 	virtual std::string GetDefaultName() override { return "CPlayer"; }
 
@@ -49,6 +50,7 @@ public:
 	void SetHealthObject(const std::shared_ptr<CGaugeBar>& pHealthGauge) { m_pHealthGauge = pHealthGauge; }
 
 private:
+
 	std::vector<std::string> m_ModelName{ "Ch18_nonPBR", "Ch35_nonPBR" };
 	std::vector<std::string> m_MeshBoneName{ "Ch18", "Ch35" };
 

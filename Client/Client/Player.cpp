@@ -44,7 +44,7 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	pCamera->SetOffset(XMFLOAT3(1.0f, 0.7f, -2.5f));
 	pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
 	pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
-	pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	//pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	pCamera->SetActive(true);
 
 	// Collider 持失
@@ -53,6 +53,42 @@ void CPlayer::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	//Update(0.0f);
 	//UpdateTransform();
 }
+
+void CPlayer::Initialize()
+{
+	if (IsInitialized()) return;
+
+	CGameObject::Initialize();
+
+	// Object Info
+	SetName("Player_" + std::to_string(GetID()));
+
+	SetRotationAxisLock(true, false, true);
+
+	// <Components>
+	// Animation Controller
+	auto pSkinnedAnimationController = CreateComponent<CAnimationController>();
+	auto pModel = CResourceManager::Instance().GetModelInfo(m_ModelName[m_nSkinType]);
+	pSkinnedAnimationController->SetModel(pModel);
+
+	// RigidBody 持失
+	auto pRigidBody = CreateComponent<CRigidBody>();
+	pRigidBody->SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	//pRigidBody->SetVelocity(XMFLOAT3(0.0f, -9.0f, 0.0f));
+
+	// Camera 持失
+	auto pCamera = CreateComponent<CThirdPersonCamera>();
+	pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pCamera->SetOffset(XMFLOAT3(1.0f, 0.7f, -2.5f));
+	pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
+	pCamera->SetActive(true);
+
+	m_bInitialized = true;
+	SetActive(true);
+}
+
 
 void CPlayer::Update(float fTimeElapsed)
 {

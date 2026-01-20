@@ -342,6 +342,8 @@ protected:
 
 	// 기존에 있던 기본 카메라
 	int m_nSelectedCamera = -1;  // m_CameraRegistry 내에서 선택된 카메라 인덱스
+
+	CGameObject* m_pDefaultCameraObject = nullptr;
 	CCamera* m_pCamera; // 이건 현재 카메라가 아닌 기본 카메라
 
 public:
@@ -474,6 +476,8 @@ CGameObject* CScene::RequestCreateObject(TypeTag<T> tag)
 
 	auto object = std::make_unique<T>();
 	object->SetID(m_NextGameObjectID++);
+	object->SetActive(false);
+	object->Initialize();
 
 	CGameObject* rawPtr = object.get();
 	m_CreateQueue.push_back(std::move(object));

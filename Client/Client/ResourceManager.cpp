@@ -468,3 +468,37 @@ void CResourceManager::ProcessShaderCreate(ID3D12Device* pd3dDevice, ID3D12Graph
 	m_ShaderToCreateList.clear();
 }
 
+// ----------------------------------------
+// Create Shader Variables For Camera
+// ----------------------------------------
+
+void CResourceManager::RegisterCamera(CCamera* pCamera)
+{
+	std::lock_guard<std::mutex> lock(m_UploadMutex);
+	m_CameraRegisterBuffer.push_back(pCamera);
+}
+
+
+void CResourceManager::CollectCameraRegister(int maxcount)
+{
+	{
+		int count{};
+		while (false == m_CameraRegisterBuffer.empty() && count < maxcount)
+		{
+			m_CameraToCreateList.push_back(m_CameraRegisterBuffer.front());
+			m_CameraRegisterBuffer.pop_front();
+			++count;
+		}
+	}
+}
+
+void CResourceManager::ProcessCameraCreate(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	for (auto& pCamera : m_CameraToCreateList)
+	{
+		pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	m_ShaderToCreateList.clear();
+}
+

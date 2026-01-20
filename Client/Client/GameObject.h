@@ -95,7 +95,7 @@ public:
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int) {};
 	virtual void DeepCopyFromGameObject(CGameObject* rhs);
 	void ClearMemberVariables();
-	void Initialize();
+	virtual void Initialize();
 
 	// --------------------------------------------
 	// Object methods
@@ -135,6 +135,14 @@ public:
 
 private:
 	bool m_bActive = true; // Active Flag
+
+public:
+	// --------------------------------------------
+	// Initialize Flag
+	// --------------------------------------------
+	bool IsInitialized() const { return m_bActive; }
+protected:
+	bool m_bInitialized = false;
 
 public:
 	// --------------------------------------------

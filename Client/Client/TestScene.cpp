@@ -21,17 +21,17 @@ void CTestScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	pTextComponent->SetSize(100.0f, 100.0f, 400.0f, 50.0f);
 
 	// auto pPlayerObject = AddObject(CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0));
-	auto pPlayerObject = AddObject(std::make_unique<CPlayer>());
+	auto pPlayerObject = RequestCreateObject(TypeTag<CPlayer>());
+	// auto pPlayerObject = AddObject(std::make_unique<CPlayer>());
 	auto pPlayer = dynamic_cast<CPlayer*>(pPlayerObject);
-	pPlayer->Initialize(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
-	pPlayerObject->SetName("Player");
+	// pPlayer->Initialize(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
 	pPlayerObject->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
 	pPlayerObject->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
 
 	m_pPlayer = dynamic_cast<CPlayer*>(pPlayerObject);
 
 	// Player 다중 실행 테스트
-	int nPlayerCount = 10;
+	/*int nPlayerCount = 10;
 	for(int i = 0; i < nPlayerCount; ++i){
 		auto pPlayerObject = AddObject(std::make_unique<CPlayer>());
 		auto pPlayer = dynamic_cast<CPlayer*>(pPlayerObject);
@@ -39,7 +39,7 @@ void CTestScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		pPlayerObject->SetName("Player");
 		pPlayerObject->SetPosition(XMFLOAT3(0.5f + 0.5f * i, 0.0f, 0.0f));
 		pPlayerObject->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
-	}
+	}*/
 }
 
 void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -96,6 +96,17 @@ void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 			auto camera = GetMainCamera();
 			camera->Move(XMFLOAT3(0.0f, -0.1f, 0.0f));
 			camera->RegenerateViewMatrix();
+		}
+			break;
+		case VK_F2:
+		{
+			auto pObject = RequestCreateObject(TypeTag<CPlayer>());
+			pObject->SetPosition(Vector3::Add(GetMainCamera()->GetPosition(), Vector3::ScalarProduct(GetMainCamera()->GetLook(), 3.0f, false)));
+
+#ifdef _DEBUG
+			std::string debugMsg = to_string(GetSceneName()) + " - CTestScene::OnProcessingKeyboardMessage: Player Object Created. CID = " + std::to_string(pObject->GetID()) + ", Name = " + pObject->GetName() + "\n";
+			OutputDebugStringA(debugMsg.c_str());
+#endif
 		}
 			break;
 		}

@@ -350,4 +350,14 @@ public:
 
 	std::deque<CShader*> m_ShaderRegisterBuffer;
 	std::vector<CShader*> m_ShaderToCreateList;
+
+	// ----------------------------------------
+	// Create Shader Variables For Camera
+	// ----------------------------------------
+	void RegisterCamera(CCamera* pCamera);
+	void CollectCameraRegister(int maxcount = INT_MAX);
+	void ProcessCameraCreate(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	std::deque<CCamera*> m_CameraRegisterBuffer;
+	std::vector<CCamera*> m_CameraToCreateList;
 };
