@@ -109,6 +109,17 @@ void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 #endif
 		}
 			break;
+		case VK_F3 :
+		{
+			auto pObject = RequestCreateObject(TypeTag<CZombieObject>());
+			pObject->SetPosition(Vector3::Add(GetMainCamera()->GetPosition(), Vector3::ScalarProduct(GetMainCamera()->GetLook(), 3.0f, false)));
+
+#ifdef _DEBUG
+			std::string debugMsg = to_string(GetSceneName()) + " - CTestScene::OnProcessingKeyboardMessage: Zombie Object Created. CID = " + std::to_string(pObject->GetID()) + ", Name = " + pObject->GetName() + "\n";
+			OutputDebugStringA(debugMsg.c_str());
+#endif
+		}
+			break;
 		}
 		break;
 	}	

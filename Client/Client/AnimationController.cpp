@@ -180,13 +180,14 @@ void CAnimationController::Clear()
 	m_pAnimationSets = NULL;
 	m_nAnimationTracks = 0;
 	m_pAnimationTracks.clear();
+
+	UpperPose = IDLE;
+	BasePose = IDLE;
 }
 
 void CAnimationController::SetModel(CLoadedModelInfo* pModel)
 {
 	Clear();
-
-	UpperPose = IDLE;
 
 	m_pModelRootObject = pModel->m_pModelRootObject;
 	m_nSkinnedMeshes = pModel->m_nSkinnedMeshes;
