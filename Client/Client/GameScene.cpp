@@ -29,8 +29,6 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	// Create Objects
 	CResourceManager& resourceManager = CResourceManager::Instance();
 
-
-
 	// <Environment>
 	//StoreTerrain(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
 
@@ -54,17 +52,16 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	// <Initialize GameObjects>
 	// Player 생성
-	auto pPlayer = AddObject(std::make_unique<CPlayer>());
-	pPlayer->Initialize(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
+	//auto pPlayer = AddObject(std::make_unique<CPlayer>());
+	auto pPlayer = RequestCreateObject(TypeTag<CPlayer>());
+	pPlayer->SetSkin(0); // 기본 모델 설정
 	pPlayer->SetPosition(DirectX::XMFLOAT3(100.0f, 0.0f, 100.0f));
 	m_pPlayer = (CPlayer*)pPlayer;
 
 	// Gun 생성
-	auto pGun = dynamic_cast<CGun*>(AddObject(std::make_unique<CGun>()));
-	pGun->Initialize(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
+	auto pGun = RequestCreateObject(TypeTag<CGun>());
+	//auto pGun = dynamic_cast<CGun*>(AddObject(std::make_unique<CGun>()));
 	m_pPlayer->SetGun(pGun);
-
-	//CreateFreeCamera(pd3dDevice, pd3dCommandList);
 
 	//// Map Load
 	//auto pMap = resourceManager.GetModelInfo("Stage1");
@@ -75,8 +72,8 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	//AddObject(m_pMap);
 
 	// Collision Checker
-	auto pCollisionChecker = (CCollisionChecker*)AddObject(std::make_unique<CCollisionChecker>(this));
-	pCollisionChecker->Initialize(pd3dDevice, pd3dCommandList);
+	//auto pCollisionChecker = (CCollisionChecker*)AddObject(std::make_unique<CCollisionChecker>(this));
+	auto pCollisionChecker = RequestCreateObject(TypeTag<CCollisionChecker>());
 	m_pCollisionChecker = pCollisionChecker;
 
 	//// BulletObject
@@ -149,11 +146,11 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	m_pShadowShader = std::make_shared<CShadowMapShader>();
 	m_pShadowShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
-	m_pShadowShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture());
+	m_pShadowShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture().get());
 
 	m_pShadowMapToViewport = std::make_shared<CShadowToViewportShader>();
 	m_pShadowMapToViewport->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
-	m_pShadowMapToViewport->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture());
+	m_pShadowMapToViewport->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture().get());
 
 	// 마지막 모든 Object의 생성이 끝나면 Player의 카메라를 추적
 	if (m_pPlayer)

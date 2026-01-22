@@ -683,29 +683,28 @@ void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (!m_pCursorSprite) {
 		m_pCursorSprite = std::make_unique<CSprite>();
-		m_pCursorSprite->Initialize(m_pd3dDevice.Get(), pd3dCommandList);
-
 		auto pUIShader = CResourceManager::Instance().GetShader<CTextureToViewportShader>();
-
 		std::shared_ptr<CMesh> pRectangleMesh = CResourceManager::Instance().GetMesh("UI");
+		auto pCursorMaterial = m_pCursorSprite->GetMaterial();
 
-		auto cursorTexture = CResourceManager::Instance().LoadOrCreateTexture(L"Image/cursor.dds");
-		if(nullptr == cursorTexture)
-		{
+		TextureRecipe cursorTextureRecipe;
+		cursorTextureRecipe.source = TEXTURE_SOURCE_FILE;
+		cursorTextureRecipe.name = L"Cursor";
+		cursorTextureRecipe.filePath = L"Image/cursor.dds";
+		cursorTextureRecipe.type = RESOURCE_TEXTURE2D;
+		cursorTextureRecipe.rootparameterindex = ROOT_PARAMETER_STANDARD_TEXTURES;
 
-			cursorTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
-			cursorTexture->LoadTextureFromDDSFile(m_pd3dDevice.Get(), pd3dCommandList, L"Image/cursor.dds", RESOURCE_TEXTURE2D, 0);
-			CResourceManager::Instance().CreateShaderResourceViews(m_pd3dDevice.Get(), cursorTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
-			CResourceManager::Instance().SetTexture(L"Image/cursor.dds", cursorTexture);
-		}
+		auto cursorTexture = std::make_shared<CTexture>(cursorTextureRecipe);
+		//cursorTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
+		//cursorTexture->LoadTextureFromDDSFile(m_pd3dDevice.Get(), pd3dCommandList, L"Image/cursor.dds", RESOURCE_TEXTURE2D, 0);
+		//CResourceManager::Instance().CreateShaderResourceViews(m_pd3dDevice.Get(), cursorTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+		//CResourceManager::Instance().SetTexture(L"Image/cursor.dds", cursorTexture);
+		cursorTexture->CreateShaderVariables(m_pd3dDevice.Get(), pd3dCommandList);
 
-		std::shared_ptr<CMaterial> pCursorMaterial = std::make_shared<CMaterial>();
 		pCursorMaterial->SetTexture(cursorTexture);
 		pCursorMaterial->SetShader(pUIShader);
 
 		m_pCursorSprite->SetMesh(pRectangleMesh);
-		m_pCursorSprite->MaterialResize(1);
-		m_pCursorSprite->SetMaterial(0, pCursorMaterial);
 
 #ifdef _WITH_DIRECT_WRITE_UI
 		auto ptextcomponent = m_pCursorSprite->CreateComponent<CTextComponent>();

@@ -40,6 +40,10 @@ void CTestScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		pPlayerObject->SetPosition(XMFLOAT3(0.5f + 0.5f * i, 0.0f, 0.0f));
 		pPlayerObject->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
 	}*/
+
+	// SkyBox »ý¼º
+	auto pSkyBoxObject = RequestCreateObject(TypeTag<CSkyBox>());
+
 }
 
 void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)

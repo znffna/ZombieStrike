@@ -27,6 +27,10 @@ void CGun::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dC
 	DeepCopyFromModel(CResourceManager::Instance().GetModelInfo(m_strGunName[m_nGunType]));
 }
 
+void CGun::Initialize()
+{
+}
+
 void CGun::Update(float fTimeElapsed)
 {
 	m_fCoolTime -= fTimeElapsed;

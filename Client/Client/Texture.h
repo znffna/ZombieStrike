@@ -20,11 +20,48 @@ enum RESOURCE_TYPE
 	RESOURCE_STRUCTURED_BUFFER = 0x07
 };
 
+enum ETextureSource
+{
+	TEXTURE_SOURCE_FILE = 0,
+	TEXTURE_SOURCE_BUFFER,
+	TEXTURE_SOURCE_RENDERTARGET
+};;
+
+struct TextureRecipe
+{
+	ETextureSource source;   // File / Buffer / RenderTarget
+	std::wstring   name;
+	UINT		   type;    // Texture Type
+	UINT		   rootparameterindex;    // Root Parameter Index
+
+	// File source
+	std::wstring   filePath;
+
+	// Buffer source
+	uint32_t       width;
+	uint32_t       height;
+	DXGI_FORMAT    format;
+
+	uint32_t       mipLevels;
+	uint32_t       flags;    // SRV / RTV / UAV / Depth
+
+	D3D12_HEAP_TYPE heapType;
+	D3D12_RESOURCE_STATES initialState;
+	D3D12_CLEAR_VALUE pd3dClearValue;
+
+	// Buffer Data
+	void* pData;    
+	UINT   nElements;
+	UINT   nStride;
+};
+
 class CTexture
 {
 public:
 	CTexture() {};
+	CTexture(TextureRecipe texturerecipe);
 	CTexture(int nTextures, UINT nTextureType, int nRootParameters);
+
 	virtual ~CTexture()
 	{
 		m_pd3dTextures.clear();
@@ -42,6 +79,20 @@ public:
 		m_d3dSrvGpuDescriptorHandles.clear();
 
 	};
+
+public:
+	// ----------------------------------------
+	// Initialization
+	// ----------------------------------------
+	bool IsGPUReady() const { return m_bInitialized; }
+private:
+	bool m_bInitialized = false;
+	TextureRecipe m_textureRecipe;
+	std::string recipe_debug;
+
+	void CreateByTextureRecipe(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+public:
 
 	// Texture Name
 	std::string GetName() { return m_strName; }
@@ -89,11 +140,13 @@ public:
 	void CreateBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, DXGI_FORMAT ndxgiFormat, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, UINT nIndex);;
 
 private:
-	bool m_bInitialized = false;
 	std::string m_strName; // Texture Name
 	std::vector<std::wstring> m_pwstrPaths; // Texture Path
 
 	UINT m_nTextureType = 0x00; // Texture Type
+	DXGI_FORMAT m_pdxgiBufferFormat;
+	int m_nBufferElement;
+	int m_nBufferStride;
 
 	// Texture Variables
 	UINT m_nTextures;

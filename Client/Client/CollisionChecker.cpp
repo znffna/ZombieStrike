@@ -1,8 +1,8 @@
 #include "CollisionChecker.h"
 #include "Scene.h"
 
-CCollisionChecker::CCollisionChecker(CScene* pScene)
-	:CGameObject(), m_pScene(pScene)
+CCollisionChecker::CCollisionChecker()
+	:CGameObject()
 {
 	SetLayer(LAYER_CONTROLLER);
 }
@@ -11,7 +11,7 @@ CCollisionChecker::~CCollisionChecker()
 {
 }
 
-void CCollisionChecker::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void CCollisionChecker::Initialize()
 {
 	std::vector<std::pair<GAMEOBJECT_LAYER, GAMEOBJECT_LAYER>> ppObjectLayerPairs{
 	{ LAYER_PLAYER, LAYER_ENEMY,},

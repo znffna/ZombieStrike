@@ -173,6 +173,9 @@ void CResourceManager::CreateShaderResourceView(ID3D12Device* pd3dDevice, CTextu
 
 void CResourceManager::CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, int nIndex)
 {
+	static int calledcount = 0;
+	++calledcount;
+
 	ID3D12Resource* pShaderResource = pTexture->GetResource(nIndex);
 	D3D12_GPU_DESCRIPTOR_HANDLE d3dGpuDescriptorHandle = pTexture->GetGpuDescriptorHandle(nIndex);
 	if (pShaderResource && !d3dGpuDescriptorHandle.ptr)
@@ -183,9 +186,7 @@ void CResourceManager::CreateShaderResourceView(ID3D12Device* pd3dDevice, CTextu
 
 		pTexture->SetGpuDescriptorHandle(nIndex, m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle);
 		m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-
 	}
-
 }
 
 void CResourceManager::PrepareRender(ID3D12GraphicsCommandList* pd3dCommnadList)
@@ -200,6 +201,12 @@ void CResourceManager::PrepareRender(ID3D12GraphicsCommandList* pd3dCommnadList)
 void CResourceManager::SetTexture(const std::wstring& path, std::shared_ptr<CTexture> texture) {
 	if (texture == nullptr) return;
 	TextureInfos[path] = texture;
+}
+
+void CResourceManager::SetTexture(const std::wstring& path, TextureInfo texture)
+{
+	if (texture.texture == nullptr) return;
+	Textures[path] = texture;
 }
 
 std::shared_ptr<CTexture> CResourceManager::LoadOrCreateTexture(const std::wstring& path) {
@@ -280,6 +287,32 @@ std::shared_ptr<CMesh> CResourceManager::GetMesh(const std::string& name) {
 		return MeshInfos[name];
 	}
 	return nullptr;
+}
+
+void CResourceManager::RegisterGameObjectResources(CGameObject* pGameObject)
+{
+	std::lock_guard<std::mutex> lock(m_RegisterGameObjectMutex);
+	m_GameObjectResourceRegisterList.push_back(pGameObject);
+	{
+		std::string debugname = "Registered GameObject for Resource Collection: " + pGameObject->GetName() + "\n";
+		OutputDebugStringA(debugname.c_str());
+	}
+}
+
+void CResourceManager::CollectGameObjectRequest(int maxcount)
+{
+	std::lock_guard<std::mutex> lock(m_RegisterGameObjectMutex);
+	int count = 0;
+	while (!m_GameObjectResourceRegisterList.empty() && count < maxcount)
+	{
+		CGameObject* pGameObject = m_GameObjectResourceRegisterList.back();
+		m_GameObjectResourceRegisterList.pop_back();
+
+		pGameObject->CollectShaderVariables();
+		count++;
+	}
+
+	m_GameObjectResourceRegisterList.clear();
 }
 
 // ----------------------------------------
@@ -366,10 +399,10 @@ void CResourceManager::ProcessMaterialUpload(ID3D12Device* pd3dDevice, ID3D12Gra
 {
 	for (auto& pMaterial : m_MaterialUploadList)
 	{
-		/*{
+		{
 			std::string debugname = "Processing Material Upload: " + pMaterial->GetName() + "\n";
 			OutputDebugStringA(debugname.c_str());
-		}*/
+		}
 		pMaterial->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 }

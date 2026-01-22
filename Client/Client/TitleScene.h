@@ -19,8 +19,8 @@ public:
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 
 private:
-	std::shared_ptr<CSprite> m_pBackgroundObject;
-	std::shared_ptr<CSprite> m_pStartButton;
-	std::shared_ptr<CSprite> m_pExitButton;
+	CSprite* m_pBackgroundObject;
+	CSprite* m_pStartButton;
+	CSprite* m_pExitButton;
 };
 

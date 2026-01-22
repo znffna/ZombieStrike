@@ -1,7 +1,28 @@
 #include "Texture.h"
 
+#include "ResourceManager.h"
 ///////////////////////////////////////////////////////////////////////////////
 //
+
+CTexture::CTexture(TextureRecipe texturerecipe)
+	: m_textureRecipe(texturerecipe)
+{
+	m_nTextures = 1;
+	m_pd3dTextures.resize(m_nTextures);
+	m_pd3dTextureUploadBuffers.resize(m_nTextures);
+	m_strTextureNames.resize(m_nTextures);
+
+	m_nTextureType = texturerecipe.type;
+
+	m_pdxgiBufferFormats.resize(m_nTextures);
+	m_nBufferElements.resize(m_nTextures);
+	m_nBufferStrides.resize(m_nTextures);
+
+	m_d3dSrvGpuDescriptorHandles.resize(m_nTextures);
+
+	m_nRootParameters = 1;
+	m_nRootParameterIndices.resize(m_nRootParameters);
+}
 
 CTexture::CTexture(int nTextures, UINT nTextureType, int nRootParameters)
 {
@@ -21,6 +42,7 @@ CTexture::CTexture(int nTextures, UINT nTextureType, int nRootParameters)
 	m_nRootParameters = nRootParameters;
 	m_nRootParameterIndices.resize(m_nRootParameters);
 }
+
 
 D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int nIndex)
 {
@@ -73,6 +95,66 @@ D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int nIndex)
 
 // Shader Variables
 
+void CTexture::CreateByTextureRecipe(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	switch (m_textureRecipe.source)
+	{
+	case TEXTURE_SOURCE_FILE:
+	{
+		auto pResource = CResourceManager::Instance().GetTexture(m_textureRecipe.filePath);
+		if (pResource.texture) {
+			// 이미 로드된 경우 리소스 설정
+			m_nTextures = 1;
+			m_pd3dTextures.resize(m_nTextures);
+			m_pd3dTextureUploadBuffers.resize(m_nTextures);
+			m_strTextureNames.resize(m_nTextures);
+			m_d3dSrvGpuDescriptorHandles.resize(m_nTextures);
+
+			m_pd3dTextures[0] = pResource.texture;
+			m_d3dSrvGpuDescriptorHandles[0] = pResource.gpuHandle;
+
+			m_nRootParameterIndices[0] = m_textureRecipe.rootparameterindex;
+			m_strTextureNames[0] = m_textureRecipe.filePath;
+			m_nTextureType = m_textureRecipe.type;
+		}
+		else {
+			// 로드되지 않은 경우 확장자에 따라 로드
+			std::wstring ext = m_textureRecipe.filePath.substr(m_textureRecipe.filePath.find_last_of(L".") + 1);
+			std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
+
+			m_nTextures = 1;
+			m_pd3dTextures.resize(m_nTextures);
+			m_pd3dTextureUploadBuffers.resize(m_nTextures);
+			m_strTextureNames.resize(m_nTextures);
+			m_d3dSrvGpuDescriptorHandles.resize(m_nTextures);
+
+			if (ext == L"dds") {
+				LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, m_textureRecipe.filePath, m_textureRecipe.type, 0);
+			}
+			else {
+				// WIC 지원 포맷 (png, jpg, jpeg, bmp 등)
+				LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, m_textureRecipe.filePath, m_textureRecipe.type, 0);
+			}
+			CResourceManager::Instance().CreateShaderResourceView(pd3dDevice, this, 0, m_textureRecipe.rootparameterindex);
+			CResourceManager::Instance().SetTexture(m_textureRecipe.filePath, CResourceManager::TextureInfo{ m_pd3dTextures[0], m_d3dSrvGpuDescriptorHandles[0], ROOT_PARAMETER_STANDARD_TEXTURES });
+		}
+	}
+		break;
+	case TEXTURE_SOURCE_RENDERTARGET:
+	{
+		CreateTexture(pd3dDevice, pd3dCommandList, 0, RESOURCE_TEXTURE2D, m_textureRecipe.width, m_textureRecipe.height, m_textureRecipe.nElements, m_textureRecipe.mipLevels, m_textureRecipe.format, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, m_textureRecipe.initialState, &m_textureRecipe.pd3dClearValue);
+	}
+		break;
+	case TEXTURE_SOURCE_BUFFER:
+	{
+		CreateBuffer(pd3dDevice, pd3dCommandList, m_textureRecipe.pData, m_textureRecipe.nElements, m_textureRecipe.nStride, m_textureRecipe.format, m_textureRecipe.heapType, m_textureRecipe.initialState, 0);
+	}
+		break;
+	default:
+		throw std::runtime_error("m_textureRecipe.source has wrong value");
+		break;
+	}
+}
 
 // Shader Variables
 void CTexture::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -80,15 +162,23 @@ void CTexture::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	// Already Initialized Check
 	if (m_bInitialized) return;
 
-	// Create Buffer 
-
-
-	// Create Shader Resource View Descriptor Heap
-
+	// Create Buffer By Recipe
+	try {
+		CreateByTextureRecipe(pd3dDevice, pd3dCommandList);
+			}
+	catch (const std::exception& e) {
+		std::string errorMsg = "Failed to create texture shader variables: ";
+		errorMsg += e.what();
+		OutputDebugStringA(errorMsg.c_str());
+		m_bInitialized = false;
+		return;
+	}
+	// Create Shader Resource View Descriptor Heap [이것도 같은 뷰를 사용하도록 해야할 것 같은데..]
 
 	// Set Initialized Flag
 	m_bInitialized = true;
 }
+
 
 void CTexture::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int nParameterIndex, int nTextureIndex)
 {

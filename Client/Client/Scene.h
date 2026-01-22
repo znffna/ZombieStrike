@@ -243,9 +243,12 @@ public:
 	// 디버그 / 테스트용 즉시 추가 (소유권 이전 강제)
 	CGameObject* AddObject(std::unique_ptr<CGameObject> object);
 
+	template<typename T>
+	T* AddObject(std::unique_ptr<T> object);
+
 	// 생성 요청 (지연 생성)
 	template<typename T>
-	CGameObject* RequestCreateObject(TypeTag<T> tag);
+	T* RequestCreateObject(TypeTag<T> tag);
 
 	// 삭제 요청 (지연 삭제)
 	void RequestDestroyObject(uint32_t id);
@@ -469,7 +472,7 @@ public:
 };
 
 template<typename T>
-CGameObject* CScene::RequestCreateObject(TypeTag<T> tag)
+T* CScene::RequestCreateObject(TypeTag<T> tag)
 {
 	static_assert(std::is_base_of_v<CGameObject, T>,
 		"T must derive from CGameObject");
@@ -479,9 +482,34 @@ CGameObject* CScene::RequestCreateObject(TypeTag<T> tag)
 	object->SetActive(false);
 	object->Initialize();
 
-	CGameObject* rawPtr = object.get();
+	T* rawPtr = object.get();
 	m_CreateQueue.push_back(std::move(object));
+	
+	CResourceManager::Instance().RegisterGameObjectResources(rawPtr);
 
 	return rawPtr; // 아직 Scene에 등록되지 않은 객체
 }
 
+template<typename T>
+T* CScene::AddObject(std::unique_ptr<T> object)
+{
+	static_assert(std::is_base_of_v<CGameObject, T>,
+		"T must derive from CGameObject");
+
+	if (!object)
+		return nullptr;
+
+	object->SetID(m_NextGameObjectID++);
+	object->SetScene(this);
+
+	auto rawPtr = object.get();
+
+	RegisterLayerView(rawPtr);
+	m_ppGameObjects.emplace(rawPtr->GetID(), std::move(object));
+
+	{
+		std::string debugMsg = to_string(GetSceneName()) + " - CScene::AddObject: Object Added. CID = " + std::to_string(rawPtr->GetID()) + ", Name = " + rawPtr->GetName() + "\n";
+		OutputDebugStringA(debugMsg.c_str());
+	}
+	return rawPtr;
+}

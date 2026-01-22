@@ -21,26 +21,34 @@ void CTitleScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	// UI Shader
 	auto pQuadShader = CResourceManager::Instance().GetShader<CTextureToViewportShader>();
 
-	//// Title / Background
-	//{
-	//	std::shared_ptr<CTexture> pTitleTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
-	//	pTitleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Title.dds", RESOURCE_TEXTURE2D, 0);
-	//	CScene::CreateShaderResourceViews(pd3dDevice, pTitleTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+	// Title / Background
+	{
+		TextureRecipe titleTextureRecipe;
+		titleTextureRecipe.filePath = L"Image/Title.dds";
+		titleTextureRecipe.type = RESOURCE_TEXTURE2D;
+		titleTextureRecipe.source = TEXTURE_SOURCE_FILE;
+		titleTextureRecipe.name = L"Title Image";
+		//
 
-	//	std::shared_ptr<CMaterial> pTitleMaterial = std::make_shared<CMaterial>();
-	//	pTitleMaterial->SetTexture(pTitleTexture);
-	//	pTitleMaterial->SetShader(pUIShader);
+		std::shared_ptr<CTexture> pTitleTexture = std::make_shared<CTexture>(titleTextureRecipe);
 
-	//	std::shared_ptr<CSprite> pBackgroundObject = std::make_shared<CSprite>();
-	//	pBackgroundObject->Initialize(pd3dDevice, pd3dCommandList);
-	//	pBackgroundObject->SetMesh(pRectangleMesh);
-	//	pBackgroundObject->AddMaterial(pTitleMaterial);
+		//std::shared_ptr<CTexture> pTitleTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
+		//pTitleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Title.dds", RESOURCE_TEXTURE2D, 0);
+		//CScene::CreateShaderResourceViews(pd3dDevice, pTitleTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
 
-	//	pBackgroundObject->SetSize(0.0f, 0.0f, 1.0f, 1.0f);
+		std::shared_ptr<CMaterial> pTitleMaterial = std::make_shared<CMaterial>();
+		pTitleMaterial->SetTexture(pTitleTexture);
+		pTitleMaterial->SetShader(pQuadShader);
 
-	//	AddObject(pBackgroundObject);
-	//	m_pBackgroundObject = pBackgroundObject;
-	//}
+		auto pBackgroundObject = RequestCreateObject(TypeTag<CSprite>()); 
+		pBackgroundObject->Initialize(pd3dDevice, pd3dCommandList);
+		pBackgroundObject->SetMesh(pRectangleMesh);
+		pBackgroundObject->AddMaterial(pTitleMaterial);
+
+		pBackgroundObject->SetSize(0.0f, 0.0f, 1.0f, 1.0f);
+
+		m_pBackgroundObject = pBackgroundObject;
+	}
 
 	//// Start
 	//{

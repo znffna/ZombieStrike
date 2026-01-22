@@ -490,6 +490,24 @@ void CGameObject::ReleaseShaderVariables()
 #endif // _USE_OBJECT_MATERIAL_CBV
 }
 
+void CGameObject::CollectShaderVariables()
+{
+	if (m_pMesh)
+	{
+		CResourceManager::Instance().RegisterMeshUpload(m_pMesh.get());
+	}
+
+	for (auto& pMaterial : m_ppMaterials)
+	{
+		CResourceManager::Instance().RegisterMaterialUpload(pMaterial.get());
+	}
+
+	for (auto& pChild : m_pChilds)
+	{
+		pChild->CollectShaderVariables();
+	}
+}
+
 void CGameObject::ReleaseUploadBuffers()
 {
 	if (m_pMesh)
@@ -988,35 +1006,64 @@ void CSkyBox::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	std::shared_ptr<CTexture> pSkyBoxTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE_CUBE, 1);
-	pSkyBoxTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"SkyBox/SkyBox.dds", RESOURCE_TEXTURE_CUBE, 0);
+	TextureRecipe skyboxTextureRecipe;
+	skyboxTextureRecipe.source = TEXTURE_SOURCE_FILE;
+	skyboxTextureRecipe.name = L"SkyBoxTexture";
+	skyboxTextureRecipe.filePath = L"SkyBox/SkyBox.dds";
+	skyboxTextureRecipe.type = RESOURCE_TEXTURE_CUBE;
+	skyboxTextureRecipe.rootparameterindex = ROOT_PARAMETER_ALBEDO_TEXTURE;
+
+	std::shared_ptr<CTexture> pSkyBoxTexture = std::make_shared<CTexture>(skyboxTextureRecipe);
+	//std::shared_ptr<CTexture> pSkyBoxTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE_CUBE, 1);
+	//pSkyBoxTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"SkyBox/SkyBox.dds", RESOURCE_TEXTURE_CUBE, 0);
 
 	std::shared_ptr<CShader> pSkyBoxShader = std::make_shared<CSkyBoxShader>();
 	pSkyBoxShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature);
-	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	// pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	// pSkyBoxShader->CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 1);
 	
-	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture.get(), 0, ROOT_PARAMETER_SKYBOX);
+	/*CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture.get(), 0, ROOT_PARAMETER_SKYBOX);
 	{
 		std::string strDebugName = "After CScene::CreateShaderResourceViews\n";
 		OutputDebugStringA(strDebugName.c_str());
-	}
+	}*/
 
 	std::shared_ptr<CMaterial> pSkyBoxMaterial = std::make_shared<CMaterial>();
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);
 	pSkyBoxMaterial->SetShader(pSkyBoxShader);
 
-	MaterialResize(1);
-	SetMaterial(0, pSkyBoxMaterial);
+	//MaterialResize(1);
+	//SetMaterial(0, pSkyBoxMaterial);
+	AddMaterial(pSkyBoxMaterial);
 }
 
-std::shared_ptr<CSkyBox> CSkyBox::Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+void CSkyBox::Initialize()
 {
-	std::shared_ptr<CSkyBox> pSkyBox = std::make_shared<CSkyBox>();
-	pSkyBox->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	// Set Mesh
+	std::shared_ptr<CMesh> pSkyBoxMesh = std::make_shared<CSkyBoxMesh>(20.0f, 20.0f, 20.0f);
+	SetMesh(pSkyBoxMesh);
 
-	return pSkyBox;
+	// Set Material
+	auto pSkyBoxMaterial = std::make_shared<CMaterial>();
+	pSkyBoxMaterial->SetName("SkyBox Material");
+
+	// Set Texture
+	TextureRecipe skyboxTextureRecipe;
+	skyboxTextureRecipe.source = TEXTURE_SOURCE_FILE;
+	skyboxTextureRecipe.name = L"SkyBoxTexture";
+	skyboxTextureRecipe.filePath = L"SkyBox/SkyBox.dds";
+	skyboxTextureRecipe.type = RESOURCE_TEXTURE_CUBE;
+	skyboxTextureRecipe.rootparameterindex = ROOT_PARAMETER_SKYBOX;
+
+	auto pSkyBoxTexture = std::make_shared<CTexture>(skyboxTextureRecipe);
+	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);
+
+	// Set Shader
+	auto pSkyBoxShader = CResourceManager::Instance().GetOrCreate<CSkyBoxShader>();
+	pSkyBoxMaterial->SetShader(pSkyBoxShader);
+
+	AddMaterial(pSkyBoxMaterial);
 }
 
 void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
@@ -1119,15 +1166,32 @@ void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	pShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	SetShader(pShader);
 
-	// 이 define 은 stdafx.h 에서 정의되어 있다.
-	std::shared_ptr<CTexture> pTexture = std::make_shared<CTexture>(2, RESOURCE_TEXTURE2D, 2);
-	pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Stone01.jpg", RESOURCE_TEXTURE2D, 0);
-	pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Grass.jpg", RESOURCE_TEXTURE2D, 1);
+	auto pMaterial = std::make_shared<CMaterial>();
+	m_ppMaterials.push_back(pMaterial);
 
-	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, pTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+	TextureRecipe terrainTextureRecipe;
+	terrainTextureRecipe.source = TEXTURE_SOURCE_FILE;
+	terrainTextureRecipe.name = L"TerrainTexture_0";
+	terrainTextureRecipe.filePath = L"Image/Stone01.jpg";
+	terrainTextureRecipe.type = RESOURCE_TEXTURE2D;
+	terrainTextureRecipe.rootparameterindex = ROOT_PARAMETER_ALBEDO_TEXTURE;
 
-	MaterialResize(1);
-	m_ppMaterials[0]->SetTexture(pTexture);
+	auto pTexture = std::make_shared<CTexture>(terrainTextureRecipe);
+	pMaterial->AddTexture(pTexture);
+
+	terrainTextureRecipe.name = L"TerrainTexture_1";
+	terrainTextureRecipe.filePath = L"Image/Grass.jpg";
+	terrainTextureRecipe.rootparameterindex++;
+
+	pTexture = std::make_shared<CTexture>(terrainTextureRecipe);
+	pMaterial->AddTexture(pTexture);
+
+	//std::shared_ptr<CTexture> pTexture = std::make_shared<CTexture>(2, RESOURCE_TEXTURE2D, 2);
+	//pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Stone01.jpg", RESOURCE_TEXTURE2D, 0);
+	//pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Grass.jpg", RESOURCE_TEXTURE2D, 1);
+	//CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, pTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+
+
 }
 
 std::shared_ptr<CHeightMapTerrain> CHeightMapTerrain::InitializeByBinary(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pBinFileName, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color)
@@ -1198,15 +1262,31 @@ std::shared_ptr<CHeightMapTerrain> CHeightMapTerrain::InitializeByBinary(ID3D12D
 	pHeightMapTerrain->SetShader(pShader);
 
 	// 이 define 은 stdafx.h 에서 정의되어 있다.
-	std::shared_ptr<CTexture> pTexture = std::make_shared<CTexture>(2, RESOURCE_TEXTURE2D, 2);
-	pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Grass.jpg", RESOURCE_TEXTURE2D, 0);
-	pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Stone01.jpg", RESOURCE_TEXTURE2D, 1);
-	
-	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, pTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
 
 	pHeightMapTerrain->m_ppMaterials.resize(1);
-	pHeightMapTerrain->m_ppMaterials[0]->SetTexture(pTexture);
 
+	TextureRecipe terrainTextureRecipe;
+	terrainTextureRecipe.source = TEXTURE_SOURCE_FILE;
+	terrainTextureRecipe.name = L"TerrainTexture_0";
+	terrainTextureRecipe.filePath = L"Image/Stone01.jpg";
+	terrainTextureRecipe.type = RESOURCE_TEXTURE2D;
+	terrainTextureRecipe.rootparameterindex = ROOT_PARAMETER_ALBEDO_TEXTURE;
+
+	auto pTexture = std::make_shared<CTexture>(terrainTextureRecipe);
+	pHeightMapTerrain->m_ppMaterials[0]->AddTexture(pTexture);
+
+	terrainTextureRecipe.name = L"TerrainTexture_1";
+	terrainTextureRecipe.filePath = L"Image/Grass.jpg";
+	terrainTextureRecipe.rootparameterindex++;
+
+	pTexture = std::make_shared<CTexture>(terrainTextureRecipe);
+	pHeightMapTerrain->m_ppMaterials[0]->AddTexture(pTexture);
+
+	//std::shared_ptr<CTexture> pTexture = std::make_shared<CTexture>(2, RESOURCE_TEXTURE2D, 2);
+	//pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Grass.jpg", RESOURCE_TEXTURE2D, 0);
+	//pTexture->LoadTextureFromWICFile(pd3dDevice, pd3dCommandList, L"Image/Stone01.jpg", RESOURCE_TEXTURE2D, 1);
+	
+	//CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, pTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
 	return pHeightMapTerrain;
 }
 
@@ -1238,17 +1318,38 @@ CBulletParticleObject::CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12Gra
 	std::shared_ptr<CBulletMesh> pMesh = std::make_shared<CBulletMesh>(pd3dDevice, pd3dCommandList, xmf3Position, xmf3Look, fLifetime, xmf3Acceleration, xmf3Color, xmf2Size, nMaxParticles);
 	SetMesh(pMesh);
 
-	std::shared_ptr<CTexture> pParticleTexture = std::make_shared<CTexture>(4, RESOURCE_TEXTURE2D, 4);
+	std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
+	AddMaterial(pMaterial);
+
+	TextureRecipe particleTextureRecipe;
+	particleTextureRecipe.source = TEXTURE_SOURCE_FILE;
+	particleTextureRecipe.name = L"CBulletParticleObject";
+	particleTextureRecipe.filePath = L"Image/BulletTrail.dds";
+	particleTextureRecipe.type = RESOURCE_TEXTURE2D;
+	particleTextureRecipe.rootparameterindex = ROOT_PARAMETER_ALBEDO_TEXTURE;
+
+	pMaterial->AddTexture(std::make_shared<CTexture>(particleTextureRecipe));
+
+	particleTextureRecipe.filePath = L"Image/Spark.dds";
+	particleTextureRecipe.rootparameterindex++;
+	pMaterial->AddTexture(std::make_shared<CTexture>(particleTextureRecipe));
+
+	particleTextureRecipe.filePath = L"Image/Blood.dds";
+	particleTextureRecipe.rootparameterindex++;
+	pMaterial->AddTexture(std::make_shared<CTexture>(particleTextureRecipe));
+
+	particleTextureRecipe.filePath = L"Image/StoneFragment.dds";
+	particleTextureRecipe.rootparameterindex++;
+	pMaterial->AddTexture(std::make_shared<CTexture>(particleTextureRecipe));
+
+	/*std::shared_ptr<CTexture> pParticleTexture = std::make_shared<CTexture>(4, RESOURCE_TEXTURE2D, 4);
 	pParticleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/BulletTrail.dds", RESOURCE_TEXTURE2D, 0);
 	pParticleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Spark.dds", RESOURCE_TEXTURE2D, 1);
 	pParticleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Blood.dds", RESOURCE_TEXTURE2D, 2);
 	pParticleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/StoneFragment.dds", RESOURCE_TEXTURE2D, 3);
 	pParticleTexture->SetName("CBulletParticleObject");
-	
-	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, pParticleTexture.get(), 0, ROOT_PARAMETER_ALBEDO_TEXTURE);
-
-	std::shared_ptr<CMaterial> pMaterial = std::make_shared<CMaterial>();
-	pMaterial->SetTexture(pParticleTexture);
+	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, pParticleTexture.get(), 0, ROOT_PARAMETER_ALBEDO_TEXTURE);*/
+	//pMaterial->SetTexture(pParticleTexture);
 
 	srand((unsigned)time(NULL));
 
@@ -1256,6 +1357,18 @@ CBulletParticleObject::CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12Gra
 	for (int i = 0; i < 1024; i++) { pxmf4RandomValues[i].x = float((rand() % 10000) - 5000) / 5000.0f; pxmf4RandomValues[i].y = float((rand() % 10000) - 5000) / 5000.0f; pxmf4RandomValues[i].z = float((rand() % 10000) - 5000) / 5000.0f; pxmf4RandomValues[i].w = float((rand() % 10000) - 5000) / 5000.0f; }
 
 	//	m_pRandowmValueTexture = new CTexture(1, RESOURCE_TEXTURE1D, 0, 1);
+
+	TextureRecipe RandomValueTextureRecipe;
+	RandomValueTextureRecipe.source = TEXTURE_SOURCE_BUFFER;
+	RandomValueTextureRecipe.name = L"RandomValueTexture";
+	RandomValueTextureRecipe.pData = pxmf4RandomValues;
+	RandomValueTextureRecipe.width = 1024;
+	RandomValueTextureRecipe.nElements = 1024;
+	RandomValueTextureRecipe.nStride = sizeof(XMFLOAT4);
+	RandomValueTextureRecipe.format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	RandomValueTextureRecipe.heapType = D3D12_HEAP_TYPE_DEFAULT;
+	RandomValueTextureRecipe.initialState = D3D12_RESOURCE_STATE_GENERIC_READ;
+
 	m_pRandowmValueTexture = std::make_shared<CTexture>(1, RESOURCE_BUFFER, 1);
 	m_pRandowmValueTexture->CreateBuffer(pd3dDevice, pd3dCommandList, pxmf4RandomValues, 1024, sizeof(XMFLOAT4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, 0);
 

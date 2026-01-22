@@ -1812,7 +1812,7 @@ void CShadowMapShader::ReleaseUploadBuffers()
 {
 }
 
-void CShadowMapShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CTexture> pContext)
+void CShadowMapShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CTexture* pContext)
 {
 	m_pDepthFromLightTexture = (std::shared_ptr<CTexture>) pContext;
 
@@ -1894,7 +1894,7 @@ void CTextureToViewportShader::UpdateShaderVariables(ID3D12GraphicsCommandList* 
 	if (m_pDepthFromLightTexture) m_pDepthFromLightTexture->UpdateShaderVariables(pd3dCommandList);
 }
 
-void CTextureToViewportShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CTexture> pContext)
+void CTextureToViewportShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CTexture* pContext)
 {
 	m_pDepthFromLightTexture = (std::shared_ptr<CTexture>) pContext;
 

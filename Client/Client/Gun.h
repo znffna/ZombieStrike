@@ -10,6 +10,7 @@ public:
 
 	// GameObject Override
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature, int nWeaponType);
+	virtual void Initialize();
 
 	virtual GAMEOBJECT_LAYER GetLayer() override { SetLayer(LAYER_GUN);  return LAYER_GUN; }
 

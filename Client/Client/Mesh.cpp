@@ -7,7 +7,7 @@
 
 #include "GameObject.h"
 
-CMesh::CMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+CMesh::CMesh()
 {
 	static int nMeshIndex = 0;
 	// 메쉬의 이름 초기화
@@ -19,6 +19,11 @@ CMesh::CMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandLis
 	m_nOffset = 0;
 	m_nSlot = 0;
 	m_nStride = sizeof(XMFLOAT3);
+}
+
+CMesh::CMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+	: CMesh()
+{
 }
 
 CMesh::~CMesh()
@@ -745,6 +750,67 @@ CSkyBoxMesh::CSkyBoxMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
 	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
 	
+}
+
+CSkyBoxMesh::CSkyBoxMesh(float fWidth, float fHeight, float fDepth)
+	: CMesh()
+{
+	static int nSkyBoxIndex = 0;
+	std::string strName = "SkyBox_" + std::to_string(nSkyBoxIndex++);
+	SetName(strName);
+
+	// position
+	float halfWidth = fWidth * 0.5f;
+	float halfHeight = fHeight * 0.5f;
+	float halfDepth = fDepth * 0.5f;
+
+	m_nVertices = 36;
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	m_pxmf3Positions.resize(m_nVertices);
+
+	// Front Quad (quads point inward)
+	m_pxmf3Positions[0] = XMFLOAT3(-halfWidth, +halfHeight, +halfDepth);
+	m_pxmf3Positions[1] = XMFLOAT3(+halfWidth, +halfHeight, +halfDepth);
+	m_pxmf3Positions[2] = XMFLOAT3(-halfWidth, -halfHeight, +halfDepth);
+	m_pxmf3Positions[3] = XMFLOAT3(-halfWidth, -halfHeight, +halfDepth);
+	m_pxmf3Positions[4] = XMFLOAT3(+halfWidth, +halfHeight, +halfDepth);
+	m_pxmf3Positions[5] = XMFLOAT3(+halfWidth, -halfHeight, +halfDepth);
+	// Back Quad										
+	m_pxmf3Positions[6] = XMFLOAT3(+halfWidth, +halfHeight, -halfDepth);
+	m_pxmf3Positions[7] = XMFLOAT3(-halfWidth, +halfHeight, -halfDepth);
+	m_pxmf3Positions[8] = XMFLOAT3(+halfWidth, -halfHeight, -halfDepth);
+	m_pxmf3Positions[9] = XMFLOAT3(+halfWidth, -halfHeight, -halfDepth);
+	m_pxmf3Positions[10] = XMFLOAT3(-halfWidth, +halfHeight, -halfDepth);
+	m_pxmf3Positions[11] = XMFLOAT3(-halfWidth, -halfHeight, -halfDepth);
+	// Left Quad										
+	m_pxmf3Positions[12] = XMFLOAT3(-halfWidth, +halfHeight, -halfDepth);
+	m_pxmf3Positions[13] = XMFLOAT3(-halfWidth, +halfHeight, +halfDepth);
+	m_pxmf3Positions[14] = XMFLOAT3(-halfWidth, -halfHeight, -halfDepth);
+	m_pxmf3Positions[15] = XMFLOAT3(-halfWidth, -halfHeight, -halfDepth);
+	m_pxmf3Positions[16] = XMFLOAT3(-halfWidth, +halfHeight, +halfDepth);
+	m_pxmf3Positions[17] = XMFLOAT3(-halfWidth, -halfHeight, +halfDepth);
+	// Right Quad										
+	m_pxmf3Positions[18] = XMFLOAT3(+halfWidth, +halfHeight, +halfDepth);
+	m_pxmf3Positions[19] = XMFLOAT3(+halfWidth, +halfHeight, -halfDepth);
+	m_pxmf3Positions[20] = XMFLOAT3(+halfWidth, -halfHeight, +halfDepth);
+	m_pxmf3Positions[21] = XMFLOAT3(+halfWidth, -halfHeight, +halfDepth);
+	m_pxmf3Positions[22] = XMFLOAT3(+halfWidth, +halfHeight, -halfDepth);
+	m_pxmf3Positions[23] = XMFLOAT3(+halfWidth, -halfHeight, -halfDepth);
+	// Top Quad											
+	m_pxmf3Positions[24] = XMFLOAT3(-halfWidth, +halfHeight, -halfDepth);
+	m_pxmf3Positions[25] = XMFLOAT3(+halfWidth, +halfHeight, -halfDepth);
+	m_pxmf3Positions[26] = XMFLOAT3(-halfWidth, +halfHeight, +halfDepth);
+	m_pxmf3Positions[27] = XMFLOAT3(-halfWidth, +halfHeight, +halfDepth);
+	m_pxmf3Positions[28] = XMFLOAT3(+halfWidth, +halfHeight, -halfDepth);
+	m_pxmf3Positions[29] = XMFLOAT3(+halfWidth, +halfHeight, +halfDepth);
+	// Bottom Quad										
+	m_pxmf3Positions[30] = XMFLOAT3(-halfWidth, -halfHeight, +halfDepth);
+	m_pxmf3Positions[31] = XMFLOAT3(+halfWidth, -halfHeight, +halfDepth);
+	m_pxmf3Positions[32] = XMFLOAT3(-halfWidth, -halfHeight, -halfDepth);
+	m_pxmf3Positions[33] = XMFLOAT3(-halfWidth, -halfHeight, -halfDepth);
+	m_pxmf3Positions[34] = XMFLOAT3(+halfWidth, -halfHeight, +halfDepth);
+	m_pxmf3Positions[35] = XMFLOAT3(+halfWidth, -halfHeight, -halfDepth);
 }
 
 CSkyBoxMesh::~CSkyBoxMesh()

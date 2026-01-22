@@ -54,6 +54,7 @@ void CMaterial::SetTexture(std::shared_ptr<CTexture> pTexture, int nIndex)
 
 void CMaterial::AddTexture(std::shared_ptr<CTexture> pTexture)
 { 
+	m_nTextures++;
 	m_ppTextures.push_back(pTexture); 
 }
 
@@ -70,18 +71,38 @@ void CMaterial::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 #endif // _USE_OBJECT_MATERIAL_CBV
 
 	// Material이 가지고 있는 텍스쳐 로드
+	if (m_strMaterialName == "SkyBox Material")
+	{
+		m_strMaterialName = "For Debug";
+	}
+
+	// 여기서엔 생성된 CTexute를 참조해가며 Resource를 획득
 	for (int idx = 0; idx < m_ppTextures.size(); ++idx)
 	{
-		if (m_strTexturePaths[idx].empty()) continue;
+		if (nullptr == m_ppTextures[idx]) continue; // 생성할 텍스쳐가 없는경우 Skip
 
-		if(auto pTexture = CResourceManager::Instance().LoadOrCreateTexture(m_strTexturePaths[idx]))
+		m_ppTextures[idx]->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+		/*if(auto pTexture = CResourceManager::Instance().LoadOrCreateTexture(m_strTexturePaths[idx]))
 		{
 			m_ppTextures[idx] = pTexture;
 			continue;
 		}
 
 		::LoadTextureFromFile(m_ppTextures[idx], pd3dDevice, pd3dCommandList, m_strTexturePaths[idx], ROOT_PARAMETER_ALBEDO_TEXTURE + idx);
-		CResourceManager::Instance().SetTexture(m_strTexturePaths[idx], m_ppTextures[idx]);
+		CResourceManager::Instance().SetTexture(m_strTexturePaths[idx], m_ppTextures[idx]);*/
+	}
+
+	// 여기선 최종적으로 Shader Resource View 생성
+	for (int idx = 0; idx < m_ppTextures.size(); ++idx) {
+		if (m_ppTextures[idx]) {
+			//CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, m_ppTextures[idx].get(), 0, ROOT_PARAMETER_ALBEDO_TEXTURE + idx);
+		}
+		else
+		{
+			// 없는 텍스쳐에 대한 디폴트 처리
+			//CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, CResourceManager::Instance().GetDefaultTexture().get(), 0, ROOT_PARAMETER_ALBEDO_TEXTURE + idx);
+		}
 	}
 }
 
@@ -180,8 +201,16 @@ void CMaterial::LoadTextureFromFile(UINT nType, std::ifstream& File)
 		strFilePath += to_wstring(strTextureName);
 
 		// 텍스쳐 정보 저장
-		m_strTextureNames[nTextureIndex] = strTextureName;
-		m_strTexturePaths[nTextureIndex] = strFilePath;
+		TextureRecipe textureRecipe;
+		textureRecipe.source = TEXTURE_SOURCE_FILE;
+		textureRecipe.type = RESOURCE_TEXTURE2D;
+		textureRecipe.name = to_wstring(strTextureName);
+		textureRecipe.filePath = strFilePath;
+		textureRecipe.rootparameterindex = ROOT_PARAMETER_ALBEDO_TEXTURE + nTextureIndex;
+		m_ppTextures[nTextureIndex] = std::make_shared<CTexture>(textureRecipe);
+
+		//m_strTextureNames[nTextureIndex] = strTextureName;
+		//m_strTexturePaths[nTextureIndex] = strFilePath;
 	}
 }
 

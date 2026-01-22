@@ -200,11 +200,27 @@ public:
 	// ----------------------------------------
 	// 텍스쳐 정보를 저장
 	// ----------------------------------------
+	struct TextureInfo {
+		ComPtr<ID3D12Resource> texture;
+		D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle;
+		UINT rootParameterIndex;
+	};
 	void SetTexture(const std::wstring& path, std::shared_ptr<CTexture> texture);
+	void SetTexture(const std::wstring& path, TextureInfo texture);
 	std::shared_ptr<CTexture> LoadOrCreateTexture(const std::wstring& path);
+	TextureInfo GetTexture(const std::wstring& path)
+	{
+		if (Textures.find(path) != Textures.end())
+		{
+			return Textures[path];
+		}
+
+		return TextureInfo{nullptr, 0, 0};
+	};
 
 private:
 	std::unordered_map<std::wstring, std::shared_ptr<CTexture>> TextureInfos;
+	std::unordered_map<std::wstring, TextureInfo> Textures;
 
 public:
 	// ----------------------------------------
@@ -267,6 +283,13 @@ public:
 private:
 	std::unordered_map<std::type_index, std::shared_ptr<CShader>> ShaderInfos; // typeid(TShader).hash_code(), std::shared_ptr<CShader>
 
+public:
+	void RegisterGameObjectResources(CGameObject* pGameObject);
+	void CollectGameObjectRequest(int maxcount);
+
+private:
+	std::mutex m_RegisterGameObjectMutex; 
+	std::vector<CGameObject*> m_GameObjectResourceRegisterList;
 
 public:
 	// ----------------------------------------
@@ -277,6 +300,8 @@ public:
 
 	void CollectRegister(int maxcount)
 	{
+		CollectGameObjectRequest(maxcount);
+
 		std::lock_guard<std::mutex> lock(m_UploadMutex);
 		// Mesh Upload List 일부 추출
 		CollectMeshRegister(maxcount);
