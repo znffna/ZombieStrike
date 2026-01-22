@@ -33,18 +33,16 @@ void CZombieObject::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	// <Components>
 	auto pRigidBody = CreateComponent<CRigidBody>();
-	pRigidBody->SetGravity(XMFLOAT3(0.0f, -9.0f, 0.0f));
+	//pRigidBody->SetGravity(XMFLOAT3(0.0f, -9.0f, 0.0f));
 
 	auto pModel = CResourceManager::Instance().GetModelInfo(m_strModelName[nSkinType]);
 	auto pSkinnedAnimationController = CreateComponent<CAnimationController>();
 	pSkinnedAnimationController->SetModel(pModel);
 	// m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
 
-
 	// Model Info
 	SetSkinType(nSkinType);
 	SetSkin(m_nSkinType);
-
 }
 
 void CZombieObject::Initialize()

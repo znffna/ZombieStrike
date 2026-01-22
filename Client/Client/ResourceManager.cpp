@@ -10,7 +10,7 @@ void CResourceManager::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 	CreateDescriptorHeap(pd3dDevice);
 
 	CreateDefaultMesh(pd3dDevice, pd3dCommnadList);
-	LoadModelList(pd3dDevice, pd3dCommnadList);
+	//LoadModelList(pd3dDevice, pd3dCommnadList);
 }
 
 void CResourceManager::CreateDefaultMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList)
@@ -187,6 +187,27 @@ void CResourceManager::CreateShaderResourceView(ID3D12Device* pd3dDevice, CTextu
 		pTexture->SetGpuDescriptorHandle(nIndex, m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle);
 		m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
 	}
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE CResourceManager::CreateShaderResourceView(ID3D12Device* pd3dDevice, ID3D12Resource* pResource, D3D12_SHADER_RESOURCE_VIEW_DESC& desc)
+{
+	D3D12_GPU_DESCRIPTOR_HANDLE ret;
+
+	ID3D12Resource* pShaderResource = pResource;
+	D3D12_RESOURCE_DESC d3dResourceDesc = pShaderResource->GetDesc();
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc = desc;
+
+	if (pShaderResource)
+	{
+		pd3dDevice->CreateShaderResourceView(pShaderResource, &d3dShaderResourceViewDesc, m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle);
+		m_pDescriptorHeap->m_d3dSrvCPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+
+		ret = m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle;
+		m_pDescriptorHeap->m_d3dSrvGPUDescriptorNextHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+	}
+
+	return ret;
 }
 
 void CResourceManager::PrepareRender(ID3D12GraphicsCommandList* pd3dCommnadList)

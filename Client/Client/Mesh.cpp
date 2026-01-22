@@ -1221,8 +1221,8 @@ void CSkinnedMesh::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandL
 
 	if (m_pd3dcbSkinningBoneTransforms)
 	{
-		D3D12_GPU_VIRTUAL_ADDRESS d3dcbBoneTransformsGpuVirtualAddress = m_pd3dcbSkinningBoneTransforms->GetGPUVirtualAddress();
-		pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_SKINNED_BONE_TRANSFORM, d3dcbBoneTransformsGpuVirtualAddress); //Skinned Bone Transforms
+		//D3D12_GPU_VIRTUAL_ADDRESS d3dcbBoneTransformsGpuVirtualAddress = m_pd3dcbSkinningBoneTransforms->GetGPUVirtualAddress();
+		//pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_SKINNED_BONE_TRANSFORM, d3dcbBoneTransformsGpuVirtualAddress); //Skinned Bone Transforms
 
 		// UpdateSkinningBoneTransforms(m_pcbxmf4x4MappedSkinningBoneTransforms);
 		pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 1, &m_nSkinningBoneTransformsOffset, 20);

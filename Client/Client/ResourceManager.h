@@ -132,6 +132,7 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE			m_d3dSrvCPUDescriptorNextHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE			m_d3dSrvGPUDescriptorNextHandle;
 
+	
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandleForHeapStart() { return(m_pd3dCbvSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart()); }
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandleForHeapStart() { return(m_pd3dCbvSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart()); }
 
@@ -139,6 +140,19 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUCbvDescriptorStartHandle() { return(m_d3dCbvGPUDescriptorStartHandle); }
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUSrvDescriptorStartHandle() { return(m_d3dSrvCPUDescriptorStartHandle); }
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUSrvDescriptorStartHandle() { return(m_d3dSrvGPUDescriptorStartHandle); }
+
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUAddressOfIndex(int nIndex) const
+	{
+		D3D12_GPU_DESCRIPTOR_HANDLE d3dGpuDescriptorHandle;
+		d3dGpuDescriptorHandle.ptr = m_d3dSrvGPUDescriptorStartHandle.ptr + nIndex * gnCbvSrvDescriptorIncrementSize;
+		return d3dGpuDescriptorHandle;
+	}
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUAddressOfIndex(int nIndex) const
+	{
+		D3D12_CPU_DESCRIPTOR_HANDLE d3dCpuDescriptorHandle;
+		d3dCpuDescriptorHandle.ptr = m_d3dSrvCPUDescriptorStartHandle.ptr + nIndex * gnCbvSrvDescriptorIncrementSize;
+		return d3dCpuDescriptorHandle;
+	}
 };
 
 class CResourceManager
@@ -181,6 +195,7 @@ public:
 	void CreateShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex);
 	void CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, int nIndex, UINT nRootParameterStartIndex);
 	void CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, int nIndex);
+	D3D12_GPU_DESCRIPTOR_HANDLE CreateShaderResourceView(ID3D12Device* pd3dDevice, ID3D12Resource* pResource, D3D12_SHADER_RESOURCE_VIEW_DESC& desc);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandleForHeapStart() { return(m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart()); }
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandleForHeapStart() { return(m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart()); }

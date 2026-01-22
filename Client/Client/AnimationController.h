@@ -125,7 +125,7 @@ public:
 	CGlobalBoneTransformManager(const CGlobalBoneTransformManager&) = delete;
 	CGlobalBoneTransformManager& operator=(const CGlobalBoneTransformManager&) = delete;
 
-	void Initialize(ID3D12Device* pd3dDevice);
+	void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pCommandList);
 	void Shutdown();
 
 	// Bone 범위 할당 (시작 인덱스 반환)
@@ -150,6 +150,8 @@ private:
 	UINT m_nCurrentBoneOffset = 0;								   // 현재 할당된 본 오프셋
 	UINT m_nPrevBoneOffset = 0;									   // 이전 프레임에 할당된 본 오프셋
 	UINT m_nMaxBoneOffset = 0;									   // 생성된 최대 본 오프셋
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuhandle;						   // GPU Descriptor Handle
+
 	bool m_bInitialized = false;
 };
 

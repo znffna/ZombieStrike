@@ -609,6 +609,17 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 		d3dDescriptorRanges.push_back(d3dDescriptorRange);
 	}
 
+	// Skin Mesh Bone
+	{
+		d3dDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		d3dDescriptorRange.NumDescriptors = 1;
+		d3dDescriptorRange.BaseShaderRegister = 100; // t100: gpmtxBoneTransforms
+		d3dDescriptorRange.RegisterSpace = 0;
+		d3dDescriptorRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+		d3dDescriptorRanges.push_back(d3dDescriptorRange);
+	}
+
 	// Depth Write Texture
 	{
 		d3dDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
@@ -741,9 +752,14 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_OFFSETS].Descriptor.RegisterSpace = 0;
 	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_OFFSETS].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
-	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].Descriptor.ShaderRegister = 8; //Skinned Bone Transforms
-	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].Descriptor.RegisterSpace = 0;
+	//pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	//pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].Descriptor.ShaderRegister = 8; //Skinned Bone Transforms
+	//pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].Descriptor.RegisterSpace = 0;
+	//pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+
+	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
 	pd3dRootParameters[ROOT_PARAMETER_SKINNED_BONE_TRANSFORM].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
 	// Depth Write

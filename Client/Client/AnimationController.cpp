@@ -80,10 +80,10 @@ void CAnimationTrack::HandleCallback()
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-#define MAX_INSTANCE_SKINNED_OBJECT		128
+#define MAX_INSTANCE_SKINNED_OBJECT		512
 
 
-void CGlobalBoneTransformManager::Initialize(ID3D12Device* pd3dDevice)
+void CGlobalBoneTransformManager::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pCommandList)
 {
 	//Create Shader Buffers for Skinned Meshes [Global]
 	// Upload Buffer for Global Bone Transform
@@ -100,7 +100,18 @@ void CGlobalBoneTransformManager::Initialize(ID3D12Device* pd3dDevice)
 	name = L"Global Skinning Bone Transforms Default Buffer";
 	m_pd3dGlobalBoneTransformBuffer->SetName(name.c_str());
 
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	srvDesc.Buffer.FirstElement = 0;
+	srvDesc.Buffer.NumElements = SKINNED_ANIMATION_BONES * MAX_INSTANCE_SKINNED_OBJECT;
+	srvDesc.Buffer.StructureByteStride = sizeof(XMFLOAT4X4);
+	srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+
+	gpuhandle = CResourceManager::Instance().CreateShaderResourceView(pd3dDevice, m_pd3dDefaultGlobalBoneTransformBuffer.Get(), srvDesc);
 	m_nMaxBoneOffset = ncbElementBytes;
+
 }
 
 void CGlobalBoneTransformManager::Shutdown()
@@ -159,6 +170,8 @@ void CGlobalBoneTransformManager::PrepareRender(ID3D12GraphicsCommandList* pd3dC
 	// 다음 프레임을위해 Index 초기화
 	m_nPrevBoneOffset = m_nCurrentBoneOffset;
 	m_nCurrentBoneOffset = 0;
+
+	pd3dCommandList->SetGraphicsRootDescriptorTable(ROOT_PARAMETER_SKINNED_BONE_TRANSFORM, gpuhandle); // Set SRV for Global Bone Transform Buffer
 }
 
 

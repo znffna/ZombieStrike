@@ -472,12 +472,13 @@ void CGameFramework::BuildDefaultObjects()
 	CUploadContext uploadContext{ "Only For BuildDefaultObjects" };
 	uploadContext.Create(m_pd3dDevice.Get(), m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_hFenceEvent);
 
-	// Bond Transform Manager를 초기화한다.
-	CGlobalBoneTransformManager::Instance().Initialize(m_pd3dDevice.Get());
-
 	CScene::InitStaticMembers(uploadContext.m_pd3dDevice, uploadContext.m_pd3dGraphicCommandList);
 
 	CreateShaderVariables(uploadContext.m_pd3dDevice, uploadContext.m_pd3dGraphicCommandList);
+
+	// Bond Transform Manager를 초기화한다.
+	CResourceManager::Instance().Initialize(uploadContext.m_pd3dDevice, uploadContext.m_pd3dGraphicCommandList, CScene::GetGraphicRootSignature());
+	CGlobalBoneTransformManager::Instance().Initialize(m_pd3dDevice.Get(), uploadContext.m_pd3dGraphicCommandList);
 
 	// Scene 생성 스레드를 시작한다.
 	BuildSceneMadeThread();
@@ -491,9 +492,7 @@ void CGameFramework::BuildDefaultObjects()
 	uploadContext.OnDestroy();
 
 	// 디버그용 텍스트 오브젝트들을 생성한다.
-#ifdef _DEBUG
 	CreateDebugTextObjects();
-#endif  // _DEBUG
 }
 
 void CGameFramework::ReleaseDefaultObjects()
@@ -584,9 +583,10 @@ void CGameFramework::AdvanceFrame()
 
 	// 전역 리소스 매니저 처리
 	CResourceManager::Instance().ProcessRegistries(m_pd3dDevice.Get(), pd3dCommandList);
-	CGlobalBoneTransformManager::Instance().PrepareRender(pd3dCommandList);
 
 	pCurrentScene->PrepareRender(pd3dCommandList);
+	CGlobalBoneTransformManager::Instance().PrepareRender(pd3dCommandList);
+
 	pCurrentScene->OnPreRender(pd3dCommandList);
 
 	// Framework 정보 업데이트
@@ -1018,7 +1018,7 @@ void CGameFramework::BuildSceneMadeThread()
 		CUploadContext sceneUploadContext{"SceneMadeThread"};
 		sceneUploadContext.Create(m_pd3dDevice.Get(), m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_hFenceEvent);
 
-		CResourceManager::Instance().Initialize(sceneUploadContext.m_pd3dDevice, sceneUploadContext.m_pd3dGraphicCommandList, CScene::GetGraphicRootSignature());
+		CResourceManager::Instance().LoadModelList(sceneUploadContext.m_pd3dDevice, sceneUploadContext.m_pd3dGraphicCommandList);
 
 		// Scene 생성 루프
 		while (m_SceneThreadRunning.load()) {

@@ -41,9 +41,19 @@ void CTestScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		pPlayerObject->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
 	}*/
 
+	// Zomibe 다중 실행 테스트
+	int nZombieCount = 200;
+	for(int i = 0; i < nZombieCount; ++i){
+		auto pZombieObject = RequestCreateObject(TypeTag<CZombieObject>());
+		//pZombieObject->Initialize(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
+		pZombieObject->SetPosition(XMFLOAT3(0.5f + 0.5f * i, 0.0f, 0.0f));
+		pZombieObject->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
+	}
+
 	// SkyBox 생성
 	auto pSkyBoxObject = RequestCreateObject(TypeTag<CSkyBox>());
 
+	
 }
 
 void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -89,7 +99,7 @@ void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 		}
 			break;
 		case VK_SPACE:
-			{
+		{
 			auto camera = GetMainCamera();
 			camera->Move(XMFLOAT3(0.0f, 0.1f, 0.0f));
 			camera->RegenerateViewMatrix();
@@ -113,7 +123,7 @@ void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 #endif
 		}
 			break;
-		case VK_F3 :
+		case VK_F3:
 		{
 			auto pObject = RequestCreateObject(TypeTag<CZombieObject>());
 			pObject->SetPosition(Vector3::Add(GetMainCamera()->GetPosition(), Vector3::ScalarProduct(GetMainCamera()->GetLook(), 3.0f, false)));
@@ -124,8 +134,20 @@ void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 #endif
 		}
 			break;
+		case VK_F5:
+		{
+			for(auto& vector : m_ppLayerView)
+			{
+				if (vector.first != GAMEOBJECT_LAYER::LAYER_ENEMY) continue;
+
+				for(auto& object : vector.second)
+				{
+					RequestDestroyObject(object->GetID());
+				}
+			}
 		}
 		break;
+		}
 	}	
 	}
 }

@@ -323,10 +323,12 @@ cbuffer cbBoneOffsets : register(b7)
     float4x4 gpmtxBoneOffsets[SKINNED_ANIMATION_BONES];
 };
 
-cbuffer cbBoneTransforms : register(b8)
-{
-    float4x4 gpmtxBoneTransforms[SKINNED_ANIMATION_BONES];
-};
+//cbuffer cbBoneTransforms : register(b8)
+//{
+//    float4x4 gpmtxBoneTransforms[SKINNED_ANIMATION_BONES];
+//};
+
+StructuredBuffer<float4x4> gpmtxBoneTransforms : register(t100);
 
 struct VS_SKINNED_STANDARD_INPUT
 {
@@ -335,7 +337,7 @@ struct VS_SKINNED_STANDARD_INPUT
     float3 normal : NORMAL;
     float3 tangent : TANGENT;
     float3 bitangent : BITANGENT;
-    int4 indices : BONEINDEX;
+    uint4 indices : BONEINDEX;
     float4 weights : BONEWEIGHT;
 };
 
