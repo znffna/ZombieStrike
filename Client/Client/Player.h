@@ -12,6 +12,7 @@ public:
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nSkinIndex);
 	
 	virtual void Initialize(); // Component 만을 생성. 실제 DX 관련 초기화는 CResourceManager에 Register하여 일괄 처리
+	virtual void Initialize(int nSkinIndex); // Component 만을 생성. 실제 DX 관련 초기화는 CResourceManager에 Register하여 일괄 처리
 	
 	virtual std::string GetDefaultName() override { return "CPlayer"; }
 

@@ -89,6 +89,43 @@ void CPlayer::Initialize()
 	SetActive(true);
 }
 
+void CPlayer::Initialize(int nSkinIndex)
+{
+	if (IsInitialized()) return;
+
+	CGameObject::Initialize();
+
+	// Object Info
+	SetName("Player_" + std::to_string(GetID()));
+
+	SetRotationAxisLock(true, false, true);
+
+	SetSkinType(nSkinIndex); // 사용할 Skin 설정
+
+	// <Components>
+	// Animation Controller
+	auto pSkinnedAnimationController = CreateComponent<CAnimationController>();
+	auto pModel = CResourceManager::Instance().GetModelInfo(m_ModelName[m_nSkinType]);
+	pSkinnedAnimationController->SetModel(pModel);
+
+	// RigidBody 생성
+	auto pRigidBody = CreateComponent<CRigidBody>();
+	pRigidBody->SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	//pRigidBody->SetVelocity(XMFLOAT3(0.0f, -9.0f, 0.0f));
+
+	// Camera 생성
+	auto pCamera = CreateComponent<CThirdPersonCamera>();
+	pCamera->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pCamera->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	pCamera->SetOffset(XMFLOAT3(1.0f, 0.7f, -2.5f));
+	pCamera->GenerateViewMatrix(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
+	pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 1000.0f);
+	pCamera->SetActive(true);
+
+	m_bInitialized = true;
+	SetActive(true);
+}
+
 
 void CPlayer::Update(float fTimeElapsed)
 {

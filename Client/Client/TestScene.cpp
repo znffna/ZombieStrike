@@ -21,7 +21,7 @@ void CTestScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	pTextComponent->SetSize(100.0f, 100.0f, 400.0f, 50.0f);
 
 	// auto pPlayerObject = AddObject(CPlayer::Create(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0));
-	auto pPlayerObject = RequestCreateObject(TypeTag<CPlayer>());
+	auto pPlayerObject = RequestCreateObject(TypeTag<CPlayer>(), 0);
 	// auto pPlayerObject = AddObject(std::make_unique<CPlayer>());
 	auto pPlayer = dynamic_cast<CPlayer*>(pPlayerObject);
 	// pPlayer->Initialize(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
@@ -41,19 +41,9 @@ void CTestScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		pPlayerObject->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
 	}*/
 
-	// Zomibe 다중 실행 테스트
-	int nZombieCount = 200;
-	for(int i = 0; i < nZombieCount; ++i){
-		auto pZombieObject = RequestCreateObject(TypeTag<CZombieObject>());
-		//pZombieObject->Initialize(pd3dDevice, pd3dCommandList, pd3dRootSignature, 0);
-		pZombieObject->SetPosition(XMFLOAT3(0.5f + 0.5f * i, 0.0f, 0.0f));
-		pZombieObject->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
-	}
-
 	// SkyBox 생성
 	auto pSkyBoxObject = RequestCreateObject(TypeTag<CSkyBox>());
 
-	
 }
 
 void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -123,17 +113,6 @@ void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 #endif
 		}
 			break;
-		case VK_F3:
-		{
-			auto pObject = RequestCreateObject(TypeTag<CZombieObject>());
-			pObject->SetPosition(Vector3::Add(GetMainCamera()->GetPosition(), Vector3::ScalarProduct(GetMainCamera()->GetLook(), 3.0f, false)));
-
-#ifdef _DEBUG
-			std::string debugMsg = to_string(GetSceneName()) + " - CTestScene::OnProcessingKeyboardMessage: Zombie Object Created. CID = " + std::to_string(pObject->GetID()) + ", Name = " + pObject->GetName() + "\n";
-			OutputDebugStringA(debugMsg.c_str());
-#endif
-		}
-			break;
 		case VK_F5:
 		{
 			for(auto& vector : m_ppLayerView)
@@ -145,6 +124,18 @@ void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 					RequestDestroyObject(object->GetID());
 				}
 			}
+		}
+		case '1':
+		case '2':
+		case '3':
+		{
+			auto pObject = RequestCreateObject(TypeTag<CPlayer>(), wParam - '1');
+			pObject->SetPosition(Vector3::Add(GetMainCamera()->GetPosition(), Vector3::ScalarProduct(GetMainCamera()->GetLook(), 3.0f, false)));
+
+#ifdef _DEBUG
+			std::string debugMsg = to_string(GetSceneName()) + " - CTestScene::OnProcessingKeyboardMessage: Player Object Created. CID = " + std::to_string(pObject->GetID()) + ", Name = " + pObject->GetName() + "\n";
+			OutputDebugStringA(debugMsg.c_str());
+#endif
 		}
 		break;
 		}

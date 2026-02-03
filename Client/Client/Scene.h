@@ -247,8 +247,8 @@ public:
 	T* AddObject(std::unique_ptr<T> object);
 
 	// 积己 夸没 (瘤楷 积己)
-	template<typename T>
-	T* RequestCreateObject(TypeTag<T> tag);
+	template<typename T, typename... Args>
+	T* RequestCreateObject(TypeTag<T> tag, Args&&... args);
 
 	// 昏力 夸没 (瘤楷 昏力)
 	void RequestDestroyObject(uint32_t id);
@@ -471,8 +471,8 @@ public:
 	}
 };
 
-template<typename T>
-T* CScene::RequestCreateObject(TypeTag<T> tag)
+template<typename T, typename... Args>
+T* CScene::RequestCreateObject(TypeTag<T> tag, Args&&... args)
 {
 	static_assert(std::is_base_of_v<CGameObject, T>,
 		"T must derive from CGameObject");
@@ -480,7 +480,7 @@ T* CScene::RequestCreateObject(TypeTag<T> tag)
 	auto object = std::make_unique<T>();
 	object->SetID(m_NextGameObjectID++);
 	object->SetActive(false);
-	object->Initialize();
+	object->Initialize(std::forward<Args>(args)...);
 
 	T* rawPtr = object.get();
 	m_CreateQueue.push_back(std::move(object));
