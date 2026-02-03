@@ -154,6 +154,11 @@ using Microsoft::WRL::ComPtr;
 #define ROOT_PARAMETER_RANDOM_SPHERE_BUFFER (ROOT_PARAMETER_RANDOMBUFFER + 1) // 18 or 12
 
 
+// Terrain Texture
+#define ROOT_PARAMETER_TERRAIN0 ROOT_PARAMETER_STANDARD_TEXTURES
+#define ROOT_PARAMETER_TERRAIN1 (ROOT_PARAMETER_TERRAIN0 + 1)
+
+
 // GaneFramework
 extern bool g_bWindowActive; // 전역 또는 멤버 변수로 상태 저장
 extern int gnCurrentBullets;

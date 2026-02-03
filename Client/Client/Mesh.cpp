@@ -118,6 +118,17 @@ BoundingBox CMesh::GetBoundingBox(const XMFLOAT4X4& xmf4x4WorldMatrix)
 ///////////////////////////////////////////////////////////////////////////////
 //
 
+CStandardMesh::CStandardMesh()
+	: CMesh()
+{
+	// 버텍스 정보 버퍼 초기화
+	ZeroMemory(&m_d3dTextureCoord0BufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+	ZeroMemory(&m_d3dTextureCoord1BufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+	ZeroMemory(&m_d3dNormalBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+	ZeroMemory(&m_d3dTangentBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+	ZeroMemory(&m_d3dBiTangentBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+}
+
 CStandardMesh::CStandardMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 	: CMesh(pd3dDevice, pd3dCommandList)
 {
@@ -279,69 +290,80 @@ void CStandardMesh::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphi
 {
 	CMesh::CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
+	// Create Color Buffer
+	if (!m_pxmf4Colors.empty())
+	{
+		m_pd3dColorBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4Colors.data(), sizeof(XMFLOAT4) * m_pxmf4Colors.size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
+		std::wstring wstrName = to_wstring(GetName()) + L" : m_pd3dColorBuffer";
+		m_pd3dColorBuffer->SetName(wstrName.c_str());
+		m_d3dColorBufferView.BufferLocation = m_pd3dColorBuffer->GetGPUVirtualAddress();
+		m_d3dColorBufferView.StrideInBytes = sizeof(XMFLOAT4);
+		m_d3dColorBufferView.SizeInBytes = sizeof(XMFLOAT4) * m_pxmf4Colors.size();
+	}
+
 	// Create TextureCoord0 Buffer
 	if (!m_pxmf2TextureCoords0.empty())
 	{
-		m_pd3dTextureCoord0Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0.data(), sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord0UploadBuffer);
+		m_pd3dTextureCoord0Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0.data(), sizeof(XMFLOAT2) * m_pxmf2TextureCoords0.size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord0UploadBuffer);
 
 		std::wstring wstrName = to_wstring(GetName()) + L" : m_pd3dTextureCoord0Buffer";
 		m_pd3dTextureCoord0Buffer->SetName(wstrName.c_str());
 
 		m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
 		m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
-		m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+		m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_pxmf2TextureCoords0.size();
 	}
 
 	// Create TextureCoord1 Buffer
 	if (!m_pxmf2TextureCoords1.empty())
 	{
-		m_pd3dTextureCoord1Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords1.data(), sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord1UploadBuffer);
+		m_pd3dTextureCoord1Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords1.data(), sizeof(XMFLOAT2) * m_pxmf2TextureCoords1.size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord1UploadBuffer);
 
 		std::wstring wstrName = to_wstring(GetName()) + L" : m_pd3dTextureCoord1Buffer";
 		m_pd3dTextureCoord1Buffer->SetName(wstrName.c_str());
 
 		m_d3dTextureCoord1BufferView.BufferLocation = m_pd3dTextureCoord1Buffer->GetGPUVirtualAddress();
 		m_d3dTextureCoord1BufferView.StrideInBytes = sizeof(XMFLOAT2);
-		m_d3dTextureCoord1BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+		m_d3dTextureCoord1BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_pxmf2TextureCoords1.size();
 	}
 	
 	// Create Normal Buffer
 	if (!m_pxmf3Normals.empty())
 	{
-		m_pd3dNormalBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Normals.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dNormalUploadBuffer);
+		m_pd3dNormalBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Normals.data(), sizeof(XMFLOAT3) * m_pxmf3Normals.size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dNormalUploadBuffer);
 
 		std::wstring wstrName = to_wstring(GetName()) + L" : m_pd3dNormalBuffer";
 		m_pd3dNormalBuffer->SetName(wstrName.c_str());
 
 		m_d3dNormalBufferView.BufferLocation = m_pd3dNormalBuffer->GetGPUVirtualAddress();
 		m_d3dNormalBufferView.StrideInBytes = sizeof(XMFLOAT3);
-		m_d3dNormalBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+		m_d3dNormalBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_pxmf3Normals.size();
 	}
 
 	// Create Tangent Buffer
 	if (!m_pxmf3Tangents.empty())
 	{
-		m_pd3dTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Tangents.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTangentUploadBuffer);
+		m_pd3dTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Tangents.data(), sizeof(XMFLOAT3) * m_pxmf3Tangents.size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTangentUploadBuffer);
 
 		std::wstring wstrName = to_wstring(GetName()) + L" : m_pd3dTangentBuffer";
 		m_pd3dTangentBuffer->SetName(wstrName.c_str());
 
 		m_d3dTangentBufferView.BufferLocation = m_pd3dTangentBuffer->GetGPUVirtualAddress();
 		m_d3dTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
-		m_d3dTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+		m_d3dTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_pxmf3Tangents.size();
 	}
 
 	// Create BiTangent Buffer
 	if (!m_pxmf3BiTangents.empty())
 	{
-		m_pd3dBiTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3BiTangents.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dBiTangentUploadBuffer);
+		m_pd3dBiTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3BiTangents.data(), sizeof(XMFLOAT3) * m_pxmf3BiTangents.size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dBiTangentUploadBuffer);
 
 		std::wstring wstrName = to_wstring(GetName()) + L" : m_pxmf3BiTangents";
 		m_pd3dBiTangentBuffer->SetName(wstrName.c_str());
 
 		m_d3dBiTangentBufferView.BufferLocation = m_pd3dBiTangentBuffer->GetGPUVirtualAddress();
 		m_d3dBiTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
-		m_d3dBiTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+		m_d3dBiTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_pxmf3BiTangents.size();
 	}
 
 }
@@ -366,7 +388,7 @@ void CStandardMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void
 
 void CStandardMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet)
 {
-	int nSubMeshes = (int)m_nSubMeshes;
+	int nSubMeshes = (int)m_ppnSubSetIndices.size();
 
 	// Render Process
 	UpdateShaderVariables(pd3dCommandList);
@@ -821,7 +843,7 @@ CSkyBoxMesh::~CSkyBoxMesh()
 //
 
 CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, void* pContext)
-	: CMesh(pd3dDevice, pd3dCommandList)
+	: CStandardMesh(pd3dDevice, pd3dCommandList)
 {
 #ifdef _WITH_TERRAIN_TESSELATION
 	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_25_CONTROL_POINT_PATCHLIST;
@@ -1007,7 +1029,7 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 }
 
 CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<CTerrainVertex>& pVertices, std::vector<UINT>& pIndices)
-	: CMesh(pd3dDevice, pd3dCommandList)
+	: CStandardMesh(pd3dDevice, pd3dCommandList)
 {
 	m_nVertices = (UINT)pVertices.size();
 
@@ -1035,6 +1057,28 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
 	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
 	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * pIndices.size();
+}
+
+CHeightMapGridMesh::CHeightMapGridMesh(std::vector<CTerrainVertex>& pVertices, std::vector<UINT>& pIndices)
+	: CStandardMesh()
+{
+	m_pxmf3Positions.resize(pVertices.size());
+	m_pxmf4Colors.resize(pVertices.size());
+	m_pxmf3Normals.resize(pVertices.size());
+	m_pxmf2TextureCoords0.resize(pVertices.size());
+	m_pxmf2TextureCoords1.resize(pVertices.size());
+
+	for (size_t i = 0; i < pVertices.size(); i++)
+	{
+		m_pxmf3Positions[i] = pVertices[i].m_xmf3Position;
+		m_pxmf4Colors[i] = pVertices[i].m_xmf4Diffuse;
+		m_pxmf3Normals[i] = pVertices[i].m_xmf3Normal;
+		m_pxmf2TextureCoords0[i] = pVertices[i].m_xmf2TexCoord0;
+		m_pxmf2TextureCoords1[i] = pVertices[i].m_xmf2TexCoord1;
+	}
+	
+	SetSubSetAmount(1);
+	m_ppnSubSetIndices[0] = pIndices;
 }
 
 CHeightMapGridMesh::~CHeightMapGridMesh()
@@ -1088,6 +1132,18 @@ XMFLOAT2 CHeightMapGridMesh::OnGetUVs(int x, int z, void* pContext)
 	XMFLOAT2 UV = XMFLOAT2((float)x / m_nWidth, (float)z / m_nLength);
 
 	return UV;
+}
+
+void CHeightMapGridMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
+{
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[5] = { m_d3dPositionBufferView, m_d3dColorBufferView, m_d3dNormalBufferView, m_d3dTextureCoord0BufferView, m_d3dTextureCoord1BufferView };
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 5, pVertexBufferViews);
+}
+
+void CHeightMapGridMesh::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// Create Standard Mesh Shader Variables
+	CStandardMesh::CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

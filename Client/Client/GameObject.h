@@ -502,13 +502,19 @@ public:
 	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
 		LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength,
 		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
+
 	static std::shared_ptr<CHeightMapTerrain> InitializeByBinary(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
 		LPCTSTR pBinFileName, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength,
 		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
+
 	virtual std::string GetDefaultName() override { return "CHeightMapTerrain"; }
 
 	static std::shared_ptr<CHeightMapTerrain> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
 		LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength,
+		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
+
+	void Initialize(std::wstring wstrHeightMapFilePath, std::wstring wstrMeshFilePath,
+		int nWidth, int nLength,
 		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
 
 	// Object Render

@@ -70,13 +70,15 @@ void CMaterial::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	ZeroMemory(m_pcbMappedMaterial, sizeof(CB_MATERIAL_INFO));
 #endif // _USE_OBJECT_MATERIAL_CBV
 
-	// Material이 가지고 있는 텍스쳐 로드
-	if (m_strMaterialName == "SkyBox Material")
+	// Shader가 존재할 경우, Shader에서 필요한 작업 수행
+	if (m_pShader)
 	{
-		m_strMaterialName = "For Debug";
+		m_pShader->CreateShader(pd3dDevice, CScene::GetGraphicRootSignature());
+		//m_pShader->BuildObjects(pd3dDevice, pd3dCommandList);
+		m_pShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 
-	// 여기서엔 생성된 CTexute를 참조해가며 Resource를 획득
+	// Material이 가지고 있는 텍스쳐 로드
 	for (int idx = 0; idx < m_ppTextures.size(); ++idx)
 	{
 		if (nullptr == m_ppTextures[idx]) continue; // 생성할 텍스쳐가 없는경우 Skip
@@ -91,18 +93,6 @@ void CMaterial::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 
 		::LoadTextureFromFile(m_ppTextures[idx], pd3dDevice, pd3dCommandList, m_strTexturePaths[idx], ROOT_PARAMETER_ALBEDO_TEXTURE + idx);
 		CResourceManager::Instance().SetTexture(m_strTexturePaths[idx], m_ppTextures[idx]);*/
-	}
-
-	// 여기선 최종적으로 Shader Resource View 생성
-	for (int idx = 0; idx < m_ppTextures.size(); ++idx) {
-		if (m_ppTextures[idx]) {
-			//CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, m_ppTextures[idx].get(), 0, ROOT_PARAMETER_ALBEDO_TEXTURE + idx);
-		}
-		else
-		{
-			// 없는 텍스쳐에 대한 디폴트 처리
-			//CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, CResourceManager::Instance().GetDefaultTexture().get(), 0, ROOT_PARAMETER_ALBEDO_TEXTURE + idx);
-		}
 	}
 }
 

@@ -44,6 +44,16 @@ void CTestScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	// SkyBox 持失
 	auto pSkyBoxObject = RequestCreateObject(TypeTag<CSkyBox>());
 
+	{
+		/*std::wstring wstrHeightMapFilePath, std::wstring wstrMeshFilePath,
+			int nWidth, int nLength,
+	XMFLOAT3 xmf3Scale(1.0f, 50.0f / 255.0f, 1.0f);
+			XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color*/
+	}
+
+	// Terrain 持失
+	auto pTerrainObject = RequestCreateObject(TypeTag<CHeightMapTerrain>(), L"Terrain/terrain1.raw", L"Terrain/terrain1.bin", 257, 257,	XMFLOAT3(1.0f, 50.0f / 255.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+
 }
 
 void CTestScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)

@@ -1098,6 +1098,81 @@ std::shared_ptr<CHeightMapTerrain> CHeightMapTerrain::Create(ID3D12Device* pd3dD
 	return pHeightMapTerrain;
 }
 
+void CHeightMapTerrain::Initialize(std::wstring wstrHeightMapFilePath, std::wstring wstrMeshFilePath, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color)
+{
+	// 지형에 사용할 높이 맵을 생성한다.
+	m_pHeightMapImage = std::make_shared<CHeightMapImage>(wstrHeightMapFilePath, nWidth, nLength, xmf3Scale);
+
+	//지형에 사용할 높이 맵의 가로, 세로의 크기이다. 
+	m_nWidth = nWidth;
+	m_nLength = nLength;
+
+	//xmf3Scale는 지형을 실제로 몇 배 확대할 것인가를 나타낸다. 
+	m_xmf3Scale = xmf3Scale;
+
+	// Mesh 
+	std::shared_ptr<CMesh> pHeightMapGridMesh;
+	std::ifstream in(wstrMeshFilePath, std::ios::binary);
+	if (!in.is_open()) 
+	{
+		std::wcout << L"Failed to open mesh file: " << wstrMeshFilePath << L"\n";
+		return;
+	}
+
+	UINT vertexCount = 0;
+	UINT indexCount = 0;
+
+	in.read(reinterpret_cast<char*>(&vertexCount), sizeof(UINT));
+	in.read(reinterpret_cast<char*>(&indexCount), sizeof(UINT));
+
+	std::vector<CTerrainVertex> outVertices;
+	std::vector<UINT> outIndices;
+
+	outVertices.resize(vertexCount);
+	outIndices.resize(indexCount);
+
+	in.read(reinterpret_cast<char*>(outVertices.data()), vertexCount * sizeof(CTerrainVertex));
+	in.read(reinterpret_cast<char*>(outIndices.data()), indexCount * sizeof(UINT));
+
+	in.close();
+
+	std::cout << "Import successful.\n";
+	std::cout << "Vertices: " << vertexCount << ", Indices: " << indexCount << "\n";
+
+	pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(outVertices, outIndices);
+	SetMesh(pHeightMapGridMesh);
+
+	m_pVertices = outVertices;
+	m_pIndices = outIndices;
+	isBinary = true;
+
+	// Material
+	m_ppMaterials.resize(1);
+	m_ppMaterials[0] = std::make_shared<CMaterial>();
+
+	// Set Shader
+	std::shared_ptr<CShader> pShader = std::make_shared<CTerrainShader>();
+	m_ppMaterials[0]->SetShader(pShader);
+
+	// Set Texture
+	TextureRecipe terrainTextureRecipe;
+	terrainTextureRecipe.source = TEXTURE_SOURCE_FILE;
+	terrainTextureRecipe.name = L"TerrainTexture_0";
+	terrainTextureRecipe.filePath = L"Image/Grass.jpg";
+	terrainTextureRecipe.type = RESOURCE_TEXTURE2D;
+	terrainTextureRecipe.rootparameterindex = ROOT_PARAMETER_TERRAIN0;
+
+	auto pTexture = std::make_shared<CTexture>(terrainTextureRecipe);
+	m_ppMaterials[0]->AddTexture(pTexture);
+
+	terrainTextureRecipe.name = L"TerrainTexture_1";
+	terrainTextureRecipe.filePath = L"Image/Stone01.jpg";
+	terrainTextureRecipe.rootparameterindex = ROOT_PARAMETER_TERRAIN1;
+
+	pTexture = std::make_shared<CTexture>(terrainTextureRecipe);
+	m_ppMaterials[0]->AddTexture(pTexture);
+}
+
 void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color)
 {
 	//지형에 사용할 높이 맵의 가로, 세로의 크기이다. 
@@ -1270,14 +1345,14 @@ std::shared_ptr<CHeightMapTerrain> CHeightMapTerrain::InitializeByBinary(ID3D12D
 	terrainTextureRecipe.name = L"TerrainTexture_0";
 	terrainTextureRecipe.filePath = L"Image/Stone01.jpg";
 	terrainTextureRecipe.type = RESOURCE_TEXTURE2D;
-	terrainTextureRecipe.rootparameterindex = ROOT_PARAMETER_ALBEDO_TEXTURE;
+	terrainTextureRecipe.rootparameterindex = ROOT_PARAMETER_TERRAIN0;
 
 	auto pTexture = std::make_shared<CTexture>(terrainTextureRecipe);
 	pHeightMapTerrain->m_ppMaterials[0]->AddTexture(pTexture);
 
 	terrainTextureRecipe.name = L"TerrainTexture_1";
 	terrainTextureRecipe.filePath = L"Image/Grass.jpg";
-	terrainTextureRecipe.rootparameterindex++;
+	terrainTextureRecipe.rootparameterindex = ROOT_PARAMETER_TERRAIN1;
 
 	pTexture = std::make_shared<CTexture>(terrainTextureRecipe);
 	pHeightMapTerrain->m_ppMaterials[0]->AddTexture(pTexture);

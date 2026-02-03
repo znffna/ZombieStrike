@@ -135,7 +135,7 @@ public:
 	void WriteBoneTransforms(UINT offset, const XMFLOAT4X4* pTransforms, UINT count);
 
 	// GPU 리소스 가져오기
-	ID3D12Resource* GetBoneTransformBuffer() const { return m_pd3dDefaultGlobalBoneTransformBuffer.Get(); }
+	ID3D12Resource* GetBoneTransformBuffer() const { return m_pd3dGlobalBoneTransformBuffer.Get(); }
 
 	UINT GetMaxIndex() const { return m_nMaxBoneOffset; }
 	UINT GetLastAlloactedIndex() const { return m_nPrevBoneOffset; }
@@ -144,7 +144,6 @@ public:
 private:
 	static constexpr UINT MAX_TOTAL_BONES = 8192; // 전체 게임에서 사용할 최대 본 개수
 
-	ComPtr<ID3D12Resource> m_pd3dDefaultGlobalBoneTransformBuffer; // StructuredBuffer<float4x4>
 	ComPtr<ID3D12Resource> m_pd3dGlobalBoneTransformBuffer;		   // StructuredBuffer<float4x4> 
 	XMFLOAT4X4* m_pMappedGlobalBoneTransforms = nullptr;		   // Mapped pointer
 	UINT m_nCurrentBoneOffset = 0;								   // 현재 할당된 본 오프셋

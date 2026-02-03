@@ -337,7 +337,7 @@ struct VS_SKINNED_STANDARD_INPUT
     float3 normal : NORMAL;
     float3 tangent : TANGENT;
     float3 bitangent : BITANGENT;
-    uint4 indices : BONEINDEX;
+    int4 indices : BONEINDEX;
     float4 weights : BONEWEIGHT;
 };
 

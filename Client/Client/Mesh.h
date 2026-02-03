@@ -142,27 +142,34 @@ public:
 		// Create Position Buffer
 		if (!m_pxmf3Positions.empty())
 		{
-			m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions.data(), sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+			m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions.data(), sizeof(XMFLOAT3) * m_pxmf3Positions.size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
 
 			std::wstring wstrName = to_wstring(GetName()) + L" : m_pd3dPositionBuffer";
 			m_pd3dPositionBuffer->SetName(wstrName.c_str());
 
 			m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
 			m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
-			m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+			m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_pxmf3Positions.size();
 		}
 
 		// Create SubSet Index Buffers
-		for (UINT i = 0; i < m_nSubMeshes; i++)
+		if (!m_ppnSubSetIndices.empty())
 		{
-			m_ppd3dSubSetIndexBuffers[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[i].data(), sizeof(UINT) * (UINT)m_ppnSubSetIndices[i].size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[i]);
+			m_ppd3dSubSetIndexBuffers.resize(m_ppnSubSetIndices.size());
+			m_pd3dSubSetIndexBufferViews.resize(m_ppnSubSetIndices.size());
+			m_ppd3dSubSetIndexUploadBuffers.resize(m_ppnSubSetIndices.size());
 
-			std::wstring wstrName = to_wstring(GetName()) + L" : m_ppd3dSubSetIndexBuffers[" + std::to_wstring(i) + L"]";
-			m_ppd3dSubSetIndexBuffers[i]->SetName(wstrName.c_str());
+			for (UINT i = 0; i < m_ppnSubSetIndices.size(); i++)
+			{
+				m_ppd3dSubSetIndexBuffers[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[i].data(), sizeof(UINT) * (UINT)m_ppnSubSetIndices[i].size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[i]);
 
-			m_pd3dSubSetIndexBufferViews[i].BufferLocation = m_ppd3dSubSetIndexBuffers[i]->GetGPUVirtualAddress();
-			m_pd3dSubSetIndexBufferViews[i].Format = DXGI_FORMAT_R32_UINT;
-			m_pd3dSubSetIndexBufferViews[i].SizeInBytes = (UINT)(sizeof(UINT) * m_ppnSubSetIndices[i].size());
+				std::wstring wstrName = to_wstring(GetName()) + L" : m_ppd3dSubSetIndexBuffers[" + std::to_wstring(i) + L"]";
+				m_ppd3dSubSetIndexBuffers[i]->SetName(wstrName.c_str());
+
+				m_pd3dSubSetIndexBufferViews[i].BufferLocation = m_ppd3dSubSetIndexBuffers[i]->GetGPUVirtualAddress();
+				m_pd3dSubSetIndexBufferViews[i].Format = DXGI_FORMAT_R32_UINT;
+				m_pd3dSubSetIndexBufferViews[i].SizeInBytes = (UINT)(sizeof(UINT) * m_ppnSubSetIndices[i].size());
+			}
 		}
 	}
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList) { }
@@ -237,6 +244,7 @@ protected:
 class CStandardMesh : public CMesh
 {
 public:
+	CStandardMesh();
 	CStandardMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual ~CStandardMesh();
 
@@ -252,12 +260,28 @@ public:
 protected:
 	// 버텍스 정보 버퍼
 	std::vector<XMFLOAT4> m_pxmf4Colors;						// Material Diffuse Color
+	std::vector<XMFLOAT3> m_pxmf3Normals;		// CPU에 저장된 법선 벡터 데이터
 	std::vector<XMFLOAT3> m_pxmf3Tangents;		// CPU에 저장된 접선 벡터 데이터
 	std::vector<XMFLOAT3> m_pxmf3BiTangents;	// CPU에 저장된 이접선 벡터 데이터
-	std::vector<XMFLOAT3> m_pxmf3Normals;		// CPU에 저장된 법선 벡터 데이터
 
 	std::vector<XMFLOAT2> m_pxmf2TextureCoords0;	// CPU에 저장된 텍스처 좌표 데이터
 	std::vector<XMFLOAT2> m_pxmf2TextureCoords1;	// CPU에 저장된 텍스처 좌표 데이터
+
+	ComPtr<ID3D12Resource> m_pd3dColorBuffer;		// GPU에 저장된 색상 벡터 데이터
+	ComPtr<ID3D12Resource> m_pd3dColorUploadBuffer;	// CPU에 저장된 색상 벡터 데이터를 GPU에 업로드하기 위한 버퍼
+	D3D12_VERTEX_BUFFER_VIEW m_d3dColorBufferView;	// 색상 버퍼 뷰
+
+	ComPtr<ID3D12Resource> m_pd3dNormalBuffer;			// GPU에 저장된 법선 벡터 데이터
+	ComPtr<ID3D12Resource> m_pd3dNormalUploadBuffer;	// CPU에 저장된 법선 벡터 데이터를 GPU에 업로드하기 위한 버퍼
+	D3D12_VERTEX_BUFFER_VIEW m_d3dNormalBufferView;		// 법선 버퍼 뷰
+
+	ComPtr<ID3D12Resource> m_pd3dTangentBuffer;			// GPU에 저장된 접선 벡터 데이터
+	ComPtr<ID3D12Resource> m_pd3dTangentUploadBuffer;	// CPU에 저장된 접선 벡터 데이터를 GPU에 업로드하기 위한 버퍼
+	D3D12_VERTEX_BUFFER_VIEW m_d3dTangentBufferView;	// 접선 버퍼 뷰
+
+	ComPtr<ID3D12Resource> m_pd3dBiTangentBuffer;		// GPU에 저장된 이접선 벡터 데이터
+	ComPtr<ID3D12Resource> m_pd3dBiTangentUploadBuffer;	// CPU에 저장된 이접선 벡터 데이터를 GPU에 업로드하기 위한 버퍼
+	D3D12_VERTEX_BUFFER_VIEW m_d3dBiTangentBufferView;	// 이접선 버퍼 뷰
 
 	ComPtr<ID3D12Resource> m_pd3dTextureCoord0Buffer;		// GPU에 저장된 텍스처 좌표 데이터
 	ComPtr<ID3D12Resource> m_pd3dTextureCoord0UploadBuffer;	// CPU에 저장된 텍스처 좌표 데이터를 GPU에 업로드하기 위한 버퍼
@@ -266,18 +290,6 @@ protected:
 	ComPtr<ID3D12Resource> m_pd3dTextureCoord1Buffer;		// GPU에 저장된 텍스처 좌표 데이터
 	ComPtr<ID3D12Resource> m_pd3dTextureCoord1UploadBuffer;	// CPU에 저장된 텍스처 좌표 데이터를 GPU에 업로드하기 위한 버퍼
 	D3D12_VERTEX_BUFFER_VIEW m_d3dTextureCoord1BufferView;	// 텍스처 좌표 버퍼 뷰
-
-	ComPtr<ID3D12Resource> m_pd3dNormalBuffer;		// GPU에 저장된 법선 벡터 데이터
-	ComPtr<ID3D12Resource> m_pd3dNormalUploadBuffer;	// CPU에 저장된 법선 벡터 데이터를 GPU에 업로드하기 위한 버퍼
-	D3D12_VERTEX_BUFFER_VIEW m_d3dNormalBufferView;	// 법선 버퍼 뷰
-
-	ComPtr<ID3D12Resource> m_pd3dTangentBuffer;		// GPU에 저장된 접선 벡터 데이터
-	ComPtr<ID3D12Resource> m_pd3dTangentUploadBuffer;	// CPU에 저장된 접선 벡터 데이터를 GPU에 업로드하기 위한 버퍼
-	D3D12_VERTEX_BUFFER_VIEW m_d3dTangentBufferView;	// 접선 버퍼 뷰
-
-	ComPtr<ID3D12Resource> m_pd3dBiTangentBuffer;		// GPU에 저장된 이접선 벡터 데이터
-	ComPtr<ID3D12Resource> m_pd3dBiTangentUploadBuffer;	// CPU에 저장된 이접선 벡터 데이터를 GPU에 업로드하기 위한 버퍼
-	D3D12_VERTEX_BUFFER_VIEW m_d3dBiTangentBufferView;	// 이접선 버퍼 뷰
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -388,7 +400,7 @@ private:
 	//높이 맵 이미지를 실제로 몇 배 확대하여 사용할 것인가를 나타내는 스케일 벡터이다. 
 	XMFLOAT3 m_xmf3Scale;
 public:
-	CHeightMapImage(LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale)
+	CHeightMapImage(std::wstring pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale)
 	{
 		m_nWidth = nWidth;
 		m_nLength = nLength;
@@ -398,12 +410,14 @@ public:
 		std::vector<SHORT> pHeightMapPixels(m_nWidth * m_nLength);
 
 		// 이미지를 파일에서 읽어서 메모리에 저장
-		FILE* pFile = NULL;
-		HANDLE hFile = ::CreateFile(pFileName, GENERIC_READ, 0, NULL, OPEN_EXISTING,
-			FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_READONLY, NULL);
-		DWORD dwBytesRead;
-		::ReadFile(hFile, pHeightMapPixels.data(), (m_nWidth * m_nLength), &dwBytesRead, NULL);
-		::CloseHandle(hFile);
+		std::ifstream file(pFileName, std::ios::binary);
+		if (!file.is_open())
+		{
+			// 파일 열기 실패 처리
+			return;
+		}
+		file.read(reinterpret_cast<char*>(pHeightMapPixels.data()), m_nWidth * m_nLength * sizeof(SHORT));
+		file.close();
 
 		m_pHeightMapPixels.resize(m_nWidth * m_nLength);
 
@@ -560,7 +574,7 @@ public:
 	};
 };
 
-class CHeightMapGridMesh : public CMesh
+class CHeightMapGridMesh : public CStandardMesh
 {
 protected:
 	//격자의 크기(가로: x-방향, 세로: z-방향)이다. 
@@ -582,6 +596,11 @@ public:
 		std::vector<CTerrainVertex>& pVertices,
 		std::vector<UINT>& pIndices
 	);
+	CHeightMapGridMesh(
+		std::vector<CTerrainVertex>& pVertices,
+		std::vector<UINT>& pIndices
+	);
+
 	virtual ~CHeightMapGridMesh();
 
 	XMFLOAT3 GetScale() { return(m_xmf3Scale); }
@@ -595,6 +614,11 @@ public:
 
 	//격자의 좌표가 (x, z)일 때 교점(정점)의 텍스쳐 좌표를 반환하는 함수이다.
 	virtual XMFLOAT2 OnGetUVs(int x, int z, void* pContext);
+
+	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext) override;
+
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
+
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

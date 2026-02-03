@@ -95,11 +95,6 @@ void CGlobalBoneTransformManager::Initialize(ID3D12Device* pd3dDevice, ID3D12Gra
 	// Map the buffer
 	m_pd3dGlobalBoneTransformBuffer->Map(0, NULL, (void**)&m_pMappedGlobalBoneTransforms);
 
-	// Default Buffer for Global Bone Transform
-	m_pd3dDefaultGlobalBoneTransformBuffer = ::CreateBufferResource(pd3dDevice, nullptr, NULL, ncbElementBytes, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-	name = L"Global Skinning Bone Transforms Default Buffer";
-	m_pd3dGlobalBoneTransformBuffer->SetName(name.c_str());
-
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
@@ -109,7 +104,7 @@ void CGlobalBoneTransformManager::Initialize(ID3D12Device* pd3dDevice, ID3D12Gra
 	srvDesc.Buffer.StructureByteStride = sizeof(XMFLOAT4X4);
 	srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 
-	gpuhandle = CResourceManager::Instance().CreateShaderResourceView(pd3dDevice, m_pd3dDefaultGlobalBoneTransformBuffer.Get(), srvDesc);
+	gpuhandle = CResourceManager::Instance().CreateShaderResourceView(pd3dDevice, m_pd3dGlobalBoneTransformBuffer.Get(), srvDesc);
 	m_nMaxBoneOffset = ncbElementBytes;
 
 }
@@ -120,10 +115,6 @@ void CGlobalBoneTransformManager::Shutdown()
 	{
 		m_pd3dGlobalBoneTransformBuffer->Unmap(0, NULL);
 		m_pd3dGlobalBoneTransformBuffer.Reset();
-	}
-	if (m_pd3dDefaultGlobalBoneTransformBuffer)
-	{
-		m_pd3dDefaultGlobalBoneTransformBuffer.Reset();
 	}
 }
 
@@ -148,25 +139,6 @@ void CGlobalBoneTransformManager::WriteBoneTransforms(UINT offset, const XMFLOAT
 
 void CGlobalBoneTransformManager::PrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// Set Resource Barrier for Copy
-	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
-	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
-	d3dResourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	d3dResourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	d3dResourceBarrier.Transition.pResource = m_pd3dDefaultGlobalBoneTransformBuffer.Get();
-	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
-	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
-	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
-
-	// Copy from Upload Buffer to Default Buffer
-	pd3dCommandList->CopyResource(m_pd3dDefaultGlobalBoneTransformBuffer.Get(), m_pd3dGlobalBoneTransformBuffer.Get());
-
-	// Set Resource Barrier for Vertex and Constant Buffer
-	d3dResourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-	d3dResourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-	pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
-
 	// 다음 프레임을위해 Index 초기화
 	m_nPrevBoneOffset = m_nCurrentBoneOffset;
 	m_nCurrentBoneOffset = 0;
