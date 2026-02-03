@@ -177,6 +177,7 @@ D3D12_SHADER_BYTECODE CShader::ReadCompiledShaderFromFile(const WCHAR* pszFileNa
 
 void CShader::SaveShaderToCSOFile(ID3DBlob* pShaderBlob, const LPCSTR pszShaderName)
 {
+#ifdef _SAVE_COMPILED_SHADER_TO_FILE
 	if (!pShaderBlob || !pszShaderName)
 		return;
 
@@ -202,6 +203,8 @@ void CShader::SaveShaderToCSOFile(ID3DBlob* pShaderBlob, const LPCSTR pszShaderN
 		ofsFile.close();
 	}
 #endif
+
+#endif // _SAVE_COMPILED_SHADER_TO_FILE
 }
 
 D3D12_SHADER_BYTECODE CShader::CreateVertexShader(int nPipelineState)

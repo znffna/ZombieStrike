@@ -77,6 +77,7 @@
 
 // 실행시 Shader를 Compile할 것인지 여부(안하면 CSO파일을 읽어옴)
 #define _COMPILE_SHADER  
+//#define _SAVE_COMPILED_SHADER_TO_FILE
 
 using namespace DirectX;
 using namespace DirectX::PackedVector;
