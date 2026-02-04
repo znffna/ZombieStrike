@@ -18,7 +18,7 @@ CShader::~CShader()
 {
 }
 
-void CShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature)
+void CShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	if (b_Initialized) return;
 
@@ -1107,6 +1107,13 @@ CDepthRenderShader::~CDepthRenderShader()
 {
 }
 
+void CDepthRenderShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	CShader::CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	
+	BuildObjects(pd3dDevice, pd3dCommandList);
+}
+
 D3D12_DEPTH_STENCIL_DESC CDepthRenderShader::CreateDepthStencilState(int nPipelineState)
 {
 	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
@@ -1823,14 +1830,14 @@ void CShadowMapShader::ReleaseUploadBuffers()
 
 void CShadowMapShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CTexture* pContext)
 {
-	m_pDepthFromLightTexture = (std::shared_ptr<CTexture>) pContext;
+	m_pDepthFromLightTexture = pContext;
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
 void CShadowMapShader::ReleaseObjects()
 {
-	if (m_pDepthFromLightTexture) m_pDepthFromLightTexture.reset();
+	if (m_pDepthFromLightTexture) m_pDepthFromLightTexture = nullptr;
 }
 
 void CShadowMapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene)
@@ -1905,14 +1912,14 @@ void CTextureToViewportShader::UpdateShaderVariables(ID3D12GraphicsCommandList* 
 
 void CTextureToViewportShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CTexture* pContext)
 {
-	m_pDepthFromLightTexture = (std::shared_ptr<CTexture>) pContext;
+	m_pDepthFromLightTexture = pContext;
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
 void CTextureToViewportShader::ReleaseObjects()
 {
-	m_pDepthFromLightTexture.reset();
+	if(m_pDepthFromLightTexture) m_pDepthFromLightTexture = nullptr;
 }
 
 void CTextureToViewportShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)

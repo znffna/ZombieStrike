@@ -139,6 +139,8 @@ public:
 	// method
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 	{ 
+		if (IsGPUInitialized()) return;
+
 		// Create Position Buffer
 		if (!m_pxmf3Positions.empty())
 		{
@@ -171,6 +173,8 @@ public:
 				m_pd3dSubSetIndexBufferViews[i].SizeInBytes = (UINT)(sizeof(UINT) * m_ppnSubSetIndices[i].size());
 			}
 		}
+
+		SetGPUInitialized(true);
 	}
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList) { }
 	virtual void ReleaseShaderVariables() { }
@@ -197,8 +201,15 @@ public:
 		m_ppd3dSubSetIndexUploadBuffers.resize(nSubSet);
 		m_pd3dSubSetIndexBufferViews.resize(nSubSet);
 	};
+
+	bool IsGPUInitialized() const { return m_bInitialized; }
 protected:
 	std::string m_strMeshName; // 메쉬의 이름
+
+	bool m_bInitialized = false; // GPU 자원 생성 여부
+
+private:
+	void SetGPUInitialized(bool bInitialized) { m_bInitialized = bInitialized; }
 
 protected:
 	UINT m_nType = 0x00; // 메쉬의 종류
@@ -300,6 +311,7 @@ class CGameObject;
 class CSkinnedMesh : public CStandardMesh
 {
 public:
+	CSkinnedMesh() : CStandardMesh() {};
 	CSkinnedMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual ~CSkinnedMesh();
 

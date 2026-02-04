@@ -24,12 +24,17 @@ public:
 
 	virtual void Update(float fTimeElapsed) { }
 
+	virtual bool IsGPUInitialized() { return m_bInitialized; }
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) { m_bInitialized = true; }
+
 	virtual std::unique_ptr<CComponent> Clone(CGameObject* pNewOwner) const = 0;
 
 	CGameObject* GetOwner() const { return gameObject; }
 	CGameObject* gameObject = nullptr; // Owner Object
+
 protected:
 	bool m_bActive; // Active Flag
+	bool m_bInitialized = false;
 
 	void SetOwnerInternal(CGameObject* pObject) { gameObject = pObject; }
 

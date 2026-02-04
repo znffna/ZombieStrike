@@ -140,9 +140,11 @@ public:
 	// --------------------------------------------
 	// Initialize Flag
 	// --------------------------------------------
-	bool IsInitialized() const { return m_bActive; }
+	bool IsInitialized() const { return m_bInitialized; }
 protected:
 	bool m_bInitialized = false;
+	
+	bool IsGPUInitialized();
 
 public:
 	// --------------------------------------------
@@ -217,9 +219,10 @@ public:
 	void SetChild(std::unique_ptr<CGameObject> pChild) 
 	{ 
 		pChild->SetParent(this);
+		if (m_pScene) pChild->SetScene(m_pScene);
+
 		m_pChilds.push_back(std::move(pChild));
 		// 부모의 scene이 있으면 자식에게 전파
-		if (m_pScene) pChild->SetScene(m_pScene);
 	};
 
 protected:
@@ -263,7 +266,6 @@ protected:
 	std::shared_ptr<CMesh> m_pMesh; // Object Mesh
 
 	// Material
-	UINT m_nMaterials = 0;
 	std::vector<std::shared_ptr<CMaterial>> m_ppMaterials; // Object CMaterial
 
 public:
@@ -391,12 +393,12 @@ public:
 	// --------------------------------------------
 	
 	// Load Model
-	void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, std::ifstream& File, std::shared_ptr<CShader> pShader);
+	void LoadMaterialsFromFile(std::ifstream& File, std::shared_ptr<CShader> pShader);
 	std::shared_ptr<CTexture> FindReplicatedTexture(const std::wstring pstrTextureName);
 	void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& ppSkinnedMeshes, int* pnSkinnedMesh);;
 	
 	static void LoadAnimationFromFile(std::ifstream& pInFile, std::shared_ptr<CLoadedModelInfo> pLoadedModel);
-	static std::unique_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth = 0);
+	static std::unique_ptr<CGameObject> LoadFrameHierarchyFromFile(CGameObject* pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth = 0);
 	static std::shared_ptr<CLoadedModelInfo> LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, const char* pstrFileName, std::shared_ptr<CShader> pShader);
 	
 	// Clone
@@ -490,6 +492,16 @@ public:
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
+struct CHeightMapTerrainDesc
+{
+	std::wstring wstrHeightMapFilePath;
+	std::wstring wstrMeshFilePath;
+	int nWidth;
+	int nLength;
+	XMFLOAT3 xmf3Scale;
+	XMFLOAT4 xmf4Color;
+};
+
 class CHeightMapTerrain : public CGameObject
 {
 public:
@@ -512,6 +524,8 @@ public:
 	static std::shared_ptr<CHeightMapTerrain> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
 		LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength,
 		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
+
+	void Initialize(CHeightMapTerrainDesc desc);
 
 	void Initialize(std::wstring wstrHeightMapFilePath, std::wstring wstrMeshFilePath,
 		int nWidth, int nLength,
@@ -681,4 +695,15 @@ private:
 
 	ComPtr<ID2D1SolidColorBrush> GetBrush(D2D1::ColorF d2dColor);
 	ComPtr<IDWriteTextFormat> GetTextFormat(WCHAR* pszFontName, float fFontSize);
+};
+
+class CMapObject : public CGameObject
+{
+public:
+	CMapObject() :CGameObject() {};
+
+	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_ENVIRONMENT; }
+
+	void Initialize(std::wstring wstrMapFilePath);
+	void LoadGeometryAndAnimationFromFile(std::wstring wstrMapFilePath);
 };

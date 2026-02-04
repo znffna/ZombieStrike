@@ -150,6 +150,7 @@ public:
 
 	virtual void Rotate(float x, float y, float z) override;
 
+	virtual void Update(float fTimeElapsed) override;
 	virtual void Update(const XMFLOAT3 & xmf3LookAt, float fTimeElapsed) override;
 	virtual void SetLookAt(const XMFLOAT3 & vLookAt);
 

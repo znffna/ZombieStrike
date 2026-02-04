@@ -32,13 +32,26 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	// <Environment>
 	StoreTerrain(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
 
-	//// Skybox
+	// Skybox
 	//m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 	//AddObject(m_pSkyBox);
-	//
-	//// Terrain
-	//XMFLOAT3 xmf3Scale(1.0f, 50.0f / 255.0f, 1.0f);
-	//XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
+	auto pSkyBoxObject = RequestCreateObject(TypeTag<CSkyBox>());
+
+	
+	// Terrain
+	XMFLOAT3 xmf3Scale(1.0f, 50.0f / 255.0f, 1.0f);
+	XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
+
+	CHeightMapTerrainDesc terrainDesc;
+	terrainDesc.wstrHeightMapFilePath = L"Terrain/terrain1.raw";
+	terrainDesc.wstrMeshFilePath = L"Terrain/terrain1.bin";
+	terrainDesc.nWidth = 257;
+	terrainDesc.nLength = 257;
+	terrainDesc.xmf3Scale = XMFLOAT3(1.0f, 50.0f / 255.0f, 1.0f);
+	terrainDesc.xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	auto pTerrainObject = RequestCreateObject(TypeTag<CHeightMapTerrain>(), terrainDesc);
+	//auto pTerrainObject = RequestCreateObject(TypeTag<CHeightMapTerrain>(), L"Terrain/terrain1.raw", L"Terrain/terrain1.bin", 257, 257,	XMFLOAT3(1.0f, 50.0f / 255.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+	
 	//m_pTerrain = GetTerrain(0);
 	////m_pTerrain = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain1.bin"), _T("Terrain/terrain.raw"), 257, 257, 13, 13, xmf3Scale, xmf4Color);
 	////m_pTerrain = CHeightMapTerrain::InitializeByBinary(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get(), _T("Terrain/terrain.bin"), _T("Terrain/terrain.raw"), 1025, 1025, 65, 65, xmf3Scale, xmf4Color);
@@ -53,23 +66,26 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	// <Initialize GameObjects>
 	// Player 생성
 	//auto pPlayer = AddObject(std::make_unique<CPlayer>());
-	auto pPlayer = RequestCreateObject(TypeTag<CPlayer>());
+	auto pPlayer = RequestCreateObject(TypeTag<CPlayer>(), 0);
 	pPlayer->SetSkin(0); // 기본 모델 설정
 	pPlayer->SetPosition(DirectX::XMFLOAT3(100.0f, 0.0f, 100.0f));
 	m_pPlayer = (CPlayer*)pPlayer;
 
 	// Gun 생성
-	auto pGun = RequestCreateObject(TypeTag<CGun>());
+	auto pGun = RequestCreateObject(TypeTag<CGun>(), 0);
 	//auto pGun = dynamic_cast<CGun*>(AddObject(std::make_unique<CGun>()));
 	m_pPlayer->SetGun(pGun);
 
-	//// Map Load
+	// Map Load
+	
 	//auto pMap = resourceManager.GetModelInfo("Stage1");
 	//pMap->m_pModelRootObject->UpdateTransform();
 	//m_pMap = pMap->m_pModelRootObject;
 	//m_pMap->SetLayer(LAYER_ENVIRONMENT);
 	//m_pMap->UpdateBBCache();
 	//AddObject(m_pMap);
+
+	auto mapObject = RequestCreateObject(TypeTag<CMapObject>(), L"Model/Stage2.bin");
 
 	// Collision Checker
 	//auto pCollisionChecker = (CCollisionChecker*)AddObject(std::make_unique<CCollisionChecker>(this));
@@ -141,15 +157,14 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	
 	// Shader
 	m_pDepthRenderShader = std::make_shared<CDepthRenderShader>();
-	m_pDepthRenderShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
-	m_pDepthRenderShader->BuildObjects(pd3dDevice, pd3dCommandList);
+	m_pDepthRenderShader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 
 	m_pShadowShader = std::make_shared<CShadowMapShader>();
-	m_pShadowShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+	m_pShadowShader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 	m_pShadowShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture().get());
 
 	m_pShadowMapToViewport = std::make_shared<CShadowToViewportShader>();
-	m_pShadowMapToViewport->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+	m_pShadowMapToViewport->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 	m_pShadowMapToViewport->BuildObjects(pd3dDevice, pd3dCommandList, m_pDepthRenderShader->GetDepthTexture().get());
 
 	// 마지막 모든 Object의 생성이 끝나면 Player의 카메라를 추적
@@ -185,6 +200,7 @@ void CGameScene::CreateDefaultCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	if (m_pCamera) return;
 
 	auto pCameraObject = AddObject(std::make_unique<CGameObject>());
+	pCameraObject->SetName("DefaultCamera");
 	auto pcameracomponent = pCameraObject->CreateComponent<CThirdPersonCamera>();
 	pcameracomponent->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 	pcameracomponent->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -205,7 +221,7 @@ void CGameScene::Update(float deltaTime)
 {
 	CScene::Update(deltaTime); // Collider check 포함
 
-	BuildFiredBullets();
+	// BuildFiredBullets();
 }
 
 void CGameScene::UpdateLights()
@@ -390,7 +406,8 @@ void CGameScene::ChangeMap(int nMapIndex)
 
 bool CGameScene::Fire(CPlayer* pPlayer, FIRE_INFO* pFireInfo)
 {
-	bool ret = pPlayer->Fire(pFireInfo);
+	bool ret = false;
+	// ret = pPlayer->Fire(pFireInfo);
 	return ret;
 }
 

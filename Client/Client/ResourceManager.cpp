@@ -313,7 +313,7 @@ std::shared_ptr<CMesh> CResourceManager::GetMesh(const std::string& name) {
 void CResourceManager::RegisterGameObjectResources(CGameObject* pGameObject)
 {
 	std::lock_guard<std::mutex> lock(m_RegisterGameObjectMutex);
-	m_GameObjectResourceRegisterList.push_back(pGameObject);
+	m_GameObjectResourceRegisterList.push(pGameObject);
 	{
 		std::string debugname = "Registered GameObject for Resource Collection: " + pGameObject->GetName() + "\n";
 		OutputDebugStringA(debugname.c_str());
@@ -326,14 +326,26 @@ void CResourceManager::CollectGameObjectRequest(int maxcount)
 	int count = 0;
 	while (!m_GameObjectResourceRegisterList.empty() && count < maxcount)
 	{
-		CGameObject* pGameObject = m_GameObjectResourceRegisterList.back();
-		m_GameObjectResourceRegisterList.pop_back();
+		CGameObject* pGameObject = m_GameObjectResourceRegisterList.front();
+		m_GameObjectResourceRegisterList.pop();
 
 		pGameObject->CollectShaderVariables();
+		m_GameObjectToProcessList.push_back(pGameObject);
 		count++;
 	}
+}
 
-	m_GameObjectResourceRegisterList.clear();
+void CResourceManager::ProcessGameObjectUpload(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	for(auto pGameObject : m_GameObjectToProcessList)
+	{
+		{
+			std::string debugname = "Processing GameObject Resource Upload: " + pGameObject->GetName() + "\n";
+			OutputDebugStringA(debugname.c_str());
+		}
+		pGameObject->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+	m_GameObjectToProcessList.clear();
 }
 
 // ----------------------------------------
@@ -516,7 +528,7 @@ void CResourceManager::ProcessShaderCreate(ID3D12Device* pd3dDevice, ID3D12Graph
 			std::string debugname = "Processing Shader Upload: " + to_string(pShader->GetShaderName()) + "\n";
 			OutputDebugStringA(debugname.c_str());
 		}
-		pShader->CreateShader(pd3dDevice, m_d3dGraphicRootSignature);
+		pShader->CreateShader(pd3dDevice, pd3dCommandList, m_d3dGraphicRootSignature);
 	}
 
 	m_ShaderToCreateList.clear();

@@ -105,6 +105,38 @@ void CGameObject::DeepCopyFromGameObject(CGameObject* rhs)
 	}
 }
 
+bool CGameObject::IsGPUInitialized() 
+{
+	if (m_bInitialized) return true;
+
+	if(m_pMesh)
+	{
+		if(!m_pMesh->IsGPUInitialized())
+		{
+			return false;
+		}
+	}
+
+	for(auto& pComponent : m_pComponents)
+	{
+		if(!pComponent->IsGPUInitialized())
+		{
+			return false;
+		}
+	}
+
+	for(auto& pChild : m_pChilds)
+	{
+		if(!pChild->IsGPUInitialized())
+		{
+			return false;
+		}
+	}
+
+	m_bInitialized = true;
+	return true;
+}
+
 void CGameObject::SetName(const std::string& strName)
 {
 	if (strName.length() > 0)
@@ -352,6 +384,7 @@ void CGameObject::OnPrepareRender()
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
 	if (false == m_bActive) return;
+	if (false == IsGPUInitialized()) return;
 
 	// Render Object
 
@@ -451,6 +484,18 @@ void CGameObject::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphics
 	m_pd3dcbGameObject->Map(0, nullptr, (void**)&m_pcbMappedObject);
 	ZeroMemory(m_pcbMappedObject, sizeof(CB_GAMEOBJECT_INFO));
 #endif // _USE_OBJECT_MATERIAL_CBV
+
+	// Component Shader Variables
+	for(auto& pComponent : m_pComponents)
+	{
+		// Component Shader Variables
+		pComponent->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	for(auto& pChild : m_pChilds)
+	{
+		pChild->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
 }
 
 void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
@@ -502,6 +547,12 @@ void CGameObject::CollectShaderVariables()
 		CResourceManager::Instance().RegisterMaterialUpload(pMaterial.get());
 	}
 
+	for(auto& pComponent : m_pComponents)
+	{
+		// Component Shader Variables
+		//pComponent->CollectShaderVariables();
+	}
+
 	for (auto& pChild : m_pChilds)
 	{
 		pChild->CollectShaderVariables();
@@ -516,7 +567,7 @@ void CGameObject::ReleaseUploadBuffers()
 	}
 
 	if (false == m_ppMaterials.empty()) {
-		for (UINT i = 0; i < m_nMaterials; i++)
+		for (UINT i = 0; i < (UINT)m_ppMaterials.size(); i++)
 		{
 			if (m_ppMaterials[i]) m_ppMaterials[i]->ReleaseUploadBuffers();
 		}
@@ -526,7 +577,7 @@ void CGameObject::ReleaseUploadBuffers()
 std::shared_ptr<CTexture> CGameObject::FindReplicatedTexture(const std::wstring pstrTextureName)
 {
 	std::string strTextureName = to_string(pstrTextureName);
-	for (UINT i = 0; i < m_nMaterials; i++)
+	for (UINT i = 0; i < (UINT)m_ppMaterials.size(); i++)
 	{
 		if (m_ppMaterials[i])
 		{
@@ -552,15 +603,15 @@ void CGameObject::FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh
 	for (auto& pChild : m_pChilds) pChild->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
 }
 
-void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, std::ifstream& File, std::shared_ptr<CShader> pShader)
+void CGameObject::LoadMaterialsFromFile(std::ifstream& File, std::shared_ptr<CShader> pShader)
 {
 	char pstrToken[64] = { '\0' };
 	int nMaterial = 0;
 	UINT nReads = 0;
 
-	m_nMaterials = ReadIntegerFromFile(File);
+	int nMaterials = ReadIntegerFromFile(File);
 
-	m_ppMaterials.resize(m_nMaterials);
+	m_ppMaterials.resize(nMaterials);
 
 	std::shared_ptr<CMaterial> pMaterial;
 
@@ -805,7 +856,7 @@ bool CGameObject::DeepCopyFromModel(const std::string& strModelName)
 	return DeepCopyFromModel(strModelName, this); 
 }
 
-std::unique_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth)
+std::unique_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(CGameObject* pParent, std::ifstream& file, std::shared_ptr<CShader> pShader, int* pnSkinnedMeshes, int nDepth)
 {
 	char pstrToken[64] = { '\0' };
 	UINT nReads = 0;
@@ -850,7 +901,7 @@ std::unique_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		}
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
-			std::shared_ptr<CStandardMesh> pMesh = std::make_shared<CStandardMesh>(pd3dDevice, pd3dCommandList);
+			std::shared_ptr<CStandardMesh> pMesh = std::make_shared<CStandardMesh>();
 			pMesh->LoadMeshFromFile(file);
 			pGameObject->SetMesh(pMesh);			
 		}
@@ -858,7 +909,7 @@ std::unique_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		{
 			if (pnSkinnedMeshes) (*pnSkinnedMeshes)++;
 
-			std::shared_ptr<CSkinnedMesh> pSkinnedMesh = std::make_shared<CSkinnedMesh>(pd3dDevice, pd3dCommandList);
+			std::shared_ptr<CSkinnedMesh> pSkinnedMesh = std::make_shared<CSkinnedMesh>();
 			pSkinnedMesh->LoadSkinInfoFromFile(file);
 			//pSkinnedMesh->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -869,7 +920,7 @@ std::unique_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		}
 		else if (!strcmp(pstrToken, "<Materials>:"))
 		{
-			pGameObject->LoadMaterialsFromFile(pd3dDevice, pd3dCommandList, pParent, file, pShader);
+			pGameObject->LoadMaterialsFromFile(file, pShader);
 		}
 		else if (!strcmp(pstrToken, "<Colliders>:"))
 		{
@@ -895,18 +946,8 @@ std::unique_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 				pGameObject->m_pChilds.reserve(nChilds); 
 				for (int i = 0; i < nChilds; i++)
 				{
-					auto pChild = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject.get(), file, pShader, pnSkinnedMeshes, nDepth + 1);
+					auto pChild = CGameObject::LoadFrameHierarchyFromFile(pGameObject.get(), file, pShader, pnSkinnedMeshes, nDepth + 1);
 					if (pChild) pGameObject->SetChild(std::move(pChild));
-
-#ifdef _WITH_DEBUG_FRAME_HIERARCHY
-					std::string strDebug = "(Frame: " + pChild->GetName() + ") (Parent: " + pGameObject->GetName() + ")\n";
-					for (auto& pComponent : pChild->m_pComponents)
-					{
-						std::string name = typeid(*pComponent.get()).name();
-						strDebug += "\tComponent: " + name + "\n";
-					}
-					OutputDebugStringA(strDebug.c_str());
-#endif
 				}
 			}
 		}
@@ -915,11 +956,8 @@ std::unique_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 			std::string strModelName;
 			::ReadStringFromFile(file, strModelName);
 
-			if(false){
-				//if (strModelName == pCollider->m_strName) continue;
-				if (isGetModel) continue;
-				isGetModel = DeepCopyFromModel(strModelName, pGameObject.get());
-			}
+			if (isGetModel) continue;
+			isGetModel = DeepCopyFromModel(strModelName, pGameObject.get());
 		}
 		else if (!strcmp(pstrToken, "</Frame>"))
 		{
@@ -949,7 +987,8 @@ std::shared_ptr<CLoadedModelInfo> CGameObject::LoadGeometryAndAnimationFromFile(
 		{
 			if (!strcmp(pstrToken, "<Hierarchy>:"))
 			{
-				pLoadedModel->m_pModelRootObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, pShader, &pLoadedModel->m_nSkinnedMeshes, 0);
+				pLoadedModel->m_pModelRootObject = CGameObject::LoadFrameHierarchyFromFile(nullptr, pInFile, pShader, &pLoadedModel->m_nSkinnedMeshes, 0);
+				CResourceManager::Instance().RegisterGameObjectResources(pLoadedModel->m_pModelRootObject.get());
 				::ReadStringFromFile(pInFile, pstrToken); //"</Hierarchy>"
 
 				// 모델의 Root Transform을 초기화	
@@ -1018,7 +1057,7 @@ void CSkyBox::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	//pSkyBoxTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"SkyBox/SkyBox.dds", RESOURCE_TEXTURE_CUBE, 0);
 
 	std::shared_ptr<CShader> pSkyBoxShader = std::make_shared<CSkyBoxShader>();
-	pSkyBoxShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature);
+	pSkyBoxShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	// pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	// pSkyBoxShader->CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 1);
@@ -1096,6 +1135,11 @@ std::shared_ptr<CHeightMapTerrain> CHeightMapTerrain::Create(ID3D12Device* pd3dD
 	pHeightMapTerrain->Initialize(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, nWidth, nLength, nBlockWidth, nBlockLength, xmf3Scale, xmf4Color);
 
 	return pHeightMapTerrain;
+}
+
+void CHeightMapTerrain::Initialize(CHeightMapTerrainDesc desc)
+{
+	Initialize(desc.wstrHeightMapFilePath, desc.wstrMeshFilePath, desc.nWidth, desc.nLength, desc.xmf3Scale, desc.xmf4Color);
 }
 
 void CHeightMapTerrain::Initialize(std::wstring wstrHeightMapFilePath, std::wstring wstrMeshFilePath, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color)
@@ -1237,7 +1281,7 @@ void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 #else
 	std::shared_ptr<CShader> pShader = std::make_shared<CTerrainShader>();
 #endif
-	pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature);
+	pShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	pShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	SetShader(pShader);
 
@@ -1332,7 +1376,7 @@ std::shared_ptr<CHeightMapTerrain> CHeightMapTerrain::InitializeByBinary(ID3D12D
 #else
 	std::shared_ptr<CShader> pShader = std::make_shared<CTerrainShader>();
 #endif
-	pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature);
+	pShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	pShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	pHeightMapTerrain->SetShader(pShader);
 
@@ -1762,4 +1806,102 @@ std::wstring to_wstring(GAMEOBJECT_LAYER type)
 	default:                             ret = L"Unknown";     break;
 	}
 	return ret;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//
+
+void CMapObject::Initialize(std::wstring wstrMapFilePath)
+{
+	LoadGeometryAndAnimationFromFile(wstrMapFilePath);
+}
+
+void CMapObject::LoadGeometryAndAnimationFromFile(std::wstring wstrMapFilePath)
+{
+	// 파일 열기 (실패시 바로 종료)
+	std::ifstream pInFile(wstrMapFilePath, std::ios::binary);
+	if (!pInFile.is_open()) return;
+
+	SetName(to_string(wstrMapFilePath));
+
+	char pstrToken[500] = { '\0' };
+
+	int pnSkinnedMeshes = 0;
+
+	for (; ; )
+	{
+		if (::ReadStringFromFile(pInFile, pstrToken))
+		{
+			if (!strcmp(pstrToken, "<Hierarchy>:"))
+			{
+				// ::ReadStringFromFile(pInFile, pstrToken); //"</Hierarchy>"
+			}
+			else if (!strcmp(pstrToken, "<Frame>:"))
+			{
+				int nFrame = ::ReadIntegerFromFile(pInFile);
+				int nTextures = ::ReadIntegerFromFile(pInFile);
+
+				std::string strFrameName;
+				::ReadStringFromFile(pInFile, strFrameName);
+			}
+			else if (!strcmp(pstrToken, "<Tag>:")) {
+
+				std::string strTag;
+				::ReadStringFromFile(pInFile, strTag);
+			}
+			else if (!strcmp(pstrToken, "<Transform>:"))
+			{
+				XMFLOAT3 xmf3Position, xmf3Rotation, xmf3Scale;
+				XMFLOAT4 xmf4Rotation;
+				pInFile.read((char*)&xmf3Position, sizeof(float) * 3);
+				pInFile.read((char*)&xmf3Rotation, sizeof(float) * 3); //Euler Angle
+				pInFile.read((char*)&xmf3Scale, sizeof(float) * 3);
+				pInFile.read((char*)&xmf4Rotation, sizeof(float) * 4); //Quaternion
+			}
+			else if (!strcmp(pstrToken, "<TransformMatrix>:"))
+			{
+				XMFLOAT4X4 xmf4x4Matrix;
+				pInFile.read((char*)&xmf4x4Matrix, sizeof(float) * 16);
+				SetLocalMatrix(xmf4x4Matrix);
+			}
+			else if (!strcmp(pstrToken, "<Children>:"))
+			{
+				int nChilds = ::ReadIntegerFromFile(pInFile);
+				if (nChilds > 0)
+				{
+					m_pChilds.reserve(nChilds);
+					for (int i = 0; i < nChilds; i++)
+					{
+						auto pChild = CGameObject::LoadFrameHierarchyFromFile(this, pInFile, nullptr, &pnSkinnedMeshes, 0);
+						if (pChild) SetChild(std::move(pChild));
+
+#ifdef _WITH_DEBUG_FRAME_HIERARCHY
+						std::string strDebug = "(Frame: " + pChild->GetName() + ") (Parent: " + pGameObject->GetName() + ")\n";
+						for (auto& pComponent : pChild->m_pComponents)
+						{
+							std::string name = typeid(*pComponent.get()).name();
+							strDebug += "\tComponent: " + name + "\n";
+						}
+						OutputDebugStringA(strDebug.c_str());
+#endif
+					}
+				}
+			}
+			else if (!strcmp(pstrToken, "<ModelName>"))
+			{
+				std::string strModelName;
+				::ReadStringFromFile(pInFile, strModelName);
+
+				DeepCopyFromModel(strModelName, this);
+			}
+			else if (!strcmp(pstrToken, "</Hierarchy>"))
+			{
+				break;
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
 }

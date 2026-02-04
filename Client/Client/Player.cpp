@@ -129,7 +129,7 @@ void CPlayer::Initialize(int nSkinIndex)
 
 void CPlayer::Update(float fTimeElapsed)
 {
-	if (auto pSkinnedAnimationController = CreateComponent<CAnimationController>()) UpdateLowerAnimation();
+	if (auto pSkinnedAnimationController = GetComponent<CAnimationController>()) UpdateLowerAnimation();
 
 	CGameObject::Update(fTimeElapsed);
 
@@ -234,7 +234,7 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, float deltaTime)
 
 void CPlayer::OnPrepareAnimate()
 {
-	if (auto pSkinnedAnimationController = CreateComponent<CAnimationController>())
+	if (auto pSkinnedAnimationController = GetComponent<CAnimationController>())
 	{
 		m_pGunSlot = pSkinnedAnimationController->m_pModelRootObject->FindFrame("GunSlot");
 		if (m_pGunSlot) {

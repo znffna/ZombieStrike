@@ -25,6 +25,8 @@ void CCamera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	m_pd3dcbCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbCamera->Map(0, NULL, (void**)&m_pcbMappedCamera);
+
+	CComponent::CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
 void CCamera::ReleaseShaderVariables()
@@ -195,6 +197,79 @@ void CThirdPersonCamera::Rotate(float x, float y, float z)
 	Clamp(m_fPitch, x, -89.0f, 89.0f); // -90 ~ 90으로 제한
 	Normalize(m_fYaw, y, -180.0f, 180.0f); // -180 ~ 180으로 조정
 	Normalize(m_fRoll, z, -180.0f, 180.0f); // -180 ~ 180으로 조정
+
+	// 고정축 회전 적용
+	{
+		XMFLOAT3 xmf3Right = m_xmf3Right;
+		XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&xmf3Right), XMConvertToRadians(x));
+		m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
+		m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
+		m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
+	}
+
+	{
+		XMFLOAT3 xmf3Up = XMFLOAT3(0, 1, 0);
+		XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&xmf3Up), XMConvertToRadians(y));
+		m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
+		m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
+		m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
+	}
+
+	{
+		XMFLOAT3 xmf3Look = m_xmf3Look;
+		XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&xmf3Look), XMConvertToRadians(z));
+		m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
+		m_xmf3Up = Vector3::TransformNormal(m_xmf3Up, xmmtxRotate);
+		m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
+	}
+}
+
+void CThirdPersonCamera::Update(float fTimeElapsed)
+{
+	if (gameObject)
+	{
+		auto pChaseTransform = gameObject->GetComponent<CTransform>();
+
+		// 카메라의 회전 행렬 계산
+		XMFLOAT4X4 xmf4x4Rotate = Matrix4x4::Identity();
+		XMStoreFloat4x4(&xmf4x4Rotate, XMMatrixRotationRollPitchYaw(XMConvertToRadians(m_fPitch), XMConvertToRadians(m_fYaw), XMConvertToRadians(m_fRoll)));
+		/*XMFLOAT3 xmf3Right = pChaseTransform->GetRight();
+		XMFLOAT3 xmf3Up = pChaseTransform->GetUp();
+		XMFLOAT3 xmf3Look = pChaseTransform->GetLook();
+		xmf4x4Rotate._11 = xmf3Right.x; xmf4x4Rotate._21 = xmf3Up.x; xmf4x4Rotate._31 = xmf3Look.x;
+		xmf4x4Rotate._12 = xmf3Right.y; xmf4x4Rotate._22 = xmf3Up.y; xmf4x4Rotate._32 = xmf3Look.y;
+		xmf4x4Rotate._13 = xmf3Right.z; xmf4x4Rotate._23 = xmf3Up.z; xmf4x4Rotate._33 = xmf3Look.z;
+
+		if (m_fPitch != 0.0f)
+		{
+			XMMATRIX xmmtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(m_fPitch), XMConvertToRadians(0.0f), XMConvertToRadians(0.0f));
+			xmf4x4Rotate = Matrix4x4::Multiply(xmmtxRotate, xmf4x4Rotate);
+		}*/
+
+		// 오브젝트 대비 상대적 위치 설정
+		XMFLOAT3 xmf3Offset = Vector3::TransformCoord(m_xmf3Offset, xmf4x4Rotate); // 상대적 위치에 회전 행렬 적용
+		XMFLOAT3 xmf3Position = Vector3::Add(Vector3::Add(pChaseTransform->GetPosition(), XMFLOAT3(0, 1, 0)), xmf3Offset); // 상대적 위치	+ 오브젝트 위치 = 카메라 목표 위치
+		XMFLOAT3 xmf3Direction = Vector3::Subtract(xmf3Position, m_xmf3Position); // 목표 위치 - 현재 위치 = 가야할 방향
+
+		float fLength = Vector3::Length(xmf3Direction); // 가야할 거리 계산
+		xmf3Direction = Vector3::Normalize(xmf3Direction); // 가야하는 방향 추출
+		float fTimeLagScale = (m_fTimeLag) ? fTimeElapsed * (1.0f / m_fTimeLag) : 1.0f; // 시간 지연 계산
+
+		float fDistance = fLength * fTimeLagScale; // 이동 거리 계산
+		if (fDistance > fLength)fDistance = fLength; // 이동 거리가 목표 위치보다 멀면 목표 위치로 이동
+		if (fLength < 0.01f)fDistance = fLength; // 거리가 0.01f 이하면 이동하지 않음
+
+		if (fDistance > 0) // 이동해야할 경우
+		{
+			m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Direction, fDistance);
+			OnTerrainUpdateCallback(fTimeElapsed);
+
+			//SetLookAt(xmf3LookAt);
+			SetLookAt(Vector3::Add(m_xmf3Position, Vector3::TransformCoord(XMFLOAT3(0, 0, 1), xmf4x4Rotate)));
+
+			RegenerateViewMatrix();
+		}
+	}
 }
 
 void CThirdPersonCamera::Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed)

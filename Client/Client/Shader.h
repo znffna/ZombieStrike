@@ -23,7 +23,7 @@ public:
 	virtual std::wstring GetShaderName() { return L"CShader"; }
 
 	// Create Pipeline State
-	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 	void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState = 0, bool bDepthWrite = false);
 	void CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dComputeRootSignature, int nPipelineState = 0);
 
@@ -285,6 +285,8 @@ public:
 
 	virtual std::wstring GetShaderName() override { return L"CDepthRenderShader"; }
 
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature) override;
+
 	virtual DXGI_FORMAT GetRenderTargetFormat(int nPipelineState, int nRenderTargetIndex, bool bDepthWrite = false) override { return DXGI_FORMAT_R32_FLOAT; }
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
 	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState) override;
@@ -358,7 +360,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene);
 
 public:
-	std::shared_ptr<CTexture> m_pDepthFromLightTexture;
+	CTexture* m_pDepthFromLightTexture = nullptr;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -384,7 +386,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 protected:
-	std::shared_ptr<CTexture> m_pDepthFromLightTexture;
+	CTexture* m_pDepthFromLightTexture = nullptr;
 };
 
 class CShadowToViewportShader : public CTextureToViewportShader

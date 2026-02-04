@@ -73,7 +73,7 @@ void CMaterial::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	// Shader가 존재할 경우, Shader에서 필요한 작업 수행
 	if (m_pShader)
 	{
-		m_pShader->CreateShader(pd3dDevice, CScene::GetGraphicRootSignature());
+		m_pShader->CreateShader(pd3dDevice, pd3dCommandList, CScene::GetGraphicRootSignature());
 		//m_pShader->BuildObjects(pd3dDevice, pd3dCommandList);
 		m_pShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}

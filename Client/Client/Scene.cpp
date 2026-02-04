@@ -69,6 +69,7 @@ void CScene::CreateDefaultCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	if (m_pCamera) return;
 
 	auto pCameraObject = AddObject(std::make_unique<CGameObject>());
+	pCameraObject->SetName("DefaultCamera");
 	auto pcameracomponent = pCameraObject->CreateComponent<CCamera>();
 	pcameracomponent->SetViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 	pcameracomponent->SetScissorRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -91,22 +92,22 @@ void CScene::CreateRootSignature(ID3D12RootSignature* pd3dRootSignature, ID3D12D
 	else m_pd3dGraphicsRootSignature = pd3dRootSignature;
 }
 
-void CScene::CreateStaticShader(ID3D12Device* pd3dDevice)
+void CScene::CreateStaticShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (CMaterial::m_pStandardShader == nullptr)
 	{
 		CMaterial::m_pStandardShader = std::make_shared<CStandardShader>();
-		CMaterial::m_pStandardShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+		CMaterial::m_pStandardShader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 	}
 	if (CMaterial::m_pSkinnedAnimationShader == nullptr)
 	{
 		CMaterial::m_pSkinnedAnimationShader = std::make_shared<CSkinnedAnimationStandardShader>();
-		CMaterial::m_pSkinnedAnimationShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+		CMaterial::m_pSkinnedAnimationShader->CreateShader(pd3dDevice, pd3dCommandList,	m_pd3dGraphicsRootSignature.Get());
 	}
 	if (CMaterial::m_pColliderShader == nullptr)
 	{
 		CMaterial::m_pColliderShader = std::make_shared<CColliderShader>();
-		CMaterial::m_pColliderShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature.Get());
+		CMaterial::m_pColliderShader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
 	}
 }
 
@@ -153,7 +154,7 @@ void CScene::ReleaseUploadBuffers()
 void CScene::InitStaticMembers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
 {
 	CreateRootSignature(pd3dRootSignature, pd3dDevice);
-	CreateStaticShader(pd3dDevice);
+	CreateStaticShader(pd3dDevice, pd3dCommandList);
 }
 
 void CScene::BuildDefaultLightsAndMaterials()

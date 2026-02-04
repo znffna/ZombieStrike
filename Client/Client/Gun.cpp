@@ -27,9 +27,21 @@ void CGun::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dC
 	DeepCopyFromModel(CResourceManager::Instance().GetModelInfo(m_strGunName[m_nGunType]));
 }
 
-void CGun::Initialize()
+void CGun::Initialize(int nWeaponType)
 {
+	CGameObject::Initialize();
+
+	SetGunType(nWeaponType);
+
+	// Initialize Ammo
+	m_nCurrentAmmo = m_nMaxAmmo;
+	m_fFireRate = 0.5f;
+	m_fBulletRange = 100.0f;
+	m_fReloadTime = 2.0f;
+
+	DeepCopyFromModel(CResourceManager::Instance().GetModelInfo(m_strGunName[m_nGunType]));
 }
+
 
 void CGun::Update(float fTimeElapsed)
 {

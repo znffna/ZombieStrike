@@ -367,7 +367,7 @@ public:
 	// static method
 	static ComPtr<ID3D12RootSignature> CreateGraphicsRootSignature(ID3D12Device* pd3dDevice);
 	static void CreateRootSignature(ID3D12RootSignature* pd3dRootSignature, ID3D12Device* pd3dDevice);
-	static void CreateStaticShader(ID3D12Device* pd3dDevice);
+	static void CreateStaticShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	static void CreateStaticMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	static ComPtr<ID3D12RootSignature> GetGraphicsRootSignature() { return m_pd3dGraphicsRootSignature; }
@@ -479,6 +479,7 @@ T* CScene::RequestCreateObject(TypeTag<T> tag, Args&&... args)
 
 	auto object = std::make_unique<T>();
 	object->SetID(m_NextGameObjectID++);
+	object->SetScene(this);
 	object->SetActive(false);
 	object->Initialize(std::forward<Args>(args)...);
 

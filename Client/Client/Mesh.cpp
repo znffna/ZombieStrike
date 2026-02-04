@@ -288,6 +288,8 @@ void CStandardMesh::LoadMeshFromFile(std::ifstream& File)
 
 void CStandardMesh::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	if(IsGPUInitialized()) return;
+
 	CMesh::CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	// Create Color Buffer
@@ -1142,6 +1144,8 @@ void CHeightMapGridMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList,
 
 void CHeightMapGridMesh::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	if (IsGPUInitialized()) return;
+
 	// Create Standard Mesh Shader Variables
 	CStandardMesh::CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }

@@ -301,10 +301,13 @@ private:
 public:
 	void RegisterGameObjectResources(CGameObject* pGameObject);
 	void CollectGameObjectRequest(int maxcount);
+	void ProcessGameObjectUpload(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
 
 private:
 	std::mutex m_RegisterGameObjectMutex; 
-	std::vector<CGameObject*> m_GameObjectResourceRegisterList;
+	std::queue<CGameObject*> m_GameObjectResourceRegisterList;
+	std::vector<CGameObject*> m_GameObjectToProcessList;
 
 public:
 	// ----------------------------------------
@@ -332,6 +335,7 @@ public:
 	void ProcessRegistries(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 	{
 		CollectRegister(8);
+		ProcessGameObjectUpload(pd3dDevice, pd3dCommandList);
 		ProcessMeshUpload(pd3dDevice, pd3dCommandList);
 		ProcessMaterialUpload(pd3dDevice, pd3dCommandList);
 		ProcessShaderCreate(pd3dDevice, pd3dCommandList);
