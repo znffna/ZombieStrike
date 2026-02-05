@@ -152,6 +152,9 @@
     <ClInclude Include="TextComponent.h">
       <Filter>소스 파일\Game\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Sound.h">
+      <Filter>소스 파일\Framework\Util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp">
@@ -252,6 +255,9 @@
     </ClCompile>
     <ClCompile Include="TextComponent.cpp">
       <Filter>소스 파일\Game\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Sound.cpp">
+      <Filter>소스 파일\Framework\Util</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

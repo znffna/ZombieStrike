@@ -199,6 +199,8 @@ void CAnimationController::SetModel(CLoadedModelInfo* pModel)
 		m_pAnimationTracks[i].SetEnable(false);
 	}
 	m_pAnimationTracks[0].SetEnable(true);
+
+	if(auto pHips = m_pModelRootObject->FindFrame("mixamorig:Hips")) m_pRootMotionObject = pHips;
 }
 
 CAnimationController::~CAnimationController()

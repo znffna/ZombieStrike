@@ -73,6 +73,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	//CoInitialize(nullptr);
 
 	// 전역 변수들 생성 및 초기화
+	Sound::Initialize(); // Sound System 초기화
 	BuildDefaultObjects();
 
 	isWorked = true;
@@ -94,6 +95,8 @@ void CGameFramework::OnDestroy()
 {
 	if (!isWorked) return;
 	isWorked = false;
+
+	Sound::Shutdown(); // Sound System 종료
 
 	// Scene 생성 스레드를 종료한다.
 	StopSceneMadeThread();
@@ -664,6 +667,9 @@ void CGameFramework::AdvanceFrame()
 	std::wstring text = time + L" " + fps;
 
 	::SetWindowText(m_hWnd, text.c_str());
+
+	// Sound 갱신
+	Sound::Update();
 }
 
 void CGameFramework::AnimateObjects(CScene* pScene)

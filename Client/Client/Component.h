@@ -5,7 +5,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "stdafx.h"
-
+#include "Sound.h"
 //#define _WITH_TRANSFORM_HIERARCHY
 
 class CGameObject;
