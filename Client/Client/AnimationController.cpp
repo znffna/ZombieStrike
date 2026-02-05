@@ -324,6 +324,10 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 
 		ApplyPitchToSpine(pRootGameObject);
 
+		OnRootMotion(pRootGameObject);
+		OnAnimationIK(pRootGameObject);
+
+
 		if (m_pRootMotionObject) {
 			auto pTransform = m_pRootMotionObject->GetLocalMatrix();
 			// Position의 이동을 사용하지 않음
@@ -347,9 +351,6 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 
 			m_vSkinnedMeshBoneOffsets[i] = index;
 		}
-
-		OnRootMotion(pRootGameObject);
-		OnAnimationIK(pRootGameObject);
 	}
 }
 
@@ -375,5 +376,35 @@ void CAnimationController::ApplyPitchToSpine(CGameObject* pRootGameObject)
 			pSpine2->SetLocalMatrix(pSpineTransform);
 		}
 	}
+}
+
+void CAnimationController::OnRootMotion(CGameObject* pRootGameObject)
+{
+	if(m_bRootMotion)
+	{
+		XMFLOAT3 xmf3Position = m_pRootMotionObject->GetPosition();
+		XMFLOAT3 xmf3Offset = Vector3::Subtract(xmf3Position, m_xmf3PreviousPosition);
+		pRootGameObject->SetPosition(Vector3::Add(pRootGameObject->GetPosition(), xmf3Offset));
+		m_xmf3PreviousPosition = m_pRootMotionObject->GetPosition();
+
+		//		XMFLOAT3 xmf3RootPosition = m_pModelRootObject->GetPosition();
+		//		pRootGameObject->m_xmf4x4ToParent = m_pModelRootObject->m_xmf4x4World;
+		//		pRootGameObject->SetPosition(xmf3RootPosition);
+
+		//			xmf3Position = pRootGameObject->GetPosition();
+		//			XMFLOAT3 xmf3Look = pRootGameObject->GetLook();
+		//			xmf3Position = Vector3::Add(xmf3Position, xmf3Look, fabs(xmf3Offset.x));
+		//pRootGameObject->SetWorldMatrix._41 += xmf3Offset.x;
+		//pRootGameObject->SetWorldMatrix._42 += xmf3Offset.y;
+		//pRootGameObject->SetWorldMatrix._43 += xmf3Offset.z;
+
+		//			pRootGameObject->MoveForward(fabs(xmf3Offset.x));
+		//			pRootGameObject->SetPosition(xmf3Position);
+					//m_xmf3PreviousPosition = xmf3Position;
+
+		// RootMotion이 적용될 경우 기존 Model의 RootObject
+
+	}
+
 }
 

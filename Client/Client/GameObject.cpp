@@ -1139,11 +1139,13 @@ std::shared_ptr<CHeightMapTerrain> CHeightMapTerrain::Create(ID3D12Device* pd3dD
 
 void CHeightMapTerrain::Initialize(CHeightMapTerrainDesc desc)
 {
-	Initialize(desc.wstrHeightMapFilePath, desc.wstrMeshFilePath, desc.nWidth, desc.nLength, desc.xmf3Scale, desc.xmf4Color);
+	Initialize(desc.wstrHeightMapFilePath, desc.wstrMeshFilePath, desc.nWidth, desc.nLength, desc.nBlockWidth, desc.nBlockLength, desc.xmf3Scale, desc.xmf4Color);
 }
 
-void CHeightMapTerrain::Initialize(std::wstring wstrHeightMapFilePath, std::wstring wstrMeshFilePath, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color)
+void CHeightMapTerrain::Initialize(std::wstring wstrHeightMapFilePath, std::wstring wstrMeshFilePath, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color)
 {
+	assert(wstrHeightMapFilePath != L"null");	
+
 	// 지형에 사용할 높이 맵을 생성한다.
 	m_pHeightMapImage = std::make_shared<CHeightMapImage>(wstrHeightMapFilePath, nWidth, nLength, xmf3Scale);
 
@@ -1155,40 +1157,8 @@ void CHeightMapTerrain::Initialize(std::wstring wstrHeightMapFilePath, std::wstr
 	m_xmf3Scale = xmf3Scale;
 
 	// Mesh 
-	std::shared_ptr<CMesh> pHeightMapGridMesh;
-	std::ifstream in(wstrMeshFilePath, std::ios::binary);
-	if (!in.is_open()) 
-	{
-		std::wcout << L"Failed to open mesh file: " << wstrMeshFilePath << L"\n";
-		return;
-	}
-
-	UINT vertexCount = 0;
-	UINT indexCount = 0;
-
-	in.read(reinterpret_cast<char*>(&vertexCount), sizeof(UINT));
-	in.read(reinterpret_cast<char*>(&indexCount), sizeof(UINT));
-
-	std::vector<CTerrainVertex> outVertices;
-	std::vector<UINT> outIndices;
-
-	outVertices.resize(vertexCount);
-	outIndices.resize(indexCount);
-
-	in.read(reinterpret_cast<char*>(outVertices.data()), vertexCount * sizeof(CTerrainVertex));
-	in.read(reinterpret_cast<char*>(outIndices.data()), indexCount * sizeof(UINT));
-
-	in.close();
-
-	std::cout << "Import successful.\n";
-	std::cout << "Vertices: " << vertexCount << ", Indices: " << indexCount << "\n";
-
-	pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(outVertices, outIndices);
-	SetMesh(pHeightMapGridMesh);
-
-	m_pVertices = outVertices;
-	m_pIndices = outIndices;
-	isBinary = true;
+	if (wstrMeshFilePath != L"null")	CreateGridMeshFromFile(wstrMeshFilePath);
+	else CreateGridMeshFromHeightMap(nBlockWidth, nBlockLength, xmf4Color);
 
 	// Material
 	m_ppMaterials.resize(1);
@@ -1215,6 +1185,82 @@ void CHeightMapTerrain::Initialize(std::wstring wstrHeightMapFilePath, std::wstr
 
 	pTexture = std::make_shared<CTexture>(terrainTextureRecipe);
 	m_ppMaterials[0]->AddTexture(pTexture);
+}
+
+void CHeightMapTerrain::CreateGridMeshFromHeightMap(int nBlockWidth, int nBlockLength, XMFLOAT4 xmf4Color)
+{
+	/*지형 객체는 격자 메쉬들의 배열로 만들 것이다.
+	nBlockWidth, nBlockLength는 격자 메쉬 하나의 가로, 세로 크기이다.
+	cxQuadsPerBlock, czQuadsPerBlock은 격자 메쉬의 가로 방향과 세로 방향 사각형의 개수이다.*/
+	int cxQuadsPerBlock = nBlockWidth - 1;
+	int czQuadsPerBlock = nBlockLength - 1;
+
+	long cxBlocks = (m_nWidth - 1) / cxQuadsPerBlock;
+	long czBlocks = (m_nLength - 1) / czQuadsPerBlock;
+
+	if (m_nWidth == nBlockWidth && m_nLength == nBlockLength) {
+		std::shared_ptr<CMesh> pHeightMapGridMesh;
+		pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(0, 0, nBlockWidth, nBlockLength, m_xmf3Scale, m_xmf4Color, m_pHeightMapImage.get());
+		SetMesh(pHeightMapGridMesh);
+	}
+	else
+	{
+		std::shared_ptr<CMesh> pHeightMapGridMesh;
+
+		m_pChilds.reserve(cxBlocks * czBlocks); //지형을 표현하기 위한 격자 메쉬의 개수이다.
+		int index = 0;
+		for (int z = 0, zStart = 0; z < czBlocks; z++)
+		{
+			for (int x = 0, xStart = 0; x < cxBlocks; x++)
+			{
+				std::string name = "HeightMapSub" + std::to_string(index++);
+				auto pHeightMapGameObject = std::make_unique<CGameObject>(name);
+				pHeightMapGameObject->MaterialResize(0);
+				xStart = x * (nBlockWidth - 1);
+				zStart = z * (nBlockLength - 1);
+				pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(xStart, zStart, nBlockWidth, nBlockLength, m_xmf3Scale, xmf4Color, m_pHeightMapImage.get());
+				pHeightMapGameObject->SetMesh(pHeightMapGridMesh);
+				SetChild(std::move(pHeightMapGameObject));
+			}
+		}
+	}
+}
+
+void CHeightMapTerrain::CreateGridMeshFromFile(std::wstring& wstrMeshFilePath)
+{
+	std::ifstream in(wstrMeshFilePath, std::ios::binary);
+	if (!in.is_open())
+	{
+		std::wcout << L"Failed to open mesh file: " << wstrMeshFilePath << L"\n";
+		return;
+	}
+
+	UINT vertexCount = 0;
+	UINT indexCount = 0;
+
+	in.read(reinterpret_cast<char*>(&vertexCount), sizeof(UINT));
+	in.read(reinterpret_cast<char*>(&indexCount), sizeof(UINT));
+
+	std::vector<CTerrainVertex> outVertices;
+	std::vector<UINT> outIndices;
+
+	outVertices.resize(vertexCount);
+	outIndices.resize(indexCount);
+
+	in.read(reinterpret_cast<char*>(outVertices.data()), vertexCount * sizeof(CTerrainVertex));
+	in.read(reinterpret_cast<char*>(outIndices.data()), indexCount * sizeof(UINT));
+
+	in.close();
+
+	std::cout << "Import successful.\n";
+	std::cout << "Vertices: " << vertexCount << ", Indices: " << indexCount << "\n";
+
+	std::shared_ptr<CMesh> pHeightMapGridMesh;
+	pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(outVertices, outIndices);
+	SetMesh(pHeightMapGridMesh);
+
+	m_pVertices = outVertices;
+	m_pIndices = outIndices;
 }
 
 void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color)
@@ -1366,8 +1412,6 @@ std::shared_ptr<CHeightMapTerrain> CHeightMapTerrain::InitializeByBinary(ID3D12D
 
 		pHeightMapTerrain->m_pVertices = outVertices;
 		pHeightMapTerrain->m_pIndices = outIndices;
-
-		pHeightMapTerrain->isBinary = true;
 	}
 
 

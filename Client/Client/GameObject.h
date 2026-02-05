@@ -106,6 +106,25 @@ public:
 
 	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr, bool bDepthWrite = false);
+public:
+	// --------------------------------------------
+	// Object Name
+	// --------------------------------------------
+	std::string GetName() { return m_strName; }
+	void SetName(const std::string& strName);
+	virtual std::string GetDefaultName() { return "CGameObject"; }
+private:
+	std::string m_strName = "GameObject";  // Object Name
+
+public:
+	// --------------------------------------------
+	// Active Flag
+	// --------------------------------------------
+	bool IsActive() { return m_bActive; }
+	void SetActive(bool bActive) { m_bActive = bActive; }
+
+private:
+	bool m_bActive = true; // Active Flag
 
 public:
 	// --------------------------------------------
@@ -128,16 +147,6 @@ private:
 
 public:
 	// --------------------------------------------
-	// Active Flag
-	// --------------------------------------------
-	bool IsActive() { return m_bActive; }
-	void SetActive(bool bActive) { m_bActive = bActive; }
-
-private:
-	bool m_bActive = true; // Active Flag
-
-public:
-	// --------------------------------------------
 	// Initialize Flag
 	// --------------------------------------------
 	bool IsInitialized() const { return m_bInitialized; }
@@ -145,16 +154,6 @@ protected:
 	bool m_bInitialized = false;
 	
 	bool IsGPUInitialized();
-
-public:
-	// --------------------------------------------
-	// Object Name
-	// --------------------------------------------
-	std::string GetName() { return m_strName; }
-	void SetName(const std::string& strName);
-	virtual std::string GetDefaultName() { return "CGameObject"; }
-private:
-	std::string m_strName = "GameObject";  // Object Name
 
 public:
 	// --------------------------------------------
@@ -377,6 +376,9 @@ public:
 		}
 	}
 
+	void SetRootMotion(bool bRootMotion) const { if (auto p = GetComponent<CAnimationController>()) p->SetRootMotion(bRootMotion); }
+
+
 	std::vector<CCollider*>& GetCachedColliders() { return m_pCachesColliders; }
 private:
 	bool m_bPitchLock = false;
@@ -494,12 +496,14 @@ public:
 
 struct CHeightMapTerrainDesc
 {
-	std::wstring wstrHeightMapFilePath;
-	std::wstring wstrMeshFilePath;
-	int nWidth;
-	int nLength;
-	XMFLOAT3 xmf3Scale;
-	XMFLOAT4 xmf4Color;
+	std::wstring wstrHeightMapFilePath = L"null";
+	std::wstring wstrMeshFilePath = L"null";
+	int nWidth = 0;
+	int nLength = 0;
+	int nBlockWidth = 0;
+	int nBlockLength = 0;
+	XMFLOAT3 xmf3Scale = XMFLOAT3(1.0f, 1.0f, 1.0f);
+	XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 };
 
 class CHeightMapTerrain : public CGameObject
@@ -528,35 +532,18 @@ public:
 	void Initialize(CHeightMapTerrainDesc desc);
 
 	void Initialize(std::wstring wstrHeightMapFilePath, std::wstring wstrMeshFilePath,
-		int nWidth, int nLength,
+		int nWidth, int nLength, int nBlockWidth, int nBlockLength,
 		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
+
+	void CreateGridMeshFromHeightMap(int nBlockWidth, int nBlockLength, XMFLOAT4 xmf4Color = XMFLOAT4{1.0f, 1.0f, 1.0f, 1.0f});
+	void CreateGridMeshFromFile(std::wstring& wstrMeshFilePath);
 
 	// Object Render
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override;
 
 	//지형의 높이를 계산하는 함수이다(월드 좌표계). 높이 맵의 높이에 스케일의 y를 곱한 값이다. 
 	float GetHeight(float x, float z) {
-		if (isBinary) {
-			if ((x < 0) || (z < 0) || (x >= m_nWidth) || (z >= m_nLength)) return(0.0f);
-			//높이 맵의 좌표의 정수 부분과 소수 부분을 계산한다. 
-			int nx = (int)x;
-			int nz = (int)z;
-			float fxPercent = x - nx;
-			float fzPercent = z - nz;
-
-			const auto& fBottomLeft = m_pVertices.at(nx + (nz * m_nWidth)).m_xmf3Position.y;
-			const auto& fBottomRight = m_pVertices.at((nx + 1) + (nz * m_nWidth)).m_xmf3Position.y;
-			const auto& fTopLeft = m_pVertices.at(nx + ((nz + 1) * m_nWidth)).m_xmf3Position.y;
-			const auto& fTopRight = m_pVertices.at((nx + 1) + ((nz + 1) * m_nWidth)).m_xmf3Position.y;
-
-			//사각형의 네 점을 보간하여 높이(픽셀 값)를 계산한다. 
-			float fTopHeight = fTopLeft * (1 - fxPercent) + fTopRight * fxPercent;
-			float fBottomHeight = fBottomLeft * (1 - fxPercent) + fBottomRight * fxPercent;
-			float fHeight = fBottomHeight * (1 - fzPercent) + fTopHeight * fzPercent;
-
-			return(fHeight);
-		}
-		else return(m_pHeightMapImage->GetHeight(x / m_xmf3Scale.x, z / m_xmf3Scale.z) * m_xmf3Scale.y);
+		return (m_pHeightMapImage->GetHeight(x / m_xmf3Scale.x, z / m_xmf3Scale.z) * m_xmf3Scale.y);
 	}
 	
 	//지형의 법선 벡터를 계산하는 함수이다(월드 좌표계). 높이 맵의 법선 벡터를 사용한다. 
@@ -584,9 +571,6 @@ private:
 
 	//지형을 실제로 몇 배 확대할 것인가를 나타내는 스케일 벡터이다. 
 	XMFLOAT3 m_xmf3Scale;
-
-	// Binary 로 생성시
-	bool isBinary = false;
 
 	std::vector<CTerrainVertex> m_pVertices;
 	std::vector<UINT> m_pIndices;

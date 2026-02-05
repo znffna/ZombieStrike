@@ -598,19 +598,32 @@ protected:
 	이렇게 하면 작은 격자(적은 정점)를 사용하더라도 큰 크기의 격자(지형)를 생성할수 있다.*/
 	XMFLOAT3 m_xmf3Scale;
 public:
+	// 기존의 바로 GPU까지 생성하는 코드들
 	CHeightMapGridMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		* pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale =
 		XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f), void
 		* pContext = NULL);
+
 	CHeightMapGridMesh(
 		ID3D12Device* pd3dDevice,
 		ID3D12GraphicsCommandList* pd3dCommandList,
 		std::vector<CTerrainVertex>& pVertices,
 		std::vector<UINT>& pIndices
 	);
+
+	// CPU 메모리에만 생성하는 코드
 	CHeightMapGridMesh(
 		std::vector<CTerrainVertex>& pVertices,
 		std::vector<UINT>& pIndices
+	);
+	CHeightMapGridMesh(
+		int xStart,
+		int zStart,
+		int nWidth,
+		int nLength,
+		XMFLOAT3 xmf3Scale = XMFLOAT3(1.0f, 1.0f, 1.0f),
+		XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f),
+		void* pContext = NULL
 	);
 
 	virtual ~CHeightMapGridMesh();

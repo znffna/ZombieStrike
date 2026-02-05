@@ -85,7 +85,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	//m_pMap->UpdateBBCache();
 	//AddObject(m_pMap);
 
-	auto mapObject = RequestCreateObject(TypeTag<CMapObject>(), L"Model/Stage2.bin");
+	auto mapObject = RequestCreateObject(TypeTag<CMapObject>(), L"Model/Stage1.bin");
 
 	// Collision Checker
 	//auto pCollisionChecker = (CCollisionChecker*)AddObject(std::make_unique<CCollisionChecker>(this));

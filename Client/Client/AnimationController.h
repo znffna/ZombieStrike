@@ -237,9 +237,10 @@ public:
 
 	CGameObject* m_pRootMotionObject = nullptr;
 	XMFLOAT3 m_xmf3FirstRootMotionPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	XMFLOAT3 m_xmf3PreviousPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 	void SetRootMotion(bool bRootMotion) { m_bRootMotion = bRootMotion; }
 
-	virtual void OnRootMotion(CGameObject* pRootGameObject) { }
+	virtual void OnRootMotion(CGameObject* pRootGameObject);
 	virtual void OnAnimationIK(CGameObject* pRootGameObject) { }
 };
