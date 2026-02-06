@@ -367,6 +367,9 @@ void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 		case VK_F1:
 			m_bPrintObjectCount = true;
 			break;
+		case VK_F2:
+			g_bRenderShadowMap = !g_bRenderShadowMap;
+			break;
 		default:
 			break;
 		}

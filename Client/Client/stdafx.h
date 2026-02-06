@@ -163,6 +163,7 @@ using Microsoft::WRL::ComPtr;
 extern bool g_bWindowActive; // 전역 또는 멤버 변수로 상태 저장
 extern int gnCurrentBullets;
 extern bool g_bRenderCollider;
+extern bool g_bRenderShadowMap;
 extern std::atomic<UINT64> g_nFenceValue;
 
 extern bool g_bDebugOutput; // 디버그 출력 활성화 여부

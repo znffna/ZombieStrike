@@ -79,12 +79,12 @@
     <LibraryPath>C:\Program Files (x86)\FMOD SoundSystem\FMOD Studio API Windows \api\core\lib\x64;C:\Program Files (x86)\FMOD SoundSystem\FMOD Studio API Windows \api\core\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)FMOD\inc;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)FMOD\lib\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir)FMOD\inc;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)FMOD\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)Client\FMOD\inc;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)Client\FMOD\lib\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir)FMOD\inc;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)FMOD\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

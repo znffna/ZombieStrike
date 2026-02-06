@@ -8,6 +8,7 @@
 #include "TitleScene.h"
 
 bool g_bRenderCollider = false;
+bool g_bRenderShadowMap = false;
 
 CGameFramework* CGameFramework::pGameFramework = nullptr;
 

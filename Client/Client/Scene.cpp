@@ -520,7 +520,7 @@ void CScene::RenderDepthWrite(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 			continue;
 		for (auto& pObject : pvecObjects.second)
 		{
-			pObject->Update(0.0f);
+			//pObject->Update(0.0f);
 			pObject->Render(pd3dCommandList, pCamera, true);
 		}
 	}
