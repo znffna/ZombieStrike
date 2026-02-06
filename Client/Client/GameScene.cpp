@@ -30,7 +30,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	CResourceManager& resourceManager = CResourceManager::Instance();
 
 	// <Environment>
-	StoreTerrain(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
+	//StoreTerrain(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
 
 	// Skybox
 	//m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());

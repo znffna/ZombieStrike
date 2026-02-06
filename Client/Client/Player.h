@@ -1,6 +1,7 @@
 #pragma once
 #include "GameObject.h"
 class CGun;
+class FIRE_INFO;
 class CGaugeBar;
 
 class CPlayer : public CGameObject
@@ -37,7 +38,6 @@ public:
 	void SetSkin(int nSkinType);
 
 	// Gun
-
 	void SetGun(CGun* pGun) { m_pGun = pGun; }
 	CGun* GetGun() const { return m_pGun; }
 

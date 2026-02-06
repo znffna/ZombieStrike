@@ -321,6 +321,7 @@ public:
 		CollectGameObjectRequest(maxcount);
 
 		std::lock_guard<std::mutex> lock(m_UploadMutex);
+
 		// Mesh Upload List 일부 추출
 		CollectMeshRegister(maxcount);
 		// Material Upload List 교체

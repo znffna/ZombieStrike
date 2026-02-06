@@ -915,7 +915,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		switch (wParam)
 		{
 		case VK_F1:
-			//g_bRenderCollider = !g_bRenderCollider;
+			g_bRenderCollider = !g_bRenderCollider;
 			g_bDebugOutput = !g_bDebugOutput;
 			break;
 		case VK_F9:

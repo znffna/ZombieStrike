@@ -6,11 +6,16 @@
 #pragma once
 
 #include "GameObject.h"
+#include "MapObject.h"
+#include "Skybox.h"
+#include "HeightMapTerrain.h"
+#include "Sprite.h"
+
 #include "Zombie.h" 
 #include "Player.h"
 #include "Gun.h"
 #include "CollisionChecker.h"
-#include "Sprite.h"
+#include "BulletObject.h"
 
 #include "Camera.h"
 #include "Shader.h"
@@ -347,7 +352,7 @@ protected:
 	int m_nSelectedCamera = -1;  // m_CameraRegistry 내에서 선택된 카메라 인덱스
 
 	CGameObject* m_pDefaultCameraObject = nullptr;
-	CCamera* m_pCamera; // 이건 현재 카메라가 아닌 기본 카메라
+	CCamera* m_pCamera = nullptr; // 이건 현재 카메라가 아닌 기본 카메라
 
 public:
 	// ----------------------------------------

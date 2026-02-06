@@ -83,7 +83,6 @@ public:
 	void Initialize();
 	virtual void OnDestroy();;
 
-
 	virtual std::unique_ptr<CComponent> Clone(CGameObject* newOwner) const { auto ret = std::make_unique<CTextComponent>(*this); ret->SetOwnerInternal(newOwner); return (ret); };
 
 public:

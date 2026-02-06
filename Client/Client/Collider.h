@@ -55,6 +55,8 @@ public:
 	// World Transform ¹Ý¿µ
 	virtual void UpdateCollider(const XMFLOAT4X4& world) = 0;
 
+    virtual XMFLOAT4X4 GetColliderMatrix() const = 0;
+
     // Component
 	void Update(float dt) override;
 };
@@ -101,6 +103,13 @@ public:
 
     const BoundingSphere& GetWorldSphere() const { return m_world; }
 
+    virtual XMFLOAT4X4 GetColliderMatrix() const
+    {
+        XMFLOAT4X4 matCollider;
+		XMStoreFloat4x4(&matCollider, XMMatrixTranslation(m_world.Center.x, m_world.Center.y, m_world.Center.z) * XMMatrixScaling(m_world.Radius, m_world.Radius, m_world.Radius));
+        return matCollider;
+    };
+
 private:
     BoundingSphere m_local;
     BoundingSphere m_world;
@@ -132,6 +141,12 @@ public:
 
     const BoundingBox& GetWorldAABB() const { return m_world; }
 
+    virtual XMFLOAT4X4 GetColliderMatrix() const
+    {
+        XMFLOAT4X4 matCollider;
+        XMStoreFloat4x4(&matCollider, XMMatrixTranslation(m_world.Center.x, m_world.Center.y, m_world.Center.z) * XMMatrixScaling(m_world.Extents.x, m_world.Extents.y, m_world.Extents.z));
+        return matCollider;
+    };
 
 private:
     BoundingBox m_local;
@@ -160,6 +175,19 @@ public:
         m_local.Extents = extents;
     }
 
+    void SetBoundingBox(const XMFLOAT3& center, const XMFLOAT3& extents, const XMFLOAT4& orientation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f))
+    {
+        m_local.Center = center;
+        m_local.Extents = extents;
+        m_local.Orientation = orientation;
+        m_world = m_local;
+	}
+
+    void SetBoundingBox(const BoundingBox boundingbox, const XMFLOAT4& orientation = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f))
+    {
+		SetBoundingBox(boundingbox.Center, boundingbox.Extents, orientation);
+    }
+
     void UpdateCollider(const XMFLOAT4X4& world) override
     {
         m_local.Transform(m_world, XMLoadFloat4x4(&world));
@@ -174,6 +202,17 @@ public:
     bool Intersects(const CCollider* other) const override;
 
     const BoundingOrientedBox& GetWorldOBB() const { return m_world; }
+
+    virtual XMFLOAT4X4 GetColliderMatrix() const
+    {
+        XMFLOAT4X4 matCollider;
+        XMMATRIX rotation = XMMatrixRotationQuaternion(XMLoadFloat4(&m_world.Orientation));
+        XMMATRIX translation = XMMatrixTranslation(m_world.Center.x, m_world.Center.y, m_world.Center.z);
+        XMMATRIX scale = XMMatrixScaling(m_world.Extents.x, m_world.Extents.y, m_world.Extents.z);
+
+        XMStoreFloat4x4(&matCollider, scale * rotation * translation);
+        return matCollider;
+    };
 
 private:
     BoundingOrientedBox m_local;

@@ -16,7 +16,9 @@
 #include "TitleScene.h"
 #include "TestScene.h"
 
-struct CLoadInfo
+#include "UILayer.h"
+
+struct CSceneLoadInfo
 {
 	ESceneBuildState buildstate;
 
@@ -196,8 +198,8 @@ public:
 	}
 	int GetSceneSize() const { return static_cast<int>(m_Scenes.size()); }
 
-	CLoadInfo GetSceneLoadInfo() const {
-		CLoadInfo loadInfo{};
+	CSceneLoadInfo GetSceneLoadInfo() const {
+		CSceneLoadInfo loadInfo{};
 		// CPU Info
 		loadInfo.buildstate = m_SceneBuildState.load();
 

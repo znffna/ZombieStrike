@@ -283,7 +283,7 @@ void CStandardMesh::LoadMeshFromFile(std::ifstream& File)
 		}
 	}
 
-	CResourceManager::Instance().RegisterMeshUpload(this);
+	//CResourceManager::Instance().RegisterMeshUpload(this);
 }
 
 void CStandardMesh::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)

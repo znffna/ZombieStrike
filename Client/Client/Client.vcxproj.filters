@@ -155,6 +155,18 @@
     <ClInclude Include="Sound.h">
       <Filter>소스 파일\Framework\Util</Filter>
     </ClInclude>
+    <ClInclude Include="HeightMapTerrain.h">
+      <Filter>소스 파일\Framework\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="MapObject.h">
+      <Filter>소스 파일\Framework\GameObject</Filter>
+    </ClInclude>
+    <ClInclude Include="UILayer.h">
+      <Filter>소스 파일\Framework\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Skybox.h">
+      <Filter>소스 파일\Framework\GameObject</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp">
@@ -258,6 +270,18 @@
     </ClCompile>
     <ClCompile Include="Sound.cpp">
       <Filter>소스 파일\Framework\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="HeightMapTerrain.cpp">
+      <Filter>소스 파일\Framework\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="MapObject.cpp">
+      <Filter>소스 파일\Framework\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="UILayer.cpp">
+      <Filter>소스 파일\Framework\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Skybox.cpp">
+      <Filter>소스 파일\Framework\GameObject</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

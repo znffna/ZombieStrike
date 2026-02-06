@@ -164,8 +164,10 @@
   <ItemGroup>
     <ClInclude Include="AnimationController.h" />
     <ClInclude Include="AnimationSet.h" />
+    <ClInclude Include="BulletObject.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Client.h" />
+    <ClInclude Include="MapObject.h" />
     <ClInclude Include="Collider.h" />
     <ClInclude Include="CollisionChecker.h" />
     <ClInclude Include="Component.h" />
@@ -176,6 +178,7 @@
     <ClInclude Include="GameTimer.h" />
     <ClInclude Include="GaugeBar.h" />
     <ClInclude Include="Gun.h" />
+    <ClInclude Include="HeightMapTerrain.h" />
     <ClInclude Include="LoadingScene.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
@@ -186,6 +189,7 @@
     <ClInclude Include="RigidBody.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="Skybox.h" />
     <ClInclude Include="Sound.h" />
     <ClInclude Include="Sprite.h" />
     <ClInclude Include="stdafx.h" />
@@ -196,14 +200,17 @@
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TitleScene.h" />
     <ClInclude Include="Transform.h" />
+    <ClInclude Include="UILayer.h" />
     <ClInclude Include="WICTextureLoader12.h" />
     <ClInclude Include="Zombie.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AnimationController.cpp" />
     <ClCompile Include="AnimationSet.cpp" />
+    <ClCompile Include="BulletObject.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Client.cpp" />
+    <ClCompile Include="MapObject.cpp" />
     <ClCompile Include="Collider.cpp" />
     <ClCompile Include="CollisionChecker.cpp" />
     <ClCompile Include="Component.cpp" />
@@ -214,6 +221,7 @@
     <ClCompile Include="GameTimer.cpp" />
     <ClCompile Include="GaugeBar.cpp" />
     <ClCompile Include="Gun.cpp" />
+    <ClCompile Include="HeightMapTerrain.cpp" />
     <ClCompile Include="LoadingScene.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
@@ -223,6 +231,7 @@
     <ClCompile Include="RigidBody.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Shader.cpp" />
+    <ClCompile Include="Skybox.cpp" />
     <ClCompile Include="Sound.cpp" />
     <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="stdafx.cpp" />
@@ -232,6 +241,7 @@
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TitleScene.cpp" />
     <ClCompile Include="Transform.cpp" />
+    <ClCompile Include="UILayer.cpp" />
     <ClCompile Include="WICTextureLoader12.cpp" />
     <ClCompile Include="Zombie.cpp" />
   </ItemGroup>

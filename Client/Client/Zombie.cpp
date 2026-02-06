@@ -56,15 +56,47 @@ void CZombieObject::Initialize()
 	SetRotationAxisLock(true, false, true);
 
 	// <Components>
-	auto pRigidBody = CreateComponent<CRigidBody>();
-	pRigidBody->SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
-	//pRigidBody->SetGravity(XMFLOAT3(0.0f, -9.0f, 0.0f));
-
 	auto pModel = CResourceManager::Instance().GetModelInfo(m_strModelName[m_nSkinType]);
 	auto pSkinnedAnimationController = CreateComponent<CAnimationController>();
 	pSkinnedAnimationController->SetModel(pModel);
 	// m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
 
+	auto pRigidBody = CreateComponent<CRigidBody>();
+	pRigidBody->SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	//pRigidBody->SetGravity(XMFLOAT3(0.0f, -9.0f, 0.0f));
+
+	auto pCollider = CreateComponent<COBBCollider>();
+	pCollider->SetBoundingBox(pModel->m_MeshBoundingBox);
+
+	// Model Info
+	SetSkin(m_nSkinType);
+
+	m_bInitialized = true;
+}
+
+void CZombieObject::Initialize(int nSkinType)
+{
+	if (IsInitialized()) return;
+
+	CGameObject::Initialize();
+
+	SetName("Zombie_" + std::to_string(GetID()));
+
+	SetRotationAxisLock(true, false, true);
+
+	// <Components>
+	m_nSkinType = nSkinType;
+	auto pModel = CResourceManager::Instance().GetModelInfo(m_strModelName[m_nSkinType]);
+	auto pSkinnedAnimationController = CreateComponent<CAnimationController>();
+	pSkinnedAnimationController->SetModel(pModel);
+	// m_pSkinnedAnimationController = std::make_shared<CAnimationController>();
+
+	auto pRigidBody = CreateComponent<CRigidBody>();
+	pRigidBody->SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	//pRigidBody->SetGravity(XMFLOAT3(0.0f, -9.0f, 0.0f));
+
+	auto pCollider = CreateComponent<COBBCollider>();
+	pCollider->SetBoundingBox(pModel->m_MeshBoundingBox);
 
 	// Model Info
 	SetSkin(m_nSkinType);

@@ -2,6 +2,9 @@
 
 #include "GameObject.h"
 
+struct FIRE_INFO;
+class CBulletParticleObject;
+
 class CGun : public CGameObject
 {
 public:

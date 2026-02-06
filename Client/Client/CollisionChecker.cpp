@@ -23,7 +23,6 @@ void CCollisionChecker::Initialize()
 	m_ppObjectLayerPairs = ppObjectLayerPairs;
 }
 
-
 void CCollisionChecker::Update(float fTimeElapsed)
 {
 	// Collision Check

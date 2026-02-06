@@ -81,7 +81,7 @@ enum GAMEOBJECT_LAYER {
 std::string to_string(GAMEOBJECT_LAYER type);
 std::wstring to_wstring(GAMEOBJECT_LAYER type);
 
-class CGameObject : public std::enable_shared_from_this<CGameObject>
+class CGameObject
 {
 public:
 	CGameObject();
@@ -106,6 +106,7 @@ public:
 
 	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr, bool bDepthWrite = false);
+	void RenderCollider(ID3D12GraphicsCommandList* pd3dCommandList);
 public:
 	// --------------------------------------------
 	// Object Name
@@ -242,7 +243,7 @@ public:
 		else return BoundingBox();
 	}
 
-	BoundingBox GetMergedMeshBound(BoundingBox* pVolume = nullptr);
+	virtual BoundingBox GetMergedMeshBound(BoundingBox* pVolume = nullptr);
 	void UpdateLocalBoundingBox(const XMFLOAT4X4& pParentTransform = Matrix4x4::Identity());
 
 public:
@@ -471,223 +472,3 @@ public:
 	virtual void SetSize(float cx, float cy, float width, float height) {}
 };
 
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-class CSkyBox : public CGameObject
-{
-public:
-	CSkyBox();
-	virtual ~CSkyBox();
-
-	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_SKYBOX; }
-
-	// Object Initialization
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-	virtual void Initialize();
-	virtual std::string GetDefaultName() override { return "CSkyBox"; }
-
-	// Object Render
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override;
-}; // CSkyBox
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-
-struct CHeightMapTerrainDesc
-{
-	std::wstring wstrHeightMapFilePath = L"null";
-	std::wstring wstrMeshFilePath = L"null";
-	int nWidth = 0;
-	int nLength = 0;
-	int nBlockWidth = 0;
-	int nBlockLength = 0;
-	XMFLOAT3 xmf3Scale = XMFLOAT3(1.0f, 1.0f, 1.0f);
-	XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-};
-
-class CHeightMapTerrain : public CGameObject
-{
-public:
-	CHeightMapTerrain();
-	virtual ~CHeightMapTerrain();
-
-	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_TERRAIN; }
-
-	// Object Initialization
-	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
-		LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength,
-		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
-
-	static std::shared_ptr<CHeightMapTerrain> InitializeByBinary(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
-		LPCTSTR pBinFileName, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength,
-		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
-
-	virtual std::string GetDefaultName() override { return "CHeightMapTerrain"; }
-
-	static std::shared_ptr<CHeightMapTerrain> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
-		LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength,
-		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
-
-	void Initialize(CHeightMapTerrainDesc desc);
-
-	void Initialize(std::wstring wstrHeightMapFilePath, std::wstring wstrMeshFilePath,
-		int nWidth, int nLength, int nBlockWidth, int nBlockLength,
-		XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
-
-	void CreateGridMeshFromHeightMap(int nBlockWidth, int nBlockLength, XMFLOAT4 xmf4Color = XMFLOAT4{1.0f, 1.0f, 1.0f, 1.0f});
-	void CreateGridMeshFromFile(std::wstring& wstrMeshFilePath);
-
-	// Object Render
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override;
-
-	//지형의 높이를 계산하는 함수이다(월드 좌표계). 높이 맵의 높이에 스케일의 y를 곱한 값이다. 
-	float GetHeight(float x, float z) {
-		return (m_pHeightMapImage->GetHeight(x / m_xmf3Scale.x, z / m_xmf3Scale.z) * m_xmf3Scale.y);
-	}
-	
-	//지형의 법선 벡터를 계산하는 함수이다(월드 좌표계). 높이 맵의 법선 벡터를 사용한다. 
-	XMFLOAT3 GetNormal(float x, float z) {
-		return(m_pHeightMapImage->GetHeightMapNormal(int(x / m_xmf3Scale.x),
-			int(z / m_xmf3Scale.z)));
-	}
-
-	int GetHeightMapWidth() { return(m_pHeightMapImage->GetHeightMapWidth()); }
-	int GetHeightMapLength() { return(m_pHeightMapImage->GetHeightMapLength()); }
-
-	XMFLOAT3 GetScale() { return(m_xmf3Scale); }
-
-	//지형의 크기(가로/세로)를 반환한다. 높이 맵의 크기에 스케일을 곱한 값이다. 
-	float GetWidth() { return(m_nWidth * m_xmf3Scale.x); }
-	float GetLength() { return(m_nLength * m_xmf3Scale.z); }
-
-private:
-	//지형의 높이 맵으로 사용할 이미지이다. 
-	std::shared_ptr<CHeightMapImage> m_pHeightMapImage;
-
-	//높이 맵의 가로와 세로 크기이다. 
-	int m_nWidth;
-	int m_nLength;
-
-	//지형을 실제로 몇 배 확대할 것인가를 나타내는 스케일 벡터이다. 
-	XMFLOAT3 m_xmf3Scale;
-
-	std::vector<CTerrainVertex> m_pVertices;
-	std::vector<UINT> m_pIndices;
-}; // CHeightMapTerrain
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-struct FIRE_INFO {
-	XMFLOAT3 xmf3Position;
-	XMFLOAT3 xmf3Look;
-	XMFLOAT3 xmf3MuzzlePosition; // 총구 위치(렌더링 파티클 점 생성시 사용)
-	int nBulletType = 0; // 총알 타입(0: 일반, 1: 산탄총 등)
-	float fRange = 0.0f;
-	float fspeed = 0.0f; // 총알 속도
-};
-
-class CBulletParticleObject : public CGameObject
-{
-	// TODO : Bullet을 전부 관리하는 Object로 변경할 예정
-	// 현황 : GPU상에서 모든 Bullet을 파티클처럼 관리 하는 중(즉, 생성만 직접하고 소멸은 GPU에서 SO를 통해 출력시 discard하는 방식)
-	// 목표 : 사격 즉시 피격위치 확정 및 GPU에 파티클 출력.
-	//      : 이떄 총알은 GPU상에서 전진되며, GPU에 파티클 생성시에 주어진 거리 비례 LifeTime을 소유.
-	//      : 즉, 총알이 날아가는 듯한 느낌만 주기 위함이며, 실제 피격효과로 인한 출력은 HitResult에 의해
-	//      : 별도 파티클 생성으로 이루어 진다.(즉, Trail과 혈흔 표현을 별도로 구현 예정)
-public:
-	CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Look, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
-	virtual ~CBulletParticleObject();
-
-	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_BULLET; }
-
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false);
-	virtual void OnPostRender();
-
-	// method
-	void AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Look, float fRange);
-	void AddBullet(const CBulletVertex& pBulletVertex);
-
-private:
-	std::vector<FIRE_INFO> m_pFireInfos;
-
-	std::shared_ptr<CTexture> m_pRandowmValueTexture;
-	std::shared_ptr<CTexture> m_pRandowmValueOnSphereTexture;
-
-public:
-	void AddFireInfo(const FIRE_INFO& fireInfo) {
-		m_pFireInfos.push_back(fireInfo);
-	}
-
-	std::vector<FIRE_INFO> GetFireInfos() const {
-		return m_pFireInfos;
-	}
-
-	void UpdateBulletVertices(const std::vector<CBulletVertex>& pBulletVertices) {
-		//std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullets(pBulletVertices);
-	}
-
-	void ClearFireInfos() {
-		m_pFireInfos.clear();
-	}
-
-}; // CBulletParticleObject
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-
-class UILayer
-{
-public:
-	UILayer(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight);
-	~UILayer() { ReleaseResources(); }
-
-	void Render(UINT nFrame, const std::vector<TextBlock*>& vecTextObjects);
-
-public:
-	void InitializeDevice(ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets);
-	void ReleaseResources();
-
-	float                           m_fWidth = 0.0f;
-	float                           m_fHeight = 0.0f;
-
-	ComPtr<ID3D11DeviceContext> m_pd3d11DeviceContext;
-	ComPtr<ID3D11On12Device> m_pd3d11On12Device;
-	ComPtr<IDWriteFactory> m_pd2dWriteFactory;
-	ComPtr<ID2D1Factory3> m_pd2dFactory;
-	ComPtr<ID2D1Device2> m_pd2dDevice;
-	ComPtr<ID2D1DeviceContext2> m_pd2dDeviceContext ;
-
-	UINT             m_nRenderTargets = 0;
-	ID3D11Resource** m_ppd3d11WrappedRenderTargets = NULL;
-	ID2D1Bitmap1** m_ppd2dRenderTargets = NULL;
-
-private:
-
-	// Caching Brush & TextFormat 
-	std::unordered_map<uint32_t, ComPtr<ID2D1SolidColorBrush>> m_pBrushes;
-	std::map<std::pair<std::wstring, float>, ComPtr<IDWriteTextFormat>> m_pTextFormats;
-
-	void ClearCache() {
-		m_pBrushes.clear();
-		m_pTextFormats.clear();
-	}
-
-	// Create & Get Brush & TextFormat
-	ComPtr<ID2D1SolidColorBrush> CreateBrush(D2D1::ColorF d2dColor);
-	ComPtr<IDWriteTextFormat> CreateTextFormat(WCHAR* pszFontName, float fFontSize);
-
-	ComPtr<ID2D1SolidColorBrush> GetBrush(D2D1::ColorF d2dColor);
-	ComPtr<IDWriteTextFormat> GetTextFormat(WCHAR* pszFontName, float fFontSize);
-};
-
-class CMapObject : public CGameObject
-{
-public:
-	CMapObject() :CGameObject() {};
-
-	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_ENVIRONMENT; }
-
-	void Initialize(std::wstring wstrMapFilePath);
-	void LoadGeometryAndAnimationFromFile(std::wstring wstrMapFilePath);
-};
