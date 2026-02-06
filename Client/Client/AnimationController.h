@@ -171,7 +171,7 @@ public:
 	CAnimationController(const CAnimationController& rhs) : CComponent(nullptr)
 	{
 		// State
-		OwnerType = rhs.OwnerType;
+		OwnerType = rhs.OwnerType; //player, zombie
 		BasePose = rhs.BasePose;
 		UpperPose = rhs.UpperPose;
 
@@ -246,9 +246,11 @@ public:
 public:
 	// Pose Control
 
-	void SetPose(int basePose, int upperPose = -1, bool bResetTrackPosition = true); // 상체 하체 한번에 
-	void SetBasePose(int basePose, bool bResetTrackPosition = true);
-	void SetUpperPose(int upperPose, bool bResetTrackPosition = true);
+	void SetPose(int basePose, int upperPose = -1); // 상체 하체 한번에 
+	void SetBasePose(int basePose);
+	void SetUpperPose(int upperPose);
+private: 
+	void Apply(int& currnetPose, int newPose);
 
 public:
 	bool m_bRootMotion = false;

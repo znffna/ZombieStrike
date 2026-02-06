@@ -135,7 +135,11 @@ void CPlayer::Initialize(int nSkinIndex)
 
 void CPlayer::Update(float fTimeElapsed)
 {
-	if (auto pSkinnedAnimationController = GetComponent<CAnimationController>()) UpdateLowerAnimation();
+	if (auto pSkinnedAnimationController = GetComponent<CAnimationController>())
+	{
+		UpdateBaseAnimation();
+		UpdateUpperAnimation();
+	}
 
 	CGameObject::Update(fTimeElapsed);
 
@@ -201,8 +205,17 @@ int GetAnimationIndex(char nMoveInput)
 	}
 }
 
-void CPlayer::UpdateLowerAnimation()
+void CPlayer::UpdateBaseAnimation()
 {
+
+	auto pAnim = GetComponent<CAnimationController>();
+	if (!pAnim) return;
+
+	// 8방향
+	int newBase = GetAnimationIndex(m_nMoveInput);
+
+	pAnim->SetBasePose(newBase);
+
 	//if(false) {// 현재 Look과 Velocity를 비교하여 애니메이션 상태 변경
 	//	XMFLOAT3 xmf3Look = GetComponent<CRigidBody>()->GetVelocity();
 	//	if (Vector3::IsZero(xmf3Look))
@@ -210,7 +223,6 @@ void CPlayer::UpdateLowerAnimation()
 	//		m_pSkinnedAnimationController->ChangeState(ANIMATION_POSE::IDLE);
 	//		return;
 	//	}
-
 	//	// 현재 Look 방향(x,z평면 기준)기준 Right, Forward 벡터를 구한다.
 	//	float fRight = Vector3::DotProduct(m_pTransform->GetRight(), xmf3Look);
 	//	float fForward = Vector3::DotProduct(m_pTransform->GetLook(), xmf3Look);
@@ -219,16 +231,24 @@ void CPlayer::UpdateLowerAnimation()
 	//	float degree = XMConvertToDegrees(angle); // degree로 변환[0 ~ 2Pi) => [0, 360)
 	//	int nDirection = (int)ANIMATION_POSE::WALK_RIGHT + static_cast<int>(round(degree / 45.0f)) % 8; // 8방향으로 나누기
 	//	float fLength = sqrtf(xmf3Look.x * xmf3Look.x + xmf3Look.z * xmf3Look.z);
-
 	//	if (false == ::IsZero(fLength))
 	//	{
 	//		m_pSkinnedAnimationController->ChangeState(nDirection);
 	//	}
 	//}
-
-	int nDirection = GetAnimationIndex(m_nMoveInput);
+	//int nDirection = GetAnimationIndex(m_nMoveInput);
 	//m_pSkinnedAnimationController->SetLowerState(nDirection);
 }
+
+void CPlayer::UpdateUpperAnimation()
+{
+	auto pAnim = GetComponent<CAnimationController>();
+	if (!pAnim) return;
+
+	int newUpper = (int)m_nState;
+	pAnim->SetUpperPose(newUpper);
+}
+
 
 void CPlayer::Move(DWORD dwDirection, float fDistance, float deltaTime)
 {

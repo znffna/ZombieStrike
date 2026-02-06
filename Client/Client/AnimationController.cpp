@@ -168,6 +168,7 @@ void CAnimationController::Clear()
 
 	UpperPose = IDLE;
 	BasePose = IDLE;
+
 }
 
 void CAnimationController::SetModel(CLoadedModelInfo* pModel)
@@ -380,57 +381,37 @@ void CAnimationController::ApplyPitchToSpine(CGameObject* pRootGameObject)
 	}
 }
 
-void CAnimationController::SetPose(int basePose, int upperPose, bool bResetTrackPosition)
+void CAnimationController::SetPose(int basePose, int upperPose)
 {
-	BasePose = basePose;
-	UpperPose = upperPose;
-	ApplyPoseTracks(BasePose, UpperPose, bResetTrackPosition);
+	SetBasePose(basePose);
+	SetUpperPose(upperPose);
 }
 
-void CAnimationController::SetBasePose(int basePose, bool bResetTrackPosition)
+void CAnimationController::SetBasePose(int basePose)
 {
-	BasePose = basePose;
-	ApplyPoseTracks(BasePose, UpperPose, bResetTrackPosition);
+	int tackcount = m_nAnimationTracks;
+	if (tackcount <= 0) return;
+	Apply(BasePose, basePose);
 }
 
-void CAnimationController::SetUpperPose(int upperPose, bool bResetTrackPosition)
+void CAnimationController::SetUpperPose(int upperPose)
 {
-	UpperPose = upperPose;
-	ApplyPoseTracks(BasePose, UpperPose, bResetTrackPosition);
+	int tackcount = m_nAnimationTracks;
+	if (tackcount <= 0) return;
+	Apply(UpperPose, upperPose);
 }
 
-void CAnimationController::ApplyPoseTracks(int basePose, int upperPose, bool bResetTrackPosition)
+void CAnimationController::Apply(int& currnetPose, int newPose)
 {
-	auto trackCount = m_nAnimationTracks;
-	if (trackCount <= 0) return;
+	if (currnetPose == newPose)
+		return;
+	SetTrackEnable(currnetPose, false);
+	SetTrackEnable(newPose, true);
+	SetTrackPosition(newPose, 0.0f);
 
-	if (basePose < 0 || basePose >= trackCount)  basePose = 0;
-	if (upperPose < 0 || upperPose >= trackCount)  upperPose = -1;
-
-	for (int i = 0; i < trackCount; ++i) {
-		const bool bEnable = (i == basePose) || (upperPose >= 0 && i == upperPose);
-
-		SetTrackEnable(i, bEnable);
-
-		// ÀüÈ¯
-		if (!bEnable && bResetTrackPosition)
-		{
-			SetTrackPosition(i, 0.0f);
-		}
-	
-	}
-
-	if (bResetTrackPosition)
-	{
-		SetTrackPosition(basePose, 0.0f);
-		if (upperPose >= 0 && upperPose != basePose)
-		{
-			SetTrackPosition(upperPose, 0.0f);
-		}
-	}
-
-
+	currnetPose = newPose;
 }
+
 
 void CAnimationController::OnRootMotion(CGameObject* pRootGameObject)
 {
