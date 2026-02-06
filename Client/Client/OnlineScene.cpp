@@ -216,10 +216,10 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			case ActionType::ATTACK:
 				pZombie->SetState((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_ATTACK);
 				break;
-			case ActionType::RANGED:
+			case ActionType::DEATH:
 				pZombie->SetState((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_ATTACK);
 				break;
-			case ActionType::DEAD:
+			case ActionType::SCREAM:
 				pZombie->SetState((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_DEATH);
 				//pZombie->Died();
 				break;

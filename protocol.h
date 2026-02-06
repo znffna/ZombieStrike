@@ -35,14 +35,12 @@ enum ObjectType : SIZE1 {
 
 // 공격 종류 정의
 enum ActionType : SIZE1 {
-    NONE = 0,   // 배회
-    ZMOVE = 1,  // 좀비 이동
-    ATTACK = 2,  // 근접
-    RANGED = 3,  // 원거리
-    DEAD = 4,    // 독
+    IDLE = 0,   
+    ZMOVE = 1,  
+    ATTACK = 2,  
+    DEATH = 3,  
+    SCREAM = 4,    
     HIT = 5,    
-
-
 };
 
 enum SkinType : SIZE1 {
@@ -97,11 +95,11 @@ enum PKT_TYPE : SIZE1 {
 
 inline const char* ToString(ActionType action) {
     switch (action) {
-    case NONE:   return "NONE";
+    case IDLE:   return "IDLE";
     case ZMOVE:  return "ZMOVE";
     case ATTACK: return "ATTACK";
-    case RANGED: return "RANGED";
-    case DEAD:   return "DEAD";
+    case DEATH:  return "DEATH ";
+    case SCREAM: return "SCREAM";
     case HIT:    return "HIT";
     default:     return "UNKNOWN";
     }
@@ -230,13 +228,14 @@ struct Object {
     Vec3 position;              // 위치
     Vec3 velocity;              // 방향 * 속도
     Vec3 look;                  // 보는방향
-    float pitch;                // 피치
     SIZE2 hp;                   // 체력
+    float pitch;                // 피치
 
 	GunType gun_type;           // 총 종류
     SIZE1 level;                // 레벨
     SIZE2 score;                // 점수
     SIZE2 damage;               // 공격력
+
     SIZE1 act_type;             // NONE, Player, ZMOVE, ATTACK, ...
     SIZE1 move_input;           // 이동 입력
 };

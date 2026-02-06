@@ -166,8 +166,8 @@ void CAnimationController::Clear()
 	m_nAnimationTracks = 0;
 	m_pAnimationTracks.clear();
 
-	UpperPose = IDLE;
-	BasePose = IDLE;
+	UpperPose = PLAYER_IDLE;
+	BasePose = PLAYER_IDLE;
 
 }
 
@@ -243,51 +243,51 @@ void CAnimationController::AdvanceTime(float fElapsedTime, CGameObject* pRootGam
 		int nLowerState = static_cast<int>(BasePose);
 		int nUpperState = static_cast<int>(UpperPose);
 
-		if(nLowerState != nUpperState){
-			// 하체 우선 적용
-			{
-				std::shared_ptr<CAnimationSet> pAnimationSet = m_pAnimationSets->m_pAnimationSets[m_pAnimationTracks[nLowerState].m_nAnimationSet];
-				float fPosition = m_pAnimationTracks[nLowerState].UpdatePosition(m_pAnimationTracks[nLowerState].m_fPosition, fElapsedTime, pAnimationSet->m_fLength);
-				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
-				{
-#ifdef _WITH_OBJECT_TRANSFORM
-					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local;
-#else
-					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->GetLocalMatrix();
-#endif
-					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
-					xmf4x4Transform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, m_pAnimationTracks[nLowerState].m_fWeight));
-#ifdef _WITH_OBJECT_TRANSFORM
-					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local = xmf4x4Transform;
-#else
-					m_pAnimationSets->m_ppBoneFrameCaches[j]->SetLocalMatrix(xmf4x4Transform);
-#endif
-				}
-				m_pAnimationTracks[nLowerState].HandleCallback();
-			}
-
-			{ // 상체 Lerp 적용
-				std::shared_ptr<CAnimationSet> pAnimationSet = m_pAnimationSets->m_pAnimationSets[m_pAnimationTracks[nUpperState].m_nAnimationSet];
-				float fPosition = m_pAnimationTracks[nUpperState].UpdatePosition(m_pAnimationTracks[nUpperState].m_fPosition, fElapsedTime, pAnimationSet->m_fLength);
-				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
-				{
-#ifdef _WITH_OBJECT_TRANSFORM
-					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local;
-#else
-					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->GetLocalMatrix();
-#endif
-					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
-					xmf4x4Transform = Matrix4x4::Interpolate(xmf4x4Transform, xmf4x4TrackTransform, m_pAnimationSets->m_ppBoneFrameCaches[j]->GetBoneUpperWeight());
-#ifdef _WITH_OBJECT_TRANSFORM
-					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local = xmf4x4Transform;
-#else
-					m_pAnimationSets->m_ppBoneFrameCaches[j]->SetLocalMatrix(xmf4x4Transform);
-#endif
-				}
-				m_pAnimationTracks[nUpperState].HandleCallback();
-			}
-		}
-		else
+//		if(nLowerState != nUpperState){
+//			// 하체 우선 적용
+//			{
+//				std::shared_ptr<CAnimationSet> pAnimationSet = m_pAnimationSets->m_pAnimationSets[m_pAnimationTracks[nLowerState].m_nAnimationSet];
+//				float fPosition = m_pAnimationTracks[nLowerState].UpdatePosition(m_pAnimationTracks[nLowerState].m_fPosition, fElapsedTime, pAnimationSet->m_fLength);
+//				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
+//				{
+//#ifdef _WITH_OBJECT_TRANSFORM
+//					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local;
+//#else
+//					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->GetLocalMatrix();
+//#endif
+//					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
+//					xmf4x4Transform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, m_pAnimationTracks[nLowerState].m_fWeight));
+//#ifdef _WITH_OBJECT_TRANSFORM
+//					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local = xmf4x4Transform;
+//#else
+//					m_pAnimationSets->m_ppBoneFrameCaches[j]->SetLocalMatrix(xmf4x4Transform);
+//#endif
+//				}
+//				m_pAnimationTracks[nLowerState].HandleCallback();
+//			}
+//
+//			{ // 상체 Lerp 적용
+//				std::shared_ptr<CAnimationSet> pAnimationSet = m_pAnimationSets->m_pAnimationSets[m_pAnimationTracks[nUpperState].m_nAnimationSet];
+//				float fPosition = m_pAnimationTracks[nUpperState].UpdatePosition(m_pAnimationTracks[nUpperState].m_fPosition, fElapsedTime, pAnimationSet->m_fLength);
+//				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
+//				{
+//#ifdef _WITH_OBJECT_TRANSFORM
+//					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local;
+//#else
+//					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->GetLocalMatrix();
+//#endif
+//					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
+//					xmf4x4Transform = Matrix4x4::Interpolate(xmf4x4Transform, xmf4x4TrackTransform, m_pAnimationSets->m_ppBoneFrameCaches[j]->GetBoneUpperWeight());
+//#ifdef _WITH_OBJECT_TRANSFORM
+//					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Local = xmf4x4Transform;
+//#else
+//					m_pAnimationSets->m_ppBoneFrameCaches[j]->SetLocalMatrix(xmf4x4Transform);
+//#endif
+//				}
+//				m_pAnimationTracks[nUpperState].HandleCallback();
+//			}
+//		}
+//		else
 		{
 			// 임시	저장 공간 확보
 			std::vector<std::vector<XMFLOAT4X4>> localtransform; // AnimationTrack 개수만큼 std::vector 생성
@@ -401,15 +401,19 @@ void CAnimationController::SetUpperPose(int upperPose)
 	Apply(UpperPose, upperPose);
 }
 
-void CAnimationController::Apply(int& currnetPose, int newPose)
+void CAnimationController::Apply(int& currentPose, int newPose)
 {
-	if (currnetPose == newPose)
+	if (currentPose == newPose)
 		return;
-	SetTrackEnable(currnetPose, false);
+	std::string DEBUGE = gameObject->GetName() + " " + std::to_string(currentPose) + "->" + std::to_string(newPose) + '\n';
+	
+	OutputDebugStringA(DEBUGE.c_str());
+
+	SetTrackEnable(currentPose, false);
 	SetTrackEnable(newPose, true);
 	SetTrackPosition(newPose, 0.0f);
 
-	currnetPose = newPose;
+	currentPose = newPose;
 }
 
 

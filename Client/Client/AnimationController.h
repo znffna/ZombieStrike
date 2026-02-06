@@ -201,9 +201,9 @@ public:
 
 
 	// Animation 
-	float 							m_fTime = 0.0f;
-
+	float 						m_fTime = 0.0f;
 	int 						m_nAnimationTracks = 0;
+
 	std::vector<CAnimationTrack> m_pAnimationTracks;
 
 	std::shared_ptr<CAnimationSets> m_pAnimationSets;

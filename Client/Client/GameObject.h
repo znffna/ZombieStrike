@@ -170,14 +170,18 @@ public:
 	// --------------------------------------------
 	// State
 	// --------------------------------------------
-	void SetState(int UpperPose) {
+	void SetState(int BasePose) {
 		{
-			std::string debugOutput = "SetState called : " + std::to_string(UpperPose) + " on object: " + m_strName + "\n";
-			OutputDebugStringA(debugOutput.c_str());
+			//std::string debugOutput = "SetState called : " + std::to_string(BasePose) + " on object: " + m_strName + "\n";
+			//OutputDebugStringA(debugOutput.c_str());
 		}
 		/*if (m_pSkinnedAnimationController) {
 			m_pSkinnedAnimationController->ChangeState(UpperPose);
 		}*/
+		if (auto pAnim = GetComponent<CAnimationController>())
+		{
+			pAnim->SetBasePose(BasePose);
+		}
 	}
 
 public:

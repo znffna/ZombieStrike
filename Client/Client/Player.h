@@ -8,7 +8,7 @@ enum PLAYER_ANIMATION_POSE : int // Number == Animation Track Index
 {
 	/// Player Animation States
 	// IDLE(Aiming)
-	IDLE = 0,
+	PLAYER_IDLE = 0,
 	// WALK
 	WALK_RIGHT,
 	WALK_FORWARD_RIGHT,
@@ -80,9 +80,9 @@ private:
 	std::vector<std::string> m_MeshBoneName{ "Ch18", "Ch35" };
 
 	// Gun Slot Bone
-	CGameObject* m_pGunSlot;
+	CGameObject* m_pGunSlot = nullptr;
 
-	CGun* m_pGun;
+	CGun* m_pGun = nullptr ;
 
 	std::shared_ptr<CGaugeBar> m_pHealthGauge;
 

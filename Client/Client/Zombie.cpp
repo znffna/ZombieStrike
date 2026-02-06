@@ -154,7 +154,7 @@ void CZombieObject::UpdateAnimation()
 	if (!pAnim) return;
 
 	// Á×À½ ÃÖ¿ì¼±
-	if (m_bDied || m_nNetHP <= 0 || (ActionType)m_nNetActType == ActionType::DEAD)
+	if (m_bDied || m_nNetHP <= 0 || (ActionType)m_nNetActType == ActionType::DEATH)
 	{
 		pAnim->SetBasePose((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_DEATH);
 		return;
@@ -172,7 +172,7 @@ void CZombieObject::UpdateAnimation()
 		newBase = (int)ZOMBIE_ANIMATION_POSE::ZOMBIE_HIT;
 		break;
 
-	case ActionType::RANGED:
+	case ActionType::SCREAM:
 		newBase = (int)ZOMBIE_ANIMATION_POSE::ZOMBIE_SCREAM;
 		break;
 

@@ -149,7 +149,7 @@ void CPlayer::Update(float fTimeElapsed)
 		if (m_fReloadTime >= 1.0f) {
 			if (m_pGun) m_pGun->Reload();
 			m_fReloadTime = 0.0f;
-			SetState(PLAYER_ANIMATION_POSE::IDLE);
+			SetState(PLAYER_ANIMATION_POSE::PLAYER_IDLE);
 		}
 	}
 
@@ -169,13 +169,13 @@ int GetAnimationIndex(char nMoveInput)
 	switch (nMoveInput)
 	{
 	case 0x00: // ÀÔ·Â ¾øÀ½
-		return (int)PLAYER_ANIMATION_POSE::IDLE;
+		return (int)PLAYER_ANIMATION_POSE::PLAYER_IDLE;
 	case 0x01: // F
 		return (int)PLAYER_ANIMATION_POSE::WALK_FORWARD;
 	case 0x02: // B
 		return (int)PLAYER_ANIMATION_POSE::WALK_BACKWARD;
 	case 0x03: // F + B -> »ó¼â -> ¾øÀ½
-		return (int)PLAYER_ANIMATION_POSE::IDLE;
+		return (int)PLAYER_ANIMATION_POSE::PLAYER_IDLE;
 	case 0x04: // L
 		return (int)PLAYER_ANIMATION_POSE::WALK_LEFT;
 	case 0x05: // F + L
@@ -193,15 +193,15 @@ int GetAnimationIndex(char nMoveInput)
 	case 0x0B: // F + B + R -> F/B »ó¼â -> R
 		return (int)PLAYER_ANIMATION_POSE::WALK_RIGHT;
 	case 0x0C: // L + R -> ÁÂ¿ì »ó¼â -> ¾øÀ½
-		return (int)PLAYER_ANIMATION_POSE::IDLE;
+		return (int)PLAYER_ANIMATION_POSE::PLAYER_IDLE;
 	case 0x0D: // L + R + F -> L/R »ó¼â -> F
 		return (int)PLAYER_ANIMATION_POSE::WALK_FORWARD;
 	case 0x0E: // L + R + B -> L/R »ó¼â -> B
 		return (int)PLAYER_ANIMATION_POSE::WALK_BACKWARD;
 	case 0x0F: // F + B + L + R -> »óÇÏ/ÁÂ¿ì ¸ðµÎ »ó¼â -> ¾øÀ½
-		return (int)PLAYER_ANIMATION_POSE::IDLE;
+		return (int)PLAYER_ANIMATION_POSE::PLAYER_IDLE;
 	default:
-		return (int)PLAYER_ANIMATION_POSE::IDLE;
+		return (int)PLAYER_ANIMATION_POSE::PLAYER_IDLE;
 	}
 }
 

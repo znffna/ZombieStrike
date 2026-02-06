@@ -529,19 +529,47 @@ float ZombieAI::GetPlayerZ() const { return m_targetZ; }
 Object ZombieAI::GetObjectinfo() const {
     Object info{};
     info.position = Vec3(m_x, 0, m_z);
+
     info.velocity = Vec3(0, 0, 1); // 현재 방향 지정 안함
 	info.look = GetLookVectorToPlayer();
+
     info.hp = m_hp;
     info.pitch = 0.1f;
     info.gun_type = GunType::BULLET_MAX; // 좀비는 총 안씀
     info.level = 0;
     info.score = 0;
     info.damage = ZOMBIE_DAMAGE;
-    info.act_type =
-        (m_hp == 0) ? ActionType::DEAD :
-        (m_stun_left > 0.0f) ? ActionType::HIT :   // 스턴 표현은 HIT 재사용
-        ((m_attack_left > 0.0f) || (m_pause_left > 0.0f)) ? ActionType::ATTACK : // 일시정지 중에도 공격 준비 모션처럼 표시
-        ActionType::ZMOVE;
+
+    ActionType act = ActionType::ZMOVE;
+
+    if (m_hp == 0)
+    {
+        act = ActionType::DEATH;                
+    }
+    else if (m_stun_left > 0.0f)
+    {
+        act = ActionType::HIT;                  
+    }
+    else if (m_attack_left > 0.0f)
+    {
+        act = ActionType::ATTACK;               
+    }
+    else if (m_pause_left > 0.0f)
+    {
+        
+        act = ActionType::SCREAM;     // pause를 SCREAM으로 보여주고 싶으면 이걸로
+    }
+    else
+    {
+        act = ActionType::ZMOVE;                 
+    }
+
+    info.act_type = (SIZE1)act;                 
+
+    std::cout << "[ZOMBIE INFO] name=Zombie_" << m_id
+        << " act_type=" << (int)info.act_type
+        << "(" << ToString((ActionType)info.act_type) << ")"
+        << "\n";
 
     return info;
 }

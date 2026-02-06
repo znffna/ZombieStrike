@@ -517,7 +517,9 @@ void CGameFramework::ReleaseDefaultObjects()
 
 void CGameFramework::BuildObjects()
 {
-	SceneRequest newReq{ CPushScene(TypeTag<CGameScene>{})};
+	//SceneRequest newReq{ CPushScene(TypeTag<CGameScene>{})};
+
+	SceneRequest newReq{ CPushScene(TypeTag<CTitleScene>{})};
 	//SceneRequest newReq{ CPushScene(TypeTag<CTestScene>{})};
 	RequestSceneChange(newReq);
 }

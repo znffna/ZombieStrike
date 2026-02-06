@@ -285,11 +285,11 @@ public:
                 g_users.erase(_id);
             }
             else {
-				DEBUG_LOG("[do_recv] WSARecv: IO_PENDING (정상)\n");
+				//DEBUG_LOG("[do_recv] WSARecv: IO_PENDING (정상)\n");
             }
         }
         else {
-			DEBUG_LOG("[do_recv] WSARecv: 즉시 수신 완료 (ret == 0)\n");
+			//DEBUG_LOG("[do_recv] WSARecv: 즉시 수신 완료 (ret == 0)\n");
         }
     }
 
@@ -334,7 +334,7 @@ public:
 
             if (offset + packetSize > total) break; // 아직 패킷 완성이 안 됨
 
-			DEBUG_LOG("[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << std::endl);
+			//DEBUG_LOG("[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << std::endl);
 
 			process_packet(p);    // 패킷 처리
             p += (packetSize)/sizeof(SIZE2);      // 다음 패킷으로 이동
@@ -358,7 +358,7 @@ public:
         send_ov->_wsabuf[0].len = packet_size;
         DWORD size_sent;
 
-		DEBUG_LOG("[do_send] ID = " << _id << ", size = " << packet_size << ", type = " << (int)reinterpret_cast<SIZE2*>(buff)[1] << std::endl);
+		//DEBUG_LOG("[do_send] ID = " << _id << ", size = " << packet_size << ", type = " << (int)reinterpret_cast<SIZE2*>(buff)[1] << std::endl);
         int ret = WSASend(_c_socket, send_ov->_wsabuf, 1, &size_sent, 0, &(send_ov->_over), g_send_callback);
         if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
 			std::cout << "[do_send] WSASend failed: " << WSAGetLastError() << "\n";
@@ -469,7 +469,7 @@ public:
             std::cout << "[ERROR] Invalid Packet Type\n";
             return;
         }
-		DEBUG_LOG("[process_packet] ID = " << _id << ", packet_type = " << (int)packet_type << "\n");
+		//DEBUG_LOG("[process_packet] ID = " << _id << ", packet_type = " << (int)packet_type << "\n");
 
         switch (packet_type) {
         case ::PKT_TYPE::C_S_LOGIN:
@@ -487,12 +487,12 @@ public:
             _level      = 1;
             _score      = 0;
             _damage     = 0;
-			_act_type   = ActionType::NONE;
+			_act_type   = ActionType::IDLE;
             _move_input = 0;
 
             IN_g_player_n++;
-			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _name << "\n");
-			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _skin_type << "\n");
+			//DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _name << "\n");
+			//DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _skin_type << "\n");
             send_obj_info();
             //send_object_update();
 
@@ -670,8 +670,8 @@ public:
             float hit_t = 0.0f;
 
             if (find_nearest_hit_zombie3D(ox, oy, oz, dx, dy, dz, MAX_RANGE, hit_zid, hit_t)) {
-                DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id
-                    << " hit_zid=" << hit_zid << " t=" << hit_t);
+                //DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id
+                 //   << " hit_zid=" << hit_zid << " t=" << hit_t);
 
                 // !! 데미지 + 브로드캐스트
                 constexpr SIZE2 DAMAGE = 10;   // 임시 고정 대미지(총기별 테이블은 이후에 연결)
@@ -721,7 +721,7 @@ public:
                 }
             }
             else {
-                DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id << " miss");
+                //DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id << " miss");
             }
             break;
         }
