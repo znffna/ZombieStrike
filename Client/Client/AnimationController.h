@@ -246,6 +246,10 @@ public:
 public:
 	// Pose Control
 
+	void SetPose(int basePose, int upperPose = -1, bool bResetTrackPosition = true); // 상체 하체 한번에 
+	void SetBasePose(int basePose, bool bResetTrackPosition = true);
+	void SetUpperPose(int upperPose, bool bResetTrackPosition = true);
+
 public:
 	bool m_bRootMotion = false;
 	std::shared_ptr<CGameObject> m_pModelRootObject = nullptr;
