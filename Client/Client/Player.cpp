@@ -347,10 +347,7 @@ void CPlayer::Rotate(float x, float y, float z)
 		pCamera->Rotate(x, y, z);
 	}
 
-	/*if (m_bPitchLock) x = 0.0f;
-	if (m_bYawLock) y = 0.0f;
-	if (m_bRollLock) z = 0.0f;
 
-	m_pTransform->Rotate(x, y, z);*/
+	GetComponent<CTransform>()->Rotate(0, y, 0);
 }
 
