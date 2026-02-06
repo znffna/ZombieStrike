@@ -107,18 +107,18 @@ void CZombieObject::Initialize(int nSkinType)
 
 void CZombieObject::Update(float fTimeElapsed)
 {
+	UpdateAnimation();  
+
 	CGameObject::Update(fTimeElapsed);
 
-	if(m_bDied)
-	{
-		m_fDeathTime += fTimeElapsed;
-		if (m_fDeathTime > m_fMaxDeathTime)
-		{
-			m_bDied = false; // 좀비가 죽은 상태를 초기화
-			m_fDeathTime = 0.0f; // 죽은 시간 초기화
+	if (!m_bDied) return;
 
-			SetActive(false); // 좀비 오브젝트 비활성화
-		}
+	m_fDeathTime += fTimeElapsed;
+	if (m_fDeathTime > m_fMaxDeathTime)
+	{
+		m_bDied = false;
+		m_fDeathTime = 0.f;
+		SetActive(false);
 	}
 }
 
@@ -146,4 +146,47 @@ void CZombieObject::SetSkin(int nSkinType)
 
 	//auto pCollider = GetComponent<COBBCollider>();
 	//pCollider->SetCollider(FindFrame(m_strMeshBoneName[m_nSkinType])->GetMeshBound());
+}
+
+void CZombieObject::UpdateAnimation()
+{
+	auto pAnim = GetComponent<CAnimationController>();
+	if (!pAnim) return;
+
+	// 죽음 최우선
+	if (m_bDied || m_nNetHP <= 0 || (ActionType)m_nNetActType == ActionType::DEAD)
+	{
+		pAnim->SetBasePose((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_DEATH);
+		return;
+	}
+
+	int newBase = (int)ZOMBIE_ANIMATION_POSE::ZOMBIE_IDLE;
+
+	switch ((ActionType)m_nNetActType)
+	{
+	case ActionType::ATTACK:
+		newBase = (int)ZOMBIE_ANIMATION_POSE::ZOMBIE_ATTACK;
+		break;
+
+	case ActionType::HIT:
+		newBase = (int)ZOMBIE_ANIMATION_POSE::ZOMBIE_HIT;
+		break;
+
+	case ActionType::RANGED:
+		newBase = (int)ZOMBIE_ANIMATION_POSE::ZOMBIE_SCREAM;
+		break;
+
+	default:
+	{
+		const float speedXZ = sqrtf(m_xmf3NetVelocity.x * m_xmf3NetVelocity.x +
+			m_xmf3NetVelocity.z * m_xmf3NetVelocity.z);
+
+		newBase = (speedXZ > 0.05f)
+			? (int)ZOMBIE_ANIMATION_POSE::ZOMBIE_RUNNING
+			: (int)ZOMBIE_ANIMATION_POSE::ZOMBIE_IDLE;
+	}
+	break;
+	}
+
+	pAnim->SetBasePose(newBase);
 }
