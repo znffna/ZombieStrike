@@ -42,7 +42,7 @@ public:
 	virtual bool Fire(CPlayer* pPlayer);
 
 private:
-	std::unordered_map<int, std::shared_ptr<CGameObject>> m_mapGameObjects;
+	std::unordered_map< int, CGameObject* > m_mapGameObjects;
 
 	char m_nMoveInput;
 };

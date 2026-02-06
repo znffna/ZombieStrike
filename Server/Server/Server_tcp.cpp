@@ -804,7 +804,7 @@ void SpawnZombies(int count) {
         p.header.type = PKT_TYPE::S_C_OBJECT_ADD;
         p.id = zombie->GetID();
         p.obj_type = ObjectType::ZOMBIE;
-        p.skin_type = 0;
+        p.skin_type = 0; // todo : 랜덤값 , 3개 012
         strcpy_s(p.name, "Zombie");
         p.startposition = zombie->GetPosition();
         p.starthp = zombie->GetHP();

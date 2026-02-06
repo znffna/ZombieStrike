@@ -4,6 +4,28 @@ class CGun;
 class FIRE_INFO;
 class CGaugeBar;
 
+enum PLAYER_ANIMATION_POSE : int // Number == Animation Track Index
+{
+	/// Player Animation States
+	// IDLE(Aiming)
+	IDLE = 0,
+	// WALK
+	WALK_RIGHT,
+	WALK_FORWARD_RIGHT,
+	WALK_FORWARD,
+	WALK_FORWARD_LEFT,
+	WALK_LEFT,
+	WALK_BACKWARD_LEFT,
+	WALK_BACKWARD,
+	WALK_BACKWARD_RIGHT,
+	// FIRE
+	FIRE,
+	// Reload
+	RELOAD,
+	// Hitted
+	HITTED,
+};
+
 class CPlayer : public CGameObject
 {
 public:
