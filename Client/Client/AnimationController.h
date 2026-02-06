@@ -174,6 +174,7 @@ public:
 		OwnerType = rhs.OwnerType;
 		BasePose = rhs.BasePose;
 		UpperPose = rhs.UpperPose;
+
 		// Animation 
 		m_fTime = rhs.m_fTime;
 		m_nAnimationTracks = rhs.m_nAnimationTracks;
