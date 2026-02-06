@@ -93,8 +93,7 @@ public:
 	int  GetNetActType() const { return m_nNetActType; }
 	int  GetNetHP() const { return m_nNetHP; }
 
-	// 애니메이션
-	void UpdateAnimation();
+
 
 
 private:
