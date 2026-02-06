@@ -76,7 +76,13 @@ public:
 	void HandleCallback();;
 };
 
-enum ANIMATION_POSE // Number == Animation Track Index
+enum class ANIM_OWNER_TYPE 
+{
+	PLAYER = 0,
+	ZOMBIE
+};
+
+enum PLAYER_ANIMATION_POSE : int // Number == Animation Track Index
 {
 	/// Player Animation States
 	// IDLE(Aiming)
@@ -96,7 +102,10 @@ enum ANIMATION_POSE // Number == Animation Track Index
 	RELOAD,
 	// Hitted
 	HITTED,
+};
 
+enum ZoMBIE_ANIMATION_POSE : int // Number == Animation Track Index
+{
 	/// Zombie Animation States
 	ZOMBIE_IDLE = 0,
 	ZOMBIE_RUNNING,
@@ -162,6 +171,7 @@ public:
 	CAnimationController(const CAnimationController& rhs) : CComponent(nullptr)
 	{
 		// State
+		OwnerType = rhs.OwnerType;
 		BasePose = rhs.BasePose;
 		UpperPose = rhs.UpperPose;
 		// Animation 
@@ -185,8 +195,12 @@ public:
 
 public:
 	// State
-	ANIMATION_POSE BasePose = IDLE;  // Lower Body Animation 
-	ANIMATION_POSE UpperPose = IDLE; // Upper Body Animation 
+	ANIM_OWNER_TYPE OwnerType = ANIM_OWNER_TYPE::PLAYER;
+
+	int BasePose = 0;  // Lower Body Animation 
+	int UpperPose = 0; // Upper Body Animation 
+
+	void SetOwnerType(ANIM_OWNER_TYPE type ) { OwnerType = type; }
 
 	// Animation 
 	float 							m_fTime = 0.0f;
