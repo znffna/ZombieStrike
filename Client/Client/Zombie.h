@@ -40,7 +40,7 @@ public:
 		{
 			if (auto pSkinnedAnimationController = CreateComponent<CAnimationController>())
 			{
-				SetState((int)ANIMATION_POSE::ZOMBIE_DEATH);
+				SetState((int)ZoMBIE_ANIMATION_POSE::ZOMBIE_DEATH);
 			}
 			m_bDied = true;
 		}

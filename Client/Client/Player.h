@@ -24,7 +24,8 @@ public:
 
 	// Object Update
 	virtual void Update(float fTimeElapsed) override;
-	void UpdateLowerAnimation();
+	void UpdateBaseAnimation();
+	void UpdateUpperAnimation();
 	virtual void Move(DWORD dwDirection, float fDistance, float deltaTime) override;
 
 	virtual void OnPrepareAnimate();
@@ -88,7 +89,25 @@ public:
 
 	// Player Move Input
 private:
-	char m_nMoveInput;
+	char m_nMoveInput = 0;
+	int	 m_nState = 0;
+
+
+private:
+	XMFLOAT3	m_xmf3NetVelocity = XMFLOAT3(0.f, 0.f, 0.f);
+	int			m_nNetActType = 0;
+	bool		m_bHasNetAnimState = false;
+
+public:
+	void SetNetVelocity(XMFLOAT3& v) { m_xmf3NetVelocity = v; m_bHasNetAnimState = true; }
+	XMFLOAT3& GetNetVelocity() { return m_xmf3NetVelocity; }
+
+	void SetNetActType(int actType) { m_nNetActType = actType; m_bHasNetAnimState = true; }
+	int GetNetActType() { return m_nNetActType; }
+
+	bool HasNetAnimState() { return m_bHasNetAnimState; }
+
+
 public:
 	void SetMoveInput(char nMoveInput) { m_nMoveInput = nMoveInput; }
 	char GetMoveInput() { return m_nMoveInput; }

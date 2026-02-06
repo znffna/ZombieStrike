@@ -168,6 +168,7 @@ void CAnimationController::Clear()
 
 	UpperPose = IDLE;
 	BasePose = IDLE;
+
 }
 
 void CAnimationController::SetModel(CLoadedModelInfo* pModel)
@@ -379,6 +380,38 @@ void CAnimationController::ApplyPitchToSpine(CGameObject* pRootGameObject)
 		}
 	}
 }
+
+void CAnimationController::SetPose(int basePose, int upperPose)
+{
+	SetBasePose(basePose);
+	SetUpperPose(upperPose);
+}
+
+void CAnimationController::SetBasePose(int basePose)
+{
+	int tackcount = m_nAnimationTracks;
+	if (tackcount <= 0) return;
+	Apply(BasePose, basePose);
+}
+
+void CAnimationController::SetUpperPose(int upperPose)
+{
+	int tackcount = m_nAnimationTracks;
+	if (tackcount <= 0) return;
+	Apply(UpperPose, upperPose);
+}
+
+void CAnimationController::Apply(int& currnetPose, int newPose)
+{
+	if (currnetPose == newPose)
+		return;
+	SetTrackEnable(currnetPose, false);
+	SetTrackEnable(newPose, true);
+	SetTrackPosition(newPose, 0.0f);
+
+	currnetPose = newPose;
+}
+
 
 void CAnimationController::OnRootMotion(CGameObject* pRootGameObject)
 {
