@@ -870,6 +870,13 @@ void ZombieAIThread() {
                 p.score = info.score;
                 p.damage = info.damage;
                 p.act_type = info.act_type;
+                
+
+               /* std::cout << "[ZOMBIE INFO] name=Zombie_" << p.id
+                    << " act_type=" << p.act_type
+                    << "(" << ToString((ActionType)p.act_type) << ")"
+                    << "\n";*/
+
 
                 for (auto& [id, session] : g_users) session.do_send(&p);
                 zombie->ClearDirty();

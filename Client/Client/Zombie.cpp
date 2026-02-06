@@ -107,7 +107,6 @@ void CZombieObject::Initialize(int nSkinType)
 
 void CZombieObject::Update(float fTimeElapsed)
 {
-	UpdateAnimation();  
 
 	CGameObject::Update(fTimeElapsed);
 
@@ -146,47 +145,4 @@ void CZombieObject::SetSkin(int nSkinType)
 
 	//auto pCollider = GetComponent<COBBCollider>();
 	//pCollider->SetCollider(FindFrame(m_strMeshBoneName[m_nSkinType])->GetMeshBound());
-}
-
-void CZombieObject::UpdateAnimation()
-{
-	auto pAnim = GetComponent<CAnimationController>();
-	if (!pAnim) return;
-
-	// Á×À½ ÃÖ¿ì¼±
-	if (m_bDied || m_nNetHP <= 0 || (ActionType)m_nNetActType == ActionType::DEATH)
-	{
-		pAnim->SetBasePose((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_DEATH);
-		return;
-	}
-
-	int newBase = (int)ZOMBIE_ANIMATION_POSE::ZOMBIE_IDLE;
-
-	switch ((ActionType)m_nNetActType)
-	{
-	case ActionType::ATTACK:
-		newBase = (int)ZOMBIE_ANIMATION_POSE::ZOMBIE_ATTACK;
-		break;
-
-	case ActionType::HIT:
-		newBase = (int)ZOMBIE_ANIMATION_POSE::ZOMBIE_HIT;
-		break;
-
-	case ActionType::SCREAM:
-		newBase = (int)ZOMBIE_ANIMATION_POSE::ZOMBIE_SCREAM;
-		break;
-
-	default:
-	{
-		const float speedXZ = sqrtf(m_xmf3NetVelocity.x * m_xmf3NetVelocity.x +
-			m_xmf3NetVelocity.z * m_xmf3NetVelocity.z);
-
-		newBase = (speedXZ > 0.05f)
-			? (int)ZOMBIE_ANIMATION_POSE::ZOMBIE_RUNNING
-			: (int)ZOMBIE_ANIMATION_POSE::ZOMBIE_IDLE;
-	}
-	break;
-	}
-
-	pAnim->SetBasePose(newBase);
 }

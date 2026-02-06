@@ -318,6 +318,9 @@ bool ZombieAI::IsRemoved() const noexcept {
 
 void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime)
 {
+    // TODO :: 공격시 바로 ZMOVE 가는 상황 방지 , 2.63333344 초임 
+
+
     if (IsRemoved()) return;
 
     if (playerPositions.empty()) return;
@@ -566,10 +569,10 @@ Object ZombieAI::GetObjectinfo() const {
 
     info.act_type = (SIZE1)act;                 
 
-    std::cout << "[ZOMBIE INFO] name=Zombie_" << m_id
-        << " act_type=" << (int)info.act_type
-        << "(" << ToString((ActionType)info.act_type) << ")"
-        << "\n";
+    //std::cout << "[ZOMBIE INFO] name=Zombie_" << m_id
+    //    << " act_type=" << (int)info.act_type
+    //    << "(" << ToString((ActionType)info.act_type) << ")"
+    //    << "\n";
 
     return info;
 }
