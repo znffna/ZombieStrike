@@ -110,163 +110,166 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 {	
 	PKT_TYPE type = recv_p->type; // 패킷 타입  
 
-	//switch (type) {
-	//case S_C_OBJ_INFO:
-	//{
+	switch (type) {
+	case S_C_OBJ_INFO:
+	{
 
-	//	pkt_sc_obj_info* packet = reinterpret_cast<pkt_sc_obj_info*>(recv_p);
-	//	if (g_bNetworkDebugMode) {
-	//		std::string DebugOutput = "S_C_PLAYER_INFO 패킷 수신\n";
-	//		DebugOutput += "position : (" + std::to_string(packet->startposition.x) + ", " + std::to_string(packet->startposition.y) + ", " + std::to_string(packet->startposition.z) + ")\n";
-	//		OutputDebugStringA(DebugOutput.c_str());
-	//	}
+		pkt_sc_obj_info* packet = reinterpret_cast<pkt_sc_obj_info*>(recv_p);
+		if (g_bNetworkDebugMode) {
+			std::string DebugOutput = "S_C_PLAYER_INFO 패킷 수신\n";
+			DebugOutput += "position : (" + std::to_string(packet->startposition.x) + ", " + std::to_string(packet->startposition.y) + ", " + std::to_string(packet->startposition.z) + ")\n";
+			OutputDebugStringA(DebugOutput.c_str());
+		}
 
-	//	m_pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
-	//	m_mapGameObjects[packet->id] = m_pPlayer;
-	//	m_pPlayer->SetSID(packet->id);
-	//	break;
-	//}
-	//case S_C_OBJECT_ADD:
-	//{
-	//	pkt_sc_object_add* packet = reinterpret_cast<pkt_sc_object_add*>(recv_p);
-	//	if (g_bNetworkDebugMode)
-	//	{
-	//		std::string DebugOutput = "S_C_OBJECT_ADD 패킷 수신\n";
-	//		DebugOutput += "position : (" + std::to_string(packet->startposition.x) + ", " + std::to_string(packet->startposition.y) + ", " + std::to_string(packet->startposition.z) + ")\n";
-	//		DebugOutput += "ObjectType : " + std::to_string(packet->obj_type) + "\n";
-	//		//OutputDebugStringA(DebugOutput.c_str());
-	//	}
+		m_pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
+		m_mapGameObjects[packet->id] = m_pPlayer;
+		m_pPlayer->SetSID(packet->id);
+		break;
+	}
+	case S_C_OBJECT_ADD:
+	{
+		pkt_sc_object_add* packet = reinterpret_cast<pkt_sc_object_add*>(recv_p);
+		if (g_bNetworkDebugMode)
+		{
+			std::string DebugOutput = "S_C_OBJECT_ADD 패킷 수신\n";
+			DebugOutput += "position : (" + std::to_string(packet->startposition.x) + ", " + std::to_string(packet->startposition.y) + ", " + std::to_string(packet->startposition.z) + ")\n";
+			DebugOutput += "ObjectType : " + std::to_string(packet->obj_type) + "\n";
+			//OutputDebugStringA(DebugOutput.c_str());
+		}
 
-	//	switch (packet->obj_type)
-	//	{
-	//	case ObjectType::PLAYER:
-	//	{
-	//		// 플레이어 오브젝트 추가
-	//		//std::shared_ptr<CPlayer> pPlayer = GetPlayer(packet->skin_type); // GetPlayer(skin_type)로 바꿔야 함
-	//		std::shared_ptr<CPlayer> pPlayer = GetPlayer(0); // GetPlayer(skin_type)로 바꿔야 함
-	//		pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
-	//		pPlayer->SetSID(packet->id);
-	//		m_mapGameObjects[packet->id] = pPlayer;
+		switch (packet->obj_type)
+		{
+		case ObjectType::PLAYER:
+		{
+			// 플레이어 오브젝트 추가
+			//std::shared_ptr<CPlayer> pPlayer = GetPlayer(packet->skin_type); // GetPlayer(skin_type)로 바꿔야 함
+			//std::shared_ptr<CPlayer> pPlayer = GetPlayer(0); // GetPlayer(skin_type)로 바꿔야 함
+			auto pPlayer = RequestCreateObject(TypeTag<CPlayer>(), packet->skin_type);
+			pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
+			pPlayer->SetSID(packet->id);
+			m_mapGameObjects[packet->id] = pPlayer;
 
-	//		int gun_type = packet->gun_type;
-	//		std::shared_ptr<CGun> pGun = CGun::Create(nullptr, nullptr, nullptr, gun_type);
-	//		pPlayer->SetGun(pGun);
-	//		AddObject(pGun);
+			//int gun_type = packet->gun_type;
+			//std::shared_ptr<CGun> pGun = CGun::Create(nullptr, nullptr, nullptr, gun_type);
+			//pPlayer->SetGun(pGun);
+			//AddObject(pGun);
 
-	//		{
-	//			std::string DebugOutput = "ObjectType::PLAYER 생성 완료\n";
-	//		}
-	//		AddObject(pPlayer);
-	//		break;
-	//	}
-	//	case ObjectType::ZOMBIE:
-	//	{
-	//		// 좀비 오브젝트 추가
-	//		std::shared_ptr<CGameObject> pZombie = GetZombie(packet->skin_type);
-	//		pZombie->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
-	//		m_mapGameObjects[packet->id] = pZombie;
-	//		pZombie->SetSID(packet->id);
-	//		{
-	//			std::string DebugOutput = "ObjectType::ZOMBIE 생성 완료\n";
-	//			//OutputDebugStringA(DebugOutput.c_str());
-	//		}
-	//		AddObject(pZombie);
-	//		break;
-	//	}
-	//	case ObjectType::BULLET:
-	//	{
-	//		// 총알 오브젝트 추가
-	//		/*std::shared_ptr<CGameObject> pBullet = std::make_shared<CBulletParticleObject>();
-	//		pBullet->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
-	//		m_mapGameObjects[packet->id] = pBullet;
-	//		*/
-	//		auto pPlayer = std::dynamic_pointer_cast<CPlayer>(m_mapGameObjects[packet->id]);
-	//		if(pPlayer) Fire(pPlayer);
-	//		break;
-	//	}
-	//	}
-	//	// 게임 오브젝트 추가
-	//	break;
-	//}
-	//case S_C_OBJECT_UPDATE:
-	//{
-	//	pkt_sc_object_update* updatePkt = reinterpret_cast<pkt_sc_object_update*>(recv_p);
-	//	Vec3 position = updatePkt->position;
-	//	Vec3 look = updatePkt->look;
-	//	m_mapGameObjects[updatePkt->id]->SetLook(look.x, look.y, look.z);
-	//	m_mapGameObjects[updatePkt->id]->SetPosition(position.x, position.y, position.z);
-	//	if (auto pRigidBody = m_mapGameObjects[updatePkt->id]->GetComponent<CRigidBody>()) {
-	//		pRigidBody->SetVelocity(updatePkt->velocity.x, updatePkt->velocity.y, updatePkt->velocity.z);
-	//	}
+			//{
+			//	std::string DebugOutput = "ObjectType::PLAYER 생성 완료\n";
+			//}
+			//AddObject(pPlayer);
+			break;
+		}
+		case ObjectType::ZOMBIE:
+		{
+			// 좀비 오브젝트 추가
+			//std::shared_ptr<CGameObject> pZombie = GetZombie(packet->skin_type);
+			auto pZombie = RequestCreateObject(TypeTag<CZombieObject>(), packet->skin_type);
+			pZombie->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
+			m_mapGameObjects[packet->id] = pZombie;
+			pZombie->SetSID(packet->id);
+			{
+				std::string DebugOutput = "ObjectType::ZOMBIE 생성 완료\n";
+				//OutputDebugStringA(DebugOutput.c_str());
+			}
 
-	//	if(auto pPlayer = std::dynamic_pointer_cast<CPlayer>(m_mapGameObjects[updatePkt->id]))
-	//	{
-	//		m_mapGameObjects[updatePkt->id]->SetState(updatePkt->act_type);
-	//	}
-	//	else if (auto pZombie = std::dynamic_pointer_cast<CZombieObject>(m_mapGameObjects[updatePkt->id]))
-	//	{
-	//		switch (updatePkt->act_type)
-	//		{
-	//		case ActionType::ZMOVE:
-	//			pZombie->SetState((int)CAnimationController::ANIMATION_POSE::ZOMBIE_RUNNING);
-	//			break;
-	//		case ActionType::ATTACK:
-	//			pZombie->SetState((int)CAnimationController::ANIMATION_POSE::ZOMBIE_ATTACK);
-	//			break;
-	//		case ActionType::RANGED:
-	//			pZombie->SetState((int)CAnimationController::ANIMATION_POSE::ZOMBIE_ATTACK);
-	//			break;
-	//		case ActionType::DEAD:
-	//			pZombie->SetState((int)CAnimationController::ANIMATION_POSE::ZOMBIE_DEATH);
-	//			//pZombie->Died();
-	//			break;
-	//		case ActionType::HIT:
-	//			pZombie->SetState((int)CAnimationController::ANIMATION_POSE::ZOMBIE_HIT);
-	//			break;
-	//		default:
-	//			pZombie->SetState((int)CAnimationController::ANIMATION_POSE::ZOMBIE_IDLE);
-	//			break;
-	//		}
-	//	}
-	//	else {
-	//		m_mapGameObjects[updatePkt->id]->SetState(updatePkt->act_type);
-	//	}
+			//AddObject(pZombie);
+			break;
+		}
+		case ObjectType::BULLET:
+		{
+			// 총알 오브젝트 추가
+			/*std::shared_ptr<CGameObject> pBullet = std::make_shared<CBulletParticleObject>();
+			pBullet->SetPosition(packet->fixdata.startposition.x, packet->fixdata.startposition.y, packet->fixdata.startposition.z);
+			m_mapGameObjects[packet->id] = pBullet;
+			*/
+			//auto pPlayer = std::dynamic_pointer_cast<CPlayer>(m_mapGameObjects[packet->id]);
+			//if(pPlayer) Fire(pPlayer);
+			break;
+		}
+		}
+		// 게임 오브젝트 추가
+		break;
+	}
+	case S_C_OBJECT_UPDATE:
+	{
+		pkt_sc_object_update* updatePkt = reinterpret_cast<pkt_sc_object_update*>(recv_p);
+		Vec3 position = updatePkt->position;
+		Vec3 look = updatePkt->look;
+		m_mapGameObjects[updatePkt->id]->SetLook(look.x, look.y, look.z);
+		m_mapGameObjects[updatePkt->id]->SetPosition(position.x, position.y, position.z);
+		if (auto pRigidBody = m_mapGameObjects[updatePkt->id]->GetComponent<CRigidBody>()) {
+			pRigidBody->SetVelocity(updatePkt->velocity.x, updatePkt->velocity.y, updatePkt->velocity.z);
+		}
 
-	//	float fPitch = updatePkt->pitch;
-	//	if(auto pCamera = m_mapGameObjects[updatePkt->id]->GetComponent<CCamera>()) pCamera->SetPitch(fPitch);
-	//
-	//	// 하체 처리용
-	//	if(auto pPlayer = std::dynamic_pointer_cast<CPlayer>(m_mapGameObjects[updatePkt->id]))
-	//	{
-	//		pPlayer->SetMoveInput(updatePkt->move_input);
-	//	}
+		if( auto pPlayer = (CPlayer*) m_mapGameObjects[updatePkt->id] )
+		{
+			pPlayer->SetState(updatePkt->act_type);
+		}
+		else if (auto pZombie = (CZombieObject*)(m_mapGameObjects[updatePkt->id]))
+		{
+			switch (updatePkt->act_type)
+			{
+			case ActionType::ZMOVE:
+				pZombie->SetState((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_RUNNING);
+				break;
+			case ActionType::ATTACK:
+				pZombie->SetState((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_ATTACK);
+				break;
+			case ActionType::RANGED:
+				pZombie->SetState((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_ATTACK);
+				break;
+			case ActionType::DEAD:
+				pZombie->SetState((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_DEATH);
+				//pZombie->Died();
+				break;
+			case ActionType::HIT:
+				pZombie->SetState((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_HIT);
+				break;
+			default:
+				pZombie->SetState((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_IDLE);
+				break;
+			}
+		}
+		else {
+			m_mapGameObjects[updatePkt->id]->SetState(updatePkt->act_type);
+		}
 
-	//	if (g_bNetworkDebugMode) {
-	//		std::string DebugOutput = "S_C_OBJECT_UPDATE[" + std::to_string(updatePkt->id) + "] ";
-	//		DebugOutput += "position : (" + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + ")\n";
-	//		OutputDebugStringA(DebugOutput.c_str());
-	//	}
-	//	break;
-	//}
-	//case S_C_OBJECT_REMOVE:
-	//{
-	//	pkt_sc_object_remove* removePkt = reinterpret_cast<pkt_sc_object_remove*>(recv_p);
-	//	RemoveObject(m_mapGameObjects[removePkt->id]);
-	//	m_mapGameObjects.erase(removePkt->id);
-	//	break;
-	//}
+		float fPitch = updatePkt->pitch;
+		if(auto pCamera = m_mapGameObjects[updatePkt->id]->GetComponent<CCamera>()) pCamera->SetPitch(fPitch);
+	
+		// 하체 처리용
+		if(auto pPlayer = (CPlayer*)(m_mapGameObjects[updatePkt->id]))
+		{
+			pPlayer->SetMoveInput(updatePkt->move_input);
+		}
 
-	//case S_C_STAGE_INFO:
-	//{
-	//	break;
-	//}
-	//case S_C_SCORE_INFO:
-	//{
-	//	break;
-	//}
-	//default:
-	//	break;
-	//}
+		if (g_bNetworkDebugMode) {
+			std::string DebugOutput = "S_C_OBJECT_UPDATE[" + std::to_string(updatePkt->id) + "] ";
+			DebugOutput += "position : (" + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + ")\n";
+			OutputDebugStringA(DebugOutput.c_str());
+		}
+		break;
+	}
+	case S_C_OBJECT_REMOVE:
+	{
+		pkt_sc_object_remove* removePkt = reinterpret_cast<pkt_sc_object_remove*>(recv_p);
+		RequestDestroyObject(m_mapGameObjects[removePkt->id]->GetID() );
+		m_mapGameObjects.erase(removePkt->id);
+		break;
+	}
+
+	case S_C_STAGE_INFO:
+	{
+		break;
+	}
+	case S_C_SCORE_INFO:
+	{
+		break;
+	}
+	default:
+		break;
+	}
 }
 
 void COnlineScene::SendPlayerState()
