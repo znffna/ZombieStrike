@@ -20,7 +20,7 @@ void CSprite::Initialize(std::wstring wstrFilepath)
 	titleTextureRecipe.filePath = wstrFilepath;
 	titleTextureRecipe.type = RESOURCE_TEXTURE2D;
 	titleTextureRecipe.source = TEXTURE_SOURCE_FILE;
-	titleTextureRecipe.name = L"Sprite Image";
+	titleTextureRecipe.name = L" Sprite Image";
 	titleTextureRecipe.rootparameterindex = ROOT_PARAMETER_ALBEDO_TEXTURE;
 
 	m_ppMaterials[0]->SetTexture(std::make_shared<CTexture>(titleTextureRecipe));
