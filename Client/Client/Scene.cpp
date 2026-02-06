@@ -624,9 +624,9 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	// Depth Write Texture
 	{
 		d3dDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-		d3dDescriptorRange.NumDescriptors = MAX_DEPTH_TEXTURES;
-		d3dDescriptorRange.BaseShaderRegister = 14; // t14: Depth Buffer
-		d3dDescriptorRange.RegisterSpace = 0;
+		d3dDescriptorRange.NumDescriptors = 64; // MAX_DEPTH_TEXTURES;
+		d3dDescriptorRange.BaseShaderRegister = 0; // t0, space1 : Depth Buffer
+		d3dDescriptorRange.RegisterSpace = 1;
 		d3dDescriptorRange.OffsetInDescriptorsFromTableStart = 0;
 
 		d3dDescriptorRanges.push_back(d3dDescriptorRange);

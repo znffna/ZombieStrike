@@ -75,7 +75,7 @@ float3 GetCameraPosition()
 
 #define _WITH_PCF_FILTERING
 
-Texture2D<float> gtxtDepthTextures[MAX_DEPTH_TEXTURES] : register(t14);
+Texture2D<float> gtxtDepthTextures[] : register(t0, space1);
 SamplerComparisonState gssComparisonPCFShadow : register(s2);
 
 float Compute3x3ShadowFactor(float2 uv, float fDepth, uint nIndex)
