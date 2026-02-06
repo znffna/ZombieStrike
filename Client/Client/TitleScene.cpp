@@ -23,29 +23,30 @@ void CTitleScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 	// Title / Background
 	{
-		TextureRecipe titleTextureRecipe;
-		titleTextureRecipe.filePath = L"Image/Title.dds";
-		titleTextureRecipe.type = RESOURCE_TEXTURE2D;
-		titleTextureRecipe.source = TEXTURE_SOURCE_FILE;
-		titleTextureRecipe.name = L"Title Image";
-		titleTextureRecipe.rootparameterindex = ROOT_PARAMETER_ALBEDO_TEXTURE;
-		//
+		//TextureRecipe titleTextureRecipe;
+		//titleTextureRecipe.filePath = L"Image/Title.dds";
+		//titleTextureRecipe.type = RESOURCE_TEXTURE2D;
+		//titleTextureRecipe.source = TEXTURE_SOURCE_FILE;
+		//titleTextureRecipe.name = L"Title Image";
+		//titleTextureRecipe.rootparameterindex = ROOT_PARAMETER_ALBEDO_TEXTURE;
+		////
 
-		std::shared_ptr<CTexture> pTitleTexture = std::make_shared<CTexture>(titleTextureRecipe);
+		//std::shared_ptr<CTexture> pTitleTexture = std::make_shared<CTexture>(titleTextureRecipe);
 
-		//std::shared_ptr<CTexture> pTitleTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
-		//pTitleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Title.dds", RESOURCE_TEXTURE2D, 0);
-		//CScene::CreateShaderResourceViews(pd3dDevice, pTitleTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+		////std::shared_ptr<CTexture> pTitleTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
+		////pTitleTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Title.dds", RESOURCE_TEXTURE2D, 0);
+		////CScene::CreateShaderResourceViews(pd3dDevice, pTitleTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
 
-		std::shared_ptr<CMaterial> pTitleMaterial = std::make_shared<CMaterial>();
-		pTitleMaterial->SetTexture(pTitleTexture);
-		pTitleMaterial->SetShader(pQuadShader);
+		//std::shared_ptr<CMaterial> pTitleMaterial = std::make_shared<CMaterial>();
+		//pTitleMaterial->SetTexture(pTitleTexture);
+		//pTitleMaterial->SetShader(pQuadShader);
 
-		auto pBackgroundObject = RequestCreateObject(TypeTag<CSprite>()); 
-		pBackgroundObject->Initialize(pd3dDevice, pd3dCommandList);
-		pBackgroundObject->SetMesh(pRectangleMesh);
-		pBackgroundObject->AddMaterial(pTitleMaterial);
+		//auto pBackgroundObject = RequestCreateObject(TypeTag<CSprite>()); 
+		//pBackgroundObject->Initialize(pd3dDevice, pd3dCommandList);
+		//pBackgroundObject->SetMesh(pRectangleMesh);
+		//pBackgroundObject->AddMaterial(pTitleMaterial);
 
+		auto pBackgroundObject = RequestCreateObject(TypeTag<CSprite>(), L"Image/Title.dds");
 		pBackgroundObject->SetSize(0.0f, 0.0f, 1.0f, 1.0f);
 
 		m_pBackgroundObject = pBackgroundObject;
@@ -53,29 +54,30 @@ void CTitleScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 	// Start
 	{
-		TextureRecipe titleTextureRecipe;
-		titleTextureRecipe.filePath = L"Image/Start.dds";
-		titleTextureRecipe.type = RESOURCE_TEXTURE2D;
-		titleTextureRecipe.source = TEXTURE_SOURCE_FILE;
-		titleTextureRecipe.name = L"Start Image";
-		titleTextureRecipe.rootparameterindex = ROOT_PARAMETER_ALBEDO_TEXTURE;
-		//
+		//TextureRecipe titleTextureRecipe;
+		//titleTextureRecipe.filePath = L"Image/Start.dds";
+		//titleTextureRecipe.type = RESOURCE_TEXTURE2D;
+		//titleTextureRecipe.source = TEXTURE_SOURCE_FILE;
+		//titleTextureRecipe.name = L"Start Image";
+		//titleTextureRecipe.rootparameterindex = ROOT_PARAMETER_ALBEDO_TEXTURE;
+		////
 
-		std::shared_ptr<CTexture> pStartTexture = std::make_shared<CTexture>(titleTextureRecipe);
+		//std::shared_ptr<CTexture> pStartTexture = std::make_shared<CTexture>(titleTextureRecipe);
 
-		//std::shared_ptr<CTexture> pStartTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
-		//pStartTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Start.dds", RESOURCE_TEXTURE2D, 0);
-		//CScene::CreateShaderResourceViews(pd3dDevice, pStartTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
+		////std::shared_ptr<CTexture> pStartTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
+		////pStartTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Start.dds", RESOURCE_TEXTURE2D, 0);
+		////CScene::CreateShaderResourceViews(pd3dDevice, pStartTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);
 
-		std::shared_ptr<CMaterial> pStartMaterial = std::make_shared<CMaterial>();
-		pStartMaterial->SetTexture(pStartTexture);
-		pStartMaterial->SetShader(pQuadShader);
+		//std::shared_ptr<CMaterial> pStartMaterial = std::make_shared<CMaterial>();
+		//pStartMaterial->SetTexture(pStartTexture);
+		//pStartMaterial->SetShader(pQuadShader);
 
-		auto pStartButton = RequestCreateObject(TypeTag<CSprite>());
-		pStartButton->Initialize(pd3dDevice, pd3dCommandList);
-		pStartButton->SetMesh(pRectangleMesh);
-		pStartButton->AddMaterial(pStartMaterial);
+		//auto pStartButton = RequestCreateObject(TypeTag<CSprite>());
+		//pStartButton->Initialize(pd3dDevice, pd3dCommandList);
+		//pStartButton->SetMesh(pRectangleMesh);
+		//pStartButton->AddMaterial(pStartMaterial);
 
+		auto pStartButton = RequestCreateObject(TypeTag<CSprite>(), L"Image/Start.dds");
 		pStartButton->SetSize(0.6f, 0.7f, 0.4f, 0.5f);
 
 		m_pStartButton = pStartButton;
@@ -83,29 +85,29 @@ void CTitleScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 	// Exit
 	{
-		TextureRecipe titleTextureRecipe;
-		titleTextureRecipe.filePath = L"Image/Exit.dds";
-		titleTextureRecipe.type = RESOURCE_TEXTURE2D;
-		titleTextureRecipe.source = TEXTURE_SOURCE_FILE;
-		titleTextureRecipe.name = L"Exit Image";
-		titleTextureRecipe.rootparameterindex = ROOT_PARAMETER_ALBEDO_TEXTURE;
-		//
+		//TextureRecipe titleTextureRecipe;
+		//titleTextureRecipe.filePath = L"Image/Exit.dds";
+		//titleTextureRecipe.type = RESOURCE_TEXTURE2D;
+		//titleTextureRecipe.source = TEXTURE_SOURCE_FILE;
+		//titleTextureRecipe.name = L"Exit Image";
+		//titleTextureRecipe.rootparameterindex = ROOT_PARAMETER_ALBEDO_TEXTURE;
+		////
 
-		std::shared_ptr<CTexture> pExitTexture = std::make_shared<CTexture>(titleTextureRecipe);
+		//std::shared_ptr<CTexture> pExitTexture = std::make_shared<CTexture>(titleTextureRecipe);
 
 	/*	std::shared_ptr<CTexture> pExitTexture = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1);
 		pExitTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Image/Exit.dds", RESOURCE_TEXTURE2D, 0);
 		CScene::CreateShaderResourceViews(pd3dDevice, pExitTexture.get(), 0, ROOT_PARAMETER_STANDARD_TEXTURES);*/
 
-		std::shared_ptr<CMaterial> pExitMaterial = std::make_shared<CMaterial>();
+		/*std::shared_ptr<CMaterial> pExitMaterial = std::make_shared<CMaterial>();
 		pExitMaterial->SetTexture(pExitTexture);
-		pExitMaterial->SetShader(pQuadShader);
+		pExitMaterial->SetShader(pQuadShader);*/
 
-		auto pExitButton = RequestCreateObject(TypeTag<CSprite>());
-		pExitButton->Initialize(pd3dDevice, pd3dCommandList);
-		pExitButton->SetMesh(pRectangleMesh);
-		pExitButton->AddMaterial(pExitMaterial);
+		//pExitButton->Initialize(pd3dDevice, pd3dCommandList);
+		//pExitButton->SetMesh(pRectangleMesh);
+		//pExitButton->AddMaterial(pExitMaterial);
 
+		auto pExitButton = RequestCreateObject(TypeTag<CSprite>(), L"Image/Exit.dds");
 		pExitButton->SetSize(0.6f, 0.2f, 0.4f, 0.5f);
 
 		m_pExitButton = pExitButton;

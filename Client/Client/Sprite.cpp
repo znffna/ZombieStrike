@@ -14,19 +14,19 @@ CSprite::CSprite() : CGameObject()
 	m_ppMaterials.push_back(pMaterial);
 }
 
-CSprite::CSprite(std::wstring wstrFilepath)
-	: CSprite()
+void CSprite::Initialize(std::wstring wstrFilepath)
 {
-	auto cursorTexture = CResourceManager::Instance().LoadOrCreateTexture(wstrFilepath);
-	if(cursorTexture == nullptr)
-	{
-		m_ppMaterials[0]->m_strTexturePaths[0] = wstrFilepath;
-		m_ppMaterials[0]->m_strTextureNames[0] = to_string(::GetFileName(wstrFilepath));
-	}
+	TextureRecipe titleTextureRecipe;
+	titleTextureRecipe.filePath = wstrFilepath;
+	titleTextureRecipe.type = RESOURCE_TEXTURE2D;
+	titleTextureRecipe.source = TEXTURE_SOURCE_FILE;
+	titleTextureRecipe.name = L"Sprite Image";
+	titleTextureRecipe.rootparameterindex = ROOT_PARAMETER_ALBEDO_TEXTURE;
 
-	m_ppMaterials[0]->SetTexture(cursorTexture);
+	m_ppMaterials[0]->SetTexture(std::make_shared<CTexture>(titleTextureRecipe));
 	CResourceManager::Instance().RegisterMaterialUpload(m_ppMaterials[0].get());
 }
+
 
 // 2D Sprite
 void CSprite::SetSize(float cx, float cy, float width, float height) {
