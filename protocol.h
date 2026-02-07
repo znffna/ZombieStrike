@@ -67,6 +67,7 @@ enum GunType : SIZE1 {
 enum PKT_TYPE : SIZE1 {
 
     C_S_LOGIN = 1,
+    C_S_LOADING_FINISH,
     C_S_UPDATE,
 
     C_S_SHOOT,
@@ -125,6 +126,7 @@ inline const char* ToString(GunType gun) {
 inline const char* ToString(PKT_TYPE type) {
     switch (type) {
     case C_S_LOGIN:         return "C_S_LOGIN";
+    case C_S_LOADING_FINISH:return "C_S_LOADING_FINISH";
     case C_S_UPDATE:        return "C_S_UPDATE";
     case C_S_SHOOT:         return "C_S_SHOOT";
     case C_S_HIT:           return "C_S_HIT";
@@ -254,6 +256,10 @@ struct pkt_cs_login {
     PacketHeader header{sizeof(*this), PKT_TYPE::C_S_LOGIN };
     SIZE1 skin_type;
     char name[MAX_NAME_SIZE];
+};
+
+struct pkt_cs_loading_finish {
+    PacketHeader header{ sizeof(*this), PKT_TYPE::C_S_LOADING_FINISH };
 };
 
 // 플레이어 업데이트 패킷

@@ -38,7 +38,10 @@ void COnlineScene::Update(float deltaTime)
 	// Network Client Update
 	if (NetworkingClient::Instance().IsRunning())
 	{
-		// Network Client Update
+		// - 로딩 완료 전엔 상태 전송 금지
+		if (!m_sentLoadingFinish)
+			return;
+
 		// 즉 클라처리 결과를 서버에 보고
 		SendPlayerState();
 	}
@@ -123,6 +126,13 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		m_pPlayer->SetSkin(packet->skin_type);
 		m_mapGameObjects[packet->id] = m_pPlayer;
 		m_mapObjectTypes[packet->id] = ObjectType::PLAYER;
+
+		// // [COnlineScene::ProcessPacket] - S_C_OBJ_INFO 수신 직후 로딩 완료 신호(1회)
+		if (!m_sentLoadingFinish) {
+			m_sentLoadingFinish = true;
+			NetworkingClient::Instance().SendLoadingFinishPacket();
+		}
+
 		break;
 	}
 	case S_C_OBJECT_ADD:

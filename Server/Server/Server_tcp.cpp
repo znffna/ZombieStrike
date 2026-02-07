@@ -219,6 +219,7 @@ short IN_g_player_n= 0;
 
 class SESSION;
 std::unordered_map<SIZEID, SESSION> g_users;
+std::mutex g_usersMutex; // // [GLOBAL] - g_users 보호
 // std::unordered_map<SIZEID, std::shared_ptr<SESSION>>로 교체
 
 void CALLBACK g_recv_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
@@ -274,6 +275,9 @@ public:
     SIZE1           _act_type;      
     SIZE1           _move_input;
 
+    std::atomic_bool _is_loaded{ false };
+    std::atomic_bool _alive{ true };        // - 소켓 생존 플래그
+
     void do_recv() {
         DWORD flags = 0;
         ZeroMemory(&_recv_over._over, sizeof(_recv_over._over));
@@ -286,9 +290,10 @@ public:
         if (ret == SOCKET_ERROR) {
             int err = WSAGetLastError();
             if (err != WSA_IO_PENDING) {
+                _alive.store(false, std::memory_order_release);
 				std::cout << "[do_recv] WSARecv failed: " << err << "\n";
                 closesocket(_c_socket);
-                g_users.erase(_id);
+                { std::lock_guard<std::mutex> lk(g_usersMutex); g_users.erase(_id); }
             }
             else {
 				//DEBUG_LOG("[do_recv] WSARecv: IO_PENDING (정상)\n");
@@ -357,6 +362,8 @@ public:
 	}
 
     void do_send(void* buff) {
+        if (!_alive.load(std::memory_order_acquire)) return;
+
         OVER_EXP* send_ov = new OVER_EXP(OP_SEND);
         SIZE2 packet_size = reinterpret_cast<SIZE2*>(buff)[0];
         memcpy(send_ov->_buffer, buff, packet_size);
@@ -366,8 +373,12 @@ public:
 
 		//DEBUG_LOG("[do_send] ID = " << _id << ", size = " << packet_size << ", type = " << (int)reinterpret_cast<SIZE2*>(buff)[1] << std::endl);
         int ret = WSASend(_c_socket, send_ov->_wsabuf, 1, &size_sent, 0, &(send_ov->_over), g_send_callback);
-        if (ret == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-			std::cout << "[do_send] WSASend failed: " << WSAGetLastError() << "\n";
+        if (ret == SOCKET_ERROR) {
+            int e = WSAGetLastError();
+            if (e != WSA_IO_PENDING) {
+                // // [SESSION::do_send] - 소켓 죽음 처리(10054 포함)
+                _alive.store(false, std::memory_order_release);
+            }
         }
     }
 
@@ -468,6 +479,75 @@ public:
      //    }
      //}
     }
+    void SendSceneSnapshot()
+    {
+        // 1) 나에게: 이미 로딩 완료된 플레이어들만 ADD
+        for (auto& [id, u] : g_users) {
+            if (id == _id) continue;
+            if (u._obj_type != ObjectType::PLAYER) continue;
+            if (!u._is_loaded.load(std::memory_order_acquire)) continue;
+
+            pkt_sc_object_add add{};
+            add.header.size = sizeof(add);
+            add.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+            add.id = id;
+            add.obj_type = ObjectType::PLAYER;
+            add.skin_type = u._skin_type;
+            strcpy_s(add.name, u._name.c_str());
+            add.startposition = u._position;
+            add.starthp = u._hp;
+            add.gun_type = u._gun_type;
+            add.act_type = u._act_type;
+            add.move_input = u._move_input;
+
+            this->do_send(&add);
+        }
+
+        // 2) 나에게: 기존 좀비들 ADD (스킨 테이블 일관성 유지)
+        for (auto* zombie : g_zombies) {
+            if (!zombie) continue;
+            if (zombie->IsRemoved()) continue;
+
+            pkt_sc_object_add add{};
+            add.header.size = sizeof(add);
+            add.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+            add.id = zombie->GetID();
+            add.obj_type = ObjectType::ZOMBIE;
+
+            auto sit = g_zombieSkin.find(zombie->GetID());
+            add.skin_type = (sit != g_zombieSkin.end()) ? sit->second : 0;
+
+            strcpy_s(add.name, "Zombie");
+            add.startposition = zombie->GetPosition();
+            add.starthp = zombie->GetHP();
+            add.gun_type = static_cast<GunType>(0);
+
+            this->do_send(&add);
+        }
+    }
+
+    // // [SESSION::BroadcastAddMe] - 로딩 완료된 다른 유저에게만 "나" ADD 브로드캐스트
+    void BroadcastAddMe()
+    {
+        pkt_sc_object_add me{};
+        me.header.size = sizeof(me);
+        me.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+        me.id = _id;
+        me.obj_type = ObjectType::PLAYER;
+        me.skin_type = _skin_type;
+        strcpy_s(me.name, _name.c_str());
+        me.startposition = _position;
+        me.starthp = _hp;
+        me.gun_type = _gun_type;
+        me.act_type = _act_type;
+        me.move_input = _move_input;
+
+        for (auto& [id, u] : g_users) {
+            if (id == _id) continue;
+            if (!u._is_loaded.load(std::memory_order_acquire)) continue; // 로딩중에게는 보내지 않음
+            u.do_send(&me);
+        }
+    }
 
 	void process_packet(SIZE2* packet) {
 
@@ -483,7 +563,6 @@ public:
         {
             pkt_cs_login* loginPacket = reinterpret_cast<pkt_cs_login*>(packet);
             _obj_type   = ObjectType::PLAYER;
-            //_skin_type  = loginPacket->skin_type;
             const int assigned = (IN_g_player_n % 3);
 
             _skin_type = static_cast<SIZE1>(assigned);
@@ -501,76 +580,95 @@ public:
             _move_input = 0;
 
             IN_g_player_n++;
+
 			//DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _name << "\n");
-			//DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _skin_type << "\n");
+            //DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _skin_type << "\n");
+            
+            _is_loaded.store(false, std::memory_order_release); // 로딩 완료 전
             send_obj_info();
+
             //send_object_update();
-
-			pkt_sc_object_add p_Add_P;
-            ZeroMemory(&p_Add_P, sizeof(p_Add_P));
-			p_Add_P.header.size = sizeof(p_Add_P);
-			p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
-			p_Add_P.id = _id;
-			p_Add_P.obj_type = ObjectType::PLAYER;
-			p_Add_P.skin_type = _skin_type;
-            strcpy_s(p_Add_P.name, _name.c_str());
-			p_Add_P.startposition = _position;
-			p_Add_P.starthp = _hp;
-			p_Add_P.gun_type = BULLET_PISTOL;
-            p_Add_P.act_type = _act_type;
-            p_Add_P.move_input = _move_input;
-
-            for (auto& u : g_users) {
-                if (u.first != _id) // 나를 제외한 상대방에게 알리고
-                    u.second.do_send(&p_Add_P);
-            }
-			for (auto& u : g_users) {
-				if (u.first != _id) {// 나를 제외한 상대방의 정보를 나에게 알리고
-                    pkt_sc_object_add p_Add_P;
-                    ZeroMemory(&p_Add_P, sizeof(p_Add_P));
-                    p_Add_P.header.size = sizeof(p_Add_P);
-                    p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
-
-                    p_Add_P.id = u.first;
-                    p_Add_P.obj_type = ObjectType::PLAYER;
-                    p_Add_P.skin_type = u.second._skin_type;
-                    strcpy_s(p_Add_P.name, u.second._name.c_str());
-                    p_Add_P.startposition = u.second._position;
-                    p_Add_P.starthp = u.second._hp;
-                    p_Add_P.gun_type = u.second._gun_type;
-                    p_Add_P.act_type = u.second._act_type;
-                    p_Add_P.move_input = u.second._move_input;
-					do_send(&p_Add_P);
-				}
-			}
-
-            // [C_S_LOGIN] 기존 좀비 스냅샷은 "신규 접속자(나)"에게만 유니캐스트
-            pkt_sc_object_add packet;
-            for (auto zombie : g_zombies) {
-                ZeroMemory(&packet, sizeof(packet));
-                packet.header.size = sizeof(packet);
-                packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
-                packet.id = zombie->GetID();
-                packet.obj_type = ObjectType::ZOMBIE;
-
-                // // C_S_LOGIN - 저장된 좀비 스킨으로 스냅샷 일관성 유지
-                auto sit = g_zombieSkin.find(zombie->GetID());                   // - find skin
-                packet.skin_type = (sit != g_zombieSkin.end()) ? sit->second : 0;
-
-                strcpy_s(packet.name, "Zombie");
-                packet.startposition = zombie->GetPosition();
-                packet.starthp = zombie->GetHP();
-                //packet.gun_type = GunType::BULLET_MAX; // [추가] 누락 보정(좀비는 총 안씀)
-                packet.gun_type = static_cast<GunType>(0);
-
-                // 나(this 세션)에게만 전송
-                this->do_send(&packet);
-            }
-
             break;
+            //{
+            //    pkt_sc_object_add p_Add_P;
+            //    ZeroMemory(&p_Add_P, sizeof(p_Add_P));
+            //    p_Add_P.header.size = sizeof(p_Add_P);
+            //    p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+            //    p_Add_P.id = _id;
+            //    p_Add_P.obj_type = ObjectType::PLAYER;
+            //    p_Add_P.skin_type = _skin_type;
+            //    strcpy_s(p_Add_P.name, _name.c_str());
+            //    p_Add_P.startposition = _position;
+            //    p_Add_P.starthp = _hp;
+            //    p_Add_P.gun_type = BULLET_PISTOL;
+            //    p_Add_P.act_type = _act_type;
+            //    p_Add_P.move_input = _move_input;
+            //
+            //    for (auto& u : g_users) {   // 다른 사람에게 나 add
+            //        if (u.first != _id)
+            //            u.second.do_send(&p_Add_P);
+            //    }
+            //    for (auto& u : g_users) {   // 나에게 다른 사람 add
+            //        if (u.first != _id) {
+            //            pkt_sc_object_add p_Add_P;
+            //            ZeroMemory(&p_Add_P, sizeof(p_Add_P));
+            //            p_Add_P.header.size = sizeof(p_Add_P);
+            //            p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+            //
+            //            p_Add_P.id = u.first;
+            //            p_Add_P.obj_type = ObjectType::PLAYER;
+            //            p_Add_P.skin_type = u.second._skin_type;
+            //            strcpy_s(p_Add_P.name, u.second._name.c_str());
+            //            p_Add_P.startposition = u.second._position;
+            //            p_Add_P.starthp = u.second._hp;
+            //            p_Add_P.gun_type = u.second._gun_type;
+            //            p_Add_P.act_type = u.second._act_type;
+            //            p_Add_P.move_input = u.second._move_input;
+            //            do_send(&p_Add_P);
+            //        }
+            //    }
+            //
+            //    // [C_S_LOGIN] 기존 좀비 스냅샷은 "신규 접속자(나)"에게만 유니캐스트
+            //    pkt_sc_object_add packet;
+            //    for (auto zombie : g_zombies) {
+            //        ZeroMemory(&packet, sizeof(packet));
+            //        packet.header.size = sizeof(packet);
+            //        packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
+            //        packet.id = zombie->GetID();
+            //        packet.obj_type = ObjectType::ZOMBIE;
+            //
+            //        // // C_S_LOGIN - 저장된 좀비 스킨으로 스냅샷 일관성 유지
+            //        auto sit = g_zombieSkin.find(zombie->GetID());                   // - find skin
+            //        packet.skin_type = (sit != g_zombieSkin.end()) ? sit->second : 0;
+            //
+            //        strcpy_s(packet.name, "Zombie");
+            //        packet.startposition = zombie->GetPosition();
+            //        packet.starthp = zombie->GetHP();
+            //        //packet.gun_type = GunType::BULLET_MAX; // [추가] 누락 보정(좀비는 총 안씀)
+            //        packet.gun_type = static_cast<GunType>(0);
+            //
+            //        // 나(this 세션)에게만 전송
+            //        this->do_send(&packet);
+            //    }
+            //
+            //    break;
+            //}
         }
+
+        case PKT_TYPE::C_S_LOADING_FINISH:
+        {
+            _is_loaded.store(true); // 핵심
+
+            SendSceneSnapshot();    // ← 이 시점부터만
+            BroadcastAddMe();       // 다른 플레이어에게 나 add
+        }
+        break;
+
         case PKT_TYPE::C_S_UPDATE:
         {
+            // // [SESSION::process_packet] - 로딩중엔 월드 영향 패킷 무시(텔포/꼬임 방지)
+            if (!_is_loaded.load(std::memory_order_acquire)) break;
+
 			pkt_cs_update* updatePacket = reinterpret_cast<pkt_cs_update*>(packet);
 
 
@@ -775,11 +873,17 @@ void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
 {
     auto my_id = reinterpret_cast<SIZEID>(p_over->hEvent);
 
-    if (g_users.find(my_id) == g_users.end()) {
-		std::cout << "[ERROR] Invalid session ID: " << my_id << "\n";
-        return;
+    SESSION* s = nullptr;
+    {
+        std::lock_guard<std::mutex> lk(g_usersMutex); // // [g_recv_callback] - g_users 보호
+        auto it = g_users.find(my_id);
+        if (it == g_users.end()) {
+            std::cout << "[ERROR] Invalid session ID: " << my_id << "\n";
+            return;
+        }
+        s = &it->second;
     }
-    g_users[my_id].recv_callback(num_bytes);
+    s->recv_callback(num_bytes); 
 
 }
 
@@ -842,8 +946,12 @@ void SpawnZombies(int count) {
         //p.gun_type = GunType::BULLET_MAX; 
         p.gun_type = static_cast<GunType>(0);
 
-        for (auto& [id, session] : g_users)
+        for (auto& [id, session] : g_users) {
+            // // [SpawnZombies] - 로딩 완료된 유저에게만 좀비 ADD 전송
+            if (!session._is_loaded.load(std::memory_order_acquire)) continue;
             session.do_send(&p);
+        }
+            
     }
 }
 
@@ -869,10 +977,13 @@ void ZombieAIThread() {
         std::vector<Vec3> playerPositions;
         std::vector<std::pair<SIZEID, Vec3>> playerList;  // // ZombieAIThread - ID 포함
         for (auto& [id, session] : g_users) {
-            if (session._obj_type == ObjectType::PLAYER) {
-                playerPositions.push_back(session._position);
-                playerList.emplace_back(id, session._position);
-            }
+            if (session._obj_type != ObjectType::PLAYER) continue;
+
+            // // [ZombieAIThread] - 로딩중 플레이어는 좀비 인지 대상에서 제외
+            if (!session._is_loaded.load(std::memory_order_acquire)) continue;
+
+            playerPositions.push_back(session._position);
+            playerList.emplace_back(id, session._position);
         }
 
         for (auto& zombie : g_zombies) {

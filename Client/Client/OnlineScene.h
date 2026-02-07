@@ -46,6 +46,9 @@ private:
 
 	std::unordered_map< int, ObjectType > m_mapObjectTypes; // - id별 obj_type 저장
 
+	// LoadingFinish 패킷 1회 전송 보장용
+	bool m_sentLoadingFinish = false;
+
 	char m_nMoveInput;
 };
 

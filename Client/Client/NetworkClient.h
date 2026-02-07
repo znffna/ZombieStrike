@@ -4,6 +4,7 @@
 #include <string>
 #include <queue>
 #include <mutex>
+#include <atomic>
 #include "../../protocol.h"
 #include "NetworkClient.h"
 
@@ -79,6 +80,8 @@ private:
     bool is_connect = false; // 종료 여부
 	bool is_running = false; // recv loop이 수행중인지 확인
 
+    std::atomic_bool m_sentLoadingFinish{ false }; // - 로딩 완료 패킷 중복 전송 방지 플래그
+
     std::thread recvThread;
 
     void SetConnect(bool connect = true) { is_connect = connect; }
@@ -120,6 +123,11 @@ public:
 
     // SendPacket (테스트로 구현)
     void SendLoginPacket(std::string& name);
+
+    // 로딩 완료 신호 1회 전송
+    void SendLoadingFinishPacket();
+    // 재접속 대비 리셋
+    void ResetLoadingFinishFlag() { m_sentLoadingFinish.store(false, std::memory_order_release); }
 
     // 동기적 별도스레드 recv_Loop 제작
 	std::mutex write_lock; // 쓰기 작업을 위한 뮤텍스

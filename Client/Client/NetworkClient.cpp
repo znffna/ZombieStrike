@@ -143,6 +143,9 @@ void NetworkingClient::Logout()
 	read_queue.clear();
 	write_queue.clear();
     WSACleanup();
+    // - 재접속 대비 로딩완료 플래그 리셋
+    m_sentLoadingFinish.store(false, std::memory_order_release);
+
     SetConnect(false);
 }
 
@@ -154,6 +157,27 @@ void NetworkingClient::SendLoginPacket(std::string& name)
     loginPkt.skin_type = 1;
     strcpy_s(loginPkt.name, MAX_NAME_SIZE, name.c_str());
     send_packet((char*)&loginPkt);
+}
+
+// - 로딩 완료 신호 1회 전송
+void NetworkingClient::SendLoadingFinishPacket()
+{
+    if (!IsConnect()) return;
+
+    bool expected = false;
+    if (!m_sentLoadingFinish.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
+        return; // 이미 보냄
+    }
+
+    pkt_cs_loading_finish pkt{};
+    pkt.header.size = sizeof(pkt_cs_loading_finish);
+    pkt.header.type = PKT_TYPE::C_S_LOADING_FINISH;
+
+    send_packet((char*)&pkt);
+
+    if (g_bNetworkDebugMode) {
+        OutputDebugStringA("[클라] C_S_LOADING_FINISH 전송 완료\n");
+    }
 }
 
 void NetworkingClient::recv_loop()
@@ -445,6 +469,7 @@ void NetworkingClient::send_packet(char* packet) {
 std::string GetPacketName(PKT_TYPE packetType) {
     const std::unordered_map<PKT_TYPE, std::string> packetNames = {
         { C_S_LOGIN, "C_S_LOGIN" },
+        { C_S_LOADING_FINISH, "C_S_LOADING_FINISH" },
         { C_S_UPDATE, "C_S_UPDATE" },
         { C_S_SHOOT, "C_S_SHOOT" },
         { C_S_HIT, "C_S_HIT" },
@@ -455,6 +480,10 @@ std::string GetPacketName(PKT_TYPE packetType) {
         { S_C_STAGE_INFO, "S_C_STAGE_INFO" },
         { S_C_SCORE_INFO, "S_C_SCORE_INFO" }
     };
+
+    // [GetPacketName] - .at() 크래시 방지(UNKNOWN 처리)
+    auto it = packetNames.find(packetType);
+    if (it == packetNames.end()) return "UNKNOWN";
 
     return packetNames.at(packetType);
 }
