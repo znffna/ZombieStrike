@@ -1,7 +1,7 @@
 #pragma once
 #include "GameObject.h"
 class CGun;
-class FIRE_INFO;
+struct FIRE_INFO;
 class CGaugeBar;
 
 enum PLAYER_ANIMATION_POSE : int // Number == Animation Track Index

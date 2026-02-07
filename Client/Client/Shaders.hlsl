@@ -30,7 +30,7 @@ cbuffer cbFrameworkInfo : register(b3)
     float gfElapsedTime : packoffset(c0.y);
     uint gnRenderMode : packoffset(c0.z);
     float gfBias : packoffset(c0.w);
-    uint gnShadowIndex : packoffset(c1.x);
+    int gnShadowIndex : packoffset(c1.x);
 };
 
 #include "Light.hlsl"
