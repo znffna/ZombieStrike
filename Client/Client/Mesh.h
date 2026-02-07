@@ -137,45 +137,7 @@ public:
 	std::string GetName() const { return(m_strMeshName); }
 
 	// method
-	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
-	{ 
-		if (IsGPUInitialized()) return;
-
-		// Create Position Buffer
-		if (!m_pxmf3Positions.empty())
-		{
-			m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions.data(), sizeof(XMFLOAT3) * m_pxmf3Positions.size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
-
-			std::wstring wstrName = to_wstring(GetName()) + L" : m_pd3dPositionBuffer";
-			m_pd3dPositionBuffer->SetName(wstrName.c_str());
-
-			m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
-			m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
-			m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_pxmf3Positions.size();
-		}
-
-		// Create SubSet Index Buffers
-		if (!m_ppnSubSetIndices.empty())
-		{
-			m_ppd3dSubSetIndexBuffers.resize(m_ppnSubSetIndices.size());
-			m_pd3dSubSetIndexBufferViews.resize(m_ppnSubSetIndices.size());
-			m_ppd3dSubSetIndexUploadBuffers.resize(m_ppnSubSetIndices.size());
-
-			for (UINT i = 0; i < m_ppnSubSetIndices.size(); i++)
-			{
-				m_ppd3dSubSetIndexBuffers[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[i].data(), sizeof(UINT) * (UINT)m_ppnSubSetIndices[i].size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[i]);
-
-				std::wstring wstrName = to_wstring(GetName()) + L" : m_ppd3dSubSetIndexBuffers[" + std::to_wstring(i) + L"]";
-				m_ppd3dSubSetIndexBuffers[i]->SetName(wstrName.c_str());
-
-				m_pd3dSubSetIndexBufferViews[i].BufferLocation = m_ppd3dSubSetIndexBuffers[i]->GetGPUVirtualAddress();
-				m_pd3dSubSetIndexBufferViews[i].Format = DXGI_FORMAT_R32_UINT;
-				m_pd3dSubSetIndexBufferViews[i].SizeInBytes = (UINT)(sizeof(UINT) * m_ppnSubSetIndices[i].size());
-			}
-		}
-
-		SetGPUInitialized(true);
-	}
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList) { }
 	virtual void ReleaseShaderVariables() { }
 
@@ -208,7 +170,7 @@ protected:
 
 	bool m_bInitialized = false; // GPU 자원 생성 여부
 
-private:
+protected:
 	void SetGPUInitialized(bool bInitialized) { m_bInitialized = bInitialized; }
 
 protected:
@@ -654,8 +616,15 @@ public:
 class CBulletMesh : public CMesh
 {
 public:
+	CBulletMesh() : CMesh()
+	{
+		ZeroMemory(&m_d3dStreamOutputBufferView, sizeof(D3D12_STREAM_OUTPUT_BUFFER_VIEW));
+	};
+
 	CBulletMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Look, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
 	virtual ~CBulletMesh();
+
+	void Initialize(UINT nMaxParticles);
 
 	enum BULLET_TYPE : int
 	{
@@ -671,8 +640,14 @@ public:
 
 	UINT								m_nMaxBullets = MAX_BULLETS;
 
+	std::vector<CBulletVertex> m_pBulletVertices; // Use Position
+	std::vector<CBulletVertex> m_pNewBulletVertices; // Batch Update
+
 	ComPtr<ID3D12Resource> m_pd3dStreamOutputBuffer = NULL;
 	ComPtr<ID3D12Resource> m_pd3dDrawBuffer = NULL;
+	D3D12_RESOURCE_STATES m_d3dStreamOutputBufferState;
+	D3D12_RESOURCE_STATES m_d3dDrawBufferState;
+
 	ComPtr<ID3D12Resource> m_pd3dUploadDrawBuffer = NULL;
 	CBulletVertex* m_pBullets = NULL;
 
@@ -689,8 +664,16 @@ public:
 
 	D3D12_STREAM_OUTPUT_BUFFER_VIEW		m_d3dStreamOutputBufferView;
 
+	// CPU + GPU 메모리 초기화 함수
 	virtual void CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Look, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size);
 	virtual void CreateStreamOutputBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nMaxParticles);
+
+	// Initialize 에서 호출하는 CPU 메모리 초기화 함수
+	virtual void CreateVertexBuffer();
+	virtual void CreateStreamOutputBuffer(UINT nMaxParticles);
+
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList) override;
 
 	virtual void PreRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);
@@ -699,6 +682,10 @@ public:
 	virtual void OnPostRender(int nPipelineState);
 
 	// method
+	// 아래 함수들은 어디까지나 Render 호출 Loop에서 Mesh를 사용하는 Object들이 Mesh->Render 이전에 호출을 해주어야 한다.
+	// 그리고 그 뜻은 총을 쏘는 오브젝트가 발사된 위치등을 기록해두었다가 한번에 Bullet Mesh에 넘겨주는 역할을 한다.
+	// 그리고 이 Mesh의 RenderLoop (즉 BulletObject의 RenderLoop 이전에 호출되어야 한다.) 
 	void AddBullet(const CBulletVertex& Bullet);
 	void AddBullets(const std::vector<CBulletVertex>& Bullets);
+
 };

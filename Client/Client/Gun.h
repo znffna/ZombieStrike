@@ -52,8 +52,7 @@ public:
 		m_nCurrentAmmo = m_nMaxAmmo; // 최대 탄약 수로 초기화
 	}
 
-
-	static std::shared_ptr<CBulletParticleObject> m_pBulletObject; // 총알 오브젝트
+	static CBulletParticleObject* m_pBulletObject; // 총알 오브젝트
 private:
 	void SetFireTime(float fFireTimePerSecond)
 	{ 

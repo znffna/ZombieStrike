@@ -242,7 +242,7 @@ public:
 	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState) override;
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
 
-	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature) override;
 
 private:
 	std::shared_ptr<CDescirptorHeap> m_pd3dCbvSrvDescriptorHeap = NULL;

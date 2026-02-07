@@ -877,6 +877,7 @@ D3D12_BLEND_DESC CBillboardShader::CreateBlendState(int nPipelineState)
 
 CBulletShader::CBulletShader()
 {
+	m_bAllowShadow = false;
 }
 
 CBulletShader::~CBulletShader()
@@ -1039,7 +1040,7 @@ D3D12_STREAM_OUTPUT_DESC CBulletShader::CreateStreamOuputState(int nPipelineStat
 	return(d3dStreamOutputDesc);
 }
 
-void CBulletShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature)
+void CBulletShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	m_nPipelineStates = 2;
 	m_pd3dPipelineStates.resize(m_nPipelineStates);

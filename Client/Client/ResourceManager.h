@@ -39,7 +39,9 @@ public:
 		HRESULT hResult;
 		// Command Allocator »ý¼º
 		hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&m_pd3dCommandAllocator);
+		m_pd3dCommandAllocator->SetName((to_wstring(m_strName) + L" UploadContext Command Allocator").c_str());
 		hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dCommandAllocator, NULL, __uuidof(ID3D12GraphicsCommandList), (void**)&m_pd3dGraphicCommandList);
+		m_pd3dGraphicCommandList->SetName((to_wstring(m_strName) + L" UploadContext Graphic Command List").c_str());
 
 		hResult = m_pd3dGraphicCommandList->Close();
 

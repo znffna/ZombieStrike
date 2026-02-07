@@ -29,6 +29,8 @@ public:
 	// Object Update
 	virtual void Update(float fTimeElapsed) override;
 	void CollisionCheckFromLayers(std::vector<std::pair<GAMEOBJECT_LAYER, GAMEOBJECT_LAYER>>& ppObjectLayerPairs);
+	bool CheckMeshBoundCollision(CGameObject* pObjectA, CGameObject* pObjectB);
+	void CollisionCheckFromLayer(GAMEOBJECT_LAYER first, GAMEOBJECT_LAYER second);
 	
 	// Object Render
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = nullptr, bool bDepthWrite = false) override;

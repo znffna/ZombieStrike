@@ -21,13 +21,19 @@ class CBulletParticleObject : public CGameObject
 	//      : 즉, 총알이 날아가는 듯한 느낌만 주기 위함이며, 실제 피격효과로 인한 출력은 HitResult에 의해
 	//      : 별도 파티클 생성으로 이루어 진다.(즉, Trail과 혈흔 표현을 별도로 구현 예정)
 public:
+	CBulletParticleObject() {};
+
 	CBulletParticleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Look, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
 	virtual ~CBulletParticleObject();
+
+	void Initialize(UINT nMaxParticles);
 
 	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_BULLET; }
 
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false);
 	virtual void OnPostRender();
+
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
 
 	// method
 	void AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Look, float fRange);
@@ -49,7 +55,7 @@ public:
 	}
 
 	void UpdateBulletVertices(const std::vector<CBulletVertex>& pBulletVertices) {
-		//std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullets(pBulletVertices);
+		std::dynamic_pointer_cast<CBulletMesh>(m_pMesh)->AddBullets(pBulletVertices);
 	}
 
 	void ClearFireInfos() {
