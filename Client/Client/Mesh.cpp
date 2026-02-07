@@ -113,6 +113,7 @@ void CMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet)
 	{
 		pd3dCommandList->DrawInstanced(m_nVertices, 1, m_nOffset, 0);
 	}
+
 }
 
 void CMesh::OnPostRender(int nPipelineState)
@@ -1616,7 +1617,7 @@ void CBulletMesh::CreateVertexBuffer()
 	// Fill m_pBulletVertices
 	CBulletVertex pVertices;
 	pVertices.m_xmf3Destination = XMFLOAT3{ 0,0,0 };
-	pVertices.m_xmf3Position = XMFLOAT3{ 0,0,0 };
+	pVertices.m_xmf3Position = XMFLOAT3{ 100.0f, 1.0f, 100.f };
 	pVertices.m_xmf3Velocity = XMFLOAT3{ 0,0,0 };
 	pVertices.m_fLifetime = 0.0f;
 	pVertices.m_nBulletType = BULLET_TYPE_MAINTAIN;
@@ -1814,7 +1815,6 @@ void CBulletMesh::PreRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPip
 
 void CBulletMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
 {
-	UpdateShaderVariables(pd3dCommandList);
 
 	if (nPipelineState == 0)
 	{
@@ -1829,6 +1829,10 @@ void CBulletMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nPipeli
 		pd3dCommandList->ResolveQueryData(m_pd3dSOQueryHeap, D3D12_QUERY_TYPE_SO_STATISTICS_STREAM0, 0, 1, m_pd3dSOQueryBuffer, 0);
 #else
 		CMesh::Render(pd3dCommandList); //Stream Output to m_pd3dStreamOutputBuffer
+		{
+			std::string debug = "Bullet Draw Call Vertex : " + std::to_string(m_nVertices) + "\n";
+			OutputDebugStringA(debug.c_str());
+		}
 
 		::SynchronizeResourceTransition(pd3dCommandList, m_pd3dDefaultBufferFilledSize.Get(), D3D12_RESOURCE_STATE_STREAM_OUT, D3D12_RESOURCE_STATE_COPY_SOURCE);
 		pd3dCommandList->CopyResource(m_pd3dReadBackBufferFilledSize.Get(), m_pd3dDefaultBufferFilledSize.Get());
@@ -1840,6 +1844,10 @@ void CBulletMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nPipeli
 		pd3dCommandList->SOSetTargets(0, 1, NULL);
 
 		CMesh::Render(pd3dCommandList); //Render m_pd3dDrawBuffer 
+		{
+			std::string debug = "Bullet Draw Call Vertex : " + std::to_string(m_nVertices) + "\n";
+			OutputDebugStringA(debug.c_str());
+		}
 	}
 }
 

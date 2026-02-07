@@ -260,7 +260,7 @@ void CGameScene::BuildFiredBullets()
 		//m_pBulletObject->AddBullet(pBullet.xmf3Position, pBullet.xmf3Look, result.fImpactDistance);
 		
 		CBulletVertex pBulletVertex;
-		pBulletVertex.m_xmf3Position = pBullet.xmf3Position;
+		pBulletVertex.m_xmf3Position = pBullet.xmf3MuzzlePosition;
 		pBulletVertex.m_xmf3Destination = Vector3::Add(pBullet.xmf3Position, Vector3::ScalarProduct(pBullet.xmf3Look, pBullet.fRange));
 		pBulletVertex.m_xmf3Velocity = Vector3::ScalarProduct(pBullet.xmf3Look, pBullet.fspeed);
 		

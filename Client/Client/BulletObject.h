@@ -34,6 +34,7 @@ public:
 	virtual void OnPostRender();
 
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;
+	virtual void ReleaseShaderVariables() override;
 
 	// method
 	void AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Look, float fRange);
