@@ -75,6 +75,10 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
         return {}; // 빈 경로 반환
     }
 
+    if (m_map[endZ][endX] != 0) { // // AStar::FindPath - 목표가 벽이면 즉시 실패
+        return {};
+    }
+
     auto cmp = [](Node* a, Node* b) { return a->fCost() > b->fCost(); };
     std::priority_queue<Node*, std::vector<Node*>, decltype(cmp)> openList(cmp);
     std::unordered_set<int> closedList;
@@ -87,7 +91,20 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
     }
     openList.push(startNode);
 
+    std::vector<Node*> allocated;          // // AStar::FindPath - 모든 노드 소유(일괄 해제)
+    allocated.reserve(ASTAR_MAX_EXPANSIONS + 32);
+    allocated.push_back(startNode);        // // AStar::FindPath - startNode 등록
+
     std::vector<std::pair<int, int>> path;
+    auto cleanup_open = [&]() { // // AStar::FindPath - DEBUG/SAFE: openList 잔여 노드 해제
+        while (!openList.empty()) openList.pop();
+       /* while (!openList.empty()) {
+            delete openList.top();
+            openList.pop();
+        }*/
+    };
+
+    int expansions = 0; // // AStar::FindPath - DEBUG/SAFE: 확장 카운터
 
     while (!openList.empty())
     {
@@ -95,11 +112,19 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
         int key = current->z * m_width + current->x;
 
         if (closedList.find(key) != closedList.end()) {
-            delete current;
+            //delete current;
             continue;
         }
 
         closedList.insert(key);
+
+        // // AStar::FindPath - 탐색 상한(도달 불가능 목표에서 폭주 방지)
+        if (++expansions > ASTAR_MAX_EXPANSIONS) { // // AStar::FindPath - 탐색 상한(폭주 방지)
+            //delete current;                         // // AStar::FindPath - current 해제
+            //path.clear();
+            cleanup_open();                         // // AStar::FindPath - 잔여 해제
+            break;
+        }
 
         if (current->x == endX && current->z == endZ)
         {
@@ -109,7 +134,8 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
                 node = node->parent;
             }
             std::reverse(path.begin(), path.end());
-            delete current;
+            //delete current;      // // AStar::FindPath - current 해제
+            cleanup_open();      // // AStar::FindPath - 잔여 해제
             break;
         }
 
@@ -141,6 +167,8 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
             if (closedList.find(nextKey) != closedList.end()) continue;
 
             Node* neighbor = new Node{ nx, nz };
+            allocated.push_back(neighbor); // // AStar::FindPath - neighbor 등록
+
             float stepCost = (dir < 4) ? 1.0f : 1.41421356f;  // // A* 직/대각 비용
             neighbor->gCost = current->gCost + stepCost;      // // A* 누적 gCost 갱신
 
@@ -149,7 +177,8 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
             openList.push(neighbor);
         }
     }
-
+    cleanup_open(); // // AStar::FindPath - 안전 정리(잔여가 있을 경우)
+    for (auto* n : allocated) delete n; // // AStar::FindPath - 일괄 해제
     return path;
 }
 
@@ -318,11 +347,6 @@ bool ZombieAI::IsRemoved() const noexcept {
 
 void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime)
 {
-    // // // // // // // // // // // // // // // 
-    // TODO :: 공격// 시 바로 ZMOVE 가는 상황 방지 , 2.63333344 초임 
-    // // // // // // // // // // // // // // // // // // 
-
-
     if (IsRemoved()) return;
 
     if (playerPositions.empty()) return;
@@ -373,7 +397,8 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         const float ATTACK_RANGE_FLOOR = CELL_SIZE * 2.0f; // 셀 2칸 이내면 충분히 근접
         const float effectiveAttackRange = std::max(Z_ATTACK_RANGE, ATTACK_RANGE_FLOOR);
 
-        if (dist <= Z_ATTACK_RANGE && m_attack_cd <= 0.0f && m_stun_left <= 0.0f)
+        //if (dist <= Z_ATTACK_RANGE && m_attack_cd <= 0.0f && m_stun_left <= 0.0f)
+        if (dist <= effectiveAttackRange && m_attack_cd <= 0.0f && m_stun_left <= 0.0f && !IsAttacking()) 
         {
             TriggerAttack();
             // 공격 프레임에선 이동을 멈춰 '들이치기' 모션처럼 보이게 할 수도 있음.
@@ -390,27 +415,86 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         // SetTargetPosition / FindPath 호출 안 함
     }
     else {
-        bool needRepath =
-            (int)(newTarget.x) != (int)(m_targetX) ||
-            (int)(newTarget.z) != (int)(m_targetZ) ||
-            m_path.empty() ||
-            m_pathIndex >= m_path.size() ||
-            m_repath_timer > REPATH_INTERVAL;
-
-        if (needRepath) {
-            //DEBUG_LOG("[ZombieAI::Update] ID = %d -> 타겟 변경 또는 재계산 필요", m_id);
-            SetTargetPosition(newTarget.x, newTarget.z);   
-            FindPath();                                    
-            m_repath_timer = 0;                           
+        // // ZombieAI::Update - 경로 실패 쿨다운 감소(폭주 방지)
+        if (m_repath_fail_cd > 0.0f) {
+            m_repath_fail_cd -= deltaTime;
+            if (m_repath_fail_cd < 0.0f) m_repath_fail_cd = 0.0f;
         }
-        else {
-            m_repath_timer += deltaTime;                  
+
+        // // ZombieAI::Update - 목표를 "셀 단위"로 비교(불필요 재탐색 방지)
+        const int goal_cx = (int)(newTarget.x / CELL_SIZE);
+        const int goal_cz = (int)(newTarget.z / CELL_SIZE);
+
+        const bool goalChanged = (goal_cx != m_last_goal_cx) || (goal_cz != m_last_goal_cz);
+
+        m_repath_timer += deltaTime;
+
+        // // ZombieAI::Update - 재탐색은 1초 단위로만, 그리고 목표가 바뀌거나 경로가 끊겼을 때만
+        const bool needRepath =
+            (m_repath_timer >= REPATH_INTERVAL) &&
+            (goalChanged || m_path.empty() || m_pathIndex >= m_path.size());
+
+        if (needRepath && m_repath_fail_cd <= 0.0f) { // // ZombieAI::Update - 실패 쿨다운 중엔 A* 금지
+            SetTargetPosition(newTarget.x, newTarget.z); // // ZombieAI::Update - 타겟 갱신
+            FindPath();                                  // // ZombieAI::Update - 경로 재계산
+
+            m_last_goal_cx = goal_cx;                    // // ZombieAI::Update - 마지막 목표 셀 갱신
+            m_last_goal_cz = goal_cz;
+            m_repath_timer = 0.0f;                       // // ZombieAI::Update - 타이머 리셋
+
+            if (m_path.empty()) {
+                m_repath_fail_cd = REPATH_FAIL_COOLDOWN; // // ZombieAI::Update - 경로 실패 시 잠깐 쉬고 재시도
+            }
         }
     }
 
+    //else {
+    //    bool needRepath =
+    //        (int)(newTarget.x) != (int)(m_targetX) ||
+    //        (int)(newTarget.z) != (int)(m_targetZ) ||
+    //        m_path.empty() ||
+    //        m_pathIndex >= m_path.size() ||
+    //        m_repath_timer > REPATH_INTERVAL;
+    //
+    //    if (needRepath) {
+    //        //DEBUG_LOG("[ZombieAI::Update] ID = %d -> 타겟 변경 또는 재계산 필요", m_id);
+    //        SetTargetPosition(newTarget.x, newTarget.z);   
+    //        FindPath();                                    
+    //        m_repath_timer = 0;                           
+    //    }
+    //    else {
+    //        m_repath_timer += deltaTime;                  
+    //    }
+    //}
+
 
     // 3. 이동 처리 (경로 따라 이동)
-    if (m_path.empty() || m_pathIndex >= m_path.size()) return;
+    //if (m_path.empty() || m_pathIndex >= m_path.size()) return;
+    if (m_path.empty() || m_pathIndex >= m_path.size()) {
+        Vec3 myPos(m_x, 0, m_z);
+        Vec3 toPlayer = (closest - myPos);
+        if (toPlayer.LengthSquared() > 0.0001f) {
+            Vec3 moveDir = toPlayer.Normalize();
+            Vec3 finalMove = moveDir * Z_move_speed;
+
+            if (IsAttacking() || IsPausing()) finalMove = finalMove * 0.0f; // // ZombieAI::Update - 공격/정지 중엔 정지
+
+            Vec3 nextPos = myPos + finalMove; // // ZombieAI::Update - 다음 위치
+            int nx = (int)(nextPos.x / CELL_SIZE);
+            int nz = (int)(nextPos.z / CELL_SIZE);
+
+            if (nx < 0 || nx >= (int)m_map[0].size() || nz < 0 || nz >= (int)m_map.size() || m_map[nz][nx] != 0) {
+                finalMove = Vec3(0, 0, 0); // // ZombieAI::Update - 벽이면 이동 0
+            }
+
+            m_x += finalMove.x;
+            m_z += finalMove.z;
+            m_dirty = true;
+        }
+        return;
+    }
+
+
     auto& targetNode = m_path[m_pathIndex];
     Vec3 targetPos = GetNodeCenter(targetNode.first, targetNode.second);
 
@@ -497,9 +581,41 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
             finalMove = finalMove * Z_ATTACK_MOVE_SCALE;   // // 공격중 이동 억제
         }
 
+        //
+        const float prevX = m_x; // DEBUG(이동 전 좌표)
+        const float prevZ = m_z;
+        //
+
         m_x += finalMove.x;
         m_z += finalMove.z;
         m_dirty = true; // // 상태 변경 브로드캐스트
+
+        //
+        //static float s_dbg_accum = 0.0f;                   // // ZombieAI::Update - DEBUG 누적 타이머
+        //s_dbg_accum += deltaTime;                          // // ZombieAI::Update - DEBUG 누적 타이머
+        //static int s_watch_id = -1;                 // // ZombieAI::Update - DEBUG(감시할 좀비 id 1마리)
+        //if (s_watch_id == -1) s_watch_id = m_id;    // // ZombieAI::Update - DEBUG(처음 호출된 좀비 id로 고정)
+
+        //if (m_id == s_watch_id && s_dbg_accum >= 0.5f) {          // // ZombieAI::Update - DEBUG(좀비0만, 0.5초마다)
+        //    s_dbg_accum = 0.0f;
+
+        //    const float moved2 =
+        //        (m_x - prevX) * (m_x - prevX) + (m_z - prevZ) * (m_z - prevZ);
+
+        //    std::cout
+        //        << "[ZDBG][Update] id=" << m_id
+        //        << " dt=" << deltaTime
+        //        << " pos=(" << m_x << "," << m_z << ")"
+        //        << " prev=(" << prevX << "," << prevZ << ")"
+        //        << " finalMove=(" << finalMove.x << "," << finalMove.z << ")"
+        //        << " moved2=" << moved2
+        //        << " pathIdx=" << m_pathIndex
+        //        << " pathSz=" << m_path.size()
+        //        << " atkLeft=" << m_attack_left
+        //        << " stunLeft=" << m_stun_left
+        //        << " pauseLeft=" << m_pause_left
+        //        << "\n";
+        //}
     }
 
 }

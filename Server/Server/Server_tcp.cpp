@@ -818,6 +818,16 @@ void SpawnZombies(int count) {
 
 void ZombieAIThread() {
     while (serverRunning) {
+        //----------
+        static auto s_last = std::chrono::steady_clock::now(); // // ZombieAIThread - DEBUG(루프 간격)
+        auto now2 = std::chrono::steady_clock::now();
+        auto gap = std::chrono::duration_cast<std::chrono::milliseconds>(now2 - s_last).count();
+        s_last = now2;
+        if (gap > 200) { // // ZombieAIThread - DEBUG(루프 자체가 200ms 이상 멈춤)
+            std::cout << "[ZDBG][LoopGap] gap_ms=" << gap << "\n";
+        }
+        //----------
+
         auto now = std::chrono::steady_clock::now();
         std::chrono::duration<float> dt = now - lastTick;
         lastTick = now;
@@ -836,8 +846,22 @@ void ZombieAIThread() {
         for (auto& zombie : g_zombies) {
             if (zombie->IsRemoved()) continue;
 
-            zombie->Update(playerPositions, g_zombies, deltaTime);
+            //zombie->Update(playerPositions, g_zombies, deltaTime);
             // ZombieAIThread - 제거 플래그면 완전 스킵
+
+            //----------
+            auto t0 = std::chrono::steady_clock::now(); // // ZombieAIThread - DEBUG(Update 시간 측정)
+            zombie->Update(playerPositions, g_zombies, deltaTime); // // ZombieAIThread - Update 호출
+            auto t1 = std::chrono::steady_clock::now(); // // ZombieAIThread - DEBUG(Update 시간 측정)
+
+            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count(); // // ZombieAIThread - DEBUG(Update ms)
+            if (ms > 30) { // // ZombieAIThread - DEBUG(한 좀비 Update가 30ms 이상이면 경고)
+                std::cout << "[ZDBG][SlowUpdate] zid=" << zombie->GetID()
+                    << " ms=" << ms
+                    << " playerN=" << playerPositions.size()
+                    << "\n";
+            }
+            //----------
 
             if (zombie->IsDirty()) {
                 // 프레임 경합 방어: DEAD 상태면 업데이트 대신 제거 패킷
@@ -856,6 +880,22 @@ void ZombieAIThread() {
 
                 // 일반 업데이트 브로드캐스트
                 Object info = zombie->GetObjectinfo();
+
+                // // ZombieAIThread - DEBUG(송신값 확인): 좀비0만 0.5초마다 출력
+                //static float s_net_dbg_accum = 0.0f;                     // // ZombieAIThread - DEBUG 누적
+                //s_net_dbg_accum += deltaTime;                            // // ZombieAIThread - DEBUG 누적
+                //static int s_watch_id = -1;                           // // ZombieAIThread - DEBUG(감시할 좀비 id 1마리)
+                //if (s_watch_id == -1) s_watch_id = zombie->GetID();  // // ZombieAIThread - DEBUG(처음 만난 좀비 id로 고정)
+
+                //if (zombie->GetID() == s_watch_id && s_net_dbg_accum >= 0.5f) {   // // ZombieAIThread - DEBUG(좀비0만)
+                //    s_net_dbg_accum = 0.0f;
+                //    std::cout
+                //        << "[ZDBG][Send ] id=" << zombie->GetID()
+                //        << " pos=(" << info.position.x << "," << info.position.z << ")"
+                //        << " act=" << (int)info.act_type
+                //        << "\n";
+                //}
+
                 pkt_sc_object_update p{};
                 p.header.size = sizeof(p);
                 p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
