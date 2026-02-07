@@ -373,7 +373,8 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         const float ATTACK_RANGE_FLOOR = CELL_SIZE * 2.0f; // 셀 2칸 이내면 충분히 근접
         const float effectiveAttackRange = std::max(Z_ATTACK_RANGE, ATTACK_RANGE_FLOOR);
 
-        if (dist <= Z_ATTACK_RANGE && m_attack_cd <= 0.0f && m_stun_left <= 0.0f)
+        //if (dist <= Z_ATTACK_RANGE && m_attack_cd <= 0.0f && m_stun_left <= 0.0f)
+        if (dist <= effectiveAttackRange && m_attack_cd <= 0.0f && m_stun_left <= 0.0f && !IsAttacking()) 
         {
             TriggerAttack();
             // 공격 프레임에선 이동을 멈춰 '들이치기' 모션처럼 보이게 할 수도 있음.

@@ -25,9 +25,9 @@ constexpr float deltaTime = 1.0f / 60.0f;
 constexpr float ZOMBIE_HEIGHT = 1.8f;   // 좀비 키(미터 단위 가정)
 constexpr float ZOMBIE_RADIUS = 0.35f;  // 어깨/몸통 반지름
 
-constexpr float Z_ATTACK_RANGE = 1.2f;          // 월드 단위 (CELL_SIZE에 맞춰 조정 가능)
-constexpr float Z_ATTACK_COOLDOWN = 1.0f;       // 초
-constexpr float Z_ATTACK_ANIM_TIME = 0.35f;     // 공격 모션 유지 시간(초)
+constexpr float Z_ATTACK_RANGE = 1.2f;                // 월드 단위 (CELL_SIZE에 맞춰 조정 가능)
+constexpr float Z_ATTACK_COOLDOWN = 1.0f;             // 초
+constexpr float Z_ATTACK_ANIM_TIME = 2.63333344f;     // 공격 모션 유지 시간(초)
 
 //  좀비-좀비 분리력 파라미터
 constexpr float Z_SEPARATION_RADIUS = 1.2f;     // 이 거리 안에 들어오면 서로 밀어냄
