@@ -393,6 +393,7 @@ public:
 
     void send_object_update() {
         pkt_sc_object_update p_update;
+        ZeroMemory(&p_update, sizeof(p_update));
         p_update.header.size = sizeof(p_update);
         p_update.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
         p_update.id = _id;
@@ -476,9 +477,12 @@ public:
         {
             pkt_cs_login* loginPacket = reinterpret_cast<pkt_cs_login*>(packet);
             _obj_type   = ObjectType::PLAYER;
-            _skin_type  = loginPacket->skin_type;
+            //_skin_type  = loginPacket->skin_type;
+            const int assigned = (IN_g_player_n % 3);
+
+            _skin_type = static_cast<SIZE1>(assigned);
             _name       = loginPacket->name;
-            _position   = START_POSITIONS[IN_g_player_n % 3];
+            _position = START_POSITIONS[assigned];
             _velocity   = { 0.0f,0.0f, 0.0f };
             _look       = { 0.0f,0.0f, 0.0f };
             _pitch      = 0.0f;
@@ -497,6 +501,7 @@ public:
             //send_object_update();
 
 			pkt_sc_object_add p_Add_P;
+            ZeroMemory(&p_Add_P, sizeof(p_Add_P));
 			p_Add_P.header.size = sizeof(p_Add_P);
 			p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
 			p_Add_P.id = _id;
@@ -506,6 +511,8 @@ public:
 			p_Add_P.startposition = _position;
 			p_Add_P.starthp = _hp;
 			p_Add_P.gun_type = BULLET_PISTOL;
+            p_Add_P.act_type = _act_type;
+            p_Add_P.move_input = _move_input;
 
             for (auto& u : g_users) {
                 if (u.first != _id) // 나를 제외한 상대방에게 알리고
@@ -514,6 +521,7 @@ public:
 			for (auto& u : g_users) {
 				if (u.first != _id) {// 나를 제외한 상대방의 정보를 나에게 알리고
                     pkt_sc_object_add p_Add_P;
+                    ZeroMemory(&p_Add_P, sizeof(p_Add_P));
                     p_Add_P.header.size = sizeof(p_Add_P);
                     p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
 
@@ -523,6 +531,9 @@ public:
                     strcpy_s(p_Add_P.name, u.second._name.c_str());
                     p_Add_P.startposition = u.second._position;
                     p_Add_P.starthp = u.second._hp;
+                    p_Add_P.gun_type = u.second._gun_type;
+                    p_Add_P.act_type = u.second._act_type;
+                    p_Add_P.move_input = u.second._move_input;
 					do_send(&p_Add_P);
 				}
 			}
@@ -530,6 +541,7 @@ public:
             // [C_S_LOGIN] 기존 좀비 스냅샷은 "신규 접속자(나)"에게만 유니캐스트
             pkt_sc_object_add packet;
             for (auto zombie : g_zombies) {
+                ZeroMemory(&packet, sizeof(packet));
                 packet.header.size = sizeof(packet);
                 packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
                 packet.id = zombie->GetID();

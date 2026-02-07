@@ -44,6 +44,8 @@ public:
 private:
 	std::unordered_map< int, CGameObject* > m_mapGameObjects;
 
+	std::unordered_map< int, ObjectType > m_mapObjectTypes; // - idº° obj_type ÀúÀå
+
 	char m_nMoveInput;
 };
 

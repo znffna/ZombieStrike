@@ -56,7 +56,8 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override;
 
 	// Skin State
-	void SetSkinType(int nSkinType) { m_nSkinType = nSkinType % m_ModelName.size(); } // 여기선 Index만 설정 
+	//void SetSkinType(int nSkinType) { m_nSkinType = nSkinType % m_ModelName.size(); } // 여기선 Index만 설정 
+	void SetSkinType(int nSkinType);
 	int GetSkinType() const { return m_nSkinType; }
 	void SetSkin(int nSkinType);
 

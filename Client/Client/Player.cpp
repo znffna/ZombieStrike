@@ -280,24 +280,51 @@ void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 
 }
 
+// // CPlayer::SetSkinType - 네트워크 동기화(순서 무관) 지원
+void CPlayer::SetSkinType(int nSkinType)
+{
+	if (m_ModelName.empty()) return;
+
+	// 스킨 인덱스 보정
+	m_nSkinType = nSkinType % (int)m_ModelName.size();
+
+	if (!IsInitialized()) return;
+
+	auto anim = GetComponent<CAnimationController>();
+	if (!anim) return;
+
+	auto pPlayerModel = CResourceManager::Instance().GetModelInfo(m_ModelName[m_nSkinType]);
+	if (!pPlayerModel) return;
+
+	anim->SetModel(pPlayerModel);
+
+	// 본/슬롯/카메라 오프셋 재계산
+	OnPrepareAnimate();
+}
+
 void CPlayer::SetSkin(int nSkinType)
 {
-	SetSkinType(nSkinType);
-	auto pPlayerModel = CResourceManager::Instance().GetModelInfo(m_ModelName[m_nSkinType]);
-
-	// 바뀐 Model에 맞춰 Component 변경
-	auto animatoncontroller = GetComponent<CAnimationController>();
-	animatoncontroller->SetModel(pPlayerModel);
-
-	//auto pCollider = GetComponent<COBBCollider>();
-	//pCollider->SetCollider(FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound());
-
-	// 바뀐 Model에 맞춰 PrepareSkinning
-	OnPrepareAnimate();
-
-	//Update(0.0f);
-	//UpdateTransform();
+	SetSkinType(nSkinType); // SetSkinType가 즉시 모델 적용까지 처리
 }
+
+//void CPlayer::SetSkin(int nSkinType)
+//{
+//	SetSkinType(nSkinType);
+//	auto pPlayerModel = CResourceManager::Instance().GetModelInfo(m_ModelName[m_nSkinType]);
+//
+//	// 바뀐 Model에 맞춰 Component 변경
+//	auto animatoncontroller = GetComponent<CAnimationController>();
+//	animatoncontroller->SetModel(pPlayerModel);
+//
+//	//auto pCollider = GetComponent<COBBCollider>();
+//	//pCollider->SetCollider(FindFrame(m_MeshBoneName[m_nSkinType])->GetMeshBound());
+//
+//	// 바뀐 Model에 맞춰 PrepareSkinning
+//	OnPrepareAnimate();
+//
+//	//Update(0.0f);
+//	//UpdateTransform();
+//}
 
 bool CPlayer::Fire(FIRE_INFO* pFireInfo)
 { 
