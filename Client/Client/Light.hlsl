@@ -53,6 +53,38 @@ cbuffer cbLights : register(b4)
     int gnLights;
 };
 
+struct CB_TO_LIGHT_SPACE
+{
+    matrix mtxToTextureSpace;
+    float4 f4Position;
+};
+
+cbuffer cbToLightSpace : register(b5)
+{
+    CB_TO_LIGHT_SPACE gcbToLightSpaces[MAX_LIGHTS];
+};
+
+struct ShadowMapUVs
+{
+    float4 UVs[MAX_LIGHTS];
+};
+
+ShadowMapUVs CalculateShadowMapUVs(float4 positionW)
+{
+    ShadowMapUVs result;
+    for (int i = 0; i < MAX_LIGHTS; i++)
+    {
+        if (gcbToLightSpaces[i].f4Position.w != 0.0f)
+        {
+            result.UVs[i] = mul(positionW, gcbToLightSpaces[i].mtxToTextureSpace);
+            result.UVs[i].xyz /= result.UVs[i].w; // Perspective divide
+            //result.UVs[i] /= result.UVs[i].w; // Perspective divide
+        }
+    }
+    return result;
+}
+
+
 // return : Camera World Position
 float3 GetCameraPosition()
 {
@@ -223,12 +255,16 @@ float4 SpotLight(int nIndex, float3 vPosition, float3 vNormal, float3 vToCamera)
 //    return (cColor);
 //}
 
-float4 Lighting(float3 vPosition, float3 vNormal, bool bShadow, float4 shadowMapUVs[MAX_LIGHTS])
+float4 Lighting(float3 vPosition, float3 vNormal, bool bShadow)
 {
     float3 vCameraPosition = GetCameraPosition();
     float3 vToCamera = normalize(vCameraPosition - vPosition);
 
     float4 cColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    
+    float4 shadowMapUVs[MAX_LIGHTS];
+    shadowMapUVs = CalculateShadowMapUVs(float4(vPosition, 1.0f)).UVs;
+    
 	[unroll(MAX_LIGHTS)]
     for (int i = 0; i < gnLights; i++)
     {

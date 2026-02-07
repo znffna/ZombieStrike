@@ -34,17 +34,6 @@ cbuffer cbFrameworkInfo : register(b3)
 
 #include "Light.hlsl"
 
-struct CB_TO_LIGHT_SPACE
-{
-    matrix mtxToTextureSpace;
-    float4 f4Position;
-};
-
-cbuffer cbToLightSpace : register(b5)
-{
-    CB_TO_LIGHT_SPACE gcbToLightSpaces[MAX_LIGHTS];
-};
-
 // Render Config
 #define _WITH_STANDARD_TEXTURE_MULTIPLE_PARAMETERS
 
@@ -130,29 +119,7 @@ struct VS_STANDARD_OUTPUT
     float3 tangentW : TANGENT;
     float3 bitangentW : BITANGENT;
     float2 uv : TEXCOORD;
-    
-    float4 shadowMapUVs[MAX_LIGHTS] : TEXCOORD3;
 };
-
-struct ShadowMapUVs
-{
-    float4 UVs[MAX_LIGHTS];
-};
-
-ShadowMapUVs CalculateShadowMapUVs(float4 positionW)
-{
-    ShadowMapUVs result;
-    for (int i = 0; i < MAX_LIGHTS; i++)
-    {
-        if (gcbToLightSpaces[i].f4Position.w != 0.0f)
-        {
-            result.UVs[i] = mul(positionW, gcbToLightSpaces[i].mtxToTextureSpace);
-            result.UVs[i].xyz /= result.UVs[i].w; // Perspective divide
-            //result.UVs[i] /= result.UVs[i].w; // Perspective divide
-        }
-    }
-    return result;
-}
 
 VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
 {
@@ -166,8 +133,6 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
     output.bitangentW = mul(input.bitangent, (float3x3) gmtxGameObject);
     output.position = mul(mul(float4(positionW), gmtxView), gmtxProjection);
     output.uv = input.uv;
-    
-    output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;   
     
     return (output);
 }
@@ -205,7 +170,8 @@ float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
         float3 vNormal = normalize(cNormalColor.rgb * 2.0f - 1.0f); //[0, 1] → [-1, 1]
         normalW = normalize(mul(vNormal, TBN));
     }
-    cIllumination = Lighting(input.positionW, normalW, true, input.shadowMapUVs);
+    
+    cIllumination = Lighting(input.positionW, normalW, true);
   
     return lerp(cColor, cColor * cIllumination, 0.7);
     //return (1.0 - 2.0 * cIllumination) * cColor * cColor + 2.0 * cIllumination * cColor;
@@ -266,8 +232,6 @@ struct VS_TERRAIN_OUTPUT
     float4 color : COLOR;
     float2 uv0 : TEXCOORD0;
     float2 uv1 : TEXCOORD1;
-    
-    float4 shadowMapUVs[MAX_LIGHTS] : TEXCOORD3;
 };
 
 //정점 셰이더를 정의한다.
@@ -283,8 +247,6 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
     //output.position = float4(input.position, 1.0f);
     output.uv0 = input.uv0;
     output.uv1 = input.uv1;
-    
-    output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;
     
     return (output);
 }
@@ -303,7 +265,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     float4 detailTexColor = gtxtStandardTextures[1].Sample(gssWrap, input.uv1);
 #endif
     
-    float4 cIllumination = Lighting(input.positionW, input.normalW, true, input.shadowMapUVs);
+    float4 cIllumination = Lighting(input.positionW, input.normalW, true);
     //float4 cColor = texColor * 0.5f + cIllumination * 0.5f;
     float4 cColor = (texColor * 0.8f + detailTexColor * 0.2f);
     return lerp(cColor, cIllumination, 0.5f);
@@ -375,9 +337,6 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
 
     output.position = mul(mul(positionW, gmtxView), gmtxProjection);
     output.uv = input.uv;
-    
-    output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;
-  
 
     return (output);
 }
@@ -763,8 +722,7 @@ VS_LIGHTING_OUTPUT VSLighting(VS_LIGHTING_INPUT input)
 float4 PSLighting(VS_LIGHTING_OUTPUT input) : SV_TARGET
 {
     input.normalW = normalize(input.normalW);
-    float4 shadowMapUVs[MAX_LIGHTS];
-    float4 cIllumination = Lighting(input.positionW, input.normalW, false, shadowMapUVs);
+    float4 cIllumination = Lighting(input.positionW, input.normalW, false);
 
 //	return(cIllumination);
     return (float4(input.normalW * 0.5f + 0.5f, 1.0f));
@@ -795,8 +753,6 @@ struct VS_SHADOW_MAP_OUTPUT
     float4 position : SV_POSITION;
     float3 positionW : POSITION;
     float3 normalW : NORMAL;
-
-    float4 shadowMapUVs[MAX_LIGHTS] : TEXCOORD3;
 };
 
 VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_STANDARD_INPUT input)
@@ -808,14 +764,12 @@ VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_STANDARD_INPUT input)
     output.position = mul(mul(positionW, gmtxView), gmtxProjection);
     output.normalW = mul(float4(input.normal, 0.0f), gmtxGameObject).xyz;
 
-    output.shadowMapUVs = CalculateShadowMapUVs(positionW).UVs;
-
     return (output);
 }
 
 float4 PSShadowMapShadow(VS_SHADOW_MAP_OUTPUT input) : SV_TARGET
 {
-    float4 cIllumination = Lighting(input.positionW, normalize(input.normalW), true, input.shadowMapUVs);
+    float4 cIllumination = Lighting(input.positionW, normalize(input.normalW), true);
     return (cIllumination);
 }
 
