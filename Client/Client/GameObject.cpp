@@ -256,7 +256,7 @@ void CGameObject::UpdateBBCache()
 		GetComponentsInChildren<CCollider>(pCachesColliders);
 
 		// Pointer 가아닌 실제 Value를 복사
-		std::vector<CCollider*> pColliders(pCachesColliders.size());
+		std::vector<CCollider*> pColliders;
 		for (auto& pCollider : pCachesColliders)
 		{
 			pColliders.push_back(pCollider);
