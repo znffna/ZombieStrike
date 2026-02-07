@@ -152,7 +152,8 @@ struct Light
 	bool					m_bEnable;
 	int						m_nType;
 	float					m_fRange;
-	float					padding;
+	//float					padding;
+	int 					m_nShadowStartIndex;
 };
 
 struct CB_LIGHT_INFO

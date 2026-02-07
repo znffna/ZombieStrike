@@ -1689,6 +1689,7 @@ void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommand
 	{
 		if (pLights[j].m_bEnable)
 		{
+			pLights[j].m_nShadowStartIndex = j;
 			XMFLOAT3 xmf3Position = pLights[j].m_xmf3Position;
 			XMFLOAT3 xmf3Look = pLights[j].m_xmf3Direction;
 			XMFLOAT3 xmf3Up = XMFLOAT3(0.0f, +1.0f, 0.0f);

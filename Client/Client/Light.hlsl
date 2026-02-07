@@ -36,7 +36,8 @@ struct LIGHT
     bool m_bEnable;
     int m_nType;
     float m_fRange;
-    float padding;
+    //float padding;
+    uint m_nShadowStartIndex;
 };
 
 cbuffer cbMaterialInfo : register(b1)
@@ -73,7 +74,7 @@ float3 GetCameraPosition()
 
 #define MAX_DEPTH_TEXTURES		MAX_LIGHTS
 
-#define _WITH_PCF_FILTERING
+// #define _WITH_PCF_FILTERING
 
 Texture2D<float> gtxtDepthTextures[] : register(t0, space1);
 SamplerComparisonState gssComparisonPCFShadow : register(s2);
@@ -234,9 +235,9 @@ float4 Lighting(float3 vPosition, float3 vNormal, bool bShadow, float4 shadowMap
 		float fShadowFactor = 1.0f;
         float fBias = gfBias; // Bias to prevent shadow acne
 #ifdef _WITH_PCF_FILTERING
-		if (bShadow) fShadowFactor = Compute3x3ShadowFactor(shadowMapUVs[i].xy, shadowMapUVs[i].z + fBias, i);
+		if (bShadow) fShadowFactor = Compute3x3ShadowFactor(shadowMapUVs[gLights[i].m_nShadowStartIndex].xy, shadowMapUVs[gLights[i].m_nShadowStartIndex].z + fBias, gLights[i].m_nShadowStartIndex);
 #else
-        if (bShadow) fShadowFactor = gtxtDepthTextures[i].SampleCmpLevelZero(gssComparisonPCFShadow, shadowMapUVs[i].xy, shadowMapUVs[i].z).r;
+        if (bShadow) fShadowFactor = gtxtDepthTextures[gLights[i].m_nShadowStartIndex].SampleCmpLevelZero(gssComparisonPCFShadow, shadowMapUVs[gLights[i].m_nShadowStartIndex].xy, shadowMapUVs[gLights[i].m_nShadowStartIndex].z).r;
 #endif
         if (gLights[i].m_bEnable)
         {
