@@ -75,6 +75,10 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
         return {}; // 빈 경로 반환
     }
 
+    if (m_map[endZ][endX] != 0) { // // AStar::FindPath - 목표가 벽이면 즉시 실패
+        return {};
+    }
+
     auto cmp = [](Node* a, Node* b) { return a->fCost() > b->fCost(); };
     std::priority_queue<Node*, std::vector<Node*>, decltype(cmp)> openList(cmp);
     std::unordered_set<int> closedList;
@@ -87,7 +91,18 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
     }
     openList.push(startNode);
 
+    std::vector<Node*> allocated;          // // AStar::FindPath - 모든 노드 소유(일괄 해제)
+    allocated.reserve(ASTAR_MAX_EXPANSIONS + 32);
+    allocated.push_back(startNode);        // // AStar::FindPath - startNode 등록
+
     std::vector<std::pair<int, int>> path;
+    auto cleanup_open = [&]() { // // AStar::FindPath - DEBUG/SAFE: openList 잔여 노드 해제
+        while (!openList.empty()) openList.pop();
+       /* while (!openList.empty()) {
+            delete openList.top();
+            openList.pop();
+        }*/
+    };
 
     int expansions = 0; // // AStar::FindPath - DEBUG/SAFE: 확장 카운터
 
@@ -97,15 +112,18 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
         int key = current->z * m_width + current->x;
 
         if (closedList.find(key) != closedList.end()) {
-            delete current;
+            //delete current;
             continue;
         }
 
         closedList.insert(key);
 
         // // AStar::FindPath - 탐색 상한(도달 불가능 목표에서 폭주 방지)
-        if (++expansions > ASTAR_MAX_EXPANSIONS) {
-            return {}; // 실패 처리
+        if (++expansions > ASTAR_MAX_EXPANSIONS) { // // AStar::FindPath - 탐색 상한(폭주 방지)
+            //delete current;                         // // AStar::FindPath - current 해제
+            //path.clear();
+            cleanup_open();                         // // AStar::FindPath - 잔여 해제
+            break;
         }
 
         if (current->x == endX && current->z == endZ)
@@ -116,7 +134,8 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
                 node = node->parent;
             }
             std::reverse(path.begin(), path.end());
-            delete current;
+            //delete current;      // // AStar::FindPath - current 해제
+            cleanup_open();      // // AStar::FindPath - 잔여 해제
             break;
         }
 
@@ -148,6 +167,8 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
             if (closedList.find(nextKey) != closedList.end()) continue;
 
             Node* neighbor = new Node{ nx, nz };
+            allocated.push_back(neighbor); // // AStar::FindPath - neighbor 등록
+
             float stepCost = (dir < 4) ? 1.0f : 1.41421356f;  // // A* 직/대각 비용
             neighbor->gCost = current->gCost + stepCost;      // // A* 누적 gCost 갱신
 
@@ -156,7 +177,8 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
             openList.push(neighbor);
         }
     }
-
+    cleanup_open(); // // AStar::FindPath - 안전 정리(잔여가 있을 경우)
+    for (auto* n : allocated) delete n; // // AStar::FindPath - 일괄 해제
     return path;
 }
 
