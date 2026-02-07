@@ -106,7 +106,7 @@ float3 GetCameraPosition()
 
 #define MAX_DEPTH_TEXTURES		MAX_LIGHTS
 
-// #define _WITH_PCF_FILTERING
+#define _WITH_PCF_FILTERING
 
 Texture2D<float> gtxtDepthTextures[] : register(t0, space1);
 SamplerComparisonState gssComparisonPCFShadow : register(s2);
@@ -255,7 +255,7 @@ float4 SpotLight(int nIndex, float3 vPosition, float3 vNormal, float3 vToCamera)
 //    return (cColor);
 //}
 
-float4 Lighting(float3 vPosition, float3 vNormal, bool bShadow)
+float4 Lighting(float3 vPosition, float3 vNormal, float fdepthV, bool bShadow)
 {
     float3 vCameraPosition = GetCameraPosition();
     float3 vToCamera = normalize(vCameraPosition - vPosition);

@@ -30,6 +30,7 @@ cbuffer cbFrameworkInfo : register(b3)
     float gfElapsedTime : packoffset(c0.y);
     uint gnRenderMode : packoffset(c0.z);
     float gfBias : packoffset(c0.w);
+    uint gnShadowIndex : packoffset(c1.x);
 };
 
 #include "Light.hlsl"
@@ -119,6 +120,7 @@ struct VS_STANDARD_OUTPUT
     float3 tangentW : TANGENT;
     float3 bitangentW : BITANGENT;
     float2 uv : TEXCOORD;
+    float depthV : VIEWDEPTH;
 };
 
 VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
@@ -133,6 +135,7 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
     output.bitangentW = mul(input.bitangent, (float3x3) gmtxGameObject);
     output.position = mul(mul(float4(positionW), gmtxView), gmtxProjection);
     output.uv = input.uv;
+    output.depthV = mul(float4(positionW), gmtxView).z;
     
     return (output);
 }
@@ -171,7 +174,7 @@ float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
         normalW = normalize(mul(vNormal, TBN));
     }
     
-    cIllumination = Lighting(input.positionW, normalW, true);
+    cIllumination = Lighting(input.positionW, normalW, input.depthV, true);
   
     return lerp(cColor, cColor * cIllumination, 0.7);
     //return (1.0 - 2.0 * cIllumination) * cColor * cColor + 2.0 * cIllumination * cColor;
@@ -232,6 +235,7 @@ struct VS_TERRAIN_OUTPUT
     float4 color : COLOR;
     float2 uv0 : TEXCOORD0;
     float2 uv1 : TEXCOORD1;
+    float depthV : VIEWDEPTH;  
 };
 
 //정점 셰이더를 정의한다.
@@ -247,6 +251,7 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
     //output.position = float4(input.position, 1.0f);
     output.uv0 = input.uv0;
     output.uv1 = input.uv1;
+    output.depthV = mul(positionW, gmtxView).z;
     
     return (output);
 }
@@ -265,7 +270,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
     float4 detailTexColor = gtxtStandardTextures[1].Sample(gssWrap, input.uv1);
 #endif
     
-    float4 cIllumination = Lighting(input.positionW, input.normalW, true);
+    float4 cIllumination = Lighting(input.positionW, input.normalW, input.depthV, true);
     //float4 cColor = texColor * 0.5f + cIllumination * 0.5f;
     float4 cColor = (texColor * 0.8f + detailTexColor * 0.2f);
     return lerp(cColor, cIllumination, 0.5f);
@@ -337,6 +342,7 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
 
     output.position = mul(mul(positionW, gmtxView), gmtxProjection);
     output.uv = input.uv;
+    output.depthV = mul(positionW, gmtxView).z;
 
     return (output);
 }
@@ -706,6 +712,7 @@ struct VS_LIGHTING_OUTPUT
     float4 position : SV_POSITION;
     float3 positionW : POSITION;
     float3 normalW : NORMAL;
+    float depthV : VIEWDEPTH;
 };
 
 VS_LIGHTING_OUTPUT VSLighting(VS_LIGHTING_INPUT input)
@@ -715,6 +722,7 @@ VS_LIGHTING_OUTPUT VSLighting(VS_LIGHTING_INPUT input)
     output.normalW = mul(input.normal, (float3x3) gmtxGameObject);
     output.positionW = (float3) mul(float4(input.position, 1.0f), gmtxGameObject);
     output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
+    output.depthV = mul(float4(output.positionW, 1.0f), gmtxView).z;
 
     return (output);
 }
@@ -722,7 +730,7 @@ VS_LIGHTING_OUTPUT VSLighting(VS_LIGHTING_INPUT input)
 float4 PSLighting(VS_LIGHTING_OUTPUT input) : SV_TARGET
 {
     input.normalW = normalize(input.normalW);
-    float4 cIllumination = Lighting(input.positionW, input.normalW, false);
+    float4 cIllumination = Lighting(input.positionW, input.normalW, input.depthV, false);
 
 //	return(cIllumination);
     return (float4(input.normalW * 0.5f + 0.5f, 1.0f));
@@ -753,6 +761,7 @@ struct VS_SHADOW_MAP_OUTPUT
     float4 position : SV_POSITION;
     float3 positionW : POSITION;
     float3 normalW : NORMAL;
+    float depthV : VIEWDEPTH;
 };
 
 VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_STANDARD_INPUT input)
@@ -763,13 +772,14 @@ VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_STANDARD_INPUT input)
     output.positionW = positionW.xyz;
     output.position = mul(mul(positionW, gmtxView), gmtxProjection);
     output.normalW = mul(float4(input.normal, 0.0f), gmtxGameObject).xyz;
+    output.depthV = mul(positionW, gmtxView).z;
 
     return (output);
 }
 
 float4 PSShadowMapShadow(VS_SHADOW_MAP_OUTPUT input) : SV_TARGET
 {
-    float4 cIllumination = Lighting(input.positionW, normalize(input.normalW), true);
+    float4 cIllumination = Lighting(input.positionW, normalize(input.normalW), input.depthV, true);
     return (cIllumination);
 }
 
@@ -874,7 +884,7 @@ float4 PSTextureToViewport(VS_TEXTURED_OUTPUT input) : SV_Target
 
 float4 PSShadowToViewport(VS_TEXTURED_OUTPUT input) : SV_Target
 {
-    float fDepthFromLight0 = gtxtDepthTextures[0].SampleLevel(gssBorder, input.uv, 0).r;
+    float fDepthFromLight0 = gtxtDepthTextures[gnShadowIndex].SampleLevel(gssBorder, input.uv, 0).r;
     
     return ((float4) (fDepthFromLight0));
 }

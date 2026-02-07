@@ -372,10 +372,6 @@ public:
 		for (auto& pComponent : m_pComponents) {
 			auto rawptr = pComponent.get();
 			if (auto casted = dynamic_cast<T*>(rawptr)) {
-				{
-					std::string debugOutput = "GetComponentsInChildren found component of type: " + std::string(typeid(T).name()) + " in object: " + m_strName + "\n";
-					OutputDebugStringA(debugOutput.c_str());
-				}
 				pVec.push_back(casted);
 			}
 		}

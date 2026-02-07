@@ -49,6 +49,7 @@ struct CB_FRAMEWORK_INFO
 	//int					m_nMaxFlareType2Particles = 150;
 	UINT					m_nRenderMode;
 	float					m_fBias;
+	UINT					m_nShadowmapIndex;
 	//float					m_nPadding;
 };
 
@@ -161,6 +162,7 @@ protected:
 	ComPtr<ID3D12Resource> m_pd3dcbFrameworkInfo;
 	CB_FRAMEWORK_INFO* m_pcbMappedFrameworkInfo = NULL;
 	float m_fBias = 0.007f; // Depth Bias  0.0001f
+	int m_nShadowmapIndex = 0;
 
 private:
 	// ----------------------------------------
@@ -331,5 +333,6 @@ private:
 	void CreateDebugTextObjects();
 	void UpdateDebugTextObjects();
 	void ReleaseDebugTextObjects();
+
 };
 

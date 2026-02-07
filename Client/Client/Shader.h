@@ -301,6 +301,8 @@ public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pContext = NULL);
 	virtual void ReleaseObjects();
 
+	void RenderShadowSlice(ID3D12GraphicsCommandList* pd3dCommandList, int shadowIndex, const XMMATRIX& lightView, const XMMATRIX& lightProj, const XMFLOAT3& lightPos, CScene* pScene);
+
 	void PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene);
 
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene);

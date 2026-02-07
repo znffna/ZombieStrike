@@ -1678,18 +1678,272 @@ XMMATRIX CreateOrthographicProjectionMatrix(XMMATRIX& xmmtxLightView, CCamera* p
 	return(xmmtxProjection);
 }
 
+void CDepthRenderShader::RenderShadowSlice(
+	ID3D12GraphicsCommandList* pd3dCommandList,
+	int shadowIndex,
+	const XMMATRIX& lightView,
+	const XMMATRIX& lightProj,
+	const XMFLOAT3& lightPos,
+	CScene* pScene
+)
+{
+	// DepthCamera[shadowIndex] <-> DepthTexture[shadowIndex] 1:1
+	m_ppDepthRenderCameras[shadowIndex]->SetPosition(lightPos);
+	XMStoreFloat4x4(&m_ppDepthRenderCameras[shadowIndex]->m_xmf4x4View, lightView);
+	XMStoreFloat4x4(&m_ppDepthRenderCameras[shadowIndex]->m_xmf4x4Projection, lightProj);
+
+	// ToLightMatrix도 ShadowMap index 기준으로 저장 (중요)
+	XMMATRIX toTex = XMMatrixTranspose(lightView * lightProj * m_xmProjectionToTexture);
+	XMStoreFloat4x4(&m_pToLightSpaces[shadowIndex].m_pxmf4x4ToTextures, toTex);
+	m_pToLightSpaces[shadowIndex].m_pxmf4LightPositions = XMFLOAT4(lightPos.x, lightPos.y, lightPos.z, 1.0f);
+
+	::SynchronizeResourceTransition(
+		pd3dCommandList,
+		m_pDepthFromLightTexture->GetResource(shadowIndex),
+		D3D12_RESOURCE_STATE_COMMON,
+		D3D12_RESOURCE_STATE_RENDER_TARGET
+	);
+
+	float clear[4] = { 1,1,1,1 };
+	pd3dCommandList->ClearRenderTargetView(m_pd3dRtvCPUDescriptorHandles[shadowIndex], clear, 0, nullptr);
+	pd3dCommandList->ClearDepthStencilView(m_d3dDsvDescriptorCPUHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	pd3dCommandList->OMSetRenderTargets(1, &m_pd3dRtvCPUDescriptorHandles[shadowIndex], TRUE, &m_d3dDsvDescriptorCPUHandle);
+
+	Render(pd3dCommandList, m_ppDepthRenderCameras[shadowIndex].get(), pScene);
+
+	::SynchronizeResourceTransition(
+		pd3dCommandList,
+		m_pDepthFromLightTexture->GetResource(shadowIndex),
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATE_COMMON
+	);
+}
+
+static int GetShadowMapCountByType(int lightType)
+{
+	switch (lightType)
+	{
+	case DIRECTIONAL_LIGHT: return 4; // CSM
+	case SPOT_LIGHT:        return 1;
+	case POINT_LIGHT:       return 6; // cube
+	default:                return 0;
+	}
+}
+
+static void ComputeCascadeSplits(
+	float cameraNear,
+	float cameraFar,
+	float outSplits[4]
+)
+{
+	// 단순 practical split (지금 단계에서 충분)
+	outSplits[0] = cameraNear + (cameraFar - cameraNear) * 0.05f;
+	outSplits[1] = cameraNear + (cameraFar - cameraNear) * 0.15f;
+	outSplits[2] = cameraNear + (cameraFar - cameraNear) * 0.35f;
+	outSplits[3] = cameraFar;
+}
+
+static XMMATRIX BuildDirectionalLightView(
+	const BoundingFrustum& frustum,
+	const XMFLOAT3& lightDir
+)
+{
+	// frustum 8개 코너
+	XMFLOAT3 corners[8];
+	frustum.GetCorners(corners);
+
+	// 중심 계산
+	XMVECTOR center = XMVectorZero();
+	for (int i = 0; i < 8; ++i)
+		center += XMLoadFloat3(&corners[i]);
+	center /= 8.0f;
+
+	// light 방향
+	XMVECTOR dir = XMVector3Normalize(XMLoadFloat3(&lightDir));
+
+	// 충분히 멀리 떨어진 가상 위치
+	XMVECTOR lightPos = center - dir * 500.0f; // 500~1000 OK
+
+	return XMMatrixLookAtLH(
+		lightPos,
+		center,
+		XMVectorSet(0, 1, 0, 0)
+	);
+}
+
+static XMMATRIX BuildCascadeOrthoProj(
+	const BoundingFrustum& frustum,
+	const XMMATRIX& lightView
+)
+{
+	// frustum corners → light space
+	XMFLOAT3 corners[8];
+	frustum.GetCorners(corners);
+
+	XMVECTOR minV = XMVectorSet(+FLT_MAX, +FLT_MAX, +FLT_MAX, 1);
+	XMVECTOR maxV = XMVectorSet(-FLT_MAX, -FLT_MAX, -FLT_MAX, 1);
+
+	for (int i = 0; i < 8; ++i)
+	{
+		XMVECTOR v = XMVector3TransformCoord(
+			XMLoadFloat3(&corners[i]),
+			lightView
+		);
+
+		minV = XMVectorMin(minV, v);
+		maxV = XMVectorMax(maxV, v);
+	}
+
+	float minX = XMVectorGetX(minV);
+	float maxX = XMVectorGetX(maxV);
+	float minY = XMVectorGetY(minV);
+	float maxY = XMVectorGetY(maxV);
+	float minZ = XMVectorGetZ(minV);
+	float maxZ = XMVectorGetZ(maxV);
+
+	// Z 확장 (shadow clipping 방지)
+	const float zPadding = 50.0f;
+	minZ -= zPadding;
+	maxZ += zPadding;
+
+	return XMMatrixOrthographicOffCenterLH(
+		minX, maxX,
+		minY, maxY,
+		minZ, maxZ
+	);
+}
+
 void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene)
 {
 	if (!pScene) return;
 
-	BoundingBox xmBoundingBox = pScene->CalculateBoundingBox();
+	BoundingBox xmSceneBoundingBox = pScene->CalculateBoundingBox();
 	auto pLights = pScene->GetLights();
+
+	if (nullptr == pCamera)
+	{
+		pCamera = pScene->GetMainCamera();
+	}
+
+	int nextShadowIndex = 0;
 
 	for (int j = 0; j < MAX_LIGHTS; j++)
 	{
-		if (pLights[j].m_bEnable)
+		if (!pLights[j].m_bEnable)
 		{
-			pLights[j].m_nShadowStartIndex = j;
+			m_pToLightSpaces[j].m_pxmf4LightPositions.w = 0.0f;
+			continue;
+		}
+		const int shadowCount = GetShadowMapCountByType(pLights[j].m_nType);
+		// Light가 사용하는 Shadow Map의 시작 인덱스 설정
+		pLights[j].m_nShadowStartIndex = nextShadowIndex;
+
+		if (pLights[j].m_nType == DIRECTIONAL_LIGHT)
+		{
+			float splits[4];
+			ComputeCascadeSplits(
+				pCamera->GetNearZ(),
+				pCamera->GetFarZ(),
+				splits
+			);
+
+			float prevSplit = pCamera->GetNearZ();
+
+			for (int c = 0; c < 4; ++c)
+			{
+				float curSplit = splits[c];
+
+				// 1) camera frustum slice
+				BoundingFrustum frustum =
+					pCamera->GetCameraFrustum(prevSplit, curSplit);
+
+				// 2) light view
+				XMMATRIX lightView =
+					BuildDirectionalLightView(frustum, pLights[j].m_xmf3Direction);
+
+				// 3) light projection
+				XMMATRIX lightProj =
+					BuildCascadeOrthoProj(frustum, lightView);
+
+				const int shadowIndex = nextShadowIndex + c;
+
+				m_ppDepthRenderCameras[shadowIndex]->SetPosition(
+					Vector3::Subtract(
+						pCamera->GetPosition(),
+						Vector3::ScalarProduct(pLights[j].m_xmf3Direction, 500.0f, false)
+					)
+				);
+
+				XMStoreFloat4x4(
+					&m_ppDepthRenderCameras[shadowIndex]->m_xmf4x4View,
+					lightView
+				);
+				XMStoreFloat4x4(
+					&m_ppDepthRenderCameras[shadowIndex]->m_xmf4x4Projection,
+					lightProj
+				);
+
+				// 5) ToLightMatrix (ShadowMap index 기준)
+				XMMATRIX toTex =
+					XMMatrixTranspose(lightView * lightProj * m_xmProjectionToTexture);
+
+				XMStoreFloat4x4(
+					&m_pToLightSpaces[shadowIndex].m_pxmf4x4ToTextures,
+					toTex
+				);
+
+				// 6) Render
+				RenderShadowSlice(
+					pd3dCommandList,
+					shadowIndex,
+					lightView,
+					lightProj,
+					pLights[j].m_xmf3Position,
+					pScene
+				);
+
+				prevSplit = curSplit;
+			}
+		}
+		else if (pLights[j].m_nType == SPOT_LIGHT)
+		{
+			const int shadowIndex = nextShadowIndex;
+
+			XMFLOAT3 lightPos = pLights[j].m_xmf3Position;
+			XMFLOAT3 lightDir = pLights[j].m_xmf3Direction;
+			XMFLOAT3 up(0, 1, 0);
+
+			XMMATRIX lightView = XMMatrixLookToLH(
+				XMLoadFloat3(&lightPos),
+				XMLoadFloat3(&lightDir),
+				XMLoadFloat3(&up)
+			);
+
+			float fFovAngle = 60.0f;
+			float fAspect = float(m_nDepthbufferWidth) / float(m_nDepthbufferHeight);
+			float fNear = 10.0f;
+			float fFar = pLights[j].m_fRange;
+
+			XMMATRIX lightProj = XMMatrixPerspectiveFovLH(
+				XMConvertToRadians(fFovAngle),
+				fAspect,
+				fNear,
+				fFar
+			);
+
+			RenderShadowSlice(pd3dCommandList, shadowIndex, lightView, lightProj, lightPos, pScene);
+		}
+		else if (pLights[j].m_nType == POINT_LIGHT)
+		{
+
+			// 뒷전이라 했으니, 인덱싱만 잡아둔다.
+			// shadowIndex = start + face (0..5)
+			// 이후 구현 시:
+			// - face별 방향(+X,-X,+Y,-Y,+Z,-Z)
+			// - 90도 fov, aspect 1, near/far = range
+			// - RenderShadowSlice를 face마다 호출
+
+			// 아래는 순수하게 일단 Proj을 Identity로 둔 상태에서 1면 렌더링 호출하는 코드
 			XMFLOAT3 xmf3Position = pLights[j].m_xmf3Position;
 			XMFLOAT3 xmf3Look = pLights[j].m_xmf3Direction;
 			XMFLOAT3 xmf3Up = XMFLOAT3(0.0f, +1.0f, 0.0f);
@@ -1697,46 +1951,58 @@ void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommand
 			XMMATRIX xmmtxLightView = XMMatrixLookToLH(XMLoadFloat3(&xmf3Position), XMLoadFloat3(&xmf3Look), XMLoadFloat3(&xmf3Up));
 
 			XMMATRIX xmmtxProjection = XMMatrixIdentity();
-			if (pLights[j].m_nType == DIRECTIONAL_LIGHT)
-			{
-				xmmtxProjection = CreateOrthographicProjectionMatrix(xmmtxLightView, pCamera, &xmBoundingBox);
-			}
-			else if (pLights[j].m_nType == SPOT_LIGHT)
-			{
-				float fFovAngle = 60.0f; // pLights->pLights[j].m_fPhi = cos(60.0f);
-				float fAspectRatio = float(m_nDepthbufferWidth) / float(m_nDepthbufferHeight);
-				float fNearPlaneDistance = 10.0f, fFarPlaneDistance = pLights[j].m_fRange;
 
-				xmmtxProjection = XMMatrixPerspectiveFovLH(XMConvertToRadians(fFovAngle), fAspectRatio, fNearPlaneDistance, fFarPlaneDistance);
-			}
-			else if (pLights[j].m_nType == POINT_LIGHT)
-			{
-				//ShadowMap[6]
-			}
-
-			m_ppDepthRenderCameras[j]->SetPosition(xmf3Position);
-			XMStoreFloat4x4(&m_ppDepthRenderCameras[j]->m_xmf4x4View, xmmtxLightView);
-			XMStoreFloat4x4(&m_ppDepthRenderCameras[j]->m_xmf4x4Projection, xmmtxProjection);
-
-			XMMATRIX xmmtxToTexture = XMMatrixTranspose(xmmtxLightView * xmmtxProjection * m_xmProjectionToTexture);
-			XMStoreFloat4x4(&m_pToLightSpaces[j].m_pxmf4x4ToTextures, xmmtxToTexture);
-			m_pToLightSpaces[j].m_pxmf4LightPositions = XMFLOAT4(xmf3Position.x, xmf3Position.y, xmf3Position.z, 1.0f);
-
-			::SynchronizeResourceTransition(pd3dCommandList, m_pDepthFromLightTexture->GetResource(j), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-			float pfClearColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-			pd3dCommandList->ClearRenderTargetView(m_pd3dRtvCPUDescriptorHandles[j], pfClearColor, 0, NULL);
-			pd3dCommandList->ClearDepthStencilView(m_d3dDsvDescriptorCPUHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, NULL);
-			pd3dCommandList->OMSetRenderTargets(1, &m_pd3dRtvCPUDescriptorHandles[j], TRUE, &m_d3dDsvDescriptorCPUHandle);
-
-			Render(pd3dCommandList, m_ppDepthRenderCameras[j].get(), pScene);
-
-			::SynchronizeResourceTransition(pd3dCommandList, m_pDepthFromLightTexture->GetResource(j), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON);
+			RenderShadowSlice(pd3dCommandList, nextShadowIndex, xmmtxLightView, xmmtxProjection, xmf3Position, pScene);
 		}
-		else
-		{
-			m_pToLightSpaces[j].m_pxmf4LightPositions.w = 0.0f;
-		}
+
+		nextShadowIndex += shadowCount;
+
+		//XMFLOAT3 xmf3Position = pLights[j].m_xmf3Position;
+		//XMFLOAT3 xmf3Look = pLights[j].m_xmf3Direction;
+		//XMFLOAT3 xmf3Up = XMFLOAT3(0.0f, +1.0f, 0.0f);
+
+		//XMMATRIX xmmtxLightView = XMMatrixLookToLH(XMLoadFloat3(&xmf3Position), XMLoadFloat3(&xmf3Look), XMLoadFloat3(&xmf3Up));
+
+		//XMMATRIX xmmtxProjection = XMMatrixIdentity();
+		//if (pLights[j].m_nType == DIRECTIONAL_LIGHT)
+		//{
+		//	xmmtxProjection = CreateOrthographicProjectionMatrix(xmmtxLightView, pCamera, &xmBoundingBox);
+		//}
+		//else if (pLights[j].m_nType == SPOT_LIGHT)
+		//{
+		//	float fFovAngle = 60.0f; // pLights->pLights[j].m_fPhi = cos(60.0f);
+		//	float fAspectRatio = float(m_nDepthbufferWidth) / float(m_nDepthbufferHeight);
+		//	float fNearPlaneDistance = 10.0f, fFarPlaneDistance = pLights[j].m_fRange;
+
+		//	xmmtxProjection = XMMatrixPerspectiveFovLH(XMConvertToRadians(fFovAngle), fAspectRatio, fNearPlaneDistance, fFarPlaneDistance);
+		//}
+		//else if (pLights[j].m_nType == POINT_LIGHT)
+		//{
+		//	//ShadowMap[6]
+		//}
+
+		//RenderShadowSlice(pd3dCommandList, nextShadowIndex, xmmtxLightView, xmmtxProjection, xmf3Position, pScene);
+
+		/*
+		m_ppDepthRenderCameras[j]->SetPosition(xmf3Position);
+		XMStoreFloat4x4(&m_ppDepthRenderCameras[j]->m_xmf4x4View, xmmtxLightView);
+		XMStoreFloat4x4(&m_ppDepthRenderCameras[j]->m_xmf4x4Projection, xmmtxProjection);
+
+		XMMATRIX xmmtxToTexture = XMMatrixTranspose(xmmtxLightView * xmmtxProjection * m_xmProjectionToTexture);
+		XMStoreFloat4x4(&m_pToLightSpaces[j].m_pxmf4x4ToTextures, xmmtxToTexture);
+		m_pToLightSpaces[j].m_pxmf4LightPositions = XMFLOAT4(xmf3Position.x, xmf3Position.y, xmf3Position.z, 1.0f);
+
+		::SynchronizeResourceTransition(pd3dCommandList, m_pDepthFromLightTexture->GetResource(j), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+		float pfClearColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		pd3dCommandList->ClearRenderTargetView(m_pd3dRtvCPUDescriptorHandles[j], pfClearColor, 0, NULL);
+		pd3dCommandList->ClearDepthStencilView(m_d3dDsvDescriptorCPUHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, NULL);
+		pd3dCommandList->OMSetRenderTargets(1, &m_pd3dRtvCPUDescriptorHandles[j], TRUE, &m_d3dDsvDescriptorCPUHandle);
+
+		Render(pd3dCommandList, m_ppDepthRenderCameras[j].get(), pScene);
+
+		::SynchronizeResourceTransition(pd3dCommandList, m_pDepthFromLightTexture->GetResource(j), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON);
+		*/
 	}
 }
 

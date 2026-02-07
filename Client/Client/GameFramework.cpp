@@ -788,6 +788,7 @@ void CGameFramework::UpdateShaderVariables()
 	m_pcbMappedFrameworkInfo->m_fElapsedTime = m_GameTimer.DeltaTime();
 	m_pcbMappedFrameworkInfo->m_nRenderMode = g_bRenderCollider ? 1 : 0;
 	m_pcbMappedFrameworkInfo->m_fBias = m_fBias;
+	m_pcbMappedFrameworkInfo->m_nShadowmapIndex = m_nShadowmapIndex;
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbFrameworkInfo->GetGPUVirtualAddress();
 	//->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_FRAMEWORK, d3dGpuVirtualAddress);
@@ -925,21 +926,20 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			//“F9” 키가 눌려지면 윈도우 모드와 전체화면 모드의 전환을 처리한다.
 			ChangeSwapChainState();
 			break;
-		/*case VK_F5:
-			m_fBias += 0.001f;
+		case VK_OEM_PLUS:
+			m_nShadowmapIndex = (m_nShadowmapIndex + 1) % MAX_DEPTH_TEXTURES;
 			{
-				std::string debug = "[OnProcessingKeyboardMessage] Bias = " + std::to_string(m_fBias) + "\n";
+				std::string debug = "[OnProcessingKeyboardMessage] Shadowmap Index = " + std::to_string(m_nShadowmapIndex) + "\n";
 				OutputDebugStringA(debug.c_str());
 			}
 			break;
-		case VK_F6:
-			m_fBias -= 0.001f;
-			if (m_fBias < 0.0f) m_fBias = 0.0f;
+		case VK_OEM_MINUS:
+			m_nShadowmapIndex = (m_nShadowmapIndex - 1 + MAX_DEPTH_TEXTURES) % MAX_DEPTH_TEXTURES;
 			{
-				std::string debug = "[OnProcessingKeyboardMessage] Bias = " + std::to_string(m_fBias) + "\n";
+				std::string debug = "[OnProcessingKeyboardMessage] Shadowmap Index = " + std::to_string(m_nShadowmapIndex) + "\n";
 				OutputDebugStringA(debug.c_str());
 			}
-			break;*/
+			break;
 		default:
 			break;
 		}
