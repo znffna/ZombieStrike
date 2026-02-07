@@ -167,6 +167,9 @@
     <ClInclude Include="Skybox.h">
       <Filter>소스 파일\Framework\GameObject</Filter>
     </ClInclude>
+    <ClInclude Include="BulletObject.h">
+      <Filter>소스 파일\Game\GameObject</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp">
@@ -282,6 +285,9 @@
     </ClCompile>
     <ClCompile Include="Skybox.cpp">
       <Filter>소스 파일\Framework\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="BulletObject.cpp">
+      <Filter>소스 파일\Game\GameObject</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
