@@ -406,12 +406,17 @@ void CAnimationController::Apply(int& currentPose, int newPose)
 	if (currentPose == newPose)
 		return;
 	std::string DEBUGE = gameObject->GetName() + " " + std::to_string(currentPose) + "->" + std::to_string(newPose) + '\n';
-	
 	OutputDebugStringA(DEBUGE.c_str());
+
+	const bool curLocomotion = (0 <= currentPose && currentPose <= 8);
+	const bool newLocomotion = (0 <= newPose && newPose <= 8);
 
 	SetTrackEnable(currentPose, false);
 	SetTrackEnable(newPose, true);
-	SetTrackPosition(newPose, 0.0f);
+
+	if (!(curLocomotion && newLocomotion)) {
+		SetTrackPosition(newPose, 0.0f); // // CAnimationController::Apply - 비루프(사격/리로드/피격)만 리셋
+	}
 
 	currentPose = newPose;
 }
