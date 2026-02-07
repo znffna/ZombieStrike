@@ -26,7 +26,11 @@ void CCollisionChecker::Initialize()
 void CCollisionChecker::Update(float fTimeElapsed)
 {
 	// Collision Check
-	CollisionCheckFromLayers(m_ppObjectLayerPairs);
+	for (auto& pair : m_ppObjectLayerPairs)
+	{
+		CollisionCheckFromLayer(pair.first, pair.second);
+	}
+	//CollisionCheckFromLayers(m_ppObjectLayerPairs);
 }
 
 void CCollisionChecker::CollisionCheckFromLayers(std::vector<std::pair<GAMEOBJECT_LAYER, GAMEOBJECT_LAYER>>& ppObjectLayerPairs)
@@ -69,6 +73,61 @@ void CCollisionChecker::CollisionCheckFromLayers(std::vector<std::pair<GAMEOBJEC
 			}
 		}
 	}
+	for (auto& ppCollisionInfo : ppCollidedPairs)
+	{
+		ppCollisionInfo.pObjectA->OnCollision(ppCollisionInfo.pObjectB, ppCollisionInfo.pColliderA, ppCollisionInfo.pColliderB);
+		ppCollisionInfo.pObjectB->OnCollision(ppCollisionInfo.pObjectA, ppCollisionInfo.pColliderB, ppCollisionInfo.pColliderA);
+	}
+}
+
+bool CCollisionChecker::CheckMeshBoundCollision(CGameObject* pObjectA, CGameObject* pObjectB)
+{
+	// 지형과의 체크는 무조건 통과
+	if (pObjectA->GetLayer() == GAMEOBJECT_LAYER::LAYER_TERRAIN || pObjectB->GetLayer() == GAMEOBJECT_LAYER::LAYER_TERRAIN) return true;
+
+	// Root Object에서 트리구조의 모든 MeshBound를 합친 AABB를 가져옴
+	auto pMergedA = pObjectA->GetMergedMeshBound();
+	auto pMergedB = pObjectB->GetMergedMeshBound();
+
+	// AABB 충돌이 아니면 패스
+	if (false == pMergedA.Intersects(pMergedB)) { return false; };
+	return true;
+}
+
+void CCollisionChecker::CollisionCheckFromLayer(GAMEOBJECT_LAYER first, GAMEOBJECT_LAYER second)
+{
+	auto& ppObjects = m_pScene->GetLayerViews();
+	std::vector<CollisionInfo> ppCollidedPairs;
+
+	auto& pObjectsA = ppObjects[first];
+	auto& pObjectsB = ppObjects[second];
+
+	for (auto pObjectA : pObjectsA) {
+		for (auto pObjectB : pObjectsB) {
+			// 먼저 model Bound AABB로 체크
+			bool ret = CheckMeshBoundCollision(pObjectA, pObjectB);
+			if (ret == false) continue;
+
+			// 그 이후, Collider 를 가져와 체크
+			// 이떄 CachedCOllider는 생성시 또는 변화시 한번씩 갱신.
+			auto& pCollidersA = pObjectA->GetCachedColliders();
+			auto& pCollidersB = pObjectB->GetCachedColliders();
+
+			//pObjectA->GetComponentsInChildren<CCollider>(pCollidersA);
+			//pObjectB->GetComponentsInChildren<CCollider>(pCollidersB);
+
+			for (auto& pColliderA : pCollidersA) {
+				for (auto& pColliderB : pCollidersB) {
+					if (IsCollided(pColliderA, pColliderB)) {
+						ppCollidedPairs.emplace_back(pObjectA, pObjectB, pColliderA, pColliderB);
+						//pObjectA->OnCollision(pColliderB);
+						//pObjectB->OnCollision(pColliderA);
+					}
+				}
+			}
+		}
+	}
+
 	for (auto& ppCollisionInfo : ppCollidedPairs)
 	{
 		ppCollisionInfo.pObjectA->OnCollision(ppCollisionInfo.pObjectB, ppCollisionInfo.pColliderA, ppCollisionInfo.pColliderB);

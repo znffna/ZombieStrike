@@ -38,6 +38,48 @@ CMesh::~CMesh()
 	m_ppd3dSubSetIndexBuffers.clear();
 }
 
+
+// method
+void CMesh::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (IsGPUInitialized()) return;
+
+	// Create Position Buffer
+	if (!m_pxmf3Positions.empty())
+	{
+		m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions.data(), sizeof(XMFLOAT3) * m_pxmf3Positions.size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+		std::wstring wstrName = to_wstring(GetName()) + L" : m_pd3dPositionBuffer";
+		m_pd3dPositionBuffer->SetName(wstrName.c_str());
+
+		m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+		m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+		m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_pxmf3Positions.size();
+	}
+
+	// Create SubSet Index Buffers
+	if (!m_ppnSubSetIndices.empty())
+	{
+		m_ppd3dSubSetIndexBuffers.resize(m_ppnSubSetIndices.size());
+		m_pd3dSubSetIndexBufferViews.resize(m_ppnSubSetIndices.size());
+		m_ppd3dSubSetIndexUploadBuffers.resize(m_ppnSubSetIndices.size());
+
+		for (UINT i = 0; i < m_ppnSubSetIndices.size(); i++)
+		{
+			m_ppd3dSubSetIndexBuffers[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[i].data(), sizeof(UINT) * (UINT)m_ppnSubSetIndices[i].size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[i]);
+
+			std::wstring wstrName = to_wstring(GetName()) + L" : m_ppd3dSubSetIndexBuffers[" + std::to_wstring(i) + L"]";
+			m_ppd3dSubSetIndexBuffers[i]->SetName(wstrName.c_str());
+
+			m_pd3dSubSetIndexBufferViews[i].BufferLocation = m_ppd3dSubSetIndexBuffers[i]->GetGPUVirtualAddress();
+			m_pd3dSubSetIndexBufferViews[i].Format = DXGI_FORMAT_R32_UINT;
+			m_pd3dSubSetIndexBufferViews[i].SizeInBytes = (UINT)(sizeof(UINT) * m_ppnSubSetIndices[i].size());
+		}
+	}
+
+	SetGPUInitialized(true);
+}
+
 void CMesh::ReleaseUploadBuffers()
 {
 	// Release Upload Buffers
@@ -1555,7 +1597,7 @@ void CBulletMesh::CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	CBulletVertex pVertices[1];
 
-	pVertices[0].m_xmf3Destination = XMFLOAT3{ 0,0,0 };
+	pVertices[0].m_xmf3Destination = XMFLOAT3{0,0,0};
 	pVertices[0].m_xmf3Position = XMFLOAT3{ 0,0,0 };
 	pVertices[0].m_xmf3Velocity = XMFLOAT3{ 0,0,0 };
 	pVertices[0].m_fLifetime = 0.0f;
@@ -1567,6 +1609,24 @@ void CBulletMesh::CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
 	m_d3dPositionBufferView.StrideInBytes = m_nStride;
 	m_d3dPositionBufferView.SizeInBytes = m_nStride * m_nVertices;
+}
+
+void CBulletMesh::CreateVertexBuffer()
+{
+	// Fill m_pBulletVertices
+	CBulletVertex pVertices;
+	pVertices.m_xmf3Destination = XMFLOAT3{ 0,0,0 };
+	pVertices.m_xmf3Position = XMFLOAT3{ 0,0,0 };
+	pVertices.m_xmf3Velocity = XMFLOAT3{ 0,0,0 };
+	pVertices.m_fLifetime = 0.0f;
+	pVertices.m_nBulletType = BULLET_TYPE_MAINTAIN;
+	pVertices.m_nHitObjectType = HIT_TYPE_ENVIRONMENT;
+
+	m_pBulletVertices.push_back(pVertices);
+
+	m_nVertices = m_pBulletVertices.size();
+	m_nStride = sizeof(CBulletVertex);
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
 }
 
 void CBulletMesh::CreateStreamOutputBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nMaxParticles)
@@ -1598,6 +1658,84 @@ void CBulletMesh::CreateStreamOutputBuffer(ID3D12Device* pd3dDevice, ID3D12Graph
 #endif
 }
 
+void CBulletMesh::CreateStreamOutputBuffer(UINT nMaxParticles)
+{
+	m_nMaxBullets = nMaxParticles;	
+}
+
+void CBulletMesh::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (IsGPUInitialized()) return;
+
+	// Create Position Buffer
+	if (!m_pBulletVertices.empty())
+	{
+		m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pBulletVertices.data(), m_nStride * m_pBulletVertices.size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+		std::wstring wstrName = to_wstring(GetName()) + L" : m_pd3dPositionBuffer";
+		m_pd3dPositionBuffer->SetName(wstrName.c_str());
+
+		m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+		m_d3dPositionBufferView.StrideInBytes = m_nStride;
+		m_d3dPositionBufferView.SizeInBytes = m_nStride * m_pBulletVertices.size();
+	}
+
+	// Create SubSet Index Buffers
+	if (!m_ppnSubSetIndices.empty())
+	{
+		m_ppd3dSubSetIndexBuffers.resize(m_ppnSubSetIndices.size());
+		m_pd3dSubSetIndexBufferViews.resize(m_ppnSubSetIndices.size());
+		m_ppd3dSubSetIndexUploadBuffers.resize(m_ppnSubSetIndices.size());
+
+		for (UINT i = 0; i < m_ppnSubSetIndices.size(); i++)
+		{
+			m_ppd3dSubSetIndexBuffers[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[i].data(), sizeof(UINT) * (UINT)m_ppnSubSetIndices[i].size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[i]);
+
+			std::wstring wstrName = to_wstring(GetName()) + L" : m_ppd3dSubSetIndexBuffers[" + std::to_wstring(i) + L"]";
+			m_ppd3dSubSetIndexBuffers[i]->SetName(wstrName.c_str());
+
+			m_pd3dSubSetIndexBufferViews[i].BufferLocation = m_ppd3dSubSetIndexBuffers[i]->GetGPUVirtualAddress();
+			m_pd3dSubSetIndexBufferViews[i].Format = DXGI_FORMAT_R32_UINT;
+			m_pd3dSubSetIndexBufferViews[i].SizeInBytes = (UINT)(sizeof(UINT) * m_ppnSubSetIndices[i].size());
+		}
+	}
+
+	// StreamOutput Buffer 생성
+	m_pd3dStreamOutputBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, (m_nStride * m_nMaxBullets), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_STREAM_OUT, NULL);
+	m_pd3dStreamOutputBuffer->SetName((to_wstring(GetName()) + L" : m_pd3dStreamOutputBuffer").c_str());
+	m_d3dStreamOutputBufferState = D3D12_RESOURCE_STATE_STREAM_OUT;
+
+	m_pd3dDrawBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, (m_nStride * m_nMaxBullets), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	m_pd3dDrawBuffer->SetName((to_wstring(GetName()) + L" : m_pd3dDrawBuffer").c_str());
+	m_d3dDrawBufferState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+
+	// DrawBuffer에 대한 Upload 버퍼를 생성한다.
+	m_pd3dUploadDrawBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, m_nStride, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
+	m_pd3dUploadDrawBuffer->SetName((to_wstring(GetName()) + L" : m_pd3dUploadDrawBuffer").c_str());
+
+	UINT64 nBufferFilledSize = 0;
+	m_pd3dDefaultBufferFilledSize = ::CreateBufferResource(pd3dDevice, pd3dCommandList, &nBufferFilledSize, sizeof(UINT64), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_STREAM_OUT, NULL);
+	m_pd3dDefaultBufferFilledSize->SetName((to_wstring(GetName()) + L" : m_pd3dDefaultBufferFilledSize").c_str());
+
+	m_pd3dUploadBufferFilledSize = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, sizeof(UINT64), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
+	m_pd3dUploadBufferFilledSize->SetName((to_wstring(GetName()) + L" : m_pd3dUploadBufferFilledSize").c_str());
+	m_pd3dUploadBufferFilledSize->Map(0, NULL, (void**)&m_pnUploadBufferFilledSize);
+
+#ifdef _WITH_QUERY_DATA_SO_STATISTICS
+	D3D12_QUERY_HEAP_DESC d3dQueryHeapDesc = { };
+	d3dQueryHeapDesc.Type = D3D12_QUERY_HEAP_TYPE_SO_STATISTICS;
+	d3dQueryHeapDesc.Count = 1;
+	d3dQueryHeapDesc.NodeMask = 0;
+	pd3dDevice->CreateQueryHeap(&d3dQueryHeapDesc, __uuidof(ID3D12QueryHeap), (void**)&m_pd3dSOQueryHeap);
+
+	m_pd3dSOQueryBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, sizeof(D3D12_QUERY_DATA_SO_STATISTICS), D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, NULL);
+#else
+	m_pd3dReadBackBufferFilledSize = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, sizeof(UINT64), D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, NULL);
+#endif
+
+	SetGPUInitialized(true);
+}
+
 CBulletMesh::~CBulletMesh()
 {
 	if (m_pd3dStreamOutputBuffer) m_pd3dStreamOutputBuffer.Reset();
@@ -1611,6 +1749,12 @@ CBulletMesh::~CBulletMesh()
 #else
 	if (m_pd3dReadBackBufferFilledSize) m_pd3dReadBackBufferFilledSize.Reset();
 #endif
+}
+
+void CBulletMesh::Initialize(UINT nMaxParticles)
+{
+	CreateVertexBuffer();
+	CreateStreamOutputBuffer(nMaxParticles);
 }
 
 void CBulletMesh::PreRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
@@ -1633,6 +1777,9 @@ void CBulletMesh::PreRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPip
 			m_d3dPositionBufferView.StrideInBytes = m_nStride;
 			m_d3dPositionBufferView.SizeInBytes = m_nStride * m_nVertices;
 		}
+		// DEBUG
+		m_d3dStreamOutputBufferState; // D3D12_RESOURCE_STATE_STREAM_OUT 
+
 		m_d3dStreamOutputBufferView.BufferLocation = m_pd3dStreamOutputBuffer->GetGPUVirtualAddress();
 		m_d3dStreamOutputBufferView.SizeInBytes = m_nStride * m_nMaxBullets;
 		m_d3dStreamOutputBufferView.BufferFilledSizeLocation = m_pd3dDefaultBufferFilledSize->GetGPUVirtualAddress();
@@ -1649,7 +1796,15 @@ void CBulletMesh::PreRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPip
 		::SynchronizeResourceTransition(pd3dCommandList, m_pd3dStreamOutputBuffer.Get(), D3D12_RESOURCE_STATE_STREAM_OUT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 		::SynchronizeResourceTransition(pd3dCommandList, m_pd3dDrawBuffer.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_STREAM_OUT);
 
+		// DEBUG
+		m_d3dStreamOutputBufferState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+		m_d3dDrawBufferState = D3D12_RESOURCE_STATE_STREAM_OUT;
+
 		::SwapResourcePointer(m_pd3dDrawBuffer, m_pd3dStreamOutputBuffer);
+
+		// DEBUG
+		m_d3dDrawBufferState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+		m_d3dStreamOutputBufferState = D3D12_RESOURCE_STATE_STREAM_OUT;
 
 		m_d3dPositionBufferView.BufferLocation = m_pd3dDrawBuffer->GetGPUVirtualAddress();
 		m_d3dPositionBufferView.StrideInBytes = m_nStride;
@@ -1659,6 +1814,8 @@ void CBulletMesh::PreRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPip
 
 void CBulletMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
 {
+	UpdateShaderVariables(pd3dCommandList);
+
 	if (nPipelineState == 0)
 	{
 		D3D12_STREAM_OUTPUT_BUFFER_VIEW pStreamOutputBufferViews[1] = { m_d3dStreamOutputBufferView };
@@ -1694,6 +1851,8 @@ void CBulletMesh::PostRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPi
 
 void CBulletMesh::OnPostRender(int nPipelineState)
 {
+	if (!IsGPUInitialized()) return;
+
 	if (nPipelineState == 0)
 	{
 #ifdef _WITH_QUERY_DATA_SO_STATISTICS
@@ -1710,19 +1869,49 @@ void CBulletMesh::OnPostRender(int nPipelineState)
 #endif
 
 		::gnCurrentBullets = m_nVertices;
-#ifdef _WITH_DEBUG_STREAM_OUTPUT_VERTICES
-		TCHAR pstrDebug[256] = { 0 };
-		_stprintf_s(pstrDebug, 256, _T("Stream Output Vertices = %d\n"), m_nVertices);
-		OutputDebugString(pstrDebug);
-#endif
+//#ifdef _WITH_DEBUG_STREAM_OUTPUT_VERTICES
+//		TCHAR pstrDebug[256] = { 0 };
+//		_stprintf_s(pstrDebug, 256, _T("Stream Output Vertices = %d\n"), m_nVertices);
+//		OutputDebugString(pstrDebug);
+//#endif
 		if ((m_nVertices == 0) || (m_nVertices >= MAX_BULLETS)) m_bStart = true;
 	}
 }
 
 #include "GameFramework.h"
 
+
+void CBulletMesh::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if(m_pNewBulletVertices.empty())
+		return;
+
+	// 새로운 입자들을 업로드 버퍼에 추가한다.
+	m_pd3dUploadDrawBuffer->Map(0, NULL, (void**)&m_pBullets);
+
+	memcpy(m_pBullets, m_pNewBulletVertices.data(), sizeof(CBulletVertex) * m_pNewBulletVertices.size());
+
+	// 디폴트 버퍼를 복사 상태로 전환한다.
+	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dDrawBuffer.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);
+
+	// 업로드 버퍼 내용을 디폴트 버퍼로 복사한다.
+	pd3dCommandList->CopyBufferRegion(m_pd3dDrawBuffer.Get(), m_nStride * m_nVertices, m_pd3dUploadDrawBuffer.Get(), 0, m_nStride);
+
+	// 디폴트 버퍼 상태 복원
+	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dDrawBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+	m_pd3dUploadDrawBuffer->Unmap(0, NULL);
+
+	m_nVertices += (UINT)m_pNewBulletVertices.size();
+
+	m_pNewBulletVertices.clear();
+}
+
 void CBulletMesh::AddBullet(const CBulletVertex& Bullet)
 {
+	m_pNewBulletVertices.push_back(Bullet);
+	return;
+
 	// TODO : 나중에 한번에 업로드 하는 방식으로 변경
 	if(false){
 		auto& uploadContext = CUploadContext::Instance();
@@ -1753,6 +1942,10 @@ void CBulletMesh::AddBullet(const CBulletVertex& Bullet)
 
 void CBulletMesh::AddBullets(const std::vector<CBulletVertex>& Bullets)
 {
+	m_pNewBulletVertices.insert(m_pNewBulletVertices.end(), Bullets.begin(), Bullets.end());
+	return;
+
+	// TODO : 나중에 한번에 업로드 하는 방식으로 변경
 	if(false){
 		auto& uploadContext = CUploadContext::Instance();
 		ID3D12GraphicsCommandList* m_pd3dCommandList = uploadContext.m_pd3dGraphicCommandList;

@@ -268,12 +268,14 @@ void CGameFramework::CreateCommandQueueAndList()
 		if (FAILED(hResult)) {
 			OutputDebugString(L"Failed to create command allocator\n");
 		}
+		m_CommandListContexts[i].pd3dCommandAllocator->SetName((L"GameFramework Command Allocator " + std::to_wstring(i)).c_str());
 
 		// Command List »ý¼º
 		hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandListContexts[i].pd3dCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_CommandListContexts[i].pd3dCommandList));
 		if (FAILED(hResult)) {
 			OutputDebugString(L"Failed to create command list\n");
 		}
+		m_CommandListContexts[i].pd3dCommandList->SetName((L"GameFramework Command List " + std::to_wstring(i)).c_str());
 		// Command List¸¦ ´ÝÀ½.
 		CloseCommandList(m_CommandListContexts[i].pd3dCommandList.Get());
 	}
@@ -1229,6 +1231,7 @@ void CGameFramework::UpdateDebugTextObjects()
 	auto sceneBuildState = m_SceneBuildState.load(std::memory_order_acquire);
 	m_DebugTextBlocks[index++]->SetText(L" Scene Build State :" + to_wstring(sceneBuildState));
 
+	m_DebugTextBlocks[index++]->SetText(L" Bullets : " + std::to_wstring(gnCurrentBullets));
 	m_DebugTextBlocks[index++]->SetText(to_wstring(GetCurrentScene()->GetCameraInfo()));
 	m_DebugTextBlocks[index++]->SetText(to_wstring(GetCurrentScene()->GetPlayerInfo()));
 

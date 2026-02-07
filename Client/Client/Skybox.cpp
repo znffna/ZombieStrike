@@ -45,7 +45,7 @@ void CSkyBox::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);
 	pSkyBoxMaterial->SetShader(pSkyBoxShader);
 
-	//MaterialResize(1);
+	//SetMaterialSize(1);
 	//SetMaterial(0, pSkyBoxMaterial);
 	AddMaterial(pSkyBoxMaterial);
 }

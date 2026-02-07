@@ -1,8 +1,9 @@
 #include "Gun.h"
 
 #include "BulletObject.h"
+#include "Scene.h"
 
-std::shared_ptr<CBulletParticleObject> CGun::m_pBulletObject; // 총알 오브젝트
+CBulletParticleObject* CGun::m_pBulletObject = nullptr; // 총알 오브젝트
 
 CGun::CGun()
 {
@@ -100,7 +101,10 @@ bool CGun::Fire(const XMFLOAT3& xmf3Direction, FIRE_INFO* pFireInfo)
 	fireInfo.nBulletType = m_nGunType; // 총알 타입 설정
 	fireInfo.fRange = GetRange();
 	fireInfo.fspeed = GetSpeed();
-	m_pBulletObject->AddFireInfo(fireInfo);
+
+	auto& bulletobjects = m_pScene->GetLayerViews()[LAYER_BULLET];
+
+	((CBulletParticleObject*)bulletobjects[0])->AddFireInfo(fireInfo);
 
 	{
 		std::string debug = "Gun Fire \n";

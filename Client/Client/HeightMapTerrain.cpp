@@ -104,7 +104,7 @@ void CHeightMapTerrain::CreateGridMeshFromHeightMap(int nBlockWidth, int nBlockL
 			{
 				std::string name = "HeightMapSub" + std::to_string(index++);
 				auto pHeightMapGameObject = std::make_unique<CGameObject>(name);
-				pHeightMapGameObject->MaterialResize(0);
+				pHeightMapGameObject->SetMaterialSize(0);
 				xStart = x * (nBlockWidth - 1);
 				zStart = z * (nBlockLength - 1);
 				pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(xStart, zStart, nBlockWidth, nBlockLength, m_xmf3Scale, xmf4Color, m_pHeightMapImage.get());
@@ -195,7 +195,7 @@ void CHeightMapTerrain::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 			for (int x = 0, xStart = 0; x < cxBlocks; x++)
 			{
 				auto pHeightMapGameObject = std::make_unique<CGameObject>("HeightMapSub");
-				pHeightMapGameObject->MaterialResize(0);
+				pHeightMapGameObject->SetMaterialSize(0);
 				xStart = x * (nBlockWidth - 1);
 				zStart = z * (nBlockLength - 1);
 				pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(pd3dDevice, pd3dCommandList, xStart, zStart, nBlockWidth, nBlockLength, xmf3Scale, xmf4Color, m_pHeightMapImage.get());

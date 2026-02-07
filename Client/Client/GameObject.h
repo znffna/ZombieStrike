@@ -260,7 +260,7 @@ public:
 	UINT GetMeshType() { return((m_pMesh) ? m_pMesh->GetType() : 0x00); }
 
 	// Material
-	void MaterialResize(int nMaterials) { m_ppMaterials.resize(nMaterials); }
+	void SetMaterialSize(int nMaterials) { m_ppMaterials.resize(nMaterials); }
 	void AddMaterial(std::shared_ptr<CMaterial> pMaterial) { m_ppMaterials.push_back(pMaterial); }
 	void SetMaterial(int nIndex, std::shared_ptr<CMaterial> pMaterial) { if(m_ppMaterials.size() <= nIndex) m_ppMaterials.resize(nIndex + 1); m_ppMaterials[nIndex] = pMaterial; }
 
@@ -277,9 +277,9 @@ public:
 	// Shader Variables
 	// TODO : 사실상 Object 단위로 Shader Variable을 생성하는 것은 비효율적임
 	// --------------------------------------------
-	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
-	void ReleaseShaderVariables();
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void ReleaseShaderVariables();
 
 	void CollectShaderVariables();
 
