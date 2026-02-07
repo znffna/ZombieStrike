@@ -31,7 +31,10 @@ public:
 
     static void StopMusic();
 
+	// Volume Control (0.0f ~ 1.0f)
     static void SetSoundVolume(float volume); // SFX
+
+    // Volume Control (0.0f ~ 1.0f)
     static void SetMusicVolume(float volume); // BGM
 
     // =========================

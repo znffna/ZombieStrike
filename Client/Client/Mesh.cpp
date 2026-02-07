@@ -1918,66 +1918,10 @@ void CBulletMesh::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandLi
 void CBulletMesh::AddBullet(const CBulletVertex& Bullet)
 {
 	m_pNewBulletVertices.push_back(Bullet);
-	return;
-
-	// TODO : 나중에 한번에 업로드 하는 방식으로 변경
-	if(false){
-		auto& uploadContext = CUploadContext::Instance();
-		ID3D12GraphicsCommandList* m_pd3dCommandList = uploadContext.m_pd3dGraphicCommandList;
-
-		m_pd3dUploadDrawBuffer->Map(0, NULL, (void**)&m_pBullets);
-
-		// 새로운 입자를 업로드 버퍼에 추가한다.
-		memcpy(m_pBullets, &Bullet, sizeof(CBulletVertex));
-
-		// 디폴트 버퍼를 복사 상태로 전환한다.
-		::SynchronizeResourceTransition(m_pd3dCommandList, m_pd3dDrawBuffer.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);
-
-		// 업로드 버퍼 내용을 디폴트 버퍼로 복사한다.
-		m_pd3dCommandList->CopyBufferRegion(m_pd3dDrawBuffer.Get(), m_nStride * m_nVertices, m_pd3dUploadDrawBuffer.Get(), 0, m_nStride);
-
-		// 디폴트 버퍼 상태 복원
-		::SynchronizeResourceTransition(m_pd3dCommandList, m_pd3dDrawBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-
-		m_pd3dUploadDrawBuffer->Unmap(0, NULL);
-
-		uploadContext.ExecuteAndReset();
-
-		// 정점 갯수를 증가시킨다.
-		::gnCurrentBullets = ++m_nVertices;
-	}
 }
 
 void CBulletMesh::AddBullets(const std::vector<CBulletVertex>& Bullets)
 {
 	m_pNewBulletVertices.insert(m_pNewBulletVertices.end(), Bullets.begin(), Bullets.end());
-	return;
-
-	// TODO : 나중에 한번에 업로드 하는 방식으로 변경
-	if(false){
-		auto& uploadContext = CUploadContext::Instance();
-		ID3D12GraphicsCommandList* m_pd3dCommandList = uploadContext.m_pd3dGraphicCommandList;
-
-		m_pd3dUploadDrawBuffer->Map(0, NULL, (void**)&m_pBullets);
-
-		// 새로운 입자를 업로드 버퍼에 추가한다.
-		memcpy(m_pBullets, Bullets.data(), sizeof(CBulletVertex) * Bullets.size());
-
-		// 디폴트 버퍼를 복사 상태로 전환한다.
-		::SynchronizeResourceTransition(m_pd3dCommandList, m_pd3dDrawBuffer.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);
-
-		// 업로드 버퍼 내용을 디폴트 버퍼로 복사한다.
-		m_pd3dCommandList->CopyBufferRegion(m_pd3dDrawBuffer.Get(), m_nStride * m_nVertices, m_pd3dUploadDrawBuffer.Get(), 0, m_nStride);
-
-		// 디폴트 버퍼 상태 복원
-		::SynchronizeResourceTransition(m_pd3dCommandList, m_pd3dDrawBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-
-		m_pd3dUploadDrawBuffer->Unmap(0, NULL);
-
-		uploadContext.ExecuteAndReset();
-	}
-
-	// 정점 갯수를 증가시킨다.
-	::gnCurrentBullets = m_nVertices = (m_nVertices + Bullets.size());
 }
 
