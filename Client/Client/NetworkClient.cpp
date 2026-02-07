@@ -385,6 +385,8 @@ void NetworkingClient::ProcessPacket(PacketHeader* recv_p)
 
     if (IsConnect() == false) return;
 
+    StorePacket(recv_p, (DWORD)recv_p->size);
+
     if (g_bNetworkDebugMode) {
         std::string debug = "[Å¬¶ó] ProcessPacket() È£ÃâµÊ\n";
         debug += "  Packet Type: " + GetPacketName(recv_p->type) + "\n";
