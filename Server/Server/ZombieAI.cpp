@@ -184,6 +184,37 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
 
 // ------------------- ZombieAI 구현 -----------------------
 
+void ZombieAI::SetType(ZombieType type)
+{
+    m_type = type;
+
+    switch (m_type)
+    {
+    case ZombieType::RUNNER:
+        m_move_speed = Z_move_speed * 5.0f;
+        m_damage = ZOMBIE_DAMAGE * 0.8f;
+        m_attack_cooldown = Z_ATTACK_COOLDOWN * 0.75f;
+        m_hp = static_cast<SIZE2>(ZOMBIE_HP * 0.7f);
+        break;
+
+    case ZombieType::TANKER:
+        m_move_speed = Z_move_speed * 0.65f;
+        m_damage = ZOMBIE_DAMAGE * 1.6f;
+        m_attack_cooldown = Z_ATTACK_COOLDOWN * 1.10f;
+        m_hp = static_cast<SIZE2>(ZOMBIE_HP * 2.2f);
+        break;
+
+    default: // NORMAL
+        m_move_speed = Z_move_speed;
+        m_damage = ZOMBIE_DAMAGE;
+        m_attack_cooldown = Z_ATTACK_COOLDOWN;
+        m_hp = ZOMBIE_HP;
+        break;
+    }
+
+    m_dirty = true; // // [ZombieAI::SetType] - 스탯 변경 시 스냅샷 갱신 유도
+}
+
 ZombieAI::ZombieAI(const std::vector<std::vector<int>>& map, int id)
     : m_map(map), m_astar(nullptr), m_pathIndex(0),
     m_id(id), m_x(0), m_z(0), m_targetX(0), m_targetZ(0), m_hp(ZOMBIE_HP), 
@@ -280,7 +311,7 @@ void ZombieAI::TriggerAttack(float animTime)
 {
     // 공격 모션 시간 설정, 쿨다운 갱신
     m_attack_left = std::max(m_attack_left, animTime);
-    m_attack_cd = std::max(m_attack_cd, Z_ATTACK_COOLDOWN);
+    m_attack_cd = std::max(m_attack_cd, m_attack_cooldown);
     m_dirty = true;
 }
 
@@ -475,7 +506,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         Vec3 toPlayer = (closest - myPos);
         if (toPlayer.LengthSquared() > 0.0001f) {
             Vec3 moveDir = toPlayer.Normalize();
-            Vec3 finalMove = moveDir * Z_move_speed;
+            Vec3 finalMove = moveDir * m_move_speed;
 
             if (IsAttacking() || IsPausing()) finalMove = finalMove * 0.0f; // // ZombieAI::Update - 공격/정지 중엔 정지
 
@@ -524,7 +555,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     }
 
     Vec3 moveDir = toTarget.Normalize();
-    Vec3 nextPos = currentPos + moveDir * Z_move_speed;
+    Vec3 nextPos = currentPos + moveDir * m_move_speed;
 
     // [REPLACE] 4. 좀비↔좀비 분리력(Separation force) 계산
     Vec3 separation(0, 0, 0);
@@ -574,7 +605,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
 
     // 6. 최종 이동 (공격 중 잠깐 정지 → 다시 추격)
     {
-        Vec3 finalMove = moveDir * Z_move_speed + wallPush + separation;
+        Vec3 finalMove = moveDir * m_move_speed + wallPush + separation;
 
         // 공격 중 이동량 배율 적용 (기본 0.0f → 완전 정지)
         if (IsAttacking()) {
@@ -659,7 +690,7 @@ Object ZombieAI::GetObjectinfo() const {
     info.gun_type = GunType::BULLET_MAX; // 좀비는 총 안씀
     info.level = 0;
     info.score = 0;
-    info.damage = ZOMBIE_DAMAGE;
+    info.damage = static_cast<float>(m_damage);
 
     ActionType act = ActionType::ZMOVE;
 

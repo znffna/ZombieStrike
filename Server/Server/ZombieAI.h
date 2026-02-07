@@ -46,9 +46,23 @@ constexpr float Z_PAUSE_RANGE       = CELL_SIZE * 2.0f; // 플레이어와 이 거리 이
 constexpr float Z_PAUSE_TIME        = 0.40f;            // 멈추는 시간(초)
 constexpr float Z_PAUSE_COOLDOWN    = 1.20f;            // 다시 멈추기까지의 쿨다운(초)
 constexpr float Z_PAUSE_MOVE_SCALE  = 0.0f;             // 정지 중 이동량 배율(0=완전정지)
+
+enum class ZombieType : uint8_t
+{
+    NORMAL = 0,
+    RUNNER = 1,
+    TANKER = 2,
+};
+
 class ZombieAI
 {
 public:
+    // 타입 기반 스탯 적용 함수 추가
+    void SetType(ZombieType type);
+
+    // 타입 조회 추가(디버그/패킷 name 구분용)
+    ZombieType GetType() const { return m_type; }
+
     class AStar;
 
     ZombieAI(const std::vector<std::vector<int>>& map, int id);
@@ -114,6 +128,18 @@ public:
     float GetPlayerZ() const;
 
 private:
+    // 좀비 타입 저장
+    ZombieType m_type = ZombieType::NORMAL;
+
+    // 타입별 이동속도(기존 Z_move_speed 대체)
+    float m_move_speed = Z_move_speed;
+
+    // 타입별 데미지(기존 ZOMBIE_DAMAGE 대체)
+    float m_damage = ZOMBIE_DAMAGE;
+
+    // 타입별 공격쿨(기존 Z_ATTACK_COOLDOWN 대체)
+    float m_attack_cooldown = Z_ATTACK_COOLDOWN;
+
    // AStar* m_astar;
     std::unique_ptr<AStar> m_astar;
 

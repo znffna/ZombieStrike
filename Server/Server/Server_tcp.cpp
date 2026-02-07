@@ -29,6 +29,11 @@ static std::mt19937 g_rng{ std::random_device{}() };
 static std::uniform_int_distribution<int> g_zombieSkinDist(0, ZOMBIE_SKIN_COUNT - 1); 
 static std::unordered_map<SIZEID, SIZE1> g_zombieSkin;  // 좀비 id -> skin_type (늦게 접속한 유저 스냅샷 일관성 유지용)
 
+// 좀비 타입 저장(늦게 접속한 유저 스냅샷 일관성 유지용)
+static std::unordered_map<SIZEID, ZombieType> g_zombieType;
+// 타입 가중치 랜덤(예: NORMAL 70%, RUNNER 20%, TANKER 10%)
+static std::discrete_distribution<int> g_zombieTypeDist({ 50, 30, 20 });
+
 void error_display(const char* msg, int err_no) {
     WCHAR* lpMsgBuf;
     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
@@ -517,7 +522,13 @@ public:
             auto sit = g_zombieSkin.find(zombie->GetID());
             add.skin_type = (sit != g_zombieSkin.end()) ? sit->second : 0;
 
-            strcpy_s(add.name, "Zombie");
+            auto tit = g_zombieType.find(zombie->GetID());
+            ZombieType zType = (tit != g_zombieType.end()) ? tit->second : ZombieType::NORMAL;
+
+            if (zType == ZombieType::RUNNER)      strcpy_s(add.name, "Zombie_Runner"); 
+            else if (zType == ZombieType::TANKER) strcpy_s(add.name, "Zombie_Tanker"); 
+            else                                  strcpy_s(add.name, "Zombie");        
+
             add.startposition = zombie->GetPosition();
             add.starthp = zombie->GetHP();
             add.gun_type = static_cast<GunType>(0);
@@ -832,7 +843,7 @@ public:
                         hitZ->MarkRemoved(); // // ZombieAI::MarkRemoved - 서버 틱/충돌 제외
 
                         g_zombieSkin.erase(hit_zid); // // C_S_SHOOT - erase zombie skin
-
+                        g_zombieType.erase(hit_zid);
 
                         pkt_sc_object_remove rem{};
                         rem.header.size = sizeof(rem);
@@ -920,9 +931,17 @@ void SpawnZombies(int count) {
         // float zz = static_cast<float>(sz) * CELL_SIZE;           
 
         ZombieAI* zombie = new ZombieAI(g_map, 10000 + i);
-        zombie->SetPosition(zx, zz);                                
-        zombie->SetHP(ZOMBIE_HP);
+        zombie->SetPosition(zx, zz);
+
+        // 타입 랜덤 결정 + 스탯 적용(HP/이속/쿨/데미지)
+        ZombieType zType = static_cast<ZombieType>(g_zombieTypeDist(g_rng));
+        zombie->SetType(zType);
+
+        // SetType에서 HP까지 세팅하므로 SetHP(ZOMBIE_HP) 제거
         g_zombies.push_back(zombie);
+
+        // 타입 테이블 저장(늦접 스냅샷 일관성)
+        g_zombieType[zombie->GetID()] = zType;
 
         // // SpawnZombies: 랜덤 스킨 확정 + 테이블 저장(스냅샷 일관성)
         const SIZE1 Z_Random_skin = static_cast<SIZE1>(g_zombieSkinDist(g_rng)); // - random skin
@@ -940,7 +959,10 @@ void SpawnZombies(int count) {
         p.obj_type = ObjectType::ZOMBIE;
         p.skin_type = Z_Random_skin;
 
-        strcpy_s(p.name, "Zombie");
+        if (zType == ZombieType::RUNNER)      strcpy_s(p.name, "Zombie_Runner"); 
+        else if (zType == ZombieType::TANKER) strcpy_s(p.name, "Zombie_Tanker"); 
+        else                                  strcpy_s(p.name, "Zombie");        
+
         p.startposition = zombie->GetPosition();
         p.starthp = zombie->GetHP();
         //p.gun_type = GunType::BULLET_MAX; 
@@ -1013,6 +1035,7 @@ void ZombieAIThread() {
 
                     // // ZombieAIThread - remove 시 스킨 테이블 정리
                     g_zombieSkin.erase(zombie->GetID());
+                    g_zombieType.erase(zombie->GetID());
 
                     pkt_sc_object_remove rem{};
                     rem.header.size = sizeof(rem);
