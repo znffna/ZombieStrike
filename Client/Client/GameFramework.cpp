@@ -148,6 +148,7 @@ void CGameFramework::OnDestroy()
 	if (m_pd3dDebugController) m_pd3dDebugController.Reset();
 #endif
 
+	CoUninitialize(); // 추가
 }
 
 void CGameFramework::CreateDirect3DDevice()
@@ -918,7 +919,6 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		switch (wParam)
 		{
 		case VK_F1:
-			g_bRenderCollider = !g_bRenderCollider;
 			g_bDebugOutput = !g_bDebugOutput;
 			break;
 		case VK_F9:
@@ -1028,7 +1028,7 @@ void CGameFramework::BuildSceneMadeThread()
 		CUploadContext sceneUploadContext{"SceneMadeThread"};
 		sceneUploadContext.Create(m_pd3dDevice.Get(), m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), m_hFenceEvent);
 
-		CResourceManager::Instance().LoadModelList(sceneUploadContext.m_pd3dDevice, sceneUploadContext.m_pd3dGraphicCommandList);
+		//CResourceManager::Instance().LoadModelList(sceneUploadContext.m_pd3dDevice, sceneUploadContext.m_pd3dGraphicCommandList);
 
 		// Scene 생성 루프
 		while (m_SceneThreadRunning.load()) {
