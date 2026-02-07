@@ -145,6 +145,8 @@ void CBulletParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, C
 
 	UpdateShaderVariables(pd3dCommandList);
 
+	m_pMesh->UpdateShaderVariables(pd3dCommandList);
+
 	m_pMesh->PreRender(pd3dCommandList, 0); //Stream Output
 	m_pMesh->Render(pd3dCommandList, 0); //Stream Output
 	m_pMesh->PostRender(pd3dCommandList, 0); //Stream Output
@@ -178,6 +180,12 @@ void CBulletParticleObject::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D
 
 	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, m_pRandowmValueTexture.get(), 0, ROOT_PARAMETER_RANDOMBUFFER);
 	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, m_pRandowmValueOnSphereTexture.get(), 0, ROOT_PARAMETER_RANDOM_SPHERE_BUFFER);
+}
+
+void CBulletParticleObject::ReleaseShaderVariables()
+{
+	CGameObject::ReleaseShaderVariables();
+
 }
 
 void CBulletParticleObject::AddBullet(const XMFLOAT3& pOrigin, const XMFLOAT3& xmf3Look, float fRange)

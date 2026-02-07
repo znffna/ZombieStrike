@@ -604,10 +604,22 @@ void GSBulletDraw(point VS_BULLET_DRAW_OUTPUT input[1], inout TriangleStream<GS_
     
     if (input[0].type == BULLET_MAINTAIN)
     {
-        output.position = float4(input[0].position, 1.0f);
+        // output.position = float4(input[0].position, 1.0f);
+        // output.color = input[0].color;
+        // output.uv = float2(0.5f, 0.5f);
+        // outputStream.Append(output);
+        
+        output.type = input[0].type;
         output.color = input[0].color;
-        output.uv = float2(0.5f, 0.5f);
-        outputStream.Append(output);
+        for (int i = 0; i < 4; i++)
+        {
+            float3 positionW = mul(gf3Positions[i] * 0.5f, (float3x3) gmtxInvView) + input[0].position;
+            output.position = mul(mul(float4(positionW, 1.0f), gmtxView), gmtxProjection);
+            output.uv = gf2QuadUVs[i];
+
+            outputStream.Append(output);
+        }
+        
     }
     else if (input[0].type == BULLET_TYPE_TRAIL)
     {
@@ -688,7 +700,8 @@ float4 PSBulletDraw(GS_BULLET_DRAW_OUTPUT input) : SV_TARGET
     else if (input.type == BULLET_TYPE_BLOOD)
         cColor = gtxtMetallicTexture.Sample(gssWrap, input.uv);
     else
-        discard;
+        cColor = gtxtSpecularTexture.Sample(gssWrap, input.uv);
+        // discard;
     
     // 색상 별도 적용(기본은 흰색으로 텍스쳐 색상만 적용)
     cColor *= input.color;
