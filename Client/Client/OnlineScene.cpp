@@ -69,23 +69,20 @@ bool COnlineScene::ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float delt
 
 void COnlineScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
+	CGameScene::OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+
 	switch (nMessageID)
 	{
 		case WM_KEYDOWN:
 		{
 			switch (wParam)
 			{
-			case VK_F1:
-				g_bRenderCollider = !g_bRenderCollider;
-				break;
 			case VK_F5:
 			case VK_F6:
 			case VK_F7:
 				// ChangeMap(wParam - VK_F5);
 				break;
-			case VK_ESCAPE:
-				PopScene();
-				break;
+
 			default:
 				break;
 			}

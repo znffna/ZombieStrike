@@ -365,10 +365,13 @@ void CGameScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM 
 			SelectCamera(m_pFreeCamera->GetComponent<CCamera>());
 			break;
 		case VK_F1:
-			m_bPrintObjectCount = true;
-			break;
+			g_bRenderCollider = !g_bRenderCollider;
+			break; 
 		case VK_F2:
 			g_bRenderShadowMap = !g_bRenderShadowMap;
+			break;
+		case VK_ESCAPE:
+			PopScene();
 			break;
 		default:
 			break;

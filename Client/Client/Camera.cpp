@@ -179,6 +179,47 @@ void CCamera::Rotate(float x, float y, float z)
 	}
 }
 
+BoundingFrustum CCamera::GetCameraWorldFrustum() const
+{
+	BoundingFrustum frustum;
+	// Projection 매트릭스로부터 frustum 생성
+	XMMATRIX xmmtxProjection = XMLoadFloat4x4(&m_xmf4x4Projection);
+	BoundingFrustum::CreateFromMatrix(frustum, xmmtxProjection);
+
+	// View 매트릭스로부터 Frustum을 World 좌표계로 변환 (View의 역행렬을 적용)
+	XMMATRIX xmmtxView = XMLoadFloat4x4(&m_xmf4x4View);
+	XMMATRIX xmmtxInvView = XMMatrixInverse(nullptr, xmmtxView);
+
+	BoundingFrustum frustumWorld;
+	frustum.Transform(frustumWorld, xmmtxInvView);
+
+	return frustumWorld;
+}
+
+BoundingFrustum CCamera::GetCameraFrustum(float sliceNearZ, float sliceFarZ) const
+{
+	// 1) cascade slice 기준 Projection 생성
+	XMMATRIX proj = XMMatrixPerspectiveFovLH(
+		XMConvertToRadians(m_fFovAngle),
+		m_fAspectRatio,
+		sliceNearZ,
+		sliceFarZ
+	);
+
+	// 2) Projection → View-space BoundingFrustum
+	BoundingFrustum frustumView;
+	BoundingFrustum::CreateFromMatrix(frustumView, proj);
+
+	// 3) View-space → World-space 변환
+	XMMATRIX view = XMLoadFloat4x4(&m_xmf4x4View);
+	XMMATRIX invView = XMMatrixInverse(nullptr, view);
+
+	BoundingFrustum frustumWorld;
+	frustumView.Transform(frustumWorld, invView);
+
+	return frustumWorld;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 

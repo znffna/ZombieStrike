@@ -98,6 +98,12 @@ public:
 
 	virtual void Update(const XMFLOAT3& xmf3LookAt, float fTimeElapsed) { }
 
+	virtual BoundingFrustum GetCameraWorldFrustum() const;
+	virtual BoundingFrustum GetCameraFrustum(float sliceNearZ, float sliceFarZ) const;
+
+	float GetNearZ() const { return m_fNearZ; }
+	float GetFarZ() const { return m_fFarZ; }
+
 protected:	
 	// ViewPort and ScissorRect
 	D3D12_VIEWPORT m_d3dViewport;
