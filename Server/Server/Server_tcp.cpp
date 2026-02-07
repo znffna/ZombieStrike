@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <queue>
 #include <print>
+#include <random>
 
 #include "../../protocol.h"
 #include "ZombieAI.h" 
@@ -22,6 +23,11 @@ constexpr double FRAME_INTERVAL_MS = 1000.0 / 60.0;
 constexpr bool DEBUG_PRINT = false;
 #define DEBUG_LOG(msg) \
     do { if (DEBUG_PRINT) std::cout << msg << std::endl; } while (0)
+
+constexpr int ZOMBIE_SKIN_COUNT = 3; 
+static std::mt19937 g_rng{ std::random_device{}() }; 
+static std::uniform_int_distribution<int> g_zombieSkinDist(0, ZOMBIE_SKIN_COUNT - 1); 
+static std::unordered_map<SIZEID, SIZE1> g_zombieSkin;  // 좀비 id -> skin_type (늦게 접속한 유저 스냅샷 일관성 유지용)
 
 void error_display(const char* msg, int err_no) {
     WCHAR* lpMsgBuf;
@@ -546,11 +552,16 @@ public:
                 packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
                 packet.id = zombie->GetID();
                 packet.obj_type = ObjectType::ZOMBIE;
-                packet.skin_type = 0;
+
+                // // C_S_LOGIN - 저장된 좀비 스킨으로 스냅샷 일관성 유지
+                auto sit = g_zombieSkin.find(zombie->GetID());                   // - find skin
+                packet.skin_type = (sit != g_zombieSkin.end()) ? sit->second : 0;
+
                 strcpy_s(packet.name, "Zombie");
                 packet.startposition = zombie->GetPosition();
                 packet.starthp = zombie->GetHP();
-                packet.gun_type = GunType::BULLET_MAX; // [추가] 누락 보정(좀비는 총 안씀)
+                //packet.gun_type = GunType::BULLET_MAX; // [추가] 누락 보정(좀비는 총 안씀)
+                packet.gun_type = static_cast<GunType>(0);
 
                 // 나(this 세션)에게만 전송
                 this->do_send(&packet);
@@ -722,6 +733,9 @@ public:
                     if (hitZ && !hitZ->IsRemoved()) {
                         hitZ->MarkRemoved(); // // ZombieAI::MarkRemoved - 서버 틱/충돌 제외
 
+                        g_zombieSkin.erase(hit_zid); // // C_S_SHOOT - erase zombie skin
+
+
                         pkt_sc_object_remove rem{};
                         rem.header.size = sizeof(rem);
                         rem.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
@@ -806,6 +820,10 @@ void SpawnZombies(int count) {
         zombie->SetHP(ZOMBIE_HP);
         g_zombies.push_back(zombie);
 
+        // // SpawnZombies: 랜덤 스킨 확정 + 테이블 저장(스냅샷 일관성)
+        const SIZE1 Z_Random_skin = static_cast<SIZE1>(g_zombieSkinDist(g_rng)); // - random skin
+        g_zombieSkin[zombie->GetID()] = Z_Random_skin;                            // - save skin by id
+
         // // SpawnZombies: 생성 즉시 대상 지정/경로 탐색을 원하면 필요 시 활성화
         // zombie->SetTargetPosition(player_x, player_z);          
         // zombie->FindPath();                                      
@@ -816,11 +834,13 @@ void SpawnZombies(int count) {
         p.header.type = PKT_TYPE::S_C_OBJECT_ADD;
         p.id = zombie->GetID();
         p.obj_type = ObjectType::ZOMBIE;
-        p.skin_type = 0; // todo : 랜덤값 , 3개 012
+        p.skin_type = Z_Random_skin;
+
         strcpy_s(p.name, "Zombie");
         p.startposition = zombie->GetPosition();
         p.starthp = zombie->GetHP();
-        p.gun_type = GunType::BULLET_MAX;
+        //p.gun_type = GunType::BULLET_MAX; 
+        p.gun_type = static_cast<GunType>(0);
 
         for (auto& [id, session] : g_users)
             session.do_send(&p);
@@ -879,6 +899,9 @@ void ZombieAIThread() {
                 // 프레임 경합 방어: DEAD 상태면 업데이트 대신 제거 패킷
                 if (zombie->IsDead()) {
                     zombie->MarkRemoved();
+
+                    // // ZombieAIThread - remove 시 스킨 테이블 정리
+                    g_zombieSkin.erase(zombie->GetID());
 
                     pkt_sc_object_remove rem{};
                     rem.header.size = sizeof(rem);
