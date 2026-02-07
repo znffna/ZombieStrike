@@ -20,7 +20,7 @@ constexpr float GRID_HEIGHT = 512.0f;
 constexpr float CELL_SIZE = WORLD_WIDTH / GRID_WIDTH; // 0.488..
 
 static constexpr float REPATH_INTERVAL = 1.0f; // 1초마다 재탐색 허용
-static constexpr int   ASTAR_MAX_EXPANSIONS = 8000;  // // AStar::FindPath - 탐색 상한(막힌 목표 폭주 방지)
+static constexpr int   ASTAR_MAX_EXPANSIONS = 4000;  // // AStar::FindPath - 탐색 상한(막힌 목표 폭주 방지)
 static constexpr float REPATH_FAIL_COOLDOWN = 0.75f; // // ZombieAI::Update - 경로 실패 시 재탐색 쿨다운
 
 constexpr float deltaTime = 1.0f / 60.0f;
