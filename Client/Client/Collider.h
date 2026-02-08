@@ -57,6 +57,9 @@ public:
 
     virtual XMFLOAT4X4 GetColliderMatrix() const = 0;
 
+	// MTV (Minimum Translation Vector) °è»ê
+	virtual XMFLOAT3 GetCorrectionVector(const CCollider* other) const = 0;
+
     // Component
 	void Update(float dt) override;
 };
@@ -101,6 +104,8 @@ public:
 
     bool Intersects(const CCollider* other) const override;
 
+	XMFLOAT3 GetCorrectionVector(const CCollider* other) const override;
+
     const BoundingSphere& GetWorldSphere() const { return m_world; }
 
     virtual XMFLOAT4X4 GetColliderMatrix() const
@@ -138,6 +143,8 @@ public:
     }
 
     bool Intersects(const CCollider* other) const override;
+
+	XMFLOAT3 GetCorrectionVector(const CCollider* other) const override;
 
     const BoundingBox& GetWorldAABB() const { return m_world; }
 
@@ -200,6 +207,8 @@ public:
     }
 
     bool Intersects(const CCollider* other) const override;
+
+	XMFLOAT3 GetCorrectionVector(const CCollider* other) const override;
 
     const BoundingOrientedBox& GetWorldOBB() const { return m_world; }
 

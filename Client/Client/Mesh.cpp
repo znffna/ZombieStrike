@@ -446,7 +446,7 @@ void CStandardMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubS
 	{
 		pd3dCommandList->IASetIndexBuffer(&(m_pd3dSubSetIndexBufferViews[nSubSet]));
 		UINT nSubSetIndex = (UINT)m_ppnSubSetIndices[nSubSet].size();
-		pd3dCommandList->DrawIndexedInstanced((UINT)m_ppnSubSetIndices[nSubSet].size(), 1, 0, 0, 0);
+		pd3dCommandList->DrawIndexedInstanced(nSubSetIndex, 1, 0, 0, 0);
 	}
 	else
 	{
@@ -1212,7 +1212,7 @@ CHeightMapGridMesh::~CHeightMapGridMesh()
 float CHeightMapGridMesh::OnGetHeight(int x, int z, void* pContext)
 {
 	CHeightMapImage* pHeightMapImage = (CHeightMapImage*)pContext;
-	std::vector<SHORT> pHeightMapPixels = pHeightMapImage->GetHeightMapPixels();
+	auto pHeightMapPixels = pHeightMapImage->GetHeightMapPixels();
 	XMFLOAT3 xmf3Scale = pHeightMapImage->GetScale();
 
 	int nWidth = pHeightMapImage->GetHeightMapWidth();
@@ -1829,10 +1829,6 @@ void CBulletMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nPipeli
 		pd3dCommandList->ResolveQueryData(m_pd3dSOQueryHeap, D3D12_QUERY_TYPE_SO_STATISTICS_STREAM0, 0, 1, m_pd3dSOQueryBuffer, 0);
 #else
 		CMesh::Render(pd3dCommandList); //Stream Output to m_pd3dStreamOutputBuffer
-		{
-			std::string debug = "Bullet Draw Call Vertex : " + std::to_string(m_nVertices) + "\n";
-			OutputDebugStringA(debug.c_str());
-		}
 
 		::SynchronizeResourceTransition(pd3dCommandList, m_pd3dDefaultBufferFilledSize.Get(), D3D12_RESOURCE_STATE_STREAM_OUT, D3D12_RESOURCE_STATE_COPY_SOURCE);
 		pd3dCommandList->CopyResource(m_pd3dReadBackBufferFilledSize.Get(), m_pd3dDefaultBufferFilledSize.Get());
@@ -1844,10 +1840,6 @@ void CBulletMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nPipeli
 		pd3dCommandList->SOSetTargets(0, 1, NULL);
 
 		CMesh::Render(pd3dCommandList); //Render m_pd3dDrawBuffer 
-		{
-			std::string debug = "Bullet Draw Call Vertex : " + std::to_string(m_nVertices) + "\n";
-			OutputDebugStringA(debug.c_str());
-		}
 	}
 }
 

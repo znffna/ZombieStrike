@@ -21,7 +21,7 @@ CGameObject::CGameObject()
 	m_pTransform = std::make_unique<CTransform>(this);
 }
 
-CGameObject::CGameObject(const std::string& strName)
+CGameObject::CGameObject(const std::string& strName) : CGameObject()
 {
 	SetName(strName);
 }
@@ -281,8 +281,8 @@ void CGameObject::OnCollision(CGameObject* pOther, CCollider* pColliderA, CColli
 	}*/
 
 	// 최소 거리 측정
-	//XMFLOAT3 mtv = pColliderA->GetCorrectionVector(pColliderB);
-	XMFLOAT3 mtv{0,0,0};
+	XMFLOAT3 mtv = pColliderA->GetCorrectionVector(pColliderB);
+	//XMFLOAT3 mtv{0,0,0};
 
 	// 충돌 Normal을 통한 Y축 보정 추가
 	float yAngle = mtv.y / Vector3::Length(mtv);
@@ -333,11 +333,12 @@ BoundingBox CGameObject::GetMergedMeshBound(BoundingBox* pVolume)
 {
 	if (nullptr == pVolume)
 	{
-		BoundingBox boundingBox{};
+		BoundingBox boundingBox{XMFLOAT3{0.0f,0.0f,0.0f}, XMFLOAT3{0.0f,0.0f,0.0f}};
 
 		if (m_pMesh)
 		{
-			BoundingBox::CreateMerged(boundingBox, boundingBox, m_pMesh->GetBoundingBox(m_pTransform->GetWorldMatrix()));
+			boundingBox = m_pMesh->GetBoundingBox(m_pTransform->GetWorldMatrix());
+			//BoundingBox::CreateMerged(boundingBox, boundingBox, m_pMesh->GetBoundingBox(m_pTransform->GetWorldMatrix()));
 		}
 
 		for (auto& pChild : m_pChilds)
@@ -350,7 +351,17 @@ BoundingBox CGameObject::GetMergedMeshBound(BoundingBox* pVolume)
 	else {
 		if (m_pMesh)
 		{
-			BoundingBox::CreateMerged(*pVolume, *pVolume, m_pMesh->GetBoundingBox(m_pTransform->GetWorldMatrix()));
+			if (pVolume->Extents.x == 0.0f && 
+				pVolume->Extents.y == 0.0f &&
+				pVolume->Extents.z == 0.0f
+				)
+			{
+				*pVolume = m_pMesh->GetBoundingBox(m_pTransform->GetWorldMatrix());
+			}
+			else
+			{
+				BoundingBox::CreateMerged(*pVolume, *pVolume, m_pMesh->GetBoundingBox(m_pTransform->GetWorldMatrix()));
+			}
 		}
 
 		for (auto& pChild : m_pChilds)
@@ -394,31 +405,29 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		panimationcontroller->m_pModelRootObject->Render(pd3dCommandList, pCamera, bDepthWrite);
 	}
 
-	if (m_pMesh) {
-		// Set Shader Variables
-		UpdateShaderVariables(pd3dCommandList); // GameObject Matrix Update
+	// Set Shader Variables
+	UpdateShaderVariables(pd3dCommandList); // GameObject Matrix Update
 
-		for (int i = 0; i < m_ppMaterials.size(); ++i)
+	for (int i = 0; i < m_ppMaterials.size(); ++i)
+	{
+		std::shared_ptr<CMaterial>& pMaterial = m_ppMaterials[i];
+		if (pMaterial)
 		{
-			std::shared_ptr<CMaterial>& pMaterial = m_ppMaterials[i];
-			if (pMaterial)
-			{
-				// Set Pipeline State
-				if (pMaterial->m_pShader) {
-					//if (pMaterial->m_pShader->GetAllowShadow() == false) continue; // 그림자 허용 여부 확인
-					pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0, bDepthWrite); // Render(pd3dCommandList, pCamera);
-				}
-				// Material Update
-				if (!bDepthWrite) pMaterial->UpdateShaderVariables(pd3dCommandList);
+			// Set Pipeline State
+			if (pMaterial->m_pShader) {
+				//if (pMaterial->m_pShader->GetAllowShadow() == false) continue; // 그림자 허용 여부 확인
+				pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0, bDepthWrite); // Render(pd3dCommandList, pCamera);
 			}
-			// Render Mesh
-			m_pMesh->Render(pd3dCommandList, i);
+			// Material Update
+			if (!bDepthWrite) pMaterial->UpdateShaderVariables(pd3dCommandList);
 		}
-		if (m_ppMaterials.empty())
-		{
-			// Render Mesh
-			m_pMesh->Render(pd3dCommandList);
-		}
+		// Render Mesh
+		if(m_pMesh) m_pMesh->Render(pd3dCommandList, i);
+	}
+	if (m_ppMaterials.empty())
+	{
+		// Render Mesh
+		if (m_pMesh) m_pMesh->Render(pd3dCommandList);
 	}
 
 	if (g_bRenderCollider && !bDepthWrite) {
@@ -1002,7 +1011,22 @@ std::shared_ptr<CLoadedModelInfo> CGameObject::LoadGeometryAndAnimationFromFile(
 				// Model BoundingVolume 계산
 				pLoadedModel->m_pModelRootObject->Update(0.0f);
 				pLoadedModel->m_pModelRootObject->UpdateTransform();
+
 				pLoadedModel->m_MeshBoundingBox = pLoadedModel->m_pModelRootObject->GetMergedMeshBound();
+
+				std::vector<CCollider*> colliders;
+				pLoadedModel->m_pModelRootObject->GetComponentsInChildren<CCollider>(colliders);
+
+				if (colliders.empty())
+				{
+					// Collider가 없으면 MeshBoundingBox로부터 생성
+					auto pCollider = pLoadedModel->m_pModelRootObject->CreateComponent<COBBCollider>();
+					pCollider->SetBoundingBox(pLoadedModel->m_MeshBoundingBox);
+
+					std::string debugOutput = "Auto-generated Collider for Model: " + pLoadedModel->m_strFileName + "\n";
+					OutputDebugStringA(debugOutput.c_str());
+				}
+				// 이제 RootObject는 무조건 Collider를 가지게 됨.
 			}
 			else if (!strcmp(pstrToken, "<Animation>:"))
 			{

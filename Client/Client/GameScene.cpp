@@ -27,29 +27,20 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	}
 
 	// Create Objects
-	CResourceManager& resourceManager = CResourceManager::Instance();
-
-	// <Environment>
-	//StoreTerrain(pd3dDevice, pd3dCommandList, pd3dRootSignature, 3);
-
-	// Skybox
-	//m_pSkyBox = CSkyBox::Create(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature.Get());
-	//AddObject(m_pSkyBox);
 	auto pSkyBoxObject = RequestCreateObject(TypeTag<CSkyBox>());
-
 	
 	// Terrain
-	XMFLOAT3 xmf3Scale(1.0f, 50.0f / 255.0f, 1.0f);
-	XMFLOAT4 xmf4Color(0.0f, 0.2f, 0.3f, 0.0f);
+	auto pTerrain = ChangeTerrain(0);
 
-	CHeightMapTerrainDesc terrainDesc;
-	terrainDesc.wstrHeightMapFilePath = L"Terrain/terrain1.raw";
-	terrainDesc.wstrMeshFilePath = L"Terrain/terrain1.bin";
-	terrainDesc.nWidth = 257;
-	terrainDesc.nLength = 257;
-	terrainDesc.xmf3Scale = XMFLOAT3(1.0f, 50.0f / 255.0f, 1.0f);
-	terrainDesc.xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	auto pTerrainObject = RequestCreateObject(TypeTag<CHeightMapTerrain>(), terrainDesc);
+	//CHeightMapTerrainDesc terrainDesc;
+	//terrainDesc.wstrHeightMapFilePath = L"Terrain/terrain1.raw";
+	//terrainDesc.wstrMeshFilePath = L"Terrain/terrain1.bin";
+	//terrainDesc.nWidth = 257;
+	//terrainDesc.nLength = 257;
+	//terrainDesc.xmf3Scale = XMFLOAT3(1.0f, 50.0f / std::numeric_limits<HEIGHTMAPDEPTH>::max(), 1.0f);
+	//terrainDesc.xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	//auto pTerrainObject = RequestCreateObject(TypeTag<CHeightMapTerrain>(), terrainDesc);
+
 	//auto pTerrainObject = RequestCreateObject(TypeTag<CHeightMapTerrain>(), L"Terrain/terrain1.raw", L"Terrain/terrain1.bin", 257, 257,	XMFLOAT3(1.0f, 50.0f / 255.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
 	
 	//m_pTerrain = GetTerrain(0);
@@ -66,10 +57,15 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	// <Initialize GameObjects>
 	// Player 생성
 	//auto pPlayer = AddObject(std::make_unique<CPlayer>());
-	auto pPlayer = RequestCreateObject(TypeTag<CPlayer>(), 0);
-	pPlayer->SetSkin(0); // 기본 모델 설정
-	pPlayer->SetPosition(DirectX::XMFLOAT3(100.0f, 0.0f, 100.0f));
-	m_pPlayer = (CPlayer*)pPlayer;
+
+	auto pPlayer = SpawnPlayer(XMFLOAT3(100.0f, 0.0f, 100.0f), "Player1", 0, 100, 0, 0, pTerrain);
+	m_pPlayer = pPlayer;
+
+	//auto pPlayer = RequestCreateObject(TypeTag<CPlayer>(), 0);
+	////pPlayer->SetSkin(0); // 기본 모델 설정
+	//pPlayer->SetPosition(DirectX::XMFLOAT3(100.0f, 0.0f, 100.0f));
+	//pPlayer->SetTerrain(pTerrainObject);
+
 
 	// Gun 생성
 	auto pGun = RequestCreateObject(TypeTag<CGun>(), 0);
@@ -270,7 +266,7 @@ void CGameScene::BuildFiredBullets()
 		pBulletVertex.m_nHitObjectType = result.nHitObjectType;
 		pBulletVertices.push_back(pBulletVertex);
 
-		//if(g_bDebugOutput)
+#ifdef _DEBUG
 		{
 			std::string debugOutput = "CGameScene::BuildFiredBullets() - Bullet Position: " + std::to_string(pBullet.xmf3Position.x) + ", " + std::to_string(pBullet.xmf3Position.y) + ", " + std::to_string(pBullet.xmf3Position.z) + "\n";
 			debugOutput += "Velocity: " + std::to_string(pBulletVertex.m_xmf3Velocity.x) + ", " + std::to_string(pBulletVertex.m_xmf3Velocity.y) + ", " + std::to_string(pBulletVertex.m_xmf3Velocity.z) + "\n";
@@ -291,6 +287,7 @@ void CGameScene::BuildFiredBullets()
 			
 			OutputDebugStringA(debugOutput.c_str());
 		}
+#endif
 	}
 	m_pBulletObject->UpdateBulletVertices(pBulletVertices);
 	m_pBulletObject->ClearFireInfos();
@@ -416,6 +413,102 @@ bool CGameScene::Fire(CPlayer* pPlayer, FIRE_INFO* pFireInfo)
 	bool ret = false;
 	ret = pPlayer->Fire(pFireInfo);
 	return ret;
+}
+
+CPlayer* CGameScene::SpawnPlayer(XMFLOAT3 xmf3Position, std::string name, int nSkinIndex, short starthp, char actType, char move_input, void* pTerrain)
+{
+	auto pPlayer = RequestCreateObject(TypeTag<CPlayer>(), nSkinIndex);
+	//pPlayer->SetSkin(0); // 기본 모델 설정
+	pPlayer->SetPosition(xmf3Position);
+
+	if(pTerrain != nullptr)
+	{
+		pPlayer->SetTerrain((pTerrain));
+	}
+	else
+	{
+		pPlayer->SetTerrain(m_ppLayerView[LAYER_TERRAIN][0]);
+	}
+
+	pPlayer->SetHealth(starthp);
+	pPlayer->SetMaxHealth(starthp);
+
+	// 행동 유형 설정
+	pPlayer->GetComponent<CAnimationController>()->SetUpperPose(actType);
+	pPlayer->SetMoveInput(move_input);
+
+	return pPlayer;
+}
+
+CZombieObject* CGameScene::SpawnZombie(XMFLOAT3 xmf3Position, std::string name, int nSkinIndex, short starthp, char actType, char move_input)
+{
+	auto pZombie = RequestCreateObject(TypeTag<CZombieObject>(), nSkinIndex);
+	//pPlayer->SetSkin(0); // 기본 모델 설정
+	pZombie->SetPosition(xmf3Position);
+	pZombie->SetTerrain(m_ppLayerView[LAYER_TERRAIN][0]);
+
+	//pZombie->SetHealth(starthp);
+	//pZombie->SetMaxHealth(starthp);
+
+	// 행동 유형 설정
+	pZombie->GetComponent<CAnimationController>()->SetUpperPose(actType);
+	return pZombie;
+}
+
+CHeightMapTerrain* CGameScene::ChangeTerrain(int nMapIndex)
+{
+	std::vector<std::wstring> heightmappath = 
+	{
+		L"Terrain/terrain1.raw",
+		L"Terrain/terrain2.raw",
+		L"Terrain/terrain3.raw"
+	};
+
+	std::vector<std::wstring> meshhpath =
+	{
+		L"Terrain/terrain1.bin",
+		L"Terrain/terrain2.bin",
+		L"Terrain/terrain3.bin"
+	};
+
+	assert(nMapIndex >= 0 && nMapIndex < heightmappath.size());
+
+	// 이미 지형이 존재할 경우 지운다.
+	if(!m_ppLayerView[LAYER_TERRAIN].empty()) RequestDestroyObject(m_ppLayerView[LAYER_TERRAIN][0]->GetID());
+
+	// 새로운 지형 생성
+	CHeightMapTerrainDesc terrainDesc;
+	terrainDesc.wstrHeightMapFilePath = heightmappath[nMapIndex];
+	terrainDesc.wstrMeshFilePath = meshhpath[nMapIndex];
+	//terrainDesc.wstrMeshFilePath = L"null";
+	terrainDesc.nWidth = 257;
+	terrainDesc.nLength = 257;
+	terrainDesc.nBlockWidth = 13;
+	terrainDesc.nBlockLength = 13;
+	terrainDesc.xmf3Scale = XMFLOAT3(1.0f, 50.0f / std::numeric_limits<HEIGHTMAPDEPTH>::max(), 1.0f);
+	terrainDesc.xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	auto pTerrainObject = RequestCreateObject(TypeTag<CHeightMapTerrain>(), terrainDesc);
+
+	// 모든 물리 객체에 새로운 지형 정보를 설정
+	auto pPlayers = m_ppLayerView[LAYER_PLAYER];
+	for(auto& pPlayer : pPlayers)
+	{
+		if (pPlayer)
+		{
+			pPlayer->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(pTerrainObject);
+		}
+	}
+
+	auto pZombies = m_ppLayerView[LAYER_ENEMY];
+	for (auto& pZombie : pZombies)
+	{
+		if (pZombie)
+		{
+			pZombie->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(pTerrainObject);
+		}
+	}
+
+	return pTerrainObject;
 }
 
 

@@ -115,7 +115,6 @@ private:
 	char m_nMoveInput = 0;
 	int	 m_nState = 0;
 
-
 private:
 	XMFLOAT3	m_xmf3NetVelocity = XMFLOAT3(0.f, 0.f, 0.f);
 	int			m_nNetActType = 0;

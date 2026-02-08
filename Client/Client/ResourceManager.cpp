@@ -339,10 +339,12 @@ void CResourceManager::ProcessGameObjectUpload(ID3D12Device* pd3dDevice, ID3D12G
 {
 	for(auto pGameObject : m_GameObjectToProcessList)
 	{
+#ifdef _DEBUG
 		{
 			std::string debugname = "Processing GameObject Resource Upload: " + pGameObject->GetName() + "\n";
 			OutputDebugStringA(debugname.c_str());
 		}
+#endif
 		pGameObject->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 	m_GameObjectToProcessList.clear();
@@ -383,11 +385,12 @@ void CResourceManager::ProcessMeshUpload(ID3D12Device* pd3dDevice, ID3D12Graphic
 {
 	for (auto pMesh : m_MeshUploadList)
 	{
+#ifdef _DEBUG
 		{
 			std::string debugname = "Processing Mesh Upload: " + pMesh->GetName() + "\n";
 			OutputDebugStringA(debugname.c_str());
 		}
-
+#endif
 		pMesh->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 }
@@ -432,10 +435,12 @@ void CResourceManager::ProcessMaterialUpload(ID3D12Device* pd3dDevice, ID3D12Gra
 {
 	for (auto& pMaterial : m_MaterialUploadList)
 	{
+#ifdef _DEBUG
 		{
 			std::string debugname = "Processing Material Upload: " + pMaterial->GetName() + "\n";
 			OutputDebugStringA(debugname.c_str());
 		}
+#endif
 		pMaterial->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 }

@@ -360,12 +360,13 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 //
 
+using HEIGHTMAPDEPTH = uint16_t;
 
 class CHeightMapImage
 {
 private:
 	//높이 맵 이미지 픽셀(8-비트)들의 이차원 배열이다. 각 픽셀은 0~255의 값을 갖는다. 
-	std::vector<SHORT> m_pHeightMapPixels;
+	std::vector<HEIGHTMAPDEPTH> m_pHeightMapPixels;
 
 	//높이 맵 이미지의 가로와 세로 크기이다. 
 	int m_nWidth;
@@ -381,7 +382,7 @@ public:
 		m_xmf3Scale = xmf3Scale;
 
 		// 이미지 크기만큼 메모리 확보
-		std::vector<SHORT> pHeightMapPixels(m_nWidth * m_nLength);
+		std::vector<HEIGHTMAPDEPTH> pHeightMapPixels(m_nWidth * m_nLength);
 
 		// 이미지를 파일에서 읽어서 메모리에 저장
 		std::ifstream file(pFileName, std::ios::binary);
@@ -390,7 +391,7 @@ public:
 			// 파일 열기 실패 처리
 			return;
 		}
-		file.read(reinterpret_cast<char*>(pHeightMapPixels.data()), m_nWidth * m_nLength * sizeof(SHORT));
+		file.read(reinterpret_cast<char*>(pHeightMapPixels.data()), m_nWidth * m_nLength * sizeof(HEIGHTMAPDEPTH));
 		file.close();
 
 		m_pHeightMapPixels.resize(m_nWidth * m_nLength);
@@ -483,6 +484,7 @@ public:
 		return(fHeight);
 #endif
 	};
+
 	//높이 맵 이미지에서 (x, z) 위치의 법선 벡터를 반환한다. 
 	XMFLOAT3 GetHeightMapNormal(int x, int z)
 	{
@@ -512,7 +514,7 @@ public:
 	};
 
 	XMFLOAT3 GetScale() { return(m_xmf3Scale); }
-	std::vector<SHORT> GetHeightMapPixels() { return(m_pHeightMapPixels); }
+	std::vector<HEIGHTMAPDEPTH> GetHeightMapPixels() { return(m_pHeightMapPixels); }
 	int GetHeightMapWidth() { return(m_nWidth); }
 	int GetHeightMapLength() { return(m_nLength); }
 

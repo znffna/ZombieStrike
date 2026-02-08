@@ -89,5 +89,6 @@ private:
 	std::vector<UINT> m_pIndices;
 
 	BoundingBox m_TerrainBoundingBox; // ÁöÇüÀÇ Bounding Box
+
 }; // CHeightMapTerrain
 

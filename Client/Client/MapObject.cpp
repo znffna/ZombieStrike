@@ -102,5 +102,6 @@ void CMapObject::LoadGeometryAndAnimationFromFile(std::wstring wstrMapFilePath)
 
 void CMapObject::CollectMeshBound()
 {
-
+	UpdateTransform();
+	UpdateBBCache();
 }

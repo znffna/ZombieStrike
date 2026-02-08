@@ -467,6 +467,8 @@ public:
 	void UpdateTransform(const DirectX::XMFLOAT4X4& xmf4x4ParentMatrix);
 	void UpdateTransform(std::shared_ptr<CGameObject>& pGameobject);
 
+public:
+	void SetTerrain(void* pTerrain) const { if (auto pRigidBody = GetComponent<CRigidBody>()) pRigidBody->SetTerrainUpdatedContext(pTerrain); }
 
 protected:
 	std::unique_ptr<CTransform> m_pTransform;
