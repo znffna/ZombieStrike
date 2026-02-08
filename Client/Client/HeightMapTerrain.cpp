@@ -443,3 +443,70 @@ void ExportTerrain(const char* rawFile, const char* outFile) {
 
 	std::cout << "Export complete: " << outFile << "\n";
 }
+
+void ExportTerrainZFlip(const char* rawFile, const char* outFile) {
+	constexpr int WIDTH = 257;
+	constexpr int HEIGHT = 257;
+	constexpr float HEIGHT_SCALE = 50.0f;
+	constexpr float CELL_SIZE = 1.0f;
+
+	std::ifstream in(rawFile, std::ios::binary);
+	if (!in.is_open()) {
+		std::cerr << "Failed to open raw file.\n";
+		return;
+	}
+
+	std::vector<HEIGHTMAPDEPTH> heightMap(WIDTH * HEIGHT);
+	in.read(reinterpret_cast<char*>(heightMap.data()), heightMap.size() * sizeof(HEIGHTMAPDEPTH));
+	in.close();
+
+	std::vector<CTerrainVertex> vertices(WIDTH * HEIGHT);
+
+	// Z축을 뒤집어서 생성 (HEIGHT - 1 - z)
+	for (int z = 0; z < HEIGHT; ++z) {
+		for (int x = 0; x < WIDTH; ++x) {
+			int srcIdx = z * WIDTH + x;
+			int dstIdx = (HEIGHT - 1 - z) * WIDTH + x; // Z-Flip
+			float height = static_cast<float>(heightMap[srcIdx]) / std::numeric_limits<HEIGHTMAPDEPTH>::max() * HEIGHT_SCALE;
+
+			vertices[dstIdx].m_xmf3Position = XMFLOAT3(x * CELL_SIZE, height, (HEIGHT - 1 - z) * CELL_SIZE);
+			vertices[dstIdx].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+			vertices[dstIdx].m_xmf2TexCoord0 = XMFLOAT2(static_cast<float>(x), static_cast<float>(HEIGHT - 1 - z));
+			vertices[dstIdx].m_xmf2TexCoord1 = XMFLOAT2{ vertices[dstIdx].m_xmf2TexCoord0.x / 2, vertices[dstIdx].m_xmf2TexCoord0.y / 2 };
+			vertices[dstIdx].m_xmf3Normal = XMFLOAT3(0, 1, 0);
+		}
+	}
+
+	CalculateNormal(vertices);
+
+	// 인덱스는 동일하게 생성 (이미 뒤집힌 vertices 기준)
+	std::vector<unsigned int> indices;
+	for (int z = 0; z < HEIGHT - 1; ++z) {
+		for (int x = 0; x < WIDTH - 1; ++x) {
+			int topLeft = z * WIDTH + x;
+			int topRight = topLeft + 1;
+			int bottomLeft = (z + 1) * WIDTH + x;
+			int bottomRight = bottomLeft + 1;
+
+			indices.push_back(topLeft);
+			indices.push_back(bottomLeft);
+			indices.push_back(topRight);
+
+			indices.push_back(topRight);
+			indices.push_back(bottomLeft);
+			indices.push_back(bottomRight);
+		}
+	}
+
+	std::ofstream out(outFile, std::ios::binary);
+	unsigned int vertexCount = static_cast<unsigned int>(vertices.size());
+	unsigned int indexCount = static_cast<unsigned int>(indices.size());
+
+	out.write(reinterpret_cast<const char*>(&vertexCount), sizeof(unsigned int));
+	out.write(reinterpret_cast<const char*>(&indexCount), sizeof(unsigned int));
+	out.write(reinterpret_cast<const char*>(vertices.data()), vertexCount * sizeof(CTerrainVertex));
+	out.write(reinterpret_cast<const char*>(indices.data()), indexCount * sizeof(unsigned int));
+	out.close();
+
+	std::cout << "Export complete (Z-Flipped): " << outFile << "\n";
+}

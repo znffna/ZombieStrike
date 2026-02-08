@@ -175,7 +175,6 @@ void CRigidBody::OnTerrainUpdateCallback(float fTimeElapsed)
 		if (xmf3PlayerPosition.z > (xmf4TerrainLength - 1) * xmf3Scale.z) xmf3PlayerPosition.z = (xmf4TerrainLength - 1) * xmf3Scale.z - 1.0f;
 	}
 
-
 	float fHeight = 0.0f;
 	// 지상과의 높이 체크
 	fHeight = pTerrain->GetHeight(xmf3PlayerPosition.x, xmf3PlayerPosition.z);
