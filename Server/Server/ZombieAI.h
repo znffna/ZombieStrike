@@ -43,6 +43,9 @@ constexpr float ZOMBIE_HIT_STUN_SEC = 1.5f;
 // 공격 중 이동 스케일 (0.0 = 완전 정지, 0.3 = 살짝 미끄러짐)
 constexpr float Z_ATTACK_MOVE_SCALE = 0.0f;   // // 공격 모션 동안 이동량 배율
 
+constexpr float Z_STUCK_EPS_DIST = 0.01f;     // 이 거리보다 덜 움직이면 정지로 판단(월드 단위)
+constexpr float Z_STUCK_FORCE_TIME = 0.35f;   // 이 시간 이상 정지면 강제 리패스
+
 constexpr float Z_PAUSE_RANGE       = CELL_SIZE * 2.0f; // 플레이어와 이 거리 이하로 근접 시 정지 트리거
 constexpr float Z_PAUSE_TIME        = 0.40f;            // 멈추는 시간(초)
 constexpr float Z_PAUSE_COOLDOWN    = 1.20f;            // 다시 멈추기까지의 쿨다운(초)
@@ -190,6 +193,13 @@ private:
     // ===============================
     float m_scream_cooldown = 0.0f; //  다음 울부짖기까지 남은 시간
     float m_scream_left = 0.0f;     //  울부짖기 유지 시간
+
+    // ===============================
+    // Stuck(벽/코너 끼임) 감지
+    // ===============================
+    float m_stuck_time = 0.0f;          // 스턱 누적 시간
+    float m_last_x = 0.0f;              // 이전 프레임 X
+    float m_last_z = 0.0f;              // 이전 프레임 Z
 
     bool m_removed = false;   // 사망 후 제거 브로드캐스트 중복 방지 , 제거된 개체는 true      
 };
