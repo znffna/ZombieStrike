@@ -162,6 +162,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 				m_pPlayer->SetSkin(packet->skin_type); // // S_C_OBJECT_ADD - 스킨 적용(모델 교체 보장)
 				m_mapGameObjects[packet->id] = m_pPlayer;
 				m_mapObjectTypes[packet->id] = ObjectType::PLAYER;
+				m_pPlayer->SetHealthUIPostion(0);
 				break;
 			}
 			auto itExist = m_mapGameObjects.find(packet->id);
@@ -183,6 +184,8 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			pPlayer->SetSID(packet->id);
 
 			pPlayer->SetSkin(packet->skin_type);
+			pPlayer->SetHealthUIPostion(pPlayer->GetID() % 3 + 1); // 다른 플레이어는 [1, 3]번 슬롯에 체력바 출력
+
 			m_mapGameObjects[packet->id] = pPlayer;
 			m_mapObjectTypes[packet->id] = ObjectType::PLAYER;
 
