@@ -184,6 +184,14 @@ public:
 		}
 	}
 
+	void SetUpperState(int UpperPose) const
+	{
+		if (auto pAnim = GetComponent<CAnimationController>())
+		{
+			pAnim->SetUpperPose(UpperPose);
+		}
+	}
+
 public:
 	// --------------------------------------------
 	// 소속 Scene 참조
@@ -299,12 +307,11 @@ public:
 	
 	float GetBoneUpperWeight() const
 	{ 
-		if (m_strName == "mixamorig:Hips") return 0.55f;
-		else if (m_strName == "mixamorig:Spine") return 0.55f;
-		else if (m_strName == "mixamorig:Spine1") return 0.75f;
-		else if (m_strName == "mixamorig:Spine2") return 0.9f;
-		else if (m_strTag == "Upper") return 1.0f;
-		else return 0.0f;
+		if (m_strName == "mixamorig:Spine") return 0.4f;
+		else if (m_strName == "mixamorig:Spine1") return 0.6f;
+		else if (m_strName == "mixamorig:Spine2") return 0.8f;
+		else if (m_strTag == "Upper") return 1.0f; // 상체 100%
+		else return 0.0f; // 하체 100%
 	}
 
 public:
