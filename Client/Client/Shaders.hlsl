@@ -67,6 +67,7 @@ Buffer<float4> gRandomBuffer : register(t30);
 Buffer<float4> gRandomSphereBuffer : register(t31);
 
 SamplerState gssWrap : register(s0);
+SamplerState gssClamp : register(s1);
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -203,14 +204,14 @@ VS_SKYBOX_OUTPUT VSSkyBox(VS_SKYBOX_INPUT input)
 
     output.position = mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView).xyzw;
     output.uv = input.position;
-    output.position = mul(output.position, gmtxProjection).xyww;
+    output.position = mul(output.position, gmtxProjection).xyww; // Depth = 1.0f
 
     return (output);
 }
 
 float4 PSSkyBox(VS_SKYBOX_OUTPUT input) : SV_TARGET
 {
-    return (gtxtSkyCubeTexture.Sample(gssWrap, input.uv));
+    return (gtxtSkyCubeTexture.Sample(gssClamp, input.uv));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
