@@ -720,6 +720,7 @@ void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
 		m_pCursorSprite->SetMesh(pRectangleMesh);
 
 #ifdef _WITH_DIRECT_WRITE_UI
+#ifdef _DEBUG
 		auto ptextcomponent = m_pCursorSprite->CreateComponent<CTextComponent>();
 		ptextcomponent->SetText(L"Cursor Position: (0, 0)");
 		ptextcomponent->SetActive(true);
@@ -727,6 +728,7 @@ void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
 		ptextcomponent->SetFont(L"Arial");
 		ptextcomponent->SetFontSize(m_nWndClientHeight / 35.0f);
 		ptextcomponent->SetBrush(D2D1::ColorF(D2D1::ColorF::Purple, 1.0f));
+#endif
 #endif
 	}
 

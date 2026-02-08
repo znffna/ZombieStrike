@@ -53,6 +53,9 @@ void CGaugeBar::SetGauge(float ratio)
 {
 	m_fRatio = ratio;
 
-	m_pGaugeTransform.SetPosition(m_fLeft + m_fWidth * m_fRatio / 2, m_fBottom + m_fHeight / 2, 0.0f);
-	m_pGaugeTransform.SetScale(m_fWidth * ratio, m_fHeight, 1.0f);
+	// 게이지는 왼쪽을 기준으로 줄어들어야 하므로
+	// 스케일이 줄어든 만큼 중심점을 왼쪽으로 이동
+	float gaugeWidth = m_fWidth * ratio;
+	m_pGaugeTransform.SetPosition(m_fLeft + gaugeWidth / 2, m_fBottom + m_fHeight / 2, 0.0f);
+	m_pGaugeTransform.SetScale(gaugeWidth, m_fHeight, 1.0f);
 }
