@@ -248,6 +248,8 @@ public:
 	void SetUpperPose(int upperPose);
 private: 
 	void Apply(int& currnetPose, int newPose);
+	void ApplyBase(int& currnetPose, int newPose);
+	void ApplyUpper(int& currnetPose, int newPose);
 
 public:
 	bool m_bRootMotion = false;

@@ -391,14 +391,16 @@ void CAnimationController::SetBasePose(int basePose)
 {
 	int tackcount = m_nAnimationTracks;
 	if (tackcount <= 0) return;
-	Apply(BasePose, basePose);
+	//Apply(BasePose, basePose);
+	ApplyBase(BasePose, basePose);
 }
 
 void CAnimationController::SetUpperPose(int upperPose)
 {
 	int tackcount = m_nAnimationTracks;
 	if (tackcount <= 0) return;
-	Apply(UpperPose, upperPose);
+	//Apply(UpperPose, upperPose);
+	ApplyUpper(UpperPose, upperPose);
 }
 
 void CAnimationController::Apply(int& currentPose, int newPose)
@@ -418,6 +420,45 @@ void CAnimationController::Apply(int& currentPose, int newPose)
 		SetTrackPosition(newPose, 0.0f); // // CAnimationController::Apply - 비루프(사격/리로드/피격)만 리셋
 	}
 
+	currentPose = newPose;
+}
+
+void CAnimationController::ApplyBase(int& currentPose, int newPose)
+{
+	if (currentPose == newPose) return;
+
+	/*const bool curLocomotion = (0 <= currentPose && currentPose <= 8);
+	const bool newLocomotion = (0 <= newPose && newPose <= 8);*/
+
+	const int oldPose = currentPose;
+
+	if (UpperPose != currentPose) {
+		SetTrackEnable(currentPose, false); 
+	}
+
+	SetTrackEnable(newPose, true);
+
+	/*if (!(curLocomotion && newLocomotion)) {
+		SetTrackPosition(newPose, 0.0f);
+	}*/
+
+	currentPose = newPose;
+}
+
+void CAnimationController::ApplyUpper(int& currentPose, int newPose)
+{
+	if (currentPose == newPose) return;
+
+	const int oldPose = currentPose;
+
+	if (BasePose != currentPose) {
+		SetTrackEnable(currentPose, false); 
+	}
+
+	SetTrackEnable(newPose, true);
+
+	SetTrackPosition(newPose, 0.0f);
+	
 	currentPose = newPose;
 }
 
