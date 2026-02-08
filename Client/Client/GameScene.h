@@ -38,7 +38,7 @@ public:
 	virtual void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 	virtual void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) override;
 
-	virtual void ChangeMap(int nMapIndex);;
+	virtual void ChangeMap(int nMapIndex);
 
 	bool m_bIschambered = false; // 총알 장전 여부
 	virtual bool Fire(CPlayer* pPlayer, FIRE_INFO* pFireInfo);
