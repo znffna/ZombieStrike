@@ -113,7 +113,7 @@ void CPlayer::Initialize(int nSkinIndex)
 
 	// RigidBody »ý¼º
 	auto pRigidBody = CreateComponent<CRigidBody>();
-	pRigidBody->SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	//pRigidBody->SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
 	//pRigidBody->SetVelocity(XMFLOAT3(0.0f, -9.0f, 0.0f));
 
 	auto pCollider = CreateComponent<COBBCollider>();

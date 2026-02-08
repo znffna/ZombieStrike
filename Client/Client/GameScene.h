@@ -49,6 +49,12 @@ public:
 	//void ReleaseShaderVariables() override;
 
 public:
+	CPlayer* SpawnPlayer(XMFLOAT3 xmf3Position, std::string name, int nSkinIndex, short starthp, char actType, char move_input, void * pTerrain = nullptr);
+	CZombieObject* SpawnZombie(XMFLOAT3 xmf3Position, std::string name, int nSkinIndex, short starthp, char actType, char move_input);
+
+	CHeightMapTerrain* ChangeTerrain(int nMapIndex);
+
+public:
 	// Map FileName
 	const std::vector<std::string> m_strStageNames = { "Stage1", "Stage2", "Stage3" };
 	int m_nStageIndex = 0;
@@ -58,7 +64,6 @@ public:
 	CCollisionChecker* m_pCollisionChecker;
 
 	void BuildFiredBullets();
-
 
 	bool m_bPrintObjectCount = false; // 디버그 출력용
 

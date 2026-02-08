@@ -21,7 +21,7 @@ CGameObject::CGameObject()
 	m_pTransform = std::make_unique<CTransform>(this);
 }
 
-CGameObject::CGameObject(const std::string& strName)
+CGameObject::CGameObject(const std::string& strName) : CGameObject()
 {
 	SetName(strName);
 }
@@ -405,31 +405,29 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		panimationcontroller->m_pModelRootObject->Render(pd3dCommandList, pCamera, bDepthWrite);
 	}
 
-	if (m_pMesh) {
-		// Set Shader Variables
-		UpdateShaderVariables(pd3dCommandList); // GameObject Matrix Update
+	// Set Shader Variables
+	UpdateShaderVariables(pd3dCommandList); // GameObject Matrix Update
 
-		for (int i = 0; i < m_ppMaterials.size(); ++i)
+	for (int i = 0; i < m_ppMaterials.size(); ++i)
+	{
+		std::shared_ptr<CMaterial>& pMaterial = m_ppMaterials[i];
+		if (pMaterial)
 		{
-			std::shared_ptr<CMaterial>& pMaterial = m_ppMaterials[i];
-			if (pMaterial)
-			{
-				// Set Pipeline State
-				if (pMaterial->m_pShader) {
-					//if (pMaterial->m_pShader->GetAllowShadow() == false) continue; // 그림자 허용 여부 확인
-					pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0, bDepthWrite); // Render(pd3dCommandList, pCamera);
-				}
-				// Material Update
-				if (!bDepthWrite) pMaterial->UpdateShaderVariables(pd3dCommandList);
+			// Set Pipeline State
+			if (pMaterial->m_pShader) {
+				//if (pMaterial->m_pShader->GetAllowShadow() == false) continue; // 그림자 허용 여부 확인
+				pMaterial->m_pShader->OnPrepareRender(pd3dCommandList, 0, bDepthWrite); // Render(pd3dCommandList, pCamera);
 			}
-			// Render Mesh
-			m_pMesh->Render(pd3dCommandList, i);
+			// Material Update
+			if (!bDepthWrite) pMaterial->UpdateShaderVariables(pd3dCommandList);
 		}
-		if (m_ppMaterials.empty())
-		{
-			// Render Mesh
-			m_pMesh->Render(pd3dCommandList);
-		}
+		// Render Mesh
+		if(m_pMesh) m_pMesh->Render(pd3dCommandList, i);
+	}
+	if (m_ppMaterials.empty())
+	{
+		// Render Mesh
+		if (m_pMesh) m_pMesh->Render(pd3dCommandList);
 	}
 
 	if (g_bRenderCollider && !bDepthWrite) {
