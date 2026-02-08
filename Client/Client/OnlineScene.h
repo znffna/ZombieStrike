@@ -60,6 +60,15 @@ private:
 	int m_totalZombies = 0;
 	int m_killedZombies = 0;
 	int m_aliveZombies = 0;
+	
+
+	// S_C_SCORE_INFO 웨이브 스냅샷(프로토콜 업데이트 반영)
+	int m_currentWave = 1;
+	int m_totalWaves = 1;
+	int m_waveTotalZombies = 0;
+	int m_waveKilledZombies = 0;
+	int m_waveAliveZombies = 0;
+
 
 	// 클리어 중복 처리 방지
 	bool m_stageCleared = false;

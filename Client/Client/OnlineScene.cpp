@@ -352,24 +352,42 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	{
 		auto* packet = reinterpret_cast<pkt_sc_score_info*>(recv_p);
 
-		// 서버 Score 스냅샷 저장
+		// 기존 Score 스냅샷 저장
 		m_stageScore = packet->stage_score;
 		m_totalZombies = packet->total_zombies;
 		m_killedZombies = packet->killed_zombies;
 		m_aliveZombies = packet->alive_zombies;
 
-		// Stage1 클리어 조건(서버 권위): alive==0 && total>0
-		if (!m_stageCleared && m_totalZombies > 0 && m_aliveZombies <= 0)
-		{
-			m_stageCleared = true;
+		// 웨이브 필드 스냅샷 저장(프로토콜 업데이트 반영)
+		m_currentWave = packet->current_wave;
+		m_totalWaves = packet->total_waves;
+		m_waveTotalZombies = packet->wave_total_zombies;
+		m_waveKilledZombies = packet->wave_killed_zombies;
+		m_waveAliveZombies = packet->wave_alive_zombies;
 
-			// TODO: 클리어 UI / 씬 전환 / 입력 잠금
-			// 예) ShowStageClearUI();
-			// 예) PushScene(ResultScene);
+		// 디버그(
+		/*if (g_bNetworkDebugMode) {
+			std::string msg;
+			msg += "[S_C_SCORE_INFO] score=" + std::to_string(m_stageScore);
+			msg += " wave=" + std::to_string(m_currentWave) + "/" + std::to_string(m_totalWaves);
+			msg += " alive=" + std::to_string(m_waveAliveZombies) + "/" + std::to_string(m_waveTotalZombies);
+			msg += "\n";
+			OutputDebugStringA(msg.c_str());
+		}*/
+
+		// 클리어 판정: "마지막 웨이브 + waveAlive==0" 기준
+		if (!m_stageCleared) {
+			const bool isLastWave = (m_currentWave >= m_totalWaves);
+			if (isLastWave && m_waveTotalZombies > 0 && m_waveAliveZombies <= 0) {
+				m_stageCleared = true;
+
+				// TODO: 클리어 UI / 씬 전환 / 입력 잠금
+			}
 		}
 
 		break;
 	}
+
 	default:
 		break;
 	}

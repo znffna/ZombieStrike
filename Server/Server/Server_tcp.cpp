@@ -49,7 +49,7 @@ static std::atomic_bool   g_stage1_cleared{ false };
 
 // // [GLOBAL] - Wave 시스템(3단계) 추가
 static constexpr SIZE1  WAVE_TOTAL = 3;
-static constexpr SIZE2  WAVE_PLAN[WAVE_TOTAL] = { 10, 20, 30 }; // Wave: 웨이브별 스폰 수(원하는 값으로 변경)
+static constexpr SIZE2  WAVE_PLAN[WAVE_TOTAL] = { 1, 20, 30 }; // Wave: 웨이브별 스폰 수(원하는 값으로 변경)
 
 static std::atomic<SIZE1> g_current_wave{ 1 };       // Wave: 현재 웨이브(1~3)
 static std::atomic<SIZE2> g_wave_total_zombies{ 0 }; // Wave: 현재 웨이브 총 수
@@ -1013,6 +1013,12 @@ static void Server_StartWave(SIZE1 wave) // 웨이브 시작(카운터 세팅 + 
 
     SpawnZombies(count); // 현재 웨이브 수만큼 스폰(스폰 분산 로직은 아래 C에서 교체)
 
+    // // [Server_StartWave] - 웨이브 시작 디버그 출력
+    std::cout << "[WAVE-START] wave=" << (int)wave
+        << "/" << (int)WAVE_TOTAL
+        << " spawn=" << count
+        << "\n";
+
     BroadcastStageInfoToAll(/*timeLeft=*/60000);
     BroadcastScoreInfoToAll(); // 웨이브/스코어 스냅샷 전송
 }
@@ -1388,6 +1394,26 @@ void ZombieAIThread() {
         float deltaTime = dt.count();  // 초 단위
         if (deltaTime > 0.1f) deltaTime = 0.1f;
 
+        // // [ZombieAIThread] - Wave 남은 좀비 수 주기 디버그(1초마다)
+        static float s_wave_dbg_acc = 0.0f;
+        s_wave_dbg_acc += deltaTime;
+        if (s_wave_dbg_acc >= 1.0f) {
+            s_wave_dbg_acc = 0.0f;
+
+            const SIZE1 wave = g_current_wave.load(std::memory_order_acquire);
+            const SIZE2 total = g_wave_total_zombies.load(std::memory_order_acquire);
+            const SIZE2 killed = g_wave_killed_zombies.load(std::memory_order_acquire);
+            const SIZE2 alive = (killed <= total) ? (total - killed) : 0;
+
+            std::cout << "[WAVE-DBG] wave=" << (int)wave
+                << "/" << (int)WAVE_TOTAL
+                << " total=" << total
+                << " killed=" << killed
+                << " alive=" << alive
+                << " stageCleared=" << (g_stage1_cleared.load(std::memory_order_acquire) ? 1 : 0)
+                << "\n";
+        }
+
         // 플레이어 스냅샷: ID와 위치 동시 수집
         std::vector<Vec3> playerPositions;
         std::vector<std::pair<SIZEID, Vec3>> playerList;  // ID 포함
@@ -1417,11 +1443,11 @@ void ZombieAIThread() {
         if (s_player_dbg >= 2.0f) {       // DEBUG 출력 주기
             s_player_dbg = 0.0f;
             if (!playerPositions.empty()) {
-                std::cout << "[ZDBG][Players] n=" << playerPositions.size()
-                     << " p0=(" << playerPositions[0].x << "," << playerPositions[0].z << ")\n";
+                /*std::cout << "[ZDBG][Players] n=" << playerPositions.size()
+                     << " p0=(" << playerPositions[0].x << "," << playerPositions[0].z << ")\n";*/
             }
             else {
-                std::cout << "[ZDBG][Players] n=0 (ALL FILTERED?)\n";
+                //std::cout << "[ZDBG][Players] n=0 (ALL FILTERED?)\n";
             }
         }
 
