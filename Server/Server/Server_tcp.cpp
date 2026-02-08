@@ -119,7 +119,6 @@ static inline void normalize3(float& x, float& y, float& z)
     }
 }
 
-
 // Ray(ox,oy,oz; dx,dy,dz) vs Sphere(center cx,cy,cz; radius r)
 // - out_t : 가장 이른 교차 파라미터 t(원점에서 거리)
 // - 반환값 : 교차 여부
@@ -692,7 +691,7 @@ public:
                 _velocity = updatePacket->velocity;
                 _look = updatePacket->look;
                 _pitch = updatePacket->pitch;
-                _hp = updatePacket->hp;
+                //_hp = updatePacket->hp;
                 _level = updatePacket->level;
                 _score = updatePacket->score;
                 _damage = updatePacket->damage;
@@ -1090,6 +1089,41 @@ static void BroadcastStageInfoToAll(SIZE2 timeLeft)
         session.do_send(&resp);
 }
 
+static void BroadcastPlayerFullUpdate(SIZEID victimId)
+{
+    pkt_sc_object_update u{};
+    u.header.size = sizeof(u);
+    u.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
+    u.id = victimId;
+
+    {   
+        std::lock_guard<std::mutex> lk(g_usersMutex);
+        auto it = g_users.find(victimId);
+        if (it == g_users.end()) return;
+        SESSION& v = it->second;
+
+        u.position = v._position;
+        u.velocity = v._velocity;
+        u.look = v._look;
+        u.pitch = v._pitch;
+        u.hp = v._hp;
+
+        u.gun_type = v._gun_type;
+        u.level = v._level;
+        u.score = v._score;
+        u.damage = v._damage;
+        u.act_type = v._act_type;
+        u.move_input = v._move_input;
+    }
+
+    std::vector<SESSION*> targets;
+    {
+        std::lock_guard<std::mutex> lk(g_usersMutex);
+        targets.reserve(g_users.size());
+        for (auto& [id, s] : g_users) targets.push_back(&s);
+    }
+    for (SESSION* ps : targets) ps->do_send(&u);
+}
 
 
 // ===============================
@@ -1470,12 +1504,62 @@ void ZombieAIThread() {
             // ZombieAIThread - 제거 플래그면 완전 스킵
 
             //----------
-            auto t0 = std::chrono::steady_clock::now(); // // ZombieAIThread - DEBUG(Update 시간 측정)
+            auto t0 = std::chrono::steady_clock::now(); // DEBUG(Update 시간 측정)
             zombie->Update(playerPositions, zombiesSnapshot, deltaTime);
-            auto t1 = std::chrono::steady_clock::now(); // // ZombieAIThread - DEBUG(Update 시간 측정)
+            auto t1 = std::chrono::steady_clock::now(); // DEBUG(Update 시간 측정)
+
+            if (zombie->ConsumeAttackHit())
+            {
+                if (!playerList.empty() && !zombie->IsDead() && !zombie->IsRemoved())
+                {
+                    const float zx = zombie->GetX();
+                    const float zz = zombie->GetZ();
+
+                    // 1) 가장 가까운 플레이어 선정(스냅샷 기반)
+                    SIZEID bestPid = 0;
+                    float bestD2 = FLT_MAX;
+
+                    for (auto& [pid, pos] : playerList) {
+                        const float dx = pos.x - zx;
+                        const float dz = pos.z - zz;
+                        const float d2 = dx * dx + dz * dz;
+                        if (d2 < bestD2) { bestD2 = d2; bestPid = pid; }
+                    }
+
+                    // 2) 사거리 체크(좀비쪽 effectiveAttackRange와 동일한 취지)
+                    const float attackRange = (std::max)(Z_ATTACK_RANGE, CELL_SIZE * 2.0f);
+                    if (bestD2 <= attackRange * attackRange)
+                    {
+                        const SIZE2 dmg = zombie->GetDamage();
+                        bool applied = false;
+
+                        {   // victim HP 서버에서 감소(권위)
+                            std::lock_guard<std::mutex> lk(g_usersMutex);
+                            auto it = g_users.find(bestPid);
+                            if (it != g_users.end()) {
+                                SESSION& v = it->second;
+                                if (v._alive.load(std::memory_order_acquire) &&
+                                    v._is_loaded.load(std::memory_order_acquire))
+                                {
+                                    const SIZE2 before = v._hp;
+                                    v._hp = (before > dmg) ? (before - dmg) : 0;
+
+                                    //v._act_type = ActionType::HIT; // 피격 상태(원하면)
+                                    applied = true;
+                                }
+                            }
+                        }
+
+                        // 3) 변경 브로드캐스트(HP-only 금지 → 풀 업데이트)
+                        if (applied) {
+                            BroadcastPlayerFullUpdate(bestPid); // 피해자 상태 동기화
+                        }
+                    }
+                }
+            }
 
             auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count(); // // ZombieAIThread - DEBUG(Update ms)
-            if (ms > 30) { // // ZombieAIThread - DEBUG(한 좀비 Update가 30ms 이상이면 경고)
+            if (ms > 30) { // /DEBUG(한 좀비 Update가 30ms 이상이면 경고)
                 std::cout << "[ZDBG][SlowUpdate] zid=" << zombie->GetID()
                     << " ms=" << ms
                     << " playerN=" << playerPositions.size()

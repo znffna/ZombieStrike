@@ -354,9 +354,18 @@ Vec3 ZombieAI::AvoidPlayers(const std::vector<Vec3>& playerPositions)
 
 void ZombieAI::TriggerAttack(float animTime)
 {
+    // 공격 시작 1회성 이벤트 발생(서버 권위 피격 판정용)
+    const bool wasAttacking = (m_attack_left > 0.0f);
+
     // 공격 모션 시간 설정, 쿨다운 갱신
     m_attack_left = std::max(m_attack_left, animTime);
     m_attack_cd = std::max(m_attack_cd, m_attack_cooldown);
+
+    // “이번 호출로 공격이 새로 시작된 경우”에만 1회 true
+    if (!wasAttacking && m_attack_left > 0.0f) {
+        m_attack_hit_event = true; // 1회성 히트 이벤트 ON
+    }
+
     m_dirty = true;
 }
 
@@ -364,6 +373,20 @@ bool ZombieAI::IsAttacking() const
 {
     return m_attack_left > 0.0f;
 }
+
+bool ZombieAI::ConsumeAttackHit()
+{
+   // 공격 시작 1회성 이벤트 소비
+    if (!m_attack_hit_event) return false;
+    m_attack_hit_event = false;
+    return true;
+}
+
+SIZE2 ZombieAI::GetDamage() const
+{
+    return m_damage; 
+}
+
 
 // 근접 시 잠깐 멈춤
 void ZombieAI::TriggerPause(float dur)

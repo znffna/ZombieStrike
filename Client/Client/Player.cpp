@@ -317,6 +317,7 @@ void CPlayer::SetSkin(int nSkinType)
 	SetSkinType(nSkinType); // SetSkinType가 즉시 모델 적용까지 처리
 }
 
+
 //void CPlayer::SetSkin(int nSkinType)
 //{
 //	SetSkinType(nSkinType);
