@@ -12,7 +12,7 @@ struct CollisionInfo {
 };
 
 struct RESULT_RAYCAST {
-	bool isCollided;
+	bool isCollided = false;
 	float fImpactDistance;
 	int nHitObjectType; 
 };

@@ -14,11 +14,11 @@ CCollisionChecker::~CCollisionChecker()
 void CCollisionChecker::Initialize()
 {
 	std::vector<std::pair<GAMEOBJECT_LAYER, GAMEOBJECT_LAYER>> ppObjectLayerPairs{
-	{ LAYER_PLAYER, LAYER_ENEMY,},
-	{ LAYER_BULLET, LAYER_ENEMY },
+	//{ LAYER_PLAYER, LAYER_ENEMY,},
+	//{ LAYER_BULLET, LAYER_ENEMY },
 	{ LAYER_PLAYER, LAYER_ENVIRONMENT },
 	//{ LAYER_ENEMY, LAYER_ENVIRONMENT },
-	{ LAYER_BULLET, LAYER_ENVIRONMENT }
+	//{ LAYER_BULLET, LAYER_ENVIRONMENT }
 	};
 	m_ppObjectLayerPairs = ppObjectLayerPairs;
 }
@@ -120,10 +120,10 @@ void CCollisionChecker::CollisionCheckFromLayer(GAMEOBJECT_LAYER first, GAMEOBJE
 				for (auto& pColliderB : pCollidersB) {
 					if (IsCollided(pColliderA, pColliderB)) {
 						ppCollidedPairs.emplace_back(pObjectA, pObjectB, pColliderA, pColliderB);
-						{
+						/*{
 							std::string debugoutput = "Collision Detected Between: " + pObjectA->GetName() + " - " + pObjectB->GetName() + "\n";
 							OutputDebugStringA(debugoutput.c_str());
-						}
+						}*/
 						//pObjectA->OnCollision(pColliderB);
 						//pObjectB->OnCollision(pColliderA);
 					}
@@ -159,6 +159,7 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 	RESULT_RAYCAST resultRaycast;
 	bool& isCollided = resultRaycast.isCollided;
 	float& fImpactDistance = resultRaycast.fImpactDistance;
+	resultRaycast.isCollided = false;
 	resultRaycast.fImpactDistance = fRange;
 	resultRaycast.nHitObjectType = HIT_TYPE_NONE; // 초기값은 충돌 없음
 
@@ -171,43 +172,45 @@ RESULT_RAYCAST CCollisionChecker::CheckBulletCollision(const XMFLOAT3& xmf3Posit
 	XMVECTOR xmv3Direction = XMLoadFloat3(&xmf3Direction);
 	xmv3Direction = XMVector3Normalize(xmv3Direction);
 
-	float tempRange;
+	float tempRange = 0.0f; // 초기화 추가
 
-	/*
-	auto& pTerrain = ppObjects[CGameObject::LAYER_TERRAIN];
+	// Terrain과의 충돌은 미정
+	/*auto& pTerrain = ppObjects[GAMEOBJECT_LAYER::LAYER_TERRAIN];
 	for(auto& pTerrainObject : pTerrain)
 	{
 		std::vector<std::shared_ptr<CCollider>> pColliders = pTerrainObject->m_pCachesColliders;
 		
+	}*/
+	
+
+	for (auto& pObject : pMaps)
+	{
+		auto& pColliders = pObject->GetCachedColliders();
+		for (auto& pCollider : pColliders) {
+			if (pCollider->RayCast(xmv3Position, xmv3Direction, tempRange)) {
+				// 사거리 체크 및 가장 가까운 충돌 지점으로 기록
+				if (tempRange <= fRange && tempRange < fImpactDistance) {
+					isCollided = true;
+					fImpactDistance = tempRange;
+					resultRaycast.nHitObjectType = HIT_TYPE_ENVIRONMENT; // Environment
+				}
+			}
+		}
 	}
-	*/
 
-	//for (auto& pObject : pMaps)
-	//{
-	//	auto& pColliders = pObject->GetCachedColliders();
-	//	for (auto& pCollider : pColliders) {
-	//		if (auto result = pCollider->RayCast(xmv3Position, xmv3Direction, tempRange)) {
-	//			isCollided = true;
-	//			if (tempRange < fImpactDistance) {
-	//				fImpactDistance = tempRange;
-	//				resultRaycast.nHitObjectType = HIT_TYPE_ENVIRONMENT; // Environment
-	//			}
-	//		}
-	//	}
-	//}
-
-	//for (auto& pEnemy : pEnemies) {
-	//	auto& pColliders = pEnemy->GetCachedColliders();
-	//	for (auto& pCollider : pColliders) {
-	//		if (auto result = pCollider->RayCast(xmv3Position, xmv3Direction, tempRange)) {
-	//			isCollided = true;
-	//			if (tempRange < fImpactDistance) {
-	//				fImpactDistance = tempRange;
-	//				resultRaycast.nHitObjectType = HIT_TYPE_ENEMY; // Enemy
-	//			}
-	//		}
-	//	}
-	//}
+	for (auto& pEnemy : pEnemies) {
+		auto& pColliders = pEnemy->GetCachedColliders();
+		for (auto& pCollider : pColliders) {
+			if (pCollider->RayCast(xmv3Position, xmv3Direction, tempRange)) {
+				// 사거리 체크 및 가장 가까운 충돌 지점으로 기록
+				if (tempRange <= fRange && tempRange < fImpactDistance) {
+					isCollided = true;
+					fImpactDistance = tempRange;
+					resultRaycast.nHitObjectType = HIT_TYPE_ENEMY; // Enemy
+				}
+			}
+		}
+	}
 	
 	return resultRaycast;
 }

@@ -46,7 +46,7 @@ public:
 	// 반드시 구현해야 하는 것들
 	virtual ColliderType GetType() const = 0;
 
-	// BroadPhase용 AABB (모든 Collider는 AABB로 변환 가능)
+	// BroadPhase용 AABB (모든 Collider가 AABB를 반환 가능)
 	virtual BoundingBox GetBroadPhaseAABB() const = 0;
 
 	// NarrowPhase
@@ -59,6 +59,9 @@ public:
 
 	// MTV (Minimum Translation Vector) 계산
 	virtual XMFLOAT3 GetCorrectionVector(const CCollider* other) const = 0;
+
+	// RayCast
+	virtual bool RayCast(const XMVECTOR& xmv3Position, const XMVECTOR& xmv3Direction, float& fDistance) const = 0;
 
     // Component
 	void Update(float dt) override;
@@ -106,6 +109,11 @@ public:
 
 	XMFLOAT3 GetCorrectionVector(const CCollider* other) const override;
 
+	bool RayCast(const XMVECTOR& xmv3Position, const XMVECTOR& xmv3Direction, float& fDistance) const override
+	{
+		return m_world.Intersects(xmv3Position, xmv3Direction, fDistance);
+	}
+
     const BoundingSphere& GetWorldSphere() const { return m_world; }
 
     virtual XMFLOAT4X4 GetColliderMatrix() const
@@ -145,6 +153,11 @@ public:
     bool Intersects(const CCollider* other) const override;
 
 	XMFLOAT3 GetCorrectionVector(const CCollider* other) const override;
+
+	bool RayCast(const XMVECTOR& xmv3Position, const XMVECTOR& xmv3Direction, float& fDistance) const override
+	{
+		return m_world.Intersects(xmv3Position, xmv3Direction, fDistance);
+	}
 
     const BoundingBox& GetWorldAABB() const { return m_world; }
 
@@ -209,6 +222,11 @@ public:
     bool Intersects(const CCollider* other) const override;
 
 	XMFLOAT3 GetCorrectionVector(const CCollider* other) const override;
+
+	bool RayCast(const XMVECTOR& xmv3Position, const XMVECTOR& xmv3Direction, float& fDistance) const override
+	{
+		return m_world.Intersects(xmv3Position, xmv3Direction, fDistance);
+	}
 
     const BoundingOrientedBox& GetWorldOBB() const { return m_world; }
 
