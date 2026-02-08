@@ -21,7 +21,7 @@ constexpr short MAX_ZOMBIE_COUNT = 30;  // 최대 좀비 수
 constexpr int W_WIDTH = 250;            // 맵의 크기 정의
 constexpr int W_HEIGHT = 250;
 
-constexpr int GUN_DAMAGE = 100;
+constexpr int GUN_DAMAGE = 50;
 
 
 
@@ -294,9 +294,9 @@ struct pkt_cs_update {
 // 총알 발사 패킷
 struct pkt_cs_shoot {
     PacketHeader header{sizeof(*this), PKT_TYPE::C_S_SHOOT };
-	//SIZEID id;                      // 누가 쐈는지
- //   SIZE1 GunType;                  // 총 종류
- //   //int hitZombieId;
+	//  SIZEID id;                      // 누가 쐈는지
+    //  SIZE1 GunType;                  // 총 종류
+    //  //int hitZombieId;
     float bulletPos[3];
     float bulletDir[3];
 };

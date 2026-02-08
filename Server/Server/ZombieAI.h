@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <unordered_map>
+#include <atomic> 
 #include "../../protocol.h"
 
 // 필수 정보 
@@ -57,11 +58,9 @@ enum class ZombieType : uint8_t
 class ZombieAI
 {
 public:
-    // 타입 기반 스탯 적용 함수 추가
-    void SetType(ZombieType type);
-
-    // 타입 조회 추가(디버그/패킷 name 구분용)
-    ZombieType GetType() const { return m_type; }
+   
+    void SetType(ZombieType type);   // 타입 기반 스탯 적용 함수 추가
+    ZombieType GetType() const { return m_type; }   // 타입 조회 추가(디버그/패킷 name 구분용)
 
     class AStar;
 
@@ -78,30 +77,31 @@ public:
     bool IsAttacking() const;
 
     //  길따라가기 일시정지(공격과 별개)
-    void TriggerPause(float dur = Z_PAUSE_TIME);  // // ZombieAI::TriggerPause - 근접 시 잠깐 멈추기
-    bool IsPausing() const;                       // // ZombieAI::IsPausing     - 현재 일시정지 여부
-
+    void TriggerPause(float dur = Z_PAUSE_TIME);  // 근접 시 잠깐 멈추기
+    bool IsPausing() const;                       // 현재 일시정지 여부
 
     // ---[Hit Stun]---
-    // 외부(서버 피격 처리)에서 스턴 부여
-    void SetStun(float seconds = ZOMBIE_HIT_STUN_SEC);
-    // 현재 스턴 상태 조회
-    bool IsStunned() const;
+    void SetStun(float seconds = ZOMBIE_HIT_STUN_SEC);  // 외부(서버 피격 처리)에서 스턴 부여
+    bool IsStunned() const; // 현재 스턴 상태 조회
 
     Vec3 FindClosestPlayer(const std::vector<Vec3>& playerPositions);
     void FindPath();                      // AI 동작
 
     Vec3 AvoidPlayers(const std::vector<Vec3>& playerPositions); // 플레이어 회피
+    
+    SIZE1 GetActType() const { return m_act_type; } // 현재 액션 타입 조회(네트워크 송신/디버그용)
+    void SetActType(SIZE1 t) { m_act_type = t; }    // 현재 액션 타입 설정(내부 상태머신/피격 반영용)
 
-    // 총알 피격 처리: damage 만큼 HP 감소 (0 하한), Dirty 플래그 자동 세팅
-    void ApplyDamage(SIZE2 damage);
+    void ApplyDamage(SIZE2 damage); // 총알 피격 처리: damage 만큼 HP 감소 (0 하한), Dirty 플래그 자동 세팅
+    void AddPendingDamage(SIZE2 damage) noexcept;
 
-    // 현재 사망 상태(HP==0)인지 조회
-    bool IsDead() const;
-
+    bool m_force_hit = false;   // ApplyDamage에서 세트되는 강제 HIT 플래그
+    
+    bool IsDead() const;    // 현재 사망 상태(HP==0)인지 조회
+        
     // 제거 상태 제어
-    void MarkRemoved() noexcept;      // // ZombieAI::MarkRemoved - 사망 브로드캐스트 후 호출
-    bool IsRemoved() const noexcept;  // // ZombieAI::IsRemoved - 업데이트/충돌 제외 판단
+    void MarkRemoved() noexcept;      // 사망 브로드캐스트 후 호출
+    bool IsRemoved() const noexcept;  // 업데이트/충돌 제외 판단
 
     void Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime);
 
@@ -117,7 +117,6 @@ public:
     
     Object GetObjectinfo() const; // 패킷 정보 반환   
 
-    // Dirty 플래그
     bool IsDirty() const;
     void ClearDirty();
 
@@ -128,17 +127,17 @@ public:
     float GetPlayerZ() const;
 
 private:
-    // 좀비 타입 저장
-    ZombieType m_type = ZombieType::NORMAL;
+   
+    ZombieType m_type = ZombieType::NORMAL;  // 좀비 타입 저장
 
-    // 타입별 이동속도(기존 Z_move_speed 대체)
-    float m_move_speed = Z_move_speed;
+    
+    float m_move_speed = Z_move_speed;  // 타입별 이동속도(기존 Z_move_speed 대체)
 
-    // 타입별 데미지(기존 ZOMBIE_DAMAGE 대체)
-    float m_damage = ZOMBIE_DAMAGE;
+    
+    float m_damage = ZOMBIE_DAMAGE; // 타입별 데미지(기존 ZOMBIE_DAMAGE 대체)
 
-    // 타입별 공격쿨(기존 Z_ATTACK_COOLDOWN 대체)
-    float m_attack_cooldown = Z_ATTACK_COOLDOWN;
+    
+    float m_attack_cooldown = Z_ATTACK_COOLDOWN;    // 타입별 공격쿨(기존 Z_ATTACK_COOLDOWN 대체)
 
    // AStar* m_astar;
     std::unique_ptr<AStar> m_astar;
@@ -160,6 +159,7 @@ private:
     size_t m_pathIndex;
 
     bool m_dirty = true;
+    std::atomic<SIZE2> m_pending_damage{ 0 };
 
     Vec3 GetNodeCenter(int x, int z) const;
 
@@ -170,11 +170,13 @@ private:
     float m_pause_left = 0.0f;   // 남은 정지 시간
     float m_pause_cd = 0.0f;   // 정지 쿨다운
 
-    // 피격 스턴 남은 시간(초)
-    float m_stun_left = 0.0f;
+    SIZE1 m_act_type = (SIZE1)ActionType::ZMOVE; 
+   
+    float m_stun_left = 0.0f;    // 피격 스턴 남은 시간(초)
 
-    // 사망 후 제거 브로드캐스트 중복 방지
-    bool m_removed = false;           // // ZombieAI::m_removed - 제거된 개체는 true
+    float m_hit_visual_left = 0.0f;
+ 
+    bool m_removed = false;   // 사망 후 제거 브로드캐스트 중복 방지 , 제거된 개체는 true      
 };
 
 // Util 함수

@@ -20,6 +20,8 @@ constexpr int PLAYER_START_X = 580;
 constexpr int PLAYER_START_Z = 545;
 constexpr int NUM_ZOMBIES = 50; // 추가: 생성할 좀비 수
 
+constexpr float STUN_TIME = 1.0f; // 추가: 생성할 좀비 수
+
 static bool IsAABBCollision(float x1, float z1, float x2, float z2, float half, float tolerance = 1.0f)
 {   // 겹침 판단
     float range = half * tolerance * 2.0f;
@@ -336,19 +338,34 @@ bool ZombieAI::IsPausing() const
 
 void ZombieAI::ApplyDamage(SIZE2 damage)
 {
-    if (m_hp == 0) return;
+    if (m_hp == 0) return;  // 사망 상태면 무시
     if (damage >= m_hp) m_hp = 0;
     else                m_hp -= damage;
+    
+    m_stun_left = std::max(m_stun_left, ZOMBIE_HIT_STUN_SEC);   // 피격 시 스턴 갱신(중첩 시 남은 시간이 더 짧으면 연장)
 
-    // 피격 시 스턴 갱신(중첩 시 남은 시간이 더 짧으면 연장)
-    m_stun_left = std::max(m_stun_left, ZOMBIE_HIT_STUN_SEC);
+    m_attack_left = 0.0f;   
+    m_pause_left = 0.0f;
+
+    if (m_hp > 0) {  // HIT 상태 강제 트리거
+        m_hit_visual_left = std::max(m_hit_visual_left, STUN_TIME);
+        m_force_hit = true;          
+        m_act_type = ActionType::HIT;
+    }
 
     if (m_hp == 0) {
-        m_attack_left = 0.0f;   // // ApplyDamage: 사망 즉시 행동 차단
-        m_pause_left = 0.0f;    // // ApplyDamage: 사망 즉시 정지 해제
+        //m_attack_left = 0.0f;   // 사망 즉시 행동 차단
+        //m_pause_left = 0.0f;    // 사망 즉시 정지 해제
+        m_act_type = (SIZE1)ActionType::DEATH;
     }
 
     m_dirty = true;
+}
+
+void ZombieAI::AddPendingDamage(SIZE2 damage) noexcept
+{
+    if (damage == 0) return;
+    m_pending_damage.fetch_add(damage, std::memory_order_relaxed);
 }
 
 bool ZombieAI::IsDead() const
@@ -380,7 +397,30 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
 {
     if (IsRemoved()) return;
 
+    const SIZE2 pending = m_pending_damage.exchange(0, std::memory_order_acq_rel);
+    if (pending > 0) {
+
+        std::cout << "[DMG-DBG] zid=" << m_id
+            << " pending=" << pending
+            << " hp_before=" << (int)m_hp
+            << "\n";
+
+        ApplyDamage(pending); 
+
+        std::cout << "[DMG-DBG] zid=" << m_id
+            << " hp_after=" << (int)m_hp
+            << " stun_left=" << m_stun_left
+            << " hitVis=" << m_hit_visual_left
+            << "\n";
+
+    }
+
     if (playerPositions.empty()) return;
+
+    if (m_hit_visual_left > 0.0f) {
+        m_hit_visual_left -= deltaTime;
+        if (m_hit_visual_left < 0.0f) m_hit_visual_left = 0.0f;
+    }
 
     if (m_attack_cd > 0.0f) { m_attack_cd -= deltaTime; if (m_attack_cd < 0.0f) m_attack_cd = 0.0f; }
     if (m_attack_left > 0.0f) { m_attack_left -= deltaTime; if (m_attack_left < 0.0f) m_attack_left = 0.0f; }
@@ -389,18 +429,35 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     if (m_pause_cd > 0.0f) { m_pause_cd -= deltaTime; if (m_pause_cd < 0.0f) m_pause_cd = 0.0f; }
     if (m_pause_left > 0.0f) { m_pause_left -= deltaTime; if (m_pause_left < 0.0f) m_pause_left = 0.0f; }
 
-
-    // 스턴 상태면 이동/경로탐색 모두 중지
-    if (m_stun_left > 0.0f) {
-        m_stun_left -= deltaTime;
+    if (m_stun_left > 0.0f) {                     
+        m_stun_left -= deltaTime;                
         if (m_stun_left < 0.0f) m_stun_left = 0.0f;
+       
+        m_attack_left = 0.0f;                    
+        m_pause_left = 0.0f;                    
 
-        // 멈춤 처리: 이 프레임에선 아무 것도 하지 않음(위치/속도 유지)
-        // 클라 동기화를 위해 Dirty 플래그만 유지
-        m_dirty = true;
-        return;
+        m_dirty = true;                           
+        return;                                   
     }
 
+    if (m_hit_visual_left > 0.0f) {               
+        m_attack_left = 0.0f;                     
+        m_pause_left = 0.0f;                     
+        m_dirty = true;                           
+        return;                                   
+    }
+
+    // 스턴 상태면 이동/경로탐색 모두 중지
+    //if (m_stun_left > 0.0f) {
+    //    m_stun_left -= deltaTime;
+    //    if (m_stun_left < 0.0f) m_stun_left = 0.0f;
+
+    //    // 멈춤 처리: 이 프레임에선 아무 것도 하지 않음(위치/속도 유지)
+    //    // 클라 동기화를 위해 Dirty 플래그만 유지
+    //    m_dirty = true;
+    //    return;
+    //}
+ 
     // 1. 가장 가까운 플레이어 위치 계산
     Vec3 closest = FindClosestPlayer(playerPositions);
 
@@ -681,7 +738,6 @@ float ZombieAI::GetPlayerZ() const { return m_targetZ; }
 Object ZombieAI::GetObjectinfo() const {
     Object info{};
     info.position = Vec3(m_x, 0, m_z);
-
     info.velocity = Vec3(0, 0, 1); // 현재 방향 지정 안함
 	info.look = GetLookVectorToPlayer();
 
@@ -698,17 +754,21 @@ Object ZombieAI::GetObjectinfo() const {
     {
         act = ActionType::DEATH;                
     }
-    else if (m_stun_left > 0.0f)
+    else if (m_hit_visual_left > 0.0f)
     {
-        act = ActionType::HIT;                  
+        info.velocity = Vec3(0, 0, 0);
+        act = ActionType::HIT;
     }
     else if (m_attack_left > 0.0f)
     {
-        act = ActionType::ATTACK;               
+        act = ActionType::ATTACK;
     }
+    //else if (m_stun_left > 0.0f)
+    //{
+    //    act = ActionType::HIT;                  
+    //}
     else if (m_pause_left > 0.0f)
     {
-        
         act = ActionType::SCREAM;     // pause를 SCREAM으로 보여주고 싶으면 이걸로
     }
     else

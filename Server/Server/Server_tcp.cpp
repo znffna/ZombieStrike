@@ -62,9 +62,9 @@ static SIZE2 GetMaxAmmo(GunType gt) // 총 타입별 최대 탄 수
 {
     switch (gt) {
     //case GunType::BULLET_PISTOL:  return 12;
-    case GunType::BULLET_RIFLE:   return 300;
+    case GunType::BULLET_RIFLE:   return 3000;
     //case GunType::BULLET_SHOTGUN: return 8;
-    default:                      return 300;
+    default:                      return 3000;
     }
 }
 
@@ -502,13 +502,15 @@ public:
             float distSqr = (closest - zombie->GetPosition()).LengthSquared();
 
             if (distSqr <= hitRadius * hitRadius) {
-                zombie->ApplyDamage(10);
+                zombie->AddPendingDamage(GUN_DAMAGE);
 
-				if (zombie->GetHP() <= 0) {
-					// 좀비가 죽었을 때 처리
-					// std::cout << "[Zombie] " << zombie->GetID() << " is dead.\n";
-					zombie->ClearDirty(); // 좀비 상태 초기화 , 여기서 하는게 좋은가?
-				}
+    //            zombie->ApplyDamage(10);
+
+				//if (zombie->GetHP() <= 0) {
+				//	// 좀비가 죽었을 때 처리
+				//	// std::cout << "[Zombie] " << zombie->GetID() << " is dead.\n";
+				//	zombie->ClearDirty(); // 좀비 상태 초기화 , 여기서 하는게 좋은가?
+				//}
             }
         }
 
@@ -782,14 +784,21 @@ public:
             float dx = p->bulletDir[0];
             float dy = p->bulletDir[1];
             float dz = p->bulletDir[2];
-
             
-             std::cout << "[SHOOT] id=" << _id  // DEBUG: 총알 원점/방향 확인(필요 시 주석 해제)
-                       << " o=(" << ox << "," << oy << "," << oz << ")"
-                       << " d=(" << dx << "," << dy << "," << dz << ")"
-                       << " gun=" << (int)_gun_type
-                       << " ammo=" << _ammo_cur << "/" << _ammo_max
-                       << "\n";
+            {   // [SESSION::process_packet] - DEBUG: 좌표계 검증
+                std::lock_guard<std::mutex> lock(zombiesMutex);
+
+                if (!g_zombies.empty() && g_zombies[0]) {
+                    ZombieAI* z = g_zombies[0];
+
+                    //std::cout
+                    //    << "[COORD-DBG] shooter=" << _id
+                    //    << " bulletPos=(" << ox << "," << oy << "," << oz << ")"
+                    //    << " bulletDir=(" << dx << "," << dy << "," << dz << ")"
+                    //    << " zombie0=(" << z->GetX() << "," << z->GetZ() << ")"
+                    //    << "\n";
+                }
+            }
 
             {   // 발사 브로드캐스트(S_C_SHOOT) 
                 pkt_sc_shoot b{};
@@ -806,7 +815,7 @@ public:
                 }
             }
 
-            constexpr float MAX_RANGE = 80.0f; // 임시 사거리
+            constexpr float MAX_RANGE = 200.0f; // 임시 사거리
 
             int   hit_zid = -1;
             float hit_t = 0.0f;
@@ -817,6 +826,13 @@ public:
 
                 constexpr SIZE2 DAMAGE = GUN_DAMAGE;   // 임시 고정 대미지(총기별 테이블은 이후에 연결)
 
+                std::cout << "[HIT-DBG] shooter=" << _id
+                    << " hit_zid=" << hit_zid
+                    << " t=" << hit_t
+                    << " dmg=" << DAMAGE
+                    << "\n";
+
+
                 SIZE2 hp_after = 0;
                 {
                     std::lock_guard<std::mutex> lock(zombiesMutex);
@@ -825,7 +841,7 @@ public:
                         if (z && z->GetID() == hit_zid) { hitZ = z; break; }
                     }
                     if (hitZ) {
-                        hitZ->ApplyDamage(DAMAGE);
+                        hitZ->AddPendingDamage(DAMAGE);
                         hp_after = hitZ->GetHP();
                     }
                 }
