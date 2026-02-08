@@ -85,6 +85,7 @@ private:
 
 	CGun* m_pGun = nullptr ;
 
+
 public:
 	void SetHealthUIPostion(int nOutputSlot);
 private:

@@ -749,7 +749,10 @@ void CGameFramework::RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList)
 	}
 #ifdef _WITH_DIRECT_WRITE_UI
 	std::wstring cursorText = L"Cursor Position: (" + std::to_wstring(ptCursorPos.x) + L", " + std::to_wstring(ptCursorPos.y) + L")";
-	m_pCursorSprite->GetComponent<CTextComponent>()->SetText(cursorText);
+	if ( auto ptext = m_pCursorSprite->GetComponent<CTextComponent>()) {
+		ptext->SetText(cursorText);
+	}
+
 #endif
 
 	m_pCursorSprite->Render(pd3dCommandList, nullptr);

@@ -79,6 +79,9 @@ public:
     void TriggerAttack(float animTime = Z_ATTACK_ANIM_TIME);
     bool IsAttacking() const;
 
+    bool ConsumeAttackHit();     // 공격 시작 1회성 이벤트 소비
+    SIZE2 GetDamage() const;     // 좀비 데미지 조회(서버 권위)
+
     //  길따라가기 일시정지(공격과 별개)
     void TriggerPause(float dur = Z_PAUSE_TIME);  // 근접 시 잠깐 멈추기
     bool IsPausing() const;                       // 현재 일시정지 여부
@@ -142,6 +145,8 @@ private:
     
     float m_attack_cooldown = Z_ATTACK_COOLDOWN;    // 타입별 공격쿨(기존 Z_ATTACK_COOLDOWN 대체)
 
+    bool m_attack_hit_event = false;
+
    // AStar* m_astar;
     std::unique_ptr<AStar> m_astar;
 
@@ -180,6 +185,12 @@ private:
 
     float m_hit_visual_left = 0.0f;
  
+    // ===============================
+    // Scream (랜덤 울부짖기)
+    // ===============================
+    float m_scream_cooldown = 0.0f; //  다음 울부짖기까지 남은 시간
+    float m_scream_left = 0.0f;     //  울부짖기 유지 시간
+
     bool m_removed = false;   // 사망 후 제거 브로드캐스트 중복 방지 , 제거된 개체는 true      
 };
 

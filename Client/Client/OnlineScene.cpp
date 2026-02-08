@@ -250,19 +250,33 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 
 		CGameObject* obj = it->second;
 
-		Vec3 position = updatePkt->position;
-		Vec3 look = updatePkt->look;
+		const int mySid = (m_pPlayer) ? m_pPlayer->GetSID() : 0;
+		const bool isLocalPlayer = (mySid != 0 && updatePkt->id == mySid);
 
-		obj->SetLook(look.x, look.y, look.z);
-		obj->SetPosition(position.x, position.y, position.z);
+		if (!isLocalPlayer)
+		{
+			Vec3 position = updatePkt->position;
+			Vec3 look = updatePkt->look;
 
-		if (auto pRigidBody = obj->GetComponent<CRigidBody>()) {
-			pRigidBody->SetVelocity(updatePkt->velocity.x, updatePkt->velocity.y, updatePkt->velocity.z);
+			obj->SetLook(look.x, look.y, look.z);
+			obj->SetPosition(position.x, position.y, position.z);
+
+			if (auto pRigidBody = obj->GetComponent<CRigidBody>()) {
+				pRigidBody->SetVelocity(updatePkt->velocity.x, updatePkt->velocity.y, updatePkt->velocity.z);
+			}
+
+			float fPitch = updatePkt->pitch;
+			if (auto pCamera = obj->GetComponent<CCamera>()) pCamera->SetPitch(fPitch);
+		}
+		else
+		{
+			// 로컬은 Transform은 클라 권위(예측/입력) 유지
+			// HP/피격 표현은 아래 타입 처리에서 따로 다룸
 		}
 
 		auto tit = m_mapObjectTypes.find(updatePkt->id);
 		if (tit == m_mapObjectTypes.end()) {
-			obj->SetState(updatePkt->act_type);
+			if (!isLocalPlayer) obj->SetState(updatePkt->act_type); 
 			break;
 		}
 
@@ -271,8 +285,20 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		if (type == ObjectType::PLAYER)
 		{
 			CPlayer* pPlayer = (CPlayer*)obj;
-			pPlayer->SetState(updatePkt->act_type);
-			pPlayer->SetMoveInput(updatePkt->move_input);
+
+			pPlayer->SetHealth((float)updatePkt->hp);
+
+			if (!isLocalPlayer)
+			{
+				pPlayer->SetState(updatePkt->act_type);
+				pPlayer->SetMoveInput(updatePkt->move_input);
+			}
+			else
+			{
+				// 로컬은 여기서 SetState를 호출하면 “HIT 고정” 같은 문제가 생길 수 있음
+				// 필요하면 HIT만 1회 트리거로 처리(추가 구현)
+				// if (updatePkt->act_type == ActionType::HIT) pPlayer->TriggerHitOnce();
+			}
 		}
 		else if (type == ObjectType::ZOMBIE)
 		{
@@ -290,11 +316,8 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		}
 		else
 		{
-			obj->SetState(updatePkt->act_type);
+			if (!isLocalPlayer) obj->SetState(updatePkt->act_type); 
 		}
-
-		float fPitch = updatePkt->pitch;
-		if (auto pCamera = obj->GetComponent<CCamera>()) pCamera->SetPitch(fPitch);
 
 		break;
 	}
@@ -355,24 +378,42 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	{
 		auto* packet = reinterpret_cast<pkt_sc_score_info*>(recv_p);
 
-		// 서버 Score 스냅샷 저장
+		// 기존 Score 스냅샷 저장
 		m_stageScore = packet->stage_score;
 		m_totalZombies = packet->total_zombies;
 		m_killedZombies = packet->killed_zombies;
 		m_aliveZombies = packet->alive_zombies;
 
-		// Stage1 클리어 조건(서버 권위): alive==0 && total>0
-		if (!m_stageCleared && m_totalZombies > 0 && m_aliveZombies <= 0)
-		{
-			m_stageCleared = true;
+		// 웨이브 필드 스냅샷 저장(프로토콜 업데이트 반영)
+		m_currentWave = packet->current_wave;
+		m_totalWaves = packet->total_waves;
+		m_waveTotalZombies = packet->wave_total_zombies;
+		m_waveKilledZombies = packet->wave_killed_zombies;
+		m_waveAliveZombies = packet->wave_alive_zombies;
 
-			// TODO: 클리어 UI / 씬 전환 / 입력 잠금
-			// 예) ShowStageClearUI();
-			// 예) PushScene(ResultScene);
+		// 디버그(
+		/*if (g_bNetworkDebugMode) {
+			std::string msg;
+			msg += "[S_C_SCORE_INFO] score=" + std::to_string(m_stageScore);
+			msg += " wave=" + std::to_string(m_currentWave) + "/" + std::to_string(m_totalWaves);
+			msg += " alive=" + std::to_string(m_waveAliveZombies) + "/" + std::to_string(m_waveTotalZombies);
+			msg += "\n";
+			OutputDebugStringA(msg.c_str());
+		}*/
+
+		// 클리어 판정: "마지막 웨이브 + waveAlive==0" 기준
+		if (!m_stageCleared) {
+			const bool isLastWave = (m_currentWave >= m_totalWaves);
+			if (isLastWave && m_waveTotalZombies > 0 && m_waveAliveZombies <= 0) {
+				m_stageCleared = true;
+
+				// TODO: 클리어 UI / 씬 전환 / 입력 잠금
+			}
 		}
 
 		break;
 	}
+
 	default:
 		break;
 	}
@@ -400,7 +441,8 @@ void COnlineScene::SendPlayerState()
 		float pitch = m_pPlayer->GetComponent<CCamera>()->GetPitch();
 		packet.pitch = pitch; // 피치
 
-		packet.hp = 100; // 체력
+		//packet.hp = 100; // 체력
+		packet.hp = (uint16_t)m_pPlayer->GetHealth();
 
 		NetworkingClient::Instance().send_packet((char*)&packet);
 	}
