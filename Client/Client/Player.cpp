@@ -129,6 +129,14 @@ void CPlayer::Initialize(int nSkinIndex)
 	pCamera->GenerateProjectionMatrix(((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT), 60.0f, 1.0f, 400.0f);
 	pCamera->SetActive(true);
 
+	// Health Gauge UI
+	if(m_pHealthGauge == nullptr)
+	{
+		m_pHealthGauge = std::make_unique<CGaugeBar>();
+		m_pHealthGauge->Initialize(L"Image/GaugeBar.dds");
+		m_pHealthGauge->SetSize(-0.8f, 0.9f, 0.2f, 0.1f);
+	}
+
 	m_bInitialized = true;
 	SetActive(true);
 }
@@ -277,6 +285,7 @@ void CPlayer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 
 	if (m_pHealthGauge) {
 		m_pHealthGauge->SetGauge(m_fHealth / m_fMaxHealth);
+		m_pHealthGauge->Render(pd3dCommandList, pCamera, bDepthWrite);
 	}
 
 }

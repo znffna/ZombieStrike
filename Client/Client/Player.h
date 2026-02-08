@@ -73,7 +73,7 @@ public:
 	void Reload();
 
 	// UI
-	void SetHealthObject(const std::shared_ptr<CGaugeBar>& pHealthGauge) { m_pHealthGauge = pHealthGauge; }
+	//void SetHealthObject(const std::shared_ptr<CGaugeBar>& pHealthGauge) { m_pHealthGauge = pHealthGauge; }
 
 private:
 
@@ -85,7 +85,7 @@ private:
 
 	CGun* m_pGun = nullptr ;
 
-	std::shared_ptr<CGaugeBar> m_pHealthGauge;
+	std::unique_ptr<CGaugeBar> m_pHealthGauge;
 
 	// Camera Offset
 	float m_fCameraLookY = 0.0f;
@@ -133,5 +133,6 @@ public:
 public:
 	void SetMoveInput(char nMoveInput) { m_nMoveInput = nMoveInput; }
 	char GetMoveInput() { return m_nMoveInput; }
+
 };
 
