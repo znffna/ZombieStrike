@@ -485,8 +485,6 @@ void EmmitAssaultBullet(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT
         
     input.type = BULLET_TYPE_TRAIL;
     output.Append(input);
-    
-    GenerateImpactDustParticles(input, output);
 }
 
 // ¼¦°Ç ÃÑ¾Ë »ý¼º
@@ -497,8 +495,6 @@ void EmmitShotgunBullet(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INPUT
         
     input.type = BULLET_TYPE_TRAIL;
     output.Append(input);
-    
-    GenerateImpactDustParticles(input, output);
 }
 
 
@@ -520,6 +516,10 @@ void OutputTrailParticles(VS_BULLET_INPUT input, inout PointStream<VS_BULLET_INP
     if (!reachedEnd && fBeforeTime > 0.0f)
     {
         output.Append(input);
+    }
+    else
+    {
+        GenerateImpactDustParticles(input, output);
     }
 }
 

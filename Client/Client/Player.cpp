@@ -337,7 +337,7 @@ bool CPlayer::Fire(FIRE_INFO* pFireInfo)
 		if (ret) {
 			Sound::PlaySound("Sound/gun_fire.wav");
 			Sound::SetSoundVolume(0.3f);
-			SetState(PLAYER_ANIMATION_POSE::FIRE);
+			SetUpperState(PLAYER_ANIMATION_POSE::FIRE);
 		}
 		return ret;
 	} 
