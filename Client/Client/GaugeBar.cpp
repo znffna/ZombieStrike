@@ -8,7 +8,6 @@ CGaugeBar::~CGaugeBar()
 {
 }
 
-
 void CGaugeBar::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
 	if (bDepthWrite) return;
@@ -53,9 +52,19 @@ void CGaugeBar::SetGauge(float ratio)
 {
 	m_fRatio = ratio;
 
-	// 게이지는 왼쪽을 기준으로 줄어들어야 하므로
-	// 스케일이 줄어든 만큼 중심점을 왼쪽으로 이동
-	float gaugeWidth = m_fWidth * ratio;
-	m_pGaugeTransform.SetPosition(m_fLeft + gaugeWidth / 2, m_fBottom + m_fHeight / 2, 0.0f);
-	m_pGaugeTransform.SetScale(gaugeWidth, m_fHeight, 1.0f);
+	// m_fWidth는 스케일 값이므로, 실제 렌더링 너비는 m_fWidth * 2
+	// m_fLeft는 실제 왼쪽 끝 좌표 (중심 - 스케일)
+
+	// ratio에 따른 새로운 스케일 계산
+	float gaugeScale = m_fWidth * ratio;  // 스케일도 ratio만큼 줄어듦
+
+	// 왼쪽 끝을 m_fLeft로 고정하려면:
+	// 왼쪽 끝 = 중심 - 스케일
+	// m_fLeft = gaugeCenterX - gaugeScale
+	// gaugeCenterX = m_fLeft + gaugeScale
+	float gaugeCenterX = m_fLeft + gaugeScale;
+	float gaugeCenterY = m_fBottom + m_fHeight;
+
+	m_pGaugeTransform.SetPosition(gaugeCenterX, gaugeCenterY, 0.0f);
+	m_pGaugeTransform.SetScale(gaugeScale, m_fHeight, 1.0f);
 }

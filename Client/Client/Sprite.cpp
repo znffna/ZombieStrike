@@ -30,8 +30,8 @@ void CSprite::Initialize(std::wstring wstrFilepath)
 
 // 2D Sprite
 void CSprite::SetSize(float cx, float cy, float width, float height) {
-	m_fLeft = cx - width / 2;
-	m_fBottom = cy - height / 2;
+	m_fLeft = cx - width;
+	m_fBottom = cy - height;
 	m_fWidth = width;
 	m_fHeight = height;
 
@@ -85,3 +85,8 @@ bool CSprite::IsClicked(float x, float y) const
 {
 	return (x >= m_fLeft && x <= m_fLeft + m_fWidth && y >= m_fBottom && y <= m_fBottom + m_fHeight);
 }
+
+#include "GaugeBar.h"
+
+
+
