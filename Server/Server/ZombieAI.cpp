@@ -23,6 +23,14 @@ constexpr int NUM_ZOMBIES = 50; // 추가: 생성할 좀비 수
 constexpr float STUN_TIME = 1.0f; // 추가: 생성할 좀비 수
 constexpr float RUNNER_speed = 4.0f; // 추가: 생성할 좀비 수
 
+
+static float RandFloat(float a, float b)    // Scream 랜덤 유틸(초 단위)
+{
+    static thread_local std::mt19937 rng{ std::random_device{}() };
+    std::uniform_real_distribution<float> dist(a, b);
+    return dist(rng);
+}
+
 static bool IsAABBCollision(float x1, float z1, float x2, float z2, float half, float tolerance = 1.0f)
 {   // 겹침 판단
     float range = half * tolerance * 2.0f;
@@ -234,6 +242,9 @@ ZombieAI::ZombieAI(const std::vector<std::vector<int>>& map, int id)
 {
     m_astar = std::make_unique<AStar>(map);
     //m_astar = new AStar(map);
+
+    m_scream_cooldown = RandFloat(5.0f, 15.0f);
+    m_scream_left = 0.0f;
 }
 
 void ZombieAI::SetPosition(float x, float z) {
@@ -462,6 +473,7 @@ bool ZombieAI::IsRemoved() const noexcept {
 void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime)
 {
     if (IsRemoved()) return;
+    if (IsDead()) return;
 
     const SIZE2 pending = m_pending_damage.exchange(0, std::memory_order_acq_rel);
     if (pending > 0) {
@@ -518,6 +530,35 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
         return;                                   
     }
 
+    // ===============================
+    // Scream (랜덤 울부짖기)
+    // ===============================
+
+    // 울부짖는 동안은 다른 행동(이동/공격/경로) 중지
+    if (m_scream_left > 0.0f) {
+        m_scream_left -= deltaTime;
+        if (m_scream_left <= 0.0f) {
+            m_scream_left = 0.0f;
+
+            // 울부짖기 종료 → 기본 상태 복귀(원하면 ZMOVE로)
+            m_act_type = (SIZE1)ActionType::ZMOVE; // SCREAM 종료 후 ZMOVE 복귀
+            m_dirty = true;                        // 상태 변경 송신
+        }
+        return;
+    }
+
+    // 스턴/공격 중에는 울부짖기 시작 금지(원치 않으면 조건 제거 가능)
+    if (m_stun_left <= 0.0f && m_attack_left <= 0.0f) {
+        m_scream_cooldown -= deltaTime;
+        if (m_scream_cooldown <= 0.0f) {
+            m_scream_left = 0.8f;                  // 울부짖기 지속 시간
+            m_scream_cooldown = RandFloat(5.0f, 15.0f); // 다음 울부짖기 랜덤 쿨타임
+            m_act_type = (SIZE1)ActionType::SCREAM;     // SCREAM 상태 진입
+            m_dirty = true;                             // 상태 변경 송신
+            return;
+        }
+
+    }
     // 스턴 상태면 이동/경로탐색 모두 중지
     //if (m_stun_left > 0.0f) {
     //    m_stun_left -= deltaTime;
@@ -867,6 +908,9 @@ Object ZombieAI::GetObjectinfo() const {
     if (m_hp == 0)
     {
         act = ActionType::DEATH;                
+    }
+    else if (m_scream_left > 0.0f) {
+        act = ActionType::SCREAM;
     }
     else if (m_hit_visual_left > 0.0f)
     {

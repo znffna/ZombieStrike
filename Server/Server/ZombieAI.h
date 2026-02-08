@@ -185,6 +185,12 @@ private:
 
     float m_hit_visual_left = 0.0f;
  
+    // ===============================
+    // Scream (랜덤 울부짖기)
+    // ===============================
+    float m_scream_cooldown = 0.0f; //  다음 울부짖기까지 남은 시간
+    float m_scream_left = 0.0f;     //  울부짖기 유지 시간
+
     bool m_removed = false;   // 사망 후 제거 브로드캐스트 중복 방지 , 제거된 개체는 true      
 };
 
