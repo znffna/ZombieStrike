@@ -34,6 +34,11 @@ static std::unordered_map<SIZEID, SIZE1> g_zombieSkin;  // 좀비 id -> skin_typ
 static std::unordered_map<SIZEID, ZombieType> g_zombieType;                 // 좀비 타입 저장(늦게 접속한 유저 스냅샷 일관성 유지용)
 static std::discrete_distribution<int> g_zombieTypeDist({ 50, 30, 20 });    // 타입 가중치 랜덤(예: NORMAL 70%, RUNNER 20%, TANKER 10%)
 
+static std::uniform_real_distribution<float> g_speedMulNormal(0.85f, 1.15f); // // NORMAL 범위
+static std::uniform_real_distribution<float> g_speedMulRunner(0.95f, 1.10f); // // RUNNER 범위(폭 작게)
+static std::uniform_real_distribution<float> g_speedMulTanker(0.85f, 1.05f); // // TANKER 범위(폭 작게)
+
+
 void error_display(const char* msg, int err_no) {
     WCHAR* lpMsgBuf;
     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
@@ -1076,9 +1081,15 @@ void SpawnZombies(int count) {  // N등분 스폰 적용 (GetSpawnPointByIndexN)
         ZombieAI* zombie = new ZombieAI(g_map, 10000 + i);
         zombie->SetPosition(zx, zz);
 
-       
         ZombieType zType = static_cast<ZombieType>(g_zombieTypeDist(g_rng));    // 타입 랜덤 결정 + 스탯 적용(HP/이속/쿨/데미지)
-        zombie->SetType(zType);
+        
+        float speedMul = 1.0f;
+        if (zType == ZombieType::NORMAL)      speedMul = g_speedMulNormal(g_rng); // NORMAL
+        else if (zType == ZombieType::RUNNER) speedMul = g_speedMulRunner(g_rng); // RUNNER
+        else if (zType == ZombieType::TANKER) speedMul = g_speedMulTanker(g_rng); // TANKER
+
+        zombie->ApplySpeedRandomMul(speedMul); // 개체 속도 배율 저장(랜덤은 여기서만)
+        zombie->SetType(zType);                // 타입 기본 스탯 적용 + 배율 반영(SetType 내부)
 
         g_zombies.push_back(zombie);
 

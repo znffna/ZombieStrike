@@ -62,6 +62,9 @@ public:
     void SetType(ZombieType type);   // 타입 기반 스탯 적용 함수 추가
     ZombieType GetType() const { return m_type; }   // 타입 조회 추가(디버그/패킷 name 구분용)
 
+    void ApplySpeedRandomMul(float mul);  // 개체별 속도 배율 저장
+
+
     class AStar;
 
     ZombieAI(const std::vector<std::vector<int>>& map, int id);
@@ -148,6 +151,7 @@ private:
     int   m_last_goal_cx = -1;     // - 마지막 목표 셀 X
     int   m_last_goal_cz = -1;     // - 마지막 목표 셀 Z
 
+    float m_speed_mul = 1.0f;      // 개체별 속도 랜덤 배율
 
     int m_id;
     float m_x, m_z;

@@ -193,7 +193,7 @@ void ZombieAI::SetType(ZombieType type)
     switch (m_type)
     {
     case ZombieType::RUNNER:
-        m_move_speed = Z_move_speed * 5.0f;
+        m_move_speed = Z_move_speed * 3.0f;
         m_damage = ZOMBIE_DAMAGE * 0.8f;
         m_attack_cooldown = Z_ATTACK_COOLDOWN * 0.75f;
         m_hp = static_cast<SIZE2>(ZOMBIE_HP * 0.7f);
@@ -213,8 +213,17 @@ void ZombieAI::SetType(ZombieType type)
         m_hp = ZOMBIE_HP;
         break;
     }
+    m_move_speed *= m_speed_mul; 
 
-    m_dirty = true; // // [ZombieAI::SetType] - 스탯 변경 시 스냅샷 갱신 유도
+    m_dirty = true;
+}
+
+void ZombieAI::ApplySpeedRandomMul(float mul)
+{
+    if (mul < 0.8f) mul = 0.8f;   // 하한
+    if (mul > 1.3f) mul = 1.3f;   // 상한
+    m_speed_mul = mul;          
+    m_dirty = true;              
 }
 
 ZombieAI::ZombieAI(const std::vector<std::vector<int>>& map, int id)
