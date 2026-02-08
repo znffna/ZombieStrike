@@ -105,8 +105,8 @@ void CCollisionChecker::CollisionCheckFromLayer(GAMEOBJECT_LAYER first, GAMEOBJE
 	for (auto pObjectA : pObjectsA) {
 		for (auto pObjectB : pObjectsB) {
 			// 먼저 model Bound AABB로 체크
-			bool ret = CheckMeshBoundCollision(pObjectA, pObjectB);
-			if (ret == false) continue;
+			//bool ret = CheckMeshBoundCollision(pObjectA, pObjectB);
+			//if (ret == false) continue;
 
 			// 그 이후, Collider 를 가져와 체크
 			// 이떄 CachedCOllider는 생성시 또는 변화시 한번씩 갱신.
@@ -120,6 +120,10 @@ void CCollisionChecker::CollisionCheckFromLayer(GAMEOBJECT_LAYER first, GAMEOBJE
 				for (auto& pColliderB : pCollidersB) {
 					if (IsCollided(pColliderA, pColliderB)) {
 						ppCollidedPairs.emplace_back(pObjectA, pObjectB, pColliderA, pColliderB);
+						{
+							std::string debugoutput = "Collision Detected Between: " + pObjectA->GetName() + " - " + pObjectB->GetName() + "\n";
+							OutputDebugStringA(debugoutput.c_str());
+						}
 						//pObjectA->OnCollision(pColliderB);
 						//pObjectB->OnCollision(pColliderA);
 					}

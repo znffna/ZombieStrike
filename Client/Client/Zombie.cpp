@@ -96,7 +96,8 @@ void CZombieObject::Initialize(int nSkinType)
 	//pRigidBody->SetGravity(XMFLOAT3(0.0f, -9.0f, 0.0f));
 
 	auto pCollider = CreateComponent<COBBCollider>();
-	pCollider->SetBoundingBox(pModel->m_MeshBoundingBox);
+	//pCollider->SetBoundingBox(pModel->m_MeshBoundingBox);
+	pCollider->SetBoundingBox(pModel->m_pModelRootObject->GetComponent<COBBCollider>()->GetBroadPhaseAABB());
 
 	// Model Info
 	SetSkin(m_nSkinType);

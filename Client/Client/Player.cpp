@@ -117,7 +117,7 @@ void CPlayer::Initialize(int nSkinIndex)
 	//pRigidBody->SetVelocity(XMFLOAT3(0.0f, -9.0f, 0.0f));
 
 	auto pCollider = CreateComponent<COBBCollider>();
-	pCollider->SetBoundingBox(pModel->m_MeshBoundingBox.Center, pModel->m_MeshBoundingBox.Extents, XMFLOAT4(0, 0, 0, 1));
+	pCollider->SetBoundingBox(pModel->m_pModelRootObject->GetComponent<COBBCollider>()->GetBroadPhaseAABB());
 
 	// Camera »ý¼º
 	auto pCamera = CreateComponent<CThirdPersonCamera>();
