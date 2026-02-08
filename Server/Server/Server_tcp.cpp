@@ -685,19 +685,21 @@ public:
 
 			pkt_cs_update* updatePacket = reinterpret_cast<pkt_cs_update*>(packet);
 
+            {
+                std::lock_guard<std::mutex> ulk(g_usersMutex); // C_S_UPDATE write lock
 
-            float deltaTime = 1.0f / 60.0f; // 서버 틱 레이트 기준 (예: 60fps)
-            _position = updatePacket->position;
-            _velocity = updatePacket->velocity;
-            _look = updatePacket->look;
-            _pitch = updatePacket->pitch;
-            _hp = updatePacket->hp;
-            _level = updatePacket->level;
-            _score = updatePacket->score;
-            _damage = updatePacket->damage;
-            _gun_type = updatePacket->gun_type;
-            _act_type = updatePacket->act_type;
-            _move_input = updatePacket->move_input;
+                _position = updatePacket->position;
+                _velocity = updatePacket->velocity;
+                _look = updatePacket->look;
+                _pitch = updatePacket->pitch;
+                _hp = updatePacket->hp;
+                _level = updatePacket->level;
+                _score = updatePacket->score;
+                _damage = updatePacket->damage;
+                _gun_type = updatePacket->gun_type;
+                _act_type = updatePacket->act_type;
+                _move_input = updatePacket->move_input;
+            }
 
             // 로그
             //std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
