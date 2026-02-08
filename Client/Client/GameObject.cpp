@@ -1013,7 +1013,22 @@ std::shared_ptr<CLoadedModelInfo> CGameObject::LoadGeometryAndAnimationFromFile(
 				// Model BoundingVolume 계산
 				pLoadedModel->m_pModelRootObject->Update(0.0f);
 				pLoadedModel->m_pModelRootObject->UpdateTransform();
+
 				pLoadedModel->m_MeshBoundingBox = pLoadedModel->m_pModelRootObject->GetMergedMeshBound();
+
+				std::vector<CCollider*> colliders;
+				pLoadedModel->m_pModelRootObject->GetComponentsInChildren<CCollider>(colliders);
+
+				if (colliders.empty())
+				{
+					// Collider가 없으면 MeshBoundingBox로부터 생성
+					auto pCollider = pLoadedModel->m_pModelRootObject->CreateComponent<COBBCollider>();
+					pCollider->SetBoundingBox(pLoadedModel->m_MeshBoundingBox);
+
+					std::string debugOutput = "Auto-generated Collider for Model: " + pLoadedModel->m_strFileName + "\n";
+					OutputDebugStringA(debugOutput.c_str());
+				}
+				// 이제 RootObject는 무조건 Collider를 가지게 됨.
 			}
 			else if (!strcmp(pstrToken, "<Animation>:"))
 			{
