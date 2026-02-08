@@ -25,7 +25,7 @@ constexpr int GUN_DAMAGE = 50;
 
 
 
-constexpr SIZE2 PLAYER_HP = 500;           // 플레이어 체력  
+constexpr SIZE2 PLAYER_HP = 100;           // 플레이어 체력  
 
 enum ObjectType : SIZE1 {
     PLAYER = 1,
