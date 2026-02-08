@@ -296,8 +296,8 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		auto it = m_mapGameObjects.find(removePkt->id);
 		if (it != m_mapGameObjects.end())
 		{
-			CGameObject* obj = it->second;                         // // S_C_OBJECT_REMOVE - obj 로컬로 받기
-			if (obj) { RequestDestroyObject(obj->GetID()); }       // // S_C_OBJECT_REMOVE - nullptr 방어
+			CGameObject* obj = it->second;                         // obj 로컬로 받기
+			if (obj) { RequestDestroyObject(obj->GetID()); }       // nullptr 방어
 			m_mapGameObjects.erase(it);
 		}
 
@@ -307,10 +307,45 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 
 	case S_C_STAGE_INFO:
 	{
+		auto* packet = reinterpret_cast<pkt_sc_stage_info*>(recv_p);
+
+		// 서버 Stage 스냅샷 저장
+		m_currentStage = packet->currentStage;
+		m_totalStages = packet->totalStages;
+		m_timeLeftMs = packet->timeLeft;
+
+		// timeLeft==0이면 Stage Clear(서버 권위 보조 트리거)
+		if (!m_stageCleared && m_timeLeftMs <= 0)
+		{
+			m_stageCleared = true;
+
+			// TODO: 여기서 클리어 UI / 씬 전환 / 입력 잠금
+			// 예) ShowStageClearUI();
+			// 예) PushScene(ResultScene);
+		}
+
 		break;
 	}
 	case S_C_SCORE_INFO:
 	{
+		auto* packet = reinterpret_cast<pkt_sc_score_info*>(recv_p);
+
+		// 서버 Score 스냅샷 저장
+		m_stageScore = packet->stage_score;
+		m_totalZombies = packet->total_zombies;
+		m_killedZombies = packet->killed_zombies;
+		m_aliveZombies = packet->alive_zombies;
+
+		// Stage1 클리어 조건(서버 권위): alive==0 && total>0
+		if (!m_stageCleared && m_totalZombies > 0 && m_aliveZombies <= 0)
+		{
+			m_stageCleared = true;
+
+			// TODO: 클리어 UI / 씬 전환 / 입력 잠금
+			// 예) ShowStageClearUI();
+			// 예) PushScene(ResultScene);
+		}
+
 		break;
 	}
 	default:
