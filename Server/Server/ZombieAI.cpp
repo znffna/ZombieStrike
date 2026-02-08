@@ -21,6 +21,7 @@ constexpr int PLAYER_START_Z = 545;
 constexpr int NUM_ZOMBIES = 50; // 추가: 생성할 좀비 수
 
 constexpr float STUN_TIME = 1.0f; // 추가: 생성할 좀비 수
+constexpr float RUNNER_speed = 4.0f; // 추가: 생성할 좀비 수
 
 static bool IsAABBCollision(float x1, float z1, float x2, float z2, float half, float tolerance = 1.0f)
 {   // 겹침 판단
@@ -193,7 +194,7 @@ void ZombieAI::SetType(ZombieType type)
     switch (m_type)
     {
     case ZombieType::RUNNER:
-        m_move_speed = Z_move_speed * 3.0f;
+        m_move_speed = Z_move_speed * RUNNER_speed;
         m_damage = ZOMBIE_DAMAGE * 0.8f;
         m_attack_cooldown = Z_ATTACK_COOLDOWN * 0.75f;
         m_hp = static_cast<SIZE2>(ZOMBIE_HP * 0.7f);
@@ -1036,70 +1037,70 @@ void PrintMap2(
 }
 
 
-int main()
-{
-    // // [main] - 맵 로드
-    auto map = LoadMapBin("node/ob_mask_te_1.bin");
-
-    std::vector<ZombieAI*> zombies;
-
-    // // [main] - 플레이어 위치 선정
-    auto [px, pz] = GetRandomPlayerPosition(map);
-    DEBUG_LOG("[TEST] player pos = (" << px << ", " << pz << ")");
-
-    // // [main] - 좀비 스폰
-    for (int i = 0; i < NUM_ZOMBIES; ++i)
-    {
-        auto [zx, zz] = GetRandomPosition(map);
-
-        ZombieAI* zombie = new ZombieAI(map, i + 1);
-        zombie->SetPosition((float)zx * CELL_SIZE, (float)zz * CELL_SIZE);
-        zombie->SetTargetPosition((float)px * CELL_SIZE, (float)pz * CELL_SIZE);
-        zombie->FindPath();   // // ZombieAI::FindPath
-
-        zombies.push_back(zombie);
-    }
-
-    DEBUG_LOG("[TEST] zombies spawned");
-
-    // // [main] - 테스트 루프
-    while (true)
-    {
-        std::cout << "[ENTER] 리스폰 / [ESC] 종료\n";
-
-        int key = _getch();
-
-        if (key == 13) // ENTER
-        {
-            for (auto* z : zombies)
-            {
-                auto [nx, nz] = GetRandomPosition(map);
-                z->SetPosition((float)nx * CELL_SIZE, (float)nz * CELL_SIZE);
-                z->SetTargetPosition((float)px * CELL_SIZE, (float)pz * CELL_SIZE);
-                z->FindPath();
-            }
-
-            PrintMap2(
-                map,
-                zombies,
-                0, 0,
-                GRID_HEIGHT,
-                GRID_WIDTH,
-                px * CELL_SIZE,
-                pz * CELL_SIZE
-            );
-        }
-        else if (key == 27) // ESC
-        {
-            break;
-        }
-    }
-
-    // // [main] - 정리
-    for (auto* z : zombies)
-        delete z;
-
-    zombies.clear();
-
-    return 0;
-}
+//int main()
+//{
+//    // // [main] - 맵 로드
+//    auto map = LoadMapBin("node/ob_mask_te_1.bin");
+//
+//    std::vector<ZombieAI*> zombies;
+//
+//    // // [main] - 플레이어 위치 선정
+//    auto [px, pz] = GetRandomPlayerPosition(map);
+//    DEBUG_LOG("[TEST] player pos = (" << px << ", " << pz << ")");
+//
+//    // // [main] - 좀비 스폰
+//    for (int i = 0; i < NUM_ZOMBIES; ++i)
+//    {
+//        auto [zx, zz] = GetRandomPosition(map);
+//
+//        ZombieAI* zombie = new ZombieAI(map, i + 1);
+//        zombie->SetPosition((float)zx * CELL_SIZE, (float)zz * CELL_SIZE);
+//        zombie->SetTargetPosition((float)px * CELL_SIZE, (float)pz * CELL_SIZE);
+//        zombie->FindPath();   // // ZombieAI::FindPath
+//
+//        zombies.push_back(zombie);
+//    }
+//
+//    DEBUG_LOG("[TEST] zombies spawned");
+//
+//    // // [main] - 테스트 루프
+//    while (true)
+//    {
+//        std::cout << "[ENTER] 리스폰 / [ESC] 종료\n";
+//
+//        int key = _getch();
+//
+//        if (key == 13) // ENTER
+//        {
+//            for (auto* z : zombies)
+//            {
+//                auto [nx, nz] = GetRandomPosition(map);
+//                z->SetPosition((float)nx * CELL_SIZE, (float)nz * CELL_SIZE);
+//                z->SetTargetPosition((float)px * CELL_SIZE, (float)pz * CELL_SIZE);
+//                z->FindPath();
+//            }
+//
+//            PrintMap2(
+//                map,
+//                zombies,
+//                0, 0,
+//                GRID_HEIGHT,
+//                GRID_WIDTH,
+//                px * CELL_SIZE,
+//                pz * CELL_SIZE
+//            );
+//        }
+//        else if (key == 27) // ESC
+//        {
+//            break;
+//        }
+//    }
+//
+//    // // [main] - 정리
+//    for (auto* z : zombies)
+//        delete z;
+//
+//    zombies.clear();
+//
+//    return 0;
+//}

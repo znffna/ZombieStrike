@@ -32,12 +32,28 @@ static std::uniform_int_distribution<int> g_zombieSkinDist(0, ZOMBIE_SKIN_COUNT 
 static std::unordered_map<SIZEID, SIZE1> g_zombieSkin;  // 좀비 id -> skin_type (늦게 접속한 유저 스냅샷 일관성 유지용)
 
 static std::unordered_map<SIZEID, ZombieType> g_zombieType;                 // 좀비 타입 저장(늦게 접속한 유저 스냅샷 일관성 유지용)
-static std::discrete_distribution<int> g_zombieTypeDist({ 50, 30, 20 });    // 타입 가중치 랜덤(예: NORMAL 70%, RUNNER 20%, TANKER 10%)
+static std::discrete_distribution<int> g_zombieTypeDist({ 50, 40, 10 });    // 타입 가중치 랜덤(예: NORMAL 70%, RUNNER 20%, TANKER 10%)
 
 static std::uniform_real_distribution<float> g_speedMulNormal(0.85f, 1.15f); // // NORMAL 범위
 static std::uniform_real_distribution<float> g_speedMulRunner(0.95f, 1.10f); // // RUNNER 범위(폭 작게)
 static std::uniform_real_distribution<float> g_speedMulTanker(0.85f, 1.05f); // // TANKER 범위(폭 작게)
 
+// // [GLOBAL] - Stage1 스코어/좀비 카운터(서버 권위)
+static std::atomic<SIZE2> g_stage_score{ 0 };
+static std::atomic<SIZE2> g_total_zombies{ 0 };
+static std::atomic<SIZE2> g_killed_zombies{ 0 };
+
+// // [GLOBAL] - Stage1 진행 상태(필요 시 확장)
+static std::atomic<SIZE2> g_current_stage{ 1 };
+static std::atomic_bool   g_stage1_cleared{ false };
+
+// // [GLOBAL] - Wave 시스템(3단계) 추가
+static constexpr SIZE1  WAVE_TOTAL = 3;
+static constexpr SIZE2  WAVE_PLAN[WAVE_TOTAL] = { 10, 20, 30 }; // Wave: 웨이브별 스폰 수(원하는 값으로 변경)
+
+static std::atomic<SIZE1> g_current_wave{ 1 };       // Wave: 현재 웨이브(1~3)
+static std::atomic<SIZE2> g_wave_total_zombies{ 0 }; // Wave: 현재 웨이브 총 수
+static std::atomic<SIZE2> g_wave_killed_zombies{ 0 };// Wave: 현재 웨이브 킬 수
 
 void error_display(const char* msg, int err_no) {
     WCHAR* lpMsgBuf;
@@ -77,30 +93,23 @@ static SIZE2 GetMaxAmmo(GunType gt) // 총 타입별 최대 탄 수
 static SIZE2 GetReloadMs(GunType gt)    // 총 타입별 리로드 시간(ms)
 {
     switch (gt) {
-    case GunType::BULLET_PISTOL:  return 1200;
+    //case GunType::BULLET_PISTOL:  return 1200;
     case GunType::BULLET_RIFLE:   return 1500;
-    case GunType::BULLET_SHOTGUN: return 2000;
+    //case GunType::BULLET_SHOTGUN: return 2000;
     default:                      return 1500;
     }
 }
 
 
-std::vector<ZombieAI*> g_zombies; // ZombieAI 객체를 서버가 관리
-// std::vector<std::unique_ptr<ZombieAI>> g_zombies;
-std::vector<std::vector<int>> g_map; // 맵 데이터
+std::vector<ZombieAI*> g_zombies;
+static std::atomic<SIZEID> g_nextZombieId{ 10000 }; // 웨이브마다 좀비 ID 재사용 방지(유니크)
+std::vector<std::vector<int>> g_map; 
 std::mutex zombiesMutex;
 
-// // [GLOBAL] - Stage1 스코어/좀비 카운터(서버 권위)
-static std::atomic<SIZE2> g_stage_score{ 0 };
-static std::atomic<SIZE2> g_total_zombies{ 0 };
-static std::atomic<SIZE2> g_killed_zombies{ 0 };
+static bool Server_KillZombie(SIZEID zombieId);
 
-// // [GLOBAL] - Stage1 진행 상태(필요 시 확장)
-static std::atomic<SIZE2> g_current_stage{ 1 };
-static std::atomic_bool   g_stage1_cleared{ false };
 
 // ---[Bullet ↔ Zombie Hit Test Only / 3D]-----------------------------
-
 static inline void normalize3(float& x, float& y, float& z)
 {
     const float m2 = x * x + y * y + z * z;
@@ -280,7 +289,7 @@ bool validate_stage_info(const pkt_cs_stage_info* p) {
 static void SendAmmoInfoToSelf(SESSION& s);
 static void BroadcastScoreInfoToAll();
 static void BroadcastStageInfoToAll(SIZE2 timeLeft);
-
+void SpawnZombies(int count);
 
 
 enum IO_OP { OP_RECV, OP_SEND };
@@ -520,7 +529,7 @@ public:
             }
         }
 
-        // 플레이어 충돌 체크
+     // 플레이어 충돌 체크
      //for (auto& [id, session] : g_users) {
      //    if (id == shooter_id) continue;
      //    Vec3 toTarget = session._position - origin;
@@ -832,25 +841,31 @@ public:
 
                 constexpr SIZE2 DAMAGE = GUN_DAMAGE;   // 임시 고정 대미지(총기별 테이블은 이후에 연결)
 
-                std::cout << "[HIT-DBG] shooter=" << _id
+                /*std::cout << "[HIT-DBG] shooter=" << _id
                     << " hit_zid=" << hit_zid
                     << " t=" << hit_t
                     << " dmg=" << DAMAGE
-                    << "\n";
+                    << "\n";*/
 
 
                 SIZE2 hp_after = 0;
+                bool  died_now = false; 
+
                 {
                     std::lock_guard<std::mutex> lock(zombiesMutex);
                     ZombieAI* hitZ = nullptr;
                     for (auto* z : g_zombies) {
                         if (z && z->GetID() == hit_zid) { hitZ = z; break; }
                     }
-                    if (hitZ) {
-                        hitZ->AddPendingDamage(DAMAGE);
-                        hp_after = hitZ->GetHP();
+
+                    if (hitZ && !hitZ->IsRemoved()) {
+                        const SIZE2 hp_before = hitZ->GetHP();               
+                        hitZ->ApplyDamage(DAMAGE);                           
+                        hp_after = hitZ->GetHP();                           
+                        died_now = (hp_before > 0 && hp_after == 0);         
                     }
                 }
+
 
                 pkt_sc_hit_result resp{};    // (기존) 히트 결과 먼저 브로드캐스트
                 resp.header.size = sizeof(resp);
@@ -860,49 +875,50 @@ public:
                 resp.zombieHp = hp_after;
                 for (auto& [id, session] : g_users) session.do_send(&resp);
 
-                if (hp_after == 0) {    //HP가 0이면 즉시 제거 패킷 (중복 방지: MarkRemoved)
-                    ZombieAI* hitZ = nullptr;
-                    {
-                        std::lock_guard<std::mutex> lock(zombiesMutex);
-                        for (auto* z : g_zombies) {
-                            if (z && z->GetID() == hit_zid) { hitZ = z; break; }
-                        }
-                    }
-                    if (hitZ && !hitZ->IsRemoved()) {
-                        hitZ->MarkRemoved(); // 서버 틱/충돌 제외
+                if (died_now) {   
+                    Server_KillZombie(hit_zid); 
+                //    ZombieAI* hitZ = nullptr;
+                //    {
+                //        std::lock_guard<std::mutex> lock(zombiesMutex);
+                //        for (auto* z : g_zombies) {
+                //            if (z && z->GetID() == hit_zid) { hitZ = z; break; }
+                //        }
+                //    }
+                //    if (hitZ && !hitZ->IsRemoved()) {
+                //        hitZ->MarkRemoved(); // 서버 틱/충돌 제외
 
-                        // 좀비 킬 카운트/스코어 갱신(서버 권위)
-                        const SIZE2 killed_now = static_cast<SIZE2>(g_killed_zombies.fetch_add(1, std::memory_order_acq_rel) + 1);
-                        g_stage_score.fetch_add(1, std::memory_order_acq_rel); // 1킬 = 1점(필요 시 테이블화)
+                //        // 좀비 킬 카운트/스코어 갱신(서버 권위)
+                //        const SIZE2 killed_now = static_cast<SIZE2>(g_killed_zombies.fetch_add(1, std::memory_order_acq_rel) + 1);
+                //        g_stage_score.fetch_add(1, std::memory_order_acq_rel); // 1킬 = 1점(필요 시 테이블화)
 
-                        BroadcastScoreInfoToAll();
+                //        BroadcastScoreInfoToAll();
 
-                        // Stage1 클리어 조건: killed == total
-                        const SIZE2 total = g_total_zombies.load(std::memory_order_acquire);
-                        if (total > 0 && killed_now >= total) {
-                            const bool first_clear = !g_stage1_cleared.exchange(true, std::memory_order_acq_rel);
-                            if (first_clear) {
-                                std::cout << "[STAGE_CLEAR] Stage1 cleared. killed=" << killed_now << " total=" << total << "\n";
-                                BroadcastStageInfoToAll(/*timeLeft=*/0);
-                            }
-                        }
+                //        // Stage1 클리어 조건: killed == total
+                //        const SIZE2 total = g_total_zombies.load(std::memory_order_acquire);
+                //        if (total > 0 && killed_now >= total) {
+                //            const bool first_clear = !g_stage1_cleared.exchange(true, std::memory_order_acq_rel);
+                //            if (first_clear) {
+                //                std::cout << "[STAGE_CLEAR] Stage1 cleared. killed=" << killed_now << " total=" << total << "\n";
+                //                BroadcastStageInfoToAll(/*timeLeft=*/0);
+                //            }
+                //        }
 
-                        g_zombieSkin.erase(hit_zid); // erase zombie skin
-                        g_zombieType.erase(hit_zid);
+                //        g_zombieSkin.erase(hit_zid); // erase zombie skin
+                //        g_zombieType.erase(hit_zid);
 
-                        pkt_sc_object_remove rem{};
-                        rem.header.size = sizeof(rem);
-                        rem.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
-                        rem.id = hit_zid;
+                //        pkt_sc_object_remove rem{};
+                //        rem.header.size = sizeof(rem);
+                //        rem.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
+                //        rem.id = hit_zid;
 
-                        for (auto& [id, session] : g_users)
-                            session.do_send(&rem);
-                    }
+                //        for (auto& [id, session] : g_users)
+                //            session.do_send(&rem);
+                //    }
                 }
             }
             else {
                 //DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id << " miss");
-                std::cout << "[MISS] shooter=" << _id << "\n";
+                // std::cout << "[MISS] shooter=" << _id << "\n";
             }
             break;
         }
@@ -985,6 +1001,22 @@ void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
 
 }
 
+static void Server_StartWave(SIZE1 wave) // 웨이브 시작(카운터 세팅 + 스폰 + 브로드캐스트)
+{
+    if (wave < 1 || wave > WAVE_TOTAL) return;
+
+    g_current_wave.store(wave, std::memory_order_release);
+
+    const SIZE2 count = WAVE_PLAN[wave - 1];
+    g_wave_total_zombies.store(count, std::memory_order_release);
+    g_wave_killed_zombies.store(0, std::memory_order_release);
+
+    SpawnZombies(count); // 현재 웨이브 수만큼 스폰(스폰 분산 로직은 아래 C에서 교체)
+
+    BroadcastStageInfoToAll(/*timeLeft=*/60000);
+    BroadcastScoreInfoToAll(); // 웨이브/스코어 스냅샷 전송
+}
+
 //====================================
 // 서버 권위 본인에게만 탄/리로드 상태 전송
 //====================================
@@ -1012,14 +1044,23 @@ static void BroadcastScoreInfoToAll()
     resp.header.size = sizeof(resp);
     resp.header.type = PKT_TYPE::S_C_SCORE_INFO;
 
-    const SIZE2 total = g_total_zombies.load(std::memory_order_acquire);
-    const SIZE2 killed = g_killed_zombies.load(std::memory_order_acquire);
-    const SIZE2 alive = (killed <= total) ? static_cast<SIZE2>(total - killed) : 0;
+    const SIZE2 wave_total = g_wave_total_zombies.load(std::memory_order_acquire);
+    const SIZE2 wave_killed = g_wave_killed_zombies.load(std::memory_order_acquire);
+    const SIZE2 wave_alive = (wave_killed <= wave_total) ? static_cast<SIZE2>(wave_total - wave_killed) : 0;
+
 
     resp.stage_score = g_stage_score.load(std::memory_order_acquire);
-    resp.total_zombies = total;
-    resp.killed_zombies = killed;
-    resp.alive_zombies = alive;
+
+    resp.total_zombies = wave_total;
+    resp.killed_zombies = wave_killed;
+    resp.alive_zombies = wave_alive;
+
+    // 추가 웨이브 필드
+    resp.current_wave = g_current_wave.load(std::memory_order_acquire);
+    resp.total_waves = WAVE_TOTAL;
+    resp.wave_total_zombies = wave_total;
+    resp.wave_killed_zombies = wave_killed;
+    resp.wave_alive_zombies = wave_alive;
 
     for (auto& [id, session] : g_users)
         session.do_send(&resp);
@@ -1042,6 +1083,70 @@ static void BroadcastStageInfoToAll(SIZE2 timeLeft)
 }
 
 
+
+// ===============================
+// Zombie Kill / Remove (Single Authority)
+// ===============================
+static bool Server_KillZombie(SIZEID zombieId)  // 좀비 제거/킬카운트/스테이지 종료를 단일 처리
+{
+    ZombieAI* hitZ = nullptr;
+
+    {
+        std::lock_guard<std::mutex> lock(zombiesMutex);
+
+        for (auto* z : g_zombies) {
+            if (z && z->GetID() == zombieId) { hitZ = z; break; }
+        }
+        if (!hitZ) return false;
+        if (hitZ->IsRemoved()) return false; // 이미 제거 처리된 좀비면 중복 금지
+        if (!hitZ->IsDead()) return false;   // hp가 0이 아닐 수도 있으니 “죽은 상태에서만” 제거 처리 (안전)
+
+        hitZ->MarkRemoved();  // 서버 틱/충돌 제외
+    }
+
+    // 여기부터는 “한 번만” 실행되는 영역이어야 함(위에서 IsRemoved로 가드됨)
+
+    g_zombieSkin.erase(zombieId); // - 스킨/타입 테이블 정리
+    g_zombieType.erase(zombieId);
+
+    g_stage_score.fetch_add(1, std::memory_order_acq_rel);
+
+    const SIZE2 wave_killed_now = static_cast<SIZE2>(g_wave_killed_zombies.fetch_add(1, std::memory_order_acq_rel) + 1);    //웨이브 킬 카운트 증가
+
+
+    BroadcastScoreInfoToAll();
+
+    // // Server_KillZombie: 웨이브 클리어 체크
+    const SIZE2 wave_total = g_wave_total_zombies.load(std::memory_order_acquire);
+    if (wave_total > 0 && wave_killed_now >= wave_total)
+    {
+        const SIZE1 wave = g_current_wave.load(std::memory_order_acquire);
+
+        if (wave < WAVE_TOTAL) {
+            Server_StartWave(static_cast<SIZE1>(wave + 1)); // 다음 웨이브 시작
+        }
+        else {
+            // 마지막 웨이브 클리어 → 스테이지 클리어 처리
+            const bool first_clear = !g_stage1_cleared.exchange(true, std::memory_order_acq_rel);
+            if (first_clear) {
+                std::cout << "[STAGE_CLEAR] All waves cleared.\n";
+                BroadcastStageInfoToAll(/*timeLeft=*/0);
+            }
+        }
+    }
+
+    pkt_sc_object_remove rem{};
+    rem.header.size = sizeof(rem);
+    rem.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
+    rem.id = zombieId;
+
+    for (auto& [id, session] : g_users)
+        session.do_send(&rem);
+
+    return true;
+}
+
+
 auto lastTick = std::chrono::steady_clock::now();
 
 std::vector<std::pair<int, int>> spawnPoints = {    // 요구했던 두 포인트 + 예시 포인트 1~2개 더 (원하는 만큼 2~4개만 채워서 사용)
@@ -1051,13 +1156,106 @@ std::vector<std::pair<int, int>> spawnPoints = {    // 요구했던 두 포인�
     // {400, 420},  // 포인트 D (원하면 활성화)
 };
 
+// ===============================
+// Center Flat Spawn Utilities
+// ===============================
+
+// PrintMap2 기준: 0=평지(이동가능), 1=벽(막힘)
+static inline bool IsWalkableCell(int v)
+{
+    return (v == 0);
+}
+
+static inline bool InRangeCell(int x, int z)
+{
+    const int H = static_cast<int>(g_map.size());
+    const int W = (H > 0) ? static_cast<int>(g_map[0].size()) : 0;
+    return (x >= 0 && z >= 0 && z < H && x < W);
+}
+// g_map 기준 중앙 셀(x,z) 반환
+static inline std::pair<int, int> GetMapCenterCell()
+{
+    const int H = static_cast<int>(g_map.size());
+    const int W = (H > 0) ? static_cast<int>(g_map[0].size()) : 0;
+    return { W / 2, H / 2 }; // (x,z)
+}
+
+// 중앙 기준 도넛(내/외반경) 영역에서 평지 후보 셀 수집
+static std::vector<std::pair<int, int>> CollectCenterCandidates(
+    int cx, int cz,
+    int minR, int maxR,
+    int limit)
+{
+    std::vector<std::pair<int, int>> out;
+    out.reserve((std::min)(limit, 20000));
+
+    const int H = static_cast<int>(g_map.size());
+    const int W = (H > 0) ? static_cast<int>(g_map[0].size()) : 0;
+    if (H <= 0 || W <= 0) return out;
+
+    const int minR2 = minR * minR;
+    const int maxR2 = maxR * maxR;
+
+    for (int dz = -maxR; dz <= maxR; ++dz) {
+        for (int dx = -maxR; dx <= maxR; ++dx) {
+            const int x = cx + dx;
+            const int z = cz + dz;
+            if (!InRangeCell(x, z)) continue;
+
+            const int r2 = dx * dx + dz * dz;
+            if (r2 < minR2 || r2 > maxR2) continue;
+
+            if (!IsWalkableCell(g_map[z][x])) continue;
+
+            out.emplace_back(x, z);
+            if (static_cast<int>(out.size()) >= limit) return out;
+        }
+    }
+    return out;
+}
+
+//  후보에서 최소거리(minDistCell) 유지하며 분산 선택
+static std::vector<std::pair<int, int>> PickSpreadPoints(
+    std::vector<std::pair<int, int>>& candidates,
+    int need,
+    int minDistCell)
+{
+    std::shuffle(candidates.begin(), candidates.end(), g_rng);
+
+    std::vector<std::pair<int, int>> picked;
+    picked.reserve(need);
+
+    const int md2 = minDistCell * minDistCell;
+
+    auto dist2 = [](int x1, int z1, int x2, int z2) {
+        const int dx = x1 - x2;
+        const int dz = z1 - z2;
+        return dx * dx + dz * dz;
+        };
+
+    for (auto& p : candidates) {
+        bool ok = true;
+        for (auto& q : picked) {
+            if (dist2(p.first, p.second, q.first, q.second) < md2) {
+                ok = false;
+                break;
+            }
+        }
+        if (!ok) continue;
+
+        picked.push_back(p);
+        if (static_cast<int>(picked.size()) >= need) break;
+    }
+
+    return picked;
+}
+
 
 void SpawnZombies(int count) {  // N등분 스폰 적용 (GetSpawnPointByIndexN)
         
-    if (spawnPoints.empty()) {  // 스폰 포인트 미설정 시 기본 포인트 두 개로 세팅                                       
-        spawnPoints = { {150,180}, {150,100} };          
-    }
-
+    //if (spawnPoints.empty()) {  // 스폰 포인트 미설정 시 기본 포인트 두 개로 세팅                                       
+    //    spawnPoints = { {150,180}, {150,100} };          
+    //}
     //  Stage1 카운터 초기화(서버 권위)
     g_current_stage.store(1, std::memory_order_release);
     g_stage1_cleared.store(false, std::memory_order_release);
@@ -1065,20 +1263,59 @@ void SpawnZombies(int count) {  // N등분 스폰 적용 (GetSpawnPointByIndexN)
     g_total_zombies.store(static_cast<SIZE2>(count), std::memory_order_release);
     g_killed_zombies.store(0, std::memory_order_release);
 
+    // -------------------------------
+    // // [SpawnZombies] - 중앙 평지 후보 수집 + 분산 스폰(몰림 방지)
+    // -------------------------------
+    auto [ccx, ccz] = GetMapCenterCell(); //  맵 중앙 셀
+
+    // 튜닝 포인트 (셀 단위)
+    // CELL_SIZE ≈ 0.488 기준 튜닝(셀 단위)
+    // - 중앙에서 20m~70m 사이에 뿌림 + 최소 4m 간격
+    constexpr int CAND_LIMIT = 50000;   // 후보 최대
+    constexpr int MIN_R = 40;           // 중앙에서 너무 붙지 않게(도넛 내반경)
+    constexpr int MAX_R = 140;          // 중앙 기준 외반경
+    constexpr int MIN_DIST_CELL = 8;    // 서로 최소 거리(셀) - 몰림 방지 핵심
+
+    auto candidates = CollectCenterCandidates(ccx, ccz, MIN_R, MAX_R, CAND_LIMIT);
+
+
+    std::vector<std::pair<int, int>> spawnCells;        // 후보가 너무 적으면: 거리조건 완화 폴백
+    if (static_cast<int>(candidates.size()) >= count) {
+        spawnCells = PickSpreadPoints(candidates, count, MIN_DIST_CELL); // 분산 선택
+    }
+    else {
+        spawnCells = candidates; // 후보 자체가 적음 → 있는 만큼이라도 사용
+    }
+
+    if (static_cast<int>(spawnCells.size()) < count) {  // 그래도 부족하면: MIN_DIST를 완화해서 다시 시도
+        auto candidates2 = CollectCenterCandidates(ccx, ccz, /*minR*/10, /*maxR*/200, CAND_LIMIT); // 폴백 후보 확장
+        spawnCells = PickSpreadPoints(candidates2, count, /*minDistCell*/2); //  폴백 거리완화
+    }
+
+    while (static_cast<int>(spawnCells.size()) < count) {   // 최종 폴백: 그래도 부족하면 중앙에라도 채움(절대 터지지 않게)
+        spawnCells.push_back({ ccx, ccz }); // 최후 폴백(중앙)
+    }
+
 
     for (int i = 0; i < count; ++i) {
 
-        auto [sx, sz] = GetSpawnPointByIndexN(g_map, spawnPoints, i, count);  //균등 분할로 i번째 스폰 좌표 선택
+        //auto [sx, sz] = GetSpawnPointByIndexN(g_map, spawnPoints, i, count);  //균등 분할로 i번째 스폰 좌표 선택
 
         // SpawnZombies: 좌표계 선택 , 프로젝트가 '셀 인덱스' 좌표를 SetPosition에 기대하면 아래 1줄 사용:
-        float zx = static_cast<float>(sx);                          
-        float zz = static_cast<float>(sz);                         
+        //float zx = static_cast<float>(sx);                          
+        //float zz = static_cast<float>(sz);                         
 
         // 월드 좌표(CELL_SIZE 배수)를 SetPosition에 기대한다면 위 2줄 대신 아래 2줄 사용:
         // float zx = static_cast<float>(sx) * CELL_SIZE;          
         // float zz = static_cast<float>(sz) * CELL_SIZE;           
 
-        ZombieAI* zombie = new ZombieAI(g_map, 10000 + i);
+        const auto [sx, sz] = spawnCells[i]; // 분산 스폰 셀 좌표
+
+        const float zx = static_cast<float>(sx) * CELL_SIZE; // 셀→월드 변환
+        const float zz = static_cast<float>(sz) * CELL_SIZE; // 
+
+        const SIZEID zid = g_nextZombieId.fetch_add(1, std::memory_order_relaxed); // 유니크 좀비 ID 발급
+        ZombieAI* zombie = new ZombieAI(g_map, zid);
         zombie->SetPosition(zx, zz);
 
         ZombieType zType = static_cast<ZombieType>(g_zombieTypeDist(g_rng));    // 타입 랜덤 결정 + 스탯 적용(HP/이속/쿨/데미지)
@@ -1091,8 +1328,10 @@ void SpawnZombies(int count) {  // N등분 스폰 적용 (GetSpawnPointByIndexN)
         zombie->ApplySpeedRandomMul(speedMul); // 개체 속도 배율 저장(랜덤은 여기서만)
         zombie->SetType(zType);                // 타입 기본 스탯 적용 + 배율 반영(SetType 내부)
 
-        g_zombies.push_back(zombie);
-
+        {
+            std::lock_guard<std::mutex> lock(zombiesMutex); // g_zombies push_back 동기화(웨이브 전환 안전)
+            g_zombies.push_back(zombie);
+        }
         g_zombieType[zombie->GetID()] = zType; // 타입 테이블 저장(늦접 스냅샷 일관성)
 
         const SIZE1 Z_Random_skin = static_cast<SIZE1>(g_zombieSkinDist(g_rng));    // - random skin
@@ -1147,21 +1386,56 @@ void ZombieAIThread() {
         std::chrono::duration<float> dt = now - lastTick;
         lastTick = now;
         float deltaTime = dt.count();  // 초 단위
+        if (deltaTime > 0.1f) deltaTime = 0.1f;
 
         // 플레이어 스냅샷: ID와 위치 동시 수집
         std::vector<Vec3> playerPositions;
         std::vector<std::pair<SIZEID, Vec3>> playerList;  // ID 포함
 
-        for (auto& [id, session] : g_users) {
-            if (session._obj_type != ObjectType::PLAYER) continue;
+        //for (auto& [id, session] : g_users) {
+        //    if (session._obj_type != ObjectType::PLAYER) continue;
 
-            if (!session._is_loaded.load(std::memory_order_acquire)) continue;  // 로딩중 플레이어는 좀비 인지 대상에서 제외
+        //    if (!session._is_loaded.load(std::memory_order_acquire)) continue;  // 로딩중 플레이어는 좀비 인지 대상에서 제외
 
-            playerPositions.push_back(session._position);
-            playerList.emplace_back(id, session._position);
+        //    playerPositions.push_back(session._position);
+        //    playerList.emplace_back(id, session._position);
+        //}
+        {
+            std::lock_guard<std::mutex> ulk(g_usersMutex); // 플레이어 스냅샷은 락 걸고 수집(데이터 레이스 방지)
+            for (auto& [id, session] : g_users) {
+                if (session._obj_type != ObjectType::PLAYER) continue;
+                if (!session._is_loaded.load(std::memory_order_acquire)) continue; // 로딩중 제외
+                playerPositions.push_back(session._position);
+                playerList.emplace_back(id, session._position);
+                
+            }
+        }
+        
+        //  플레이어 스냅샷이 갱신되는지 확인(2초마다)
+        static float s_player_dbg = 0.0f; // DEBUG 누적
+        s_player_dbg += deltaTime;        // DEBUG 누적
+        if (s_player_dbg >= 2.0f) {       // DEBUG 출력 주기
+            s_player_dbg = 0.0f;
+            if (!playerPositions.empty()) {
+                std::cout << "[ZDBG][Players] n=" << playerPositions.size()
+                     << " p0=(" << playerPositions[0].x << "," << playerPositions[0].z << ")\n";
+            }
+            else {
+                std::cout << "[ZDBG][Players] n=0 (ALL FILTERED?)\n";
+            }
         }
 
-        for (auto& zombie : g_zombies) {
+        // ==========================================================
+        // 스냅샷 생성(락 최소화: 여기서만 잠깐)
+        // ==========================================================
+        std::vector<ZombieAI*> zombiesSnapshot; 
+        {
+            std::lock_guard<std::mutex> lock(zombiesMutex); 
+            zombiesSnapshot = g_zombies;                    
+        }
+        
+        for (auto* zombie : zombiesSnapshot) {
+
             if (zombie->IsRemoved()) continue;
 
             //zombie->Update(playerPositions, g_zombies, deltaTime);
@@ -1169,7 +1443,7 @@ void ZombieAIThread() {
 
             //----------
             auto t0 = std::chrono::steady_clock::now(); // // ZombieAIThread - DEBUG(Update 시간 측정)
-            zombie->Update(playerPositions, g_zombies, deltaTime); // // ZombieAIThread - Update 호출
+            zombie->Update(playerPositions, zombiesSnapshot, deltaTime);
             auto t1 = std::chrono::steady_clock::now(); // // ZombieAIThread - DEBUG(Update 시간 측정)
 
             auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count(); // // ZombieAIThread - DEBUG(Update ms)
@@ -1184,21 +1458,28 @@ void ZombieAIThread() {
             if (zombie->IsDirty()) {
                 // 프레임 경합 방어: DEAD 상태면 업데이트 대신 제거 패킷
                 if (zombie->IsDead()) {
-                    zombie->MarkRemoved();
+                    const SIZEID zid = zombie->GetID();
 
-                    // // ZombieAIThread - remove 시 스킨 테이블 정리
-                    g_zombieSkin.erase(zombie->GetID());
-                    g_zombieType.erase(zombie->GetID());
-
-                    pkt_sc_object_remove rem{};
-                    rem.header.size = sizeof(rem);
-                    rem.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
-                    rem.id = zombie->GetID();
-                    for (auto& [id, session] : g_users) session.do_send(&rem);
-
-                    zombie->ClearDirty();
+                    zombie->ClearDirty();                  
+                    Server_KillZombie(zid);                
                     continue;
                 }
+                //if (zombie->IsDead()) {
+                //    zombie->MarkRemoved();
+
+                //    // // ZombieAIThread - remove 시 스킨 테이블 정리
+                //    g_zombieSkin.erase(zombie->GetID());
+                //    g_zombieType.erase(zombie->GetID());
+
+                //    pkt_sc_object_remove rem{};
+                //    rem.header.size = sizeof(rem);
+                //    rem.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
+                //    rem.id = zombie->GetID();
+                //    for (auto& [id, session] : g_users) session.do_send(&rem);
+
+                //    zombie->ClearDirty();
+                //    continue;
+                //}
 
                 // 일반 업데이트 브로드캐스트
                 Object info = zombie->GetObjectinfo();
@@ -1298,7 +1579,8 @@ int main() {
     std::thread(serverControl).detach();
     std::thread(ZombieAIThread).detach();
 
-    SpawnZombies(MAX_ZOMBIE_COUNT);
+    Server_StartWave(1);
+    //SpawnZombies(MAX_ZOMBIE_COUNT);
 
     SIZEID clientId = 0;
     INT serverAddr_size = sizeof(SOCKADDR_IN);

@@ -440,9 +440,16 @@ struct pkt_cs_score_info {
 struct pkt_sc_score_info {
     PacketHeader header{sizeof(*this),PKT_TYPE::S_C_SCORE_INFO };
     SIZE2 stage_score;
-    SIZE2 total_zombies;   // - 현재 스테이지 총 좀비 수
-    SIZE2 killed_zombies;  // - 현재 스테이지 누적 킬 수
-    SIZE2 alive_zombies;   // - 현재 스테이지 남은 좀비 수
+
+    SIZE2 total_zombies;        // 현재 웨이브 총 좀비 수
+    SIZE2 killed_zombies;       // 현재 웨이브에서 죽인 수
+    SIZE2 alive_zombies;        // 현재 웨이브 남은 수
+
+    SIZE1 current_wave;         // 현재 웨이브(1~3)
+    SIZE1 total_waves;          // 총 웨이브 수(3)
+    SIZE2 wave_total_zombies;   // 웨이브 총량(중복이지만 UI 편의)
+    SIZE2 wave_killed_zombies;  // 웨이브 킬
+    SIZE2 wave_alive_zombies;   // 웨이브 남은 수
 };
 
 #pragma pack (pop)
