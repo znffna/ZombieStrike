@@ -60,8 +60,9 @@ public:
 	int m_nStageIndex = 0;
 
 	// Cache Control object
-	CBulletParticleObject* m_pBulletObject;
-	CCollisionChecker* m_pCollisionChecker;
+	CBulletParticleObject* m_pBulletObject = nullptr;
+	CCollisionChecker* m_pCollisionChecker = nullptr;
+	CHeightMapTerrain* m_pTerrain = nullptr;
 
 	void BuildFiredBullets();
 
@@ -70,7 +71,11 @@ public:
 	std::unique_ptr<CGameObject> m_pHealthObject;
 
 	// Free Camera ÂüÁ¶¿ë
-	CGameObject* m_pFreeCamera;
+	CGameObject* m_pFreeCamera = nullptr;
+
+public:
+	void SetScore(int nScore) {};
+	int GetScore() const { return m_nScore; }
 
 	// Score
 	int m_nScore = 0;

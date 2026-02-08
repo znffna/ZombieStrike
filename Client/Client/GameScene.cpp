@@ -30,7 +30,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	auto pSkyBoxObject = RequestCreateObject(TypeTag<CSkyBox>());
 	
 	// Terrain
-	auto pTerrain = ChangeTerrain(0);
+	ChangeTerrain(0);
 
 	//CHeightMapTerrainDesc terrainDesc;
 	//terrainDesc.wstrHeightMapFilePath = L"Terrain/terrain1.raw";
@@ -58,7 +58,7 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	// Player 생성
 	//auto pPlayer = AddObject(std::make_unique<CPlayer>());
 
-	auto pPlayer = SpawnPlayer(XMFLOAT3(100.0f, 0.0f, 100.0f), "Player1", 0, 100, 0, 0, pTerrain);
+	auto pPlayer = SpawnPlayer(XMFLOAT3(100.0f, 0.0f, 100.0f), "Player1", 0, 100, 0, 0, m_pTerrain);
 	m_pPlayer = pPlayer;
 
 	//auto pPlayer = RequestCreateObject(TypeTag<CPlayer>(), 0);
@@ -517,6 +517,9 @@ CHeightMapTerrain* CGameScene::ChangeTerrain(int nMapIndex)
 			pZombie->GetComponent<CRigidBody>()->SetTerrainUpdatedContext(pTerrainObject);
 		}
 	}
+
+	// GameScene 자체적으로 Cache
+	m_pTerrain = pTerrainObject;
 
 	return pTerrainObject;
 }
