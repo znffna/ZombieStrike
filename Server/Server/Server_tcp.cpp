@@ -806,7 +806,7 @@ public:
                  //   << " hit_zid=" << hit_zid << " t=" << hit_t);
 
                 // !! 데미지 + 브로드캐스트
-                constexpr SIZE2 DAMAGE = 10;   // 임시 고정 대미지(총기별 테이블은 이후에 연결)
+                constexpr SIZE2 DAMAGE = GUN_DAMAGE;   // 임시 고정 대미지(총기별 테이블은 이후에 연결)
 
                 SIZE2 hp_after = 0;
                 {
