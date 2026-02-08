@@ -458,6 +458,10 @@ public:
 	std::shared_ptr<CShadowMapShader> m_pShadowShader;
 	std::shared_ptr<CShadowToViewportShader> m_pShadowMapToViewport;
 
+	std::shared_ptr<CMinimapShader> m_pMinimapShader;
+	std::shared_ptr<CMinimapToViewportShader> m_pMinimapToViewport;
+
+
 	BoundingBox CalculateBoundingBox();
 	std::array<Light, MAX_LIGHTS> GetLights() const { return m_pLights; }
 

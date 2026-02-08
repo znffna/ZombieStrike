@@ -437,8 +437,13 @@ bool CScene::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 {
 	if (m_pDepthRenderShader) {
 		m_pDepthRenderShader->PrepareShadowMap(pd3dCommandList, pCamera, this);
-		return true;
 	}
+
+	if (m_pMinimapShader) {
+		m_pMinimapShader->PrepareMinimap(pd3dCommandList, pCamera, this);
+	}
+
+	
 	return false;
 }
 
@@ -484,6 +489,11 @@ bool CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	{
 		// Render Shadow Map to Viewport
 		m_pShadowMapToViewport->Render(pd3dCommandList, pCamera);
+	}
+
+	if (m_pMinimapToViewport)
+	{
+		m_pMinimapToViewport->Render(pd3dCommandList, pCamera);
 	}
 
 	return (true);

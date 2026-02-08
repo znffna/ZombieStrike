@@ -288,6 +288,7 @@ public:
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature) override;
 
 	virtual DXGI_FORMAT GetRenderTargetFormat(int nPipelineState, int nRenderTargetIndex, bool bDepthWrite = false) override { return DXGI_FORMAT_R32_FLOAT; }
+	virtual DXGI_FORMAT GetDepthStencilFormat(int nPipelineState, bool bDepthWrite) override { return DXGI_FORMAT_D32_FLOAT; }
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState) override;
 	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState) override;
 
@@ -407,4 +408,108 @@ public:
 		return(CShader::ReadCompiledShaderFromFile(L"PSShadowToViewport", m_pd3dPixelShaderBlob.GetAddressOf()));
 #endif
 	};
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+class CMinimapShader : public CShader
+{
+public:
+	CMinimapShader();
+	virtual ~CMinimapShader();
+	virtual std::wstring GetShaderName() override { return L"CMinimapShader"; }
+
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature) override;
+
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {};
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList) {};
+	virtual void ReleaseShaderVariables() {};
+
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void ReleaseObjects();
+
+	virtual void PrepareMinimap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene);
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene);
+
+protected:
+	std::shared_ptr<CTexture> m_pMinimapTexture;
+
+	std::vector<std::shared_ptr<CCamera>> m_ppMinimapCameras;
+
+	ComPtr<ID3D12DescriptorHeap> m_pd3dRtvDescriptorHeap;
+	D3D12_CPU_DESCRIPTOR_HANDLE		m_pd3dRtvCPUDescriptorHandles[MAX_DEPTH_TEXTURES];
+
+	ComPtr<ID3D12DescriptorHeap> m_pd3dDsvDescriptorHeap;
+	ComPtr<ID3D12Resource> m_pd3dDepthBuffer;
+	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dDsvDescriptorCPUHandle;
+
+	XMMATRIX						m_xmProjectionToTexture;
+
+public:
+	std::shared_ptr<CTexture> GetMinimapTexture();
+	ID3D12Resource* GetMinimapTextureResource(UINT nIndex);
+
+private:
+	int m_nMinimapCount = 1;
+	int m_nMinimapBufferWidth = 512;
+	int m_nMinimapBufferHeight = 512;
+};
+
+class CMinimapToViewportShader : public CTextureToViewportShader
+{
+public:
+	CMinimapToViewportShader() : CTextureToViewportShader() {};
+	virtual ~CMinimapToViewportShader() {};
+
+	virtual std::wstring GetShaderName() override { return L"CMinimapToViewportShader"; }
+
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(int nPipelineState) override
+	{
+#ifdef _COMPILE_SHADER
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSMinimapToViewport", "ps_5_1", m_pd3dPixelShaderBlob.GetAddressOf()));
+#else
+		return(CShader::ReadCompiledShaderFromFile(L"PSMinimapToViewport", m_pd3dPixelShaderBlob.GetAddressOf()));
+#endif
+	};
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+	{
+		/*D3D12_VIEWPORT d3dViewport = { 0.0f, 0.0f, WINDOW_WIDTH * 0.25f, WINDOW_HEIGHT * 0.25f, 0.0f, 1.0f };
+		D3D12_RECT d3dScissorRect = { 0, 0, WINDOW_WIDTH / 4, WINDOW_HEIGHT / 4 };*/
+		// 우측 상단에 미니맵 렌더링 (화면 크기의 1/4)
+		float minimapWidth = WINDOW_WIDTH * 0.25f;
+		float minimapHeight = WINDOW_HEIGHT * 0.25f;
+		float minimapX = WINDOW_WIDTH - minimapWidth;  // 우측 끝에서 미니맵 너비만큼 왼쪽
+		float minimapY = 0.0f;  // 화면 상단
+
+		D3D12_VIEWPORT d3dViewport = {
+			minimapX,           // TopLeftX
+			minimapY,           // TopLeftY  
+			minimapWidth,       // Width
+			minimapHeight,      // Height
+			0.0f,               // MinDepth
+			1.0f                // MaxDepth
+		};
+
+		D3D12_RECT d3dScissorRect = {
+			(LONG)minimapX,                          // left
+			(LONG)minimapY,                          // top
+			(LONG)(minimapX + minimapWidth),         // right
+			(LONG)(minimapY + minimapHeight)         // bottom
+		};
+
+		pd3dCommandList->RSSetViewports(1, &d3dViewport);
+		pd3dCommandList->RSSetScissorRects(1, &d3dScissorRect);
+
+		XMFLOAT4X4 xmf4x4Identity = Matrix4x4::Identity();
+		pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_OBJECT, 16, &xmf4x4Identity, 0);
+
+		CShader::OnPrepareRender(pd3dCommandList);
+		UpdateShaderVariables(pd3dCommandList);
+
+		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		pd3dCommandList->DrawInstanced(6, 1, 0, 0);
+	}
 };
