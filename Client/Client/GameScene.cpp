@@ -98,7 +98,8 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	// UI Object
 	{
 		auto pAimSprite = RequestCreateObject(TypeTag<CSprite>(), L"Image/aim_cross.dds");
-		pAimSprite->SetSize(0.0f, 0.0f, 0.04f, 0.04f);
+		float aspectRatio = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
+		pAimSprite->SetSize(0.0f, 0.0f, 0.04f, 0.04f * aspectRatio);
 	}
 
 	//	{
