@@ -86,6 +86,12 @@ void COnlineScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARA
 				// ChangeMap(wParam - VK_F5);
 				break;
 
+			case 'R':
+			{
+				SendReloadStart();	//리로드 시작 요청
+				break;
+			}
+
 			default:
 				break;
 			}
@@ -289,6 +295,21 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		break;
 	}
 	
+	case S_C_AMMO_INFO:
+	{
+		auto* p = reinterpret_cast<pkt_sc_ammo_info*>(recv_p);
+
+		// 서버 탄/리로드 스냅샷 적용
+		m_ammoCur = p->cur_ammo;
+		m_ammoMax = p->max_ammo;
+		m_isReloading = (p->reloading != 0);
+
+		// TODO: 여기서 UI 갱신(탄 수 표시/리로드 표시)
+		// 예) HUD->SetAmmo(m_ammoCur, m_ammoMax, m_isReloading);
+
+		break;
+	}
+
 	case S_C_OBJECT_REMOVE:
 	{
 		pkt_sc_object_remove* removePkt = reinterpret_cast<pkt_sc_object_remove*>(recv_p);
@@ -300,7 +321,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			if (obj) { RequestDestroyObject(obj->GetID()); }       // nullptr 방어
 			m_mapGameObjects.erase(it);
 		}
-
+		
 		m_mapObjectTypes.erase(removePkt->id);
 		break;
 	}
@@ -381,6 +402,30 @@ void COnlineScene::SendPlayerState()
 	}
 }
 
+void COnlineScene::SendReloadStart()
+{
+	if (!m_pPlayer || !m_pPlayer->GetGun()) return;
+
+	pkt_cs_reload pkt{};
+	pkt.header.size = sizeof(pkt);
+	pkt.header.type = PKT_TYPE::C_S_RELOAD;
+	pkt.gun_type = static_cast<GunType>(m_pPlayer->GetGun()->GetGunType());  // 현재 총
+
+	NetworkingClient::Instance().send_packet((char*)&pkt);
+}
+
+void COnlineScene::SendReloadFinish()
+{
+	if (!m_pPlayer) return;
+
+	pkt_cs_reload_finish pkt{};
+	pkt.header.size = sizeof(pkt);
+	pkt.header.type = PKT_TYPE::C_S_RELOAD_FINISH;
+	pkt.gun_type = static_cast<GunType>(m_pPlayer->GetGun()->GetGunType());  // 현재 총
+
+	NetworkingClient::Instance().send_packet((char*)&pkt);
+
+}
 void COnlineScene::SendFirePacket(const FIRE_INFO fireInfo)
 {
 	//struct pkt_cs_shoot {
@@ -392,7 +437,11 @@ void COnlineScene::SendFirePacket(const FIRE_INFO fireInfo)
 	//	float bulletDir[3];
 	//};
 
+
 	pkt_cs_shoot packet{};
+	packet.header.size = sizeof(packet);              
+	packet.header.type = PKT_TYPE::C_S_SHOOT;
+
 	memcpy(&packet.bulletPos, &fireInfo.xmf3Position, sizeof(XMFLOAT3)); // 총알 위치
 	memcpy(&packet.bulletDir, &fireInfo.xmf3Look, sizeof(XMFLOAT3)); // 총알 방향 * 거리
 
@@ -407,11 +456,11 @@ bool COnlineScene::Fire(CPlayer* pPlayer, FIRE_INFO* pFireInfo)
 	// 로컬 정보였을 경우
 	if (ret && m_pPlayer == pPlayer) {
 		SendFirePacket(fireInfo);
-		if(m_pPlayer->GetGun()->GetCurrentAmmo() <= 0)
+
+		/*if(m_pPlayer->GetGun()->GetCurrentAmmo() <= 0)
 		{
 			m_pPlayer->Reload();
-
-		}
+		}*/
 	}
 
 	return ret;

@@ -41,6 +41,9 @@ public:
 	virtual bool Fire(CPlayer* pPlayer, FIRE_INFO* pFireInfo);
 	virtual bool Fire(CPlayer* pPlayer);
 
+	void SendReloadStart();		// 리로드 시작 패킷 전송 
+	void SendReloadFinish();	// 리로드 종료 패킷 전송 
+
 private:
 	std::unordered_map< int, CGameObject* > m_mapGameObjects;
 	std::unordered_map< int, ObjectType > m_mapObjectTypes; // - id별 obj_type 저장
@@ -61,6 +64,10 @@ private:
 	// 클리어 중복 처리 방지
 	bool m_stageCleared = false;
 
+	// 탄/리로드 UI용(서버 스냅샷)
+	int  m_ammoCur = 0;
+	int  m_ammoMax = 0;
+	bool m_isReloading = false;
 
 	char m_nMoveInput;
 };

@@ -14,6 +14,7 @@
 #include <print>
 #include <random>
 #include <atomic>
+#include <chrono> 
 
 #include "../../protocol.h"
 #include "ZombieAI.h" 
@@ -30,10 +31,8 @@ static std::mt19937 g_rng{ std::random_device{}() };
 static std::uniform_int_distribution<int> g_zombieSkinDist(0, ZOMBIE_SKIN_COUNT - 1); 
 static std::unordered_map<SIZEID, SIZE1> g_zombieSkin;  // 좀비 id -> skin_type (늦게 접속한 유저 스냅샷 일관성 유지용)
 
-// 좀비 타입 저장(늦게 접속한 유저 스냅샷 일관성 유지용)
-static std::unordered_map<SIZEID, ZombieType> g_zombieType;
-// 타입 가중치 랜덤(예: NORMAL 70%, RUNNER 20%, TANKER 10%)
-static std::discrete_distribution<int> g_zombieTypeDist({ 50, 30, 20 });
+static std::unordered_map<SIZEID, ZombieType> g_zombieType;                 // 좀비 타입 저장(늦게 접속한 유저 스냅샷 일관성 유지용)
+static std::discrete_distribution<int> g_zombieTypeDist({ 50, 30, 20 });    // 타입 가중치 랜덤(예: NORMAL 70%, RUNNER 20%, TANKER 10%)
 
 void error_display(const char* msg, int err_no) {
     WCHAR* lpMsgBuf;
@@ -58,6 +57,28 @@ struct Zombie {
     SIZE2 damage;               
     SIZE1 act_type;             
 };
+
+static SIZE2 GetMaxAmmo(GunType gt) // 총 타입별 최대 탄 수
+{
+    switch (gt) {
+    //case GunType::BULLET_PISTOL:  return 12;
+    case GunType::BULLET_RIFLE:   return 300;
+    //case GunType::BULLET_SHOTGUN: return 8;
+    default:                      return 300;
+    }
+}
+
+
+static SIZE2 GetReloadMs(GunType gt)    // 총 타입별 리로드 시간(ms)
+{
+    switch (gt) {
+    case GunType::BULLET_PISTOL:  return 1200;
+    case GunType::BULLET_RIFLE:   return 1500;
+    case GunType::BULLET_SHOTGUN: return 2000;
+    default:                      return 1500;
+    }
+}
+
 
 std::vector<ZombieAI*> g_zombies; // ZombieAI 객체를 서버가 관리
 // std::vector<std::unique_ptr<ZombieAI>> g_zombies;
@@ -234,7 +255,7 @@ short IN_g_player_n= 0;
 
 class SESSION;
 std::unordered_map<SIZEID, SESSION> g_users;
-std::mutex g_usersMutex; // // [GLOBAL] - g_users 보호
+std::mutex g_usersMutex; // g_users 보호
 // std::unordered_map<SIZEID, std::shared_ptr<SESSION>>로 교체
 
 void CALLBACK g_recv_callback(DWORD, DWORD, LPWSAOVERLAPPED, DWORD);
@@ -249,6 +270,8 @@ bool validate_stage_info(const pkt_cs_stage_info* p) {
     return (p->currentStage >= 1 && p->currentStage <= 10 && p->timeLeft <= 60000);
 
 }
+
+static void SendAmmoInfoToSelf(SESSION& s);
 static void BroadcastScoreInfoToAll();
 static void BroadcastStageInfoToAll(SIZE2 timeLeft);
 
@@ -294,6 +317,12 @@ public:
     SIZE2           _damage;               
     SIZE1           _act_type;      
     SIZE1           _move_input;
+
+    SIZE2 _ammo_cur = 0;
+    SIZE2 _ammo_max = 0;
+    bool  _reloading = false;
+    std::chrono::steady_clock::time_point _reload_end_tp{};
+
 
     std::atomic_bool _is_loaded{ false };
     std::atomic_bool _alive{ true };        // - 소켓 생존 플래그
@@ -368,12 +397,11 @@ public:
 			//DEBUG_LOG("[RECV][" << _id << "] packetSize = " << (SIZE3)packetSize << std::endl);
 
 			process_packet(p);    // 패킷 처리
-            p += (packetSize)/sizeof(SIZE2);      // 다음 패킷으로 이동
+            p += (packetSize)/sizeof(SIZE2);    // 다음 패킷으로 이동
             offset += packetSize;
         }
 
-        // 조립 안 된 데이터는 앞으로 당겨서 저장
-        _remained = total - offset;
+        _remained = total - offset; // 조립 안 된 데이터는 앞으로 당겨서 저장
 
         if (_remained > 0)
             memmove(_recv_over._buffer, p, _remained);
@@ -604,6 +632,11 @@ public:
             _damage     = 0;
 			_act_type   = ActionType::IDLE;
             _move_input = 0;
+            
+            _ammo_max = GetMaxAmmo(_gun_type);  //  로그인 시 탄/리로드 상태 초기화(서버 권위)
+            _ammo_cur = _ammo_max;
+            _reloading = false;
+            _reload_end_tp = std::chrono::steady_clock::time_point{};
 
             IN_g_player_n++;
 
@@ -624,13 +657,14 @@ public:
 
             SendSceneSnapshot();    // ← 이 시점부터만
             BroadcastAddMe();       // 다른 플레이어에게 나 add
+
+            SendAmmoInfoToSelf(*this);
         }
         break;
 
         case PKT_TYPE::C_S_UPDATE:
         {
-            // // [SESSION::process_packet] - 로딩중엔 월드 영향 패킷 무시(텔포/꼬임 방지)
-            if (!_is_loaded.load(std::memory_order_acquire)) break;
+            if (!_is_loaded.load(std::memory_order_acquire)) break; // 로딩중엔 월드 영향 패킷 무시(텔포/꼬임 방지)
 
 			pkt_cs_update* updatePacket = reinterpret_cast<pkt_cs_update*>(packet);
 
@@ -727,6 +761,20 @@ public:
         {
             auto* p = reinterpret_cast<pkt_cs_shoot*>(packet);
 
+            
+            if (_reloading) {   //  리로드 중 발사 금지
+                SendAmmoInfoToSelf(*this);
+                break;
+            }
+
+            if (_ammo_cur <= 0) {   // 탄 없으면 발사 금지
+                SendAmmoInfoToSelf(*this);
+                break;
+            }
+
+            --_ammo_cur;    // 발사 승인: 탄 감소(서버 권위)
+            SendAmmoInfoToSelf(*this);
+
             float ox = p->bulletPos[0];  // XYZ 그대로 사용
             float oy = p->bulletPos[1];
             float oz = p->bulletPos[2];
@@ -734,6 +782,14 @@ public:
             float dx = p->bulletDir[0];
             float dy = p->bulletDir[1];
             float dz = p->bulletDir[2];
+
+            
+             std::cout << "[SHOOT] id=" << _id  // DEBUG: 총알 원점/방향 확인(필요 시 주석 해제)
+                       << " o=(" << ox << "," << oy << "," << oz << ")"
+                       << " d=(" << dx << "," << dy << "," << dz << ")"
+                       << " gun=" << (int)_gun_type
+                       << " ammo=" << _ammo_cur << "/" << _ammo_max
+                       << "\n";
 
             {   // 발사 브로드캐스트(S_C_SHOOT) 
                 pkt_sc_shoot b{};
@@ -759,7 +815,6 @@ public:
                 //DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id
                 //   << " hit_zid=" << hit_zid << " t=" << hit_t);
 
-                // !! 데미지 + 브로드캐스트
                 constexpr SIZE2 DAMAGE = GUN_DAMAGE;   // 임시 고정 대미지(총기별 테이블은 이후에 연결)
 
                 SIZE2 hp_after = 0;
@@ -783,8 +838,7 @@ public:
                 resp.zombieHp = hp_after;
                 for (auto& [id, session] : g_users) session.do_send(&resp);
 
-                //  HP가 0이면 즉시 제거 패킷 (중복 방지: MarkRemoved)
-                if (hp_after == 0) {
+                if (hp_after == 0) {    //HP가 0이면 즉시 제거 패킷 (중복 방지: MarkRemoved)
                     ZombieAI* hitZ = nullptr;
                     {
                         std::lock_guard<std::mutex> lock(zombiesMutex);
@@ -826,11 +880,56 @@ public:
             }
             else {
                 //DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id << " miss");
+                std::cout << "[MISS] shooter=" << _id << "\n";
             }
             break;
         }
 
+        case PKT_TYPE::C_S_RELOAD:
+        {
+            auto* p = reinterpret_cast<pkt_cs_reload*>(packet);
 
+            if (_reloading) {   // 리로드 시작(서버 권위)
+                SendAmmoInfoToSelf(*this);
+                break;
+            }
+
+            _ammo_max = GetMaxAmmo(_gun_type);
+            if (_ammo_cur >= _ammo_max) {
+                SendAmmoInfoToSelf(*this);
+                break;
+            }
+
+            _reloading = true;
+            _reload_end_tp = std::chrono::steady_clock::now()
+                + std::chrono::milliseconds(GetReloadMs(_gun_type));
+
+            SendAmmoInfoToSelf(*this);
+            break;
+        }
+
+        case PKT_TYPE::C_S_RELOAD_FINISH:
+        {
+            auto* p = reinterpret_cast<pkt_cs_reload_finish*>(packet);
+
+            if (!_reloading) {  // 리로드 종료 알림(서버 시간 검증)
+                SendAmmoInfoToSelf(*this);
+                break;
+            }
+
+            auto now = std::chrono::steady_clock::now();
+            if (now < _reload_end_tp) {
+                SendAmmoInfoToSelf(*this);  //조기 finish 방지
+                break;
+            }
+
+            _ammo_max = GetMaxAmmo(_gun_type);
+            _ammo_cur = _ammo_max;
+            _reloading = false;
+
+            SendAmmoInfoToSelf(*this);
+            break;
+        }
         default:
             std::cout << "[WARN] Unknown PacketType: " << packet_type << "\n";
             break;
@@ -863,6 +962,25 @@ void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
     s->recv_callback(num_bytes); 
 
 }
+
+//====================================
+// 서버 권위 본인에게만 탄/리로드 상태 전송
+//====================================
+static void SendAmmoInfoToSelf(SESSION& s)
+{
+    pkt_sc_ammo_info a{};
+    a.header.size = sizeof(a);
+    a.header.type = PKT_TYPE::S_C_AMMO_INFO;
+
+    a.playerId = s._id;
+    a.gun_type = s._gun_type;
+    a.cur_ammo = s._ammo_cur;
+    a.max_ammo = s._ammo_max;
+    a.reloading = s._reloading ? 1 : 0;
+
+    s.do_send(&a);
+}
+
 //====================================
 // 서버 권위 스코어/좀비 카운터 전송
 //====================================
@@ -904,8 +1022,7 @@ static void BroadcastStageInfoToAll(SIZE2 timeLeft)
 
 auto lastTick = std::chrono::steady_clock::now();
 
-// 요구했던 두 포인트 + 예시 포인트 1~2개 더 (원하는 만큼 2~4개만 채워서 사용)
-std::vector<std::pair<int, int>> spawnPoints = {
+std::vector<std::pair<int, int>> spawnPoints = {    // 요구했던 두 포인트 + 예시 포인트 1~2개 더 (원하는 만큼 2~4개만 채워서 사용)
     {150, 180},  // 포인트 A
     {150, 100},  // 포인트 B
     // {200, 300},  // 포인트 C (원하면 활성화)
@@ -913,9 +1030,8 @@ std::vector<std::pair<int, int>> spawnPoints = {
 };
 
 
-// N등분 스폰 적용 (GetSpawnPointByIndexN)
-void SpawnZombies(int count) {
-    
+void SpawnZombies(int count) {  // N등분 스폰 적용 (GetSpawnPointByIndexN)
+        
     if (spawnPoints.empty()) {  // 스폰 포인트 미설정 시 기본 포인트 두 개로 세팅                                       
         spawnPoints = { {150,180}, {150,100} };          
     }
@@ -1006,12 +1122,12 @@ void ZombieAIThread() {
 
         // 플레이어 스냅샷: ID와 위치 동시 수집
         std::vector<Vec3> playerPositions;
-        std::vector<std::pair<SIZEID, Vec3>> playerList;  // // ZombieAIThread - ID 포함
+        std::vector<std::pair<SIZEID, Vec3>> playerList;  // ID 포함
+
         for (auto& [id, session] : g_users) {
             if (session._obj_type != ObjectType::PLAYER) continue;
 
-            // // [ZombieAIThread] - 로딩중 플레이어는 좀비 인지 대상에서 제외
-            if (!session._is_loaded.load(std::memory_order_acquire)) continue;
+            if (!session._is_loaded.load(std::memory_order_acquire)) continue;  // 로딩중 플레이어는 좀비 인지 대상에서 제외
 
             playerPositions.push_back(session._position);
             playerList.emplace_back(id, session._position);

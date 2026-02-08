@@ -74,7 +74,12 @@ enum PKT_TYPE : SIZE1 {
 
     C_S_SHOOT,
     C_S_HIT,
+
+    C_S_RELOAD,
+    C_S_RELOAD_FINISH,
+
     S_C_SHOOT,
+    S_C_AMMO_INFO,
 
     //S_C_LOGIN_OK = 14,
     //S_C_LOGIN_FAIL = 15,
@@ -131,8 +136,13 @@ inline const char* ToString(PKT_TYPE type) {
     case C_S_LOADING_FINISH:return "C_S_LOADING_FINISH";
     case C_S_UPDATE:        return "C_S_UPDATE";
     case C_S_SHOOT:         return "C_S_SHOOT";
+    case C_S_RELOAD:        return "C_S_RELOAD";
+    case C_S_RELOAD_FINISH: return "C_S_RELOAD_FINISH";
     case C_S_HIT:           return "C_S_HIT";
+
     case S_C_SHOOT:         return "S_C_SHOOT";
+    case S_C_AMMO_INFO:     return "S_C_AMMO_INFO";
+
     case S_C_OBJ_INFO:      return "S_C_OBJ_INFO";
     case S_C_OBJECT_ADD:    return "S_C_OBJECT_ADD";
     case S_C_OBJECT_UPDATE: return "S_C_OBJECT_UPDATE";
@@ -298,6 +308,16 @@ struct pkt_cs_shoot {
 //    SIZEID zombieId;                // 맞은 좀비 ID
 //};
 
+struct pkt_cs_reload {
+    PacketHeader header{ sizeof(*this), PKT_TYPE::C_S_RELOAD };
+    GunType gun_type; //  현재 장착 총
+};
+
+struct pkt_cs_reload_finish {
+    PacketHeader header{ sizeof(*this), PKT_TYPE::C_S_RELOAD_FINISH };
+    GunType gun_type; //  현재 장착 총
+};
+
 
 // --------------------------
 // 서버 ->  클라
@@ -325,9 +345,21 @@ struct pkt_sc_shoot {
     PacketHeader header{ sizeof(*this), PKT_TYPE::S_C_SHOOT }; 
     SIZEID shooterId;      // 누가 쐈는지
     GunType gun_type;      // 총 종류(이펙트/사운드)
+
     float bulletPos[3];    // 발사 원점
     float bulletDir[3];    // 정규화 방향
 };
+
+struct pkt_sc_ammo_info {
+    PacketHeader header{ sizeof(*this), PKT_TYPE::S_C_AMMO_INFO };
+    SIZEID  playerId;       // 누구 탄 정보인지(보통 본인)
+    GunType gun_type;       // 총 종류
+    SIZE2   cur_ammo;       // 현재 탄 수
+    SIZE2   max_ammo;       // 최대 탄 수
+    SIZE1   reloading;      // 0/1
+    //SIZE2   reload_left_ms; // 남은 재장전 시간(선택)
+};
+
 
 // 로그인 결과 패킷
 struct pkt_sc_obj_info {
