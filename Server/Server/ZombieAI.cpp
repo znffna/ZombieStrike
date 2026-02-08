@@ -265,7 +265,13 @@ void ZombieAI::SetTargetPosition(float x, float z) {
 }
 
 std::vector<std::pair<int, int>> ZombieAI::FindPathToPlayer() {
-    return m_astar->FindPath((int)m_x, (int)m_z, (int)m_targetX, (int)m_targetZ);
+   /* return m_astar->FindPath((int)m_x, (int)m_z, (int)m_targetX, (int)m_targetZ);*/
+    return m_astar->FindPath(
+        (int)(m_x / CELL_SIZE),
+        (int)(m_z / CELL_SIZE),
+        (int)(m_targetX / CELL_SIZE),
+        (int)(m_targetZ / CELL_SIZE)
+    );
 }
 
 void ZombieAI::FindPath() {
@@ -756,31 +762,31 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     Vec3 nextPos = currentPos + moveDir * (m_move_speed * dtTick);
 
     // [REPLACE] 4. 좀비↔좀비 분리력(Separation force) 계산
-    Vec3 separation(0, 0, 0);
-    {
-        for (auto* other : allZombies) {
-            if (!other || other->GetID() == m_id) continue;
-            float ox = other->GetX();
-            float oz = other->GetZ();
+    //Vec3 separation(0, 0, 0);
+    //{
+    //    for (auto* other : allZombies) {
+    //        if (!other || other->GetID() == m_id) continue;
+    //        float ox = other->GetX();
+    //        float oz = other->GetZ();
 
-            float sx = m_x - ox;
-            float sz = m_z - oz;
-            float d2 = sx * sx + sz * sz;
+    //        float sx = m_x - ox;
+    //        float sz = m_z - oz;
+    //        float d2 = sx * sx + sz * sz;
 
-            // 반지름 안에 있으면 반발력 추가 (가까울수록 강하게)
-            const float r = Z_SEPARATION_RADIUS;
-            const float r2 = r * r;
-            if (d2 > 0.0001f && d2 < r2) {
-                float d = std::sqrt(d2);
-                float strength = (r - d) / r; // 0~1
-                separation.x += (sx / d) * strength;
-                separation.z += (sz / d) * strength;
-            }
-        }
-        if (separation.LengthSquared() > 0.0f) {
-            separation = separation.Normalize() * Z_SEPARATION_FORCE;
-        }
-    }
+    //        // 반지름 안에 있으면 반발력 추가 (가까울수록 강하게)
+    //        const float r = Z_SEPARATION_RADIUS;
+    //        const float r2 = r * r;
+    //        if (d2 > 0.0001f && d2 < r2) {
+    //            float d = std::sqrt(d2);
+    //            float strength = (r - d) / r; // 0~1
+    //            separation.x += (sx / d) * strength;
+    //            separation.z += (sz / d) * strength;
+    //        }
+    //    }
+    //    if (separation.LengthSquared() > 0.0f) {
+    //        separation = separation.Normalize() * Z_SEPARATION_FORCE;
+    //    }
+    //}
 
     // 5. 장애물 충돌 검사
     Vec3 wallPush(0, 0, 0);
@@ -796,41 +802,83 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
                 Vec3 wallCenter = GetNodeCenter(checkX, checkZ);
                 Vec3 away = nextPos - wallCenter;
                 if (away.LengthSquared() > 0.01f)
-                    wallPush += away.Normalize() * 0.1f;
+                    wallPush += away.Normalize() * 0.05f;
             }
         }
     }
 
     // 6. 최종 이동 (공격 중 잠깐 정지 → 다시 추격)
     { // // [ZombieAI::Update] - 핵심: 이동량에 deltaTime 적용
-        Vec3 finalMove = moveDir * (m_move_speed * dtTick) + wallPush + separation;
+        //Vec3 finalMove = moveDir * (m_move_speed * dtTick) + wallPush + separation;
+        Vec3 finalMove = moveDir * (m_move_speed * dtTick) + wallPush;
 
-        if (IsAttacking()) {    //공격 중 이동량 배율 적용
-            finalMove = finalMove * Z_ATTACK_MOVE_SCALE;   //  공격중 이동 억제
+        if (IsAttacking()) {
+            finalMove = finalMove * Z_ATTACK_MOVE_SCALE;   // // ZombieAI::Update - 공격중 이동 억제
+        }
+        if (IsPausing()) {
+            finalMove = Vec3(0, 0, 0);                     // // ZombieAI::Update - pause 중 완전 정지
         }
 
-        
-        if (IsPausing()) {  //  pause 중이면 완전 정지(원하면 유지)
-            finalMove = Vec3(0, 0, 0); 
-        }
-
-        const float prevX = m_x; // DEBUG(이동 전 좌표)
+        const float prevX = m_x;
         const float prevZ = m_z;
 
         Vec3 currentPos(m_x, 0, m_z);
-        Vec3 candidate = currentPos + finalMove; // Update - 이동 후보
+        Vec3 candidate = currentPos + finalMove;           // // ZombieAI::Update - 이동 후보
 
-        // 벽 셀로 들어가면 이동 금지 (벽 박치기/진입 방지)
-        int cx = (int)(candidate.x / CELL_SIZE);
-        int cz = (int)(candidate.z / CELL_SIZE);
+        auto IsWalkableWorld = [&](const Vec3& p)->bool {
+            int cx = (int)(p.x / CELL_SIZE);
+            int cz = (int)(p.z / CELL_SIZE);
+            if (cx < 0 || cx >= (int)m_map[0].size() || cz < 0 || cz >= (int)m_map.size()) return false;
+            return (m_map[cz][cx] == 0);
+            };
 
-        if (cx < 0 || cx >= (int)m_map[0].size() || cz < 0 || cz >= (int)m_map.size() || m_map[cz][cx] != 0) {
-            finalMove = Vec3(0, 0, 0); // 후보가 벽이면 이동 취소
-            candidate = currentPos;
+        // 1) 그대로 이동 가능하면 그대로
+        if (!IsWalkableWorld(candidate)) {
+            // 2) 벽이면 슬라이딩: X만 / Z만 시도
+            Vec3 candX = currentPos + Vec3(finalMove.x, 0, 0);
+            Vec3 candZ = currentPos + Vec3(0, 0, finalMove.z);
+
+            const bool okX = IsWalkableWorld(candX);
+            const bool okZ = IsWalkableWorld(candZ);
+
+            if (okX && !okZ) {
+                finalMove = Vec3(finalMove.x, 0, 0);       // // ZombieAI::Update - 벽충돌: X 슬라이드
+            }
+            else if (!okX && okZ) {
+                finalMove = Vec3(0, 0, finalMove.z);       // // ZombieAI::Update - 벽충돌: Z 슬라이드
+            }
+            else if (!okX && !okZ) {
+                finalMove = Vec3(0, 0, 0);                 // // ZombieAI::Update - 둘 다 막힘: 정지
+            }
+            candidate = currentPos + finalMove;
         }
 
+        // 적용
         m_x += finalMove.x;
         m_z += finalMove.z;
+        // ===============================
+        // 2) 스턱 감지 → 강제 리패스
+        // ===============================
+        const float dx = m_x - prevX;
+        const float dz = m_z - prevZ;
+        const float moved2 = dx * dx + dz * dz;
+
+        if (moved2 < (Z_STUCK_EPS_DIST * Z_STUCK_EPS_DIST) && !IsAttacking() && !IsPausing()) {
+            m_stuck_time += deltaTime; // // ZombieAI::Update - 스턱 누적
+        }
+        else {
+            m_stuck_time = 0.0f;       // // ZombieAI::Update - 이동했으면 리셋
+        }
+
+        if (m_stuck_time >= Z_STUCK_FORCE_TIME) {
+            // 다음 틱에 즉시 재탐색되도록 유도
+            m_repath_timer = REPATH_INTERVAL;   // // ZombieAI::Update - 스턱: 즉시 리패스 유도
+            m_repath_fail_cd = 0.0f;            // // ZombieAI::Update - 스턱: 실패 쿨다운 해제
+            m_path.clear();                     // // ZombieAI::Update - 스턱: 경로 폐기
+            m_pathIndex = 0;                    // // ZombieAI::Update - 스턱: 인덱스 리셋
+            m_stuck_time = 0.0f;                // // ZombieAI::Update - 스턱 타이머 리셋
+        }
+
         m_dirty = true; // 상태 변경 브로드캐스트
 
         //
