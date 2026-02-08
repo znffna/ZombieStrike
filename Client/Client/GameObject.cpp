@@ -333,11 +333,12 @@ BoundingBox CGameObject::GetMergedMeshBound(BoundingBox* pVolume)
 {
 	if (nullptr == pVolume)
 	{
-		BoundingBox boundingBox{};
+		BoundingBox boundingBox{XMFLOAT3{0.0f,0.0f,0.0f}, XMFLOAT3{0.0f,0.0f,0.0f}};
 
 		if (m_pMesh)
 		{
-			BoundingBox::CreateMerged(boundingBox, boundingBox, m_pMesh->GetBoundingBox(m_pTransform->GetWorldMatrix()));
+			boundingBox = m_pMesh->GetBoundingBox(m_pTransform->GetWorldMatrix());
+			//BoundingBox::CreateMerged(boundingBox, boundingBox, m_pMesh->GetBoundingBox(m_pTransform->GetWorldMatrix()));
 		}
 
 		for (auto& pChild : m_pChilds)
@@ -350,7 +351,17 @@ BoundingBox CGameObject::GetMergedMeshBound(BoundingBox* pVolume)
 	else {
 		if (m_pMesh)
 		{
-			BoundingBox::CreateMerged(*pVolume, *pVolume, m_pMesh->GetBoundingBox(m_pTransform->GetWorldMatrix()));
+			if (pVolume->Extents.x == 0.0f && 
+				pVolume->Extents.y == 0.0f &&
+				pVolume->Extents.z == 0.0f
+				)
+			{
+				*pVolume = m_pMesh->GetBoundingBox(m_pTransform->GetWorldMatrix());
+			}
+			else
+			{
+				BoundingBox::CreateMerged(*pVolume, *pVolume, m_pMesh->GetBoundingBox(m_pTransform->GetWorldMatrix()));
+			}
 		}
 
 		for (auto& pChild : m_pChilds)
