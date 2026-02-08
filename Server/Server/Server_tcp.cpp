@@ -13,6 +13,7 @@
 #include <queue>
 #include <print>
 #include <random>
+#include <atomic>
 
 #include "../../protocol.h"
 #include "ZombieAI.h" 
@@ -62,6 +63,15 @@ std::vector<ZombieAI*> g_zombies; // ZombieAI 객체를 서버가 관리
 // std::vector<std::unique_ptr<ZombieAI>> g_zombies;
 std::vector<std::vector<int>> g_map; // 맵 데이터
 std::mutex zombiesMutex;
+
+// // [GLOBAL] - Stage1 스코어/좀비 카운터(서버 권위)
+static std::atomic<SIZE2> g_stage_score{ 0 };
+static std::atomic<SIZE2> g_total_zombies{ 0 };
+static std::atomic<SIZE2> g_killed_zombies{ 0 };
+
+// // [GLOBAL] - Stage1 진행 상태(필요 시 확장)
+static std::atomic<SIZE2> g_current_stage{ 1 };
+static std::atomic_bool   g_stage1_cleared{ false };
 
 // ---[Bullet ↔ Zombie Hit Test Only / 3D]-----------------------------
 
@@ -239,6 +249,11 @@ bool validate_stage_info(const pkt_cs_stage_info* p) {
     return (p->currentStage >= 1 && p->currentStage <= 10 && p->timeLeft <= 60000);
 
 }
+static void BroadcastScoreInfoToAll();
+static void BroadcastStageInfoToAll(SIZE2 timeLeft);
+
+
+
 enum IO_OP { OP_RECV, OP_SEND };
 class OVER_EXP {
 public:
@@ -600,70 +615,7 @@ public:
 
             //send_object_update();
             break;
-            //{
-            //    pkt_sc_object_add p_Add_P;
-            //    ZeroMemory(&p_Add_P, sizeof(p_Add_P));
-            //    p_Add_P.header.size = sizeof(p_Add_P);
-            //    p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
-            //    p_Add_P.id = _id;
-            //    p_Add_P.obj_type = ObjectType::PLAYER;
-            //    p_Add_P.skin_type = _skin_type;
-            //    strcpy_s(p_Add_P.name, _name.c_str());
-            //    p_Add_P.startposition = _position;
-            //    p_Add_P.starthp = _hp;
-            //    p_Add_P.gun_type = BULLET_PISTOL;
-            //    p_Add_P.act_type = _act_type;
-            //    p_Add_P.move_input = _move_input;
-            //
-            //    for (auto& u : g_users) {   // 다른 사람에게 나 add
-            //        if (u.first != _id)
-            //            u.second.do_send(&p_Add_P);
-            //    }
-            //    for (auto& u : g_users) {   // 나에게 다른 사람 add
-            //        if (u.first != _id) {
-            //            pkt_sc_object_add p_Add_P;
-            //            ZeroMemory(&p_Add_P, sizeof(p_Add_P));
-            //            p_Add_P.header.size = sizeof(p_Add_P);
-            //            p_Add_P.header.type = PKT_TYPE::S_C_OBJECT_ADD;
-            //
-            //            p_Add_P.id = u.first;
-            //            p_Add_P.obj_type = ObjectType::PLAYER;
-            //            p_Add_P.skin_type = u.second._skin_type;
-            //            strcpy_s(p_Add_P.name, u.second._name.c_str());
-            //            p_Add_P.startposition = u.second._position;
-            //            p_Add_P.starthp = u.second._hp;
-            //            p_Add_P.gun_type = u.second._gun_type;
-            //            p_Add_P.act_type = u.second._act_type;
-            //            p_Add_P.move_input = u.second._move_input;
-            //            do_send(&p_Add_P);
-            //        }
-            //    }
-            //
-            //    // [C_S_LOGIN] 기존 좀비 스냅샷은 "신규 접속자(나)"에게만 유니캐스트
-            //    pkt_sc_object_add packet;
-            //    for (auto zombie : g_zombies) {
-            //        ZeroMemory(&packet, sizeof(packet));
-            //        packet.header.size = sizeof(packet);
-            //        packet.header.type = PKT_TYPE::S_C_OBJECT_ADD;
-            //        packet.id = zombie->GetID();
-            //        packet.obj_type = ObjectType::ZOMBIE;
-            //
-            //        // // C_S_LOGIN - 저장된 좀비 스킨으로 스냅샷 일관성 유지
-            //        auto sit = g_zombieSkin.find(zombie->GetID());                   // - find skin
-            //        packet.skin_type = (sit != g_zombieSkin.end()) ? sit->second : 0;
-            //
-            //        strcpy_s(packet.name, "Zombie");
-            //        packet.startposition = zombie->GetPosition();
-            //        packet.starthp = zombie->GetHP();
-            //        //packet.gun_type = GunType::BULLET_MAX; // [추가] 누락 보정(좀비는 총 안씀)
-            //        packet.gun_type = static_cast<GunType>(0);
-            //
-            //        // 나(this 세션)에게만 전송
-            //        this->do_send(&packet);
-            //    }
-            //
-            //    break;
-            //}
+         
         }
 
         case PKT_TYPE::C_S_LOADING_FINISH:
@@ -734,13 +686,15 @@ public:
                 break;
             }
 
-            pkt_sc_score_info resp;
-            resp.header.size = sizeof(resp);
-            resp.header.type = PKT_TYPE::S_C_SCORE_INFO;
-            resp.stage_score = p->stage_score;
+            BroadcastScoreInfoToAll();
 
-            for (auto& [id, session] : g_users)
-                session.do_send(&resp);
+            //pkt_sc_score_info resp;
+            //resp.header.size = sizeof(resp);
+            //resp.header.type = PKT_TYPE::S_C_SCORE_INFO;
+            //resp.stage_score = p->stage_score;
+            //
+            //for (auto& [id, session] : g_users)
+            //    session.do_send(&resp);
 
             break;
         }
@@ -754,7 +708,9 @@ public:
                 break;
             }
 
-            pkt_sc_stage_info resp;
+            BroadcastStageInfoToAll(p->timeLeft);    //서버 권위 스테이지 정보 브로드캐스트
+
+           /* pkt_sc_stage_info resp;
             resp.header.size = sizeof(resp);
             resp.header.type = PKT_TYPE::S_C_STAGE_INFO;
             resp.currentStage = p->currentStage;
@@ -762,7 +718,7 @@ public:
             resp.timeLeft = p->timeLeft;
 
             for (auto& [id, session] : g_users)
-                session.do_send(&resp);
+                session.do_send(&resp);*/
 
             break;
         }
@@ -771,8 +727,7 @@ public:
         {
             auto* p = reinterpret_cast<pkt_cs_shoot*>(packet);
 
-            // XYZ 그대로 사용
-            float ox = p->bulletPos[0];
+            float ox = p->bulletPos[0];  // XYZ 그대로 사용
             float oy = p->bulletPos[1];
             float oz = p->bulletPos[2];
 
@@ -780,8 +735,7 @@ public:
             float dy = p->bulletDir[1];
             float dz = p->bulletDir[2];
 
-            // [SESSION::process_packet] 변경: 발사 브로드캐스트(S_C_SHOOT) 
-            {
+            {   // 발사 브로드캐스트(S_C_SHOOT) 
                 pkt_sc_shoot b{};
                 b.header.size = sizeof(b);
                 b.header.type = PKT_TYPE::S_C_SHOOT;
@@ -796,17 +750,16 @@ public:
                 }
             }
 
-            constexpr float MAX_RANGE = 60.0f; // 임시 사거리
+            constexpr float MAX_RANGE = 80.0f; // 임시 사거리
 
             int   hit_zid = -1;
             float hit_t = 0.0f;
 
             if (find_nearest_hit_zombie3D(ox, oy, oz, dx, dy, dz, MAX_RANGE, hit_zid, hit_t)) {
                 //DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id
-                 //   << " hit_zid=" << hit_zid << " t=" << hit_t);
+                //   << " hit_zid=" << hit_zid << " t=" << hit_t);
 
-                // !! 데미지 + 브로드캐스트
-                constexpr SIZE2 DAMAGE = 10;   // 임시 고정 대미지(총기별 테이블은 이후에 연결)
+                constexpr SIZE2 DAMAGE = 100;   // 임시 고정 대미지(총기별 테이블은 이후에 연결)
 
                 SIZE2 hp_after = 0;
                 {
@@ -821,8 +774,7 @@ public:
                     }
                 }
 
-                // (기존) 히트 결과 먼저 브로드캐스트
-                pkt_sc_hit_result resp{};
+                pkt_sc_hit_result resp{};    // (기존) 히트 결과 먼저 브로드캐스트
                 resp.header.size = sizeof(resp);
                 resp.header.type = PKT_TYPE::S_C_HIT_RESULT;
                 resp.shooterId = _id;
@@ -840,9 +792,25 @@ public:
                         }
                     }
                     if (hitZ && !hitZ->IsRemoved()) {
-                        hitZ->MarkRemoved(); // // ZombieAI::MarkRemoved - 서버 틱/충돌 제외
+                        hitZ->MarkRemoved(); // 서버 틱/충돌 제외
 
-                        g_zombieSkin.erase(hit_zid); // // C_S_SHOOT - erase zombie skin
+                        // 좀비 킬 카운트/스코어 갱신(서버 권위)
+                        const SIZE2 killed_now = static_cast<SIZE2>(g_killed_zombies.fetch_add(1, std::memory_order_acq_rel) + 1);
+                        g_stage_score.fetch_add(1, std::memory_order_acq_rel); // 1킬 = 1점(필요 시 테이블화)
+
+                        BroadcastScoreInfoToAll();
+
+                        // Stage1 클리어 조건: killed == total
+                        const SIZE2 total = g_total_zombies.load(std::memory_order_acquire);
+                        if (total > 0 && killed_now >= total) {
+                            const bool first_clear = !g_stage1_cleared.exchange(true, std::memory_order_acq_rel);
+                            if (first_clear) {
+                                std::cout << "[STAGE_CLEAR] Stage1 cleared. killed=" << killed_now << " total=" << total << "\n";
+                                BroadcastStageInfoToAll(/*timeLeft=*/0);
+                            }
+                        }
+
+                        g_zombieSkin.erase(hit_zid); // erase zombie skin
                         g_zombieType.erase(hit_zid);
 
                         pkt_sc_object_remove rem{};
@@ -871,9 +839,6 @@ public:
 };
 
 
-
-
-
 void CALLBACK g_send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
 {
     OVER_EXP* send_ov = reinterpret_cast<OVER_EXP*>(p_over);
@@ -897,6 +862,43 @@ void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
     s->recv_callback(num_bytes); 
 
 }
+//====================================
+// 서버 권위 스코어/좀비 카운터 전송
+//====================================
+static void BroadcastScoreInfoToAll()
+{
+    pkt_sc_score_info resp{};
+    resp.header.size = sizeof(resp);
+    resp.header.type = PKT_TYPE::S_C_SCORE_INFO;
+
+    const SIZE2 total = g_total_zombies.load(std::memory_order_acquire);
+    const SIZE2 killed = g_killed_zombies.load(std::memory_order_acquire);
+    const SIZE2 alive = (killed <= total) ? static_cast<SIZE2>(total - killed) : 0;
+
+    resp.stage_score = g_stage_score.load(std::memory_order_acquire);
+    resp.total_zombies = total;
+    resp.killed_zombies = killed;
+    resp.alive_zombies = alive;
+
+    for (auto& [id, session] : g_users)
+        session.do_send(&resp);
+}
+//====================================
+// 스테이지 정보(현재는 Stage1 only)
+//====================================
+static void BroadcastStageInfoToAll(SIZE2 timeLeft)
+{
+    pkt_sc_stage_info resp{};
+    resp.header.size = sizeof(resp);
+    resp.header.type = PKT_TYPE::S_C_STAGE_INFO;
+
+    resp.currentStage = g_current_stage.load(std::memory_order_acquire);
+    resp.totalStages = 1;
+    resp.timeLeft = timeLeft;
+
+    for (auto& [id, session] : g_users)
+        session.do_send(&resp);
+}
 
 
 auto lastTick = std::chrono::steady_clock::now();
@@ -910,19 +912,26 @@ std::vector<std::pair<int, int>> spawnPoints = {
 };
 
 
-// // SpawnZombies: N등분 스폰 적용 (GetSpawnPointByIndexN)
+// N등분 스폰 적용 (GetSpawnPointByIndexN)
 void SpawnZombies(int count) {
-    // // SpawnZombies: 방어 코드 – 스폰 포인트 미설정 시 기본 포인트 두 개로 세팅
-    if (spawnPoints.empty()) {                                 
-        spawnPoints = { {150,180}, {150,100} };                
+    
+    if (spawnPoints.empty()) {  // 스폰 포인트 미설정 시 기본 포인트 두 개로 세팅                                       
+        spawnPoints = { {150,180}, {150,100} };          
     }
 
-    for (int i = 0; i < count; ++i) {
-        // // SpawnZombies: 균등 분할로 i번째 스폰 좌표 선택
-        auto [sx, sz] = GetSpawnPointByIndexN(g_map, spawnPoints, i, count);  
+    //  Stage1 카운터 초기화(서버 권위)
+    g_current_stage.store(1, std::memory_order_release);
+    g_stage1_cleared.store(false, std::memory_order_release);
+    g_stage_score.store(0, std::memory_order_release);
+    g_total_zombies.store(static_cast<SIZE2>(count), std::memory_order_release);
+    g_killed_zombies.store(0, std::memory_order_release);
 
-        // // SpawnZombies: 좌표계 선택
-        // 프로젝트가 '셀 인덱스' 좌표를 SetPosition에 기대하면 아래 1줄 사용:
+
+    for (int i = 0; i < count; ++i) {
+
+        auto [sx, sz] = GetSpawnPointByIndexN(g_map, spawnPoints, i, count);  //균등 분할로 i번째 스폰 좌표 선택
+
+        // SpawnZombies: 좌표계 선택 , 프로젝트가 '셀 인덱스' 좌표를 SetPosition에 기대하면 아래 1줄 사용:
         float zx = static_cast<float>(sx);                          
         float zz = static_cast<float>(sz);                         
 
@@ -933,19 +942,16 @@ void SpawnZombies(int count) {
         ZombieAI* zombie = new ZombieAI(g_map, 10000 + i);
         zombie->SetPosition(zx, zz);
 
-        // 타입 랜덤 결정 + 스탯 적용(HP/이속/쿨/데미지)
-        ZombieType zType = static_cast<ZombieType>(g_zombieTypeDist(g_rng));
+       
+        ZombieType zType = static_cast<ZombieType>(g_zombieTypeDist(g_rng));    // 타입 랜덤 결정 + 스탯 적용(HP/이속/쿨/데미지)
         zombie->SetType(zType);
 
-        // SetType에서 HP까지 세팅하므로 SetHP(ZOMBIE_HP) 제거
         g_zombies.push_back(zombie);
 
-        // 타입 테이블 저장(늦접 스냅샷 일관성)
-        g_zombieType[zombie->GetID()] = zType;
+        g_zombieType[zombie->GetID()] = zType; // 타입 테이블 저장(늦접 스냅샷 일관성)
 
-        // // SpawnZombies: 랜덤 스킨 확정 + 테이블 저장(스냅샷 일관성)
-        const SIZE1 Z_Random_skin = static_cast<SIZE1>(g_zombieSkinDist(g_rng)); // - random skin
-        g_zombieSkin[zombie->GetID()] = Z_Random_skin;                            // - save skin by id
+        const SIZE1 Z_Random_skin = static_cast<SIZE1>(g_zombieSkinDist(g_rng));    // - random skin
+        g_zombieSkin[zombie->GetID()] = Z_Random_skin;                              // - save skin by id
 
         // // SpawnZombies: 생성 즉시 대상 지정/경로 탐색을 원하면 필요 시 활성화
         // zombie->SetTargetPosition(player_x, player_z);          
@@ -969,23 +975,25 @@ void SpawnZombies(int count) {
         p.gun_type = static_cast<GunType>(0);
 
         for (auto& [id, session] : g_users) {
-            // // [SpawnZombies] - 로딩 완료된 유저에게만 좀비 ADD 전송
             if (!session._is_loaded.load(std::memory_order_acquire)) continue;
             session.do_send(&p);
         }
             
     }
+
+    BroadcastStageInfoToAll(/*timeLeft=*/60000); // Stage / Score 스냅샷 최초 전송
+    BroadcastScoreInfoToAll();
 }
 
 
 void ZombieAIThread() {
     while (serverRunning) {
         //----------
-        static auto s_last = std::chrono::steady_clock::now(); // // ZombieAIThread - DEBUG(루프 간격)
+        static auto s_last = std::chrono::steady_clock::now(); // DEBUG(루프 간격)
         auto now2 = std::chrono::steady_clock::now();
         auto gap = std::chrono::duration_cast<std::chrono::milliseconds>(now2 - s_last).count();
         s_last = now2;
-        if (gap > 200) { // // ZombieAIThread - DEBUG(루프 자체가 200ms 이상 멈춤)
+        if (gap > 200) { // DEBUG(루프 자체가 200ms 이상 멈춤)
             std::cout << "[ZDBG][LoopGap] gap_ms=" << gap << "\n";
         }
         //----------

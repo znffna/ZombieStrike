@@ -43,11 +43,24 @@ public:
 
 private:
 	std::unordered_map< int, CGameObject* > m_mapGameObjects;
-
 	std::unordered_map< int, ObjectType > m_mapObjectTypes; // - id별 obj_type 저장
 
 	// LoadingFinish 패킷 1회 전송 보장용
 	bool m_sentLoadingFinish = false;
+
+	// Stage/Score UI용 상태값(서버 스냅샷)
+	int m_currentStage = 1;
+	int m_totalStages = 1;
+	int m_timeLeftMs = 0;
+
+	int m_stageScore = 0;
+	int m_totalZombies = 0;
+	int m_killedZombies = 0;
+	int m_aliveZombies = 0;
+
+	// 클리어 중복 처리 방지
+	bool m_stageCleared = false;
+
 
 	char m_nMoveInput;
 };
