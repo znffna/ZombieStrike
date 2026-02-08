@@ -27,7 +27,7 @@ void CHeightMapTerrain::Initialize(CHeightMapTerrainDesc desc)
 
 void CHeightMapTerrain::Initialize(std::wstring wstrHeightMapFilePath, std::wstring wstrMeshFilePath, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color)
 {
-	assert(wstrHeightMapFilePath != L"null");
+	// assert(wstrHeightMapFilePath != L"null");
 
 	// 지형에 사용할 높이 맵을 생성한다.
 	m_pHeightMapImage = std::make_shared<CHeightMapImage>(wstrHeightMapFilePath, nWidth, nLength, xmf3Scale);
@@ -108,6 +108,7 @@ void CHeightMapTerrain::CreateGridMeshFromHeightMap(int nBlockWidth, int nBlockL
 				xStart = x * (nBlockWidth - 1);
 				zStart = z * (nBlockLength - 1);
 				pHeightMapGridMesh = std::make_shared<CHeightMapGridMesh>(xStart, zStart, nBlockWidth, nBlockLength, m_xmf3Scale, xmf4Color, m_pHeightMapImage.get());
+				pHeightMapGridMesh->SetName(name + "_Mesh");
 				pHeightMapGameObject->SetMesh(pHeightMapGridMesh);
 				SetChild(std::move(pHeightMapGameObject));
 			}
@@ -353,4 +354,83 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 	UpdateTransform();
 
 	CGameObject::Render(pd3dCommandList, pCamera, bDepthWrite);
+}
+
+void CHeightMapTerrain::CalculateNormal(std::vector<CTerrainVertex>& vertices) {
+	for (int z = 1; z < m_nLength - 1; ++z) {
+		for (int x = 1; x < m_nWidth - 1; ++x) {
+			int idx = z * m_nWidth + x;
+
+			XMFLOAT3 left = vertices[z * m_nWidth + (x - 1)].m_xmf3Position;
+			XMFLOAT3 right = vertices[z * m_nWidth + (x + 1)].m_xmf3Position;
+			XMFLOAT3 down = vertices[(z - 1) * m_nWidth + x].m_xmf3Position;
+			XMFLOAT3 up = vertices[(z + 1) * m_nWidth + x].m_xmf3Position;
+
+			XMVECTOR dx = XMVectorSubtract(XMLoadFloat3(&right), XMLoadFloat3(&left));
+			XMVECTOR dz = XMVectorSubtract(XMLoadFloat3(&up), XMLoadFloat3(&down));
+			XMVECTOR normal = XMVector3Normalize(XMVector3Cross(dz, dx));
+
+			XMStoreFloat3(&vertices[idx].m_xmf3Normal, normal);
+		}
+	}
+}
+
+void CHeightMapTerrain::ExportTerrain(const char* rawFile, const char* outFile) {
+	constexpr float CELL_SIZE = 1.0f;
+
+	std::ifstream in(rawFile, std::ios::binary);
+	if (!in.is_open()) {
+		std::cerr << "Failed to open raw file.\n";
+		return;
+	}
+
+	std::vector<HEIGHTMAPDEPTH> heightMap(m_nWidth * m_nLength);
+	in.read(reinterpret_cast<char*>(heightMap.data()), heightMap.size() * sizeof(HEIGHTMAPDEPTH));
+	in.close();
+
+	std::vector<CTerrainVertex> vertices(m_nWidth * m_nLength);
+	for (int z = 0; z < m_nLength; ++z) {
+		for (int x = 0; x < m_nWidth; ++x) {
+			int idx = z * m_nWidth + x;
+			float height = static_cast<float>(heightMap[idx]) / std::numeric_limits<HEIGHTMAPDEPTH>::max() * m_xmf3Scale.y;
+
+			vertices[idx].m_xmf3Position = XMFLOAT3(x * CELL_SIZE, height, z * CELL_SIZE);
+			vertices[idx].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // white
+			vertices[idx].m_xmf2TexCoord0 = XMFLOAT2(static_cast<float>(x), static_cast<float>(z));
+			vertices[idx].m_xmf2TexCoord1 = XMFLOAT2{ vertices[idx].m_xmf2TexCoord0.x / 2, vertices[idx].m_xmf2TexCoord0.y / 2 };
+			vertices[idx].m_xmf3Normal = XMFLOAT3(0, 1, 0); // 임시
+		}
+	}
+
+	CalculateNormal(vertices);
+
+	std::vector<unsigned int> indices;
+	for (int z = 0; z < m_nLength - 1; ++z) {
+		for (int x = 0; x < m_nWidth - 1; ++x) {
+			int topLeft = z * m_nWidth + x;
+			int topRight = topLeft + 1;
+			int bottomLeft = (z + 1) * m_nWidth + x;
+			int bottomRight = bottomLeft + 1;
+
+			indices.push_back(topLeft);
+			indices.push_back(bottomLeft);
+			indices.push_back(topRight);
+
+			indices.push_back(topRight);
+			indices.push_back(bottomLeft);
+			indices.push_back(bottomRight);
+		}
+	}
+
+	std::ofstream out(outFile, std::ios::binary);
+	unsigned int vertexCount = static_cast<unsigned int>(vertices.size());
+	unsigned int indexCount = static_cast<unsigned int>(indices.size());
+
+	out.write(reinterpret_cast<const char*>(&vertexCount), sizeof(unsigned int));
+	out.write(reinterpret_cast<const char*>(&indexCount), sizeof(unsigned int));
+	out.write(reinterpret_cast<const char*>(vertices.data()), vertexCount * sizeof(CTerrainVertex));
+	out.write(reinterpret_cast<const char*>(indices.data()), indexCount * sizeof(unsigned int));
+	out.close();
+
+	std::cout << "Export complete: " << outFile << "\n";
 }
