@@ -281,8 +281,8 @@ void CGameObject::OnCollision(CGameObject* pOther, CCollider* pColliderA, CColli
 	}*/
 
 	// 최소 거리 측정
-	//XMFLOAT3 mtv = pColliderA->GetCorrectionVector(pColliderB);
-	XMFLOAT3 mtv{0,0,0};
+	XMFLOAT3 mtv = pColliderA->GetCorrectionVector(pColliderB);
+	//XMFLOAT3 mtv{0,0,0};
 
 	// 충돌 Normal을 통한 Y축 보정 추가
 	float yAngle = mtv.y / Vector3::Length(mtv);

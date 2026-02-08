@@ -41,6 +41,40 @@ bool CSphereCollider::Intersects(const CCollider* other) const
 	return false;
 }
 
+XMFLOAT3 CSphereCollider::GetCorrectionVector(const CCollider* other) const
+{
+	switch (other->GetType())
+	{
+	case ColliderType::Sphere:
+	{
+		const auto* otherSphere = static_cast<const CSphereCollider*>(other);
+		return CalculateSphere_MTV(
+			m_world.Center, XMFLOAT3(m_world.Radius, m_world.Radius, m_world.Radius),
+			otherSphere->m_world.Center, XMFLOAT3(otherSphere->m_world.Radius, otherSphere->m_world.Radius, otherSphere->m_world.Radius)
+		);
+	}
+
+	case ColliderType::AABB:
+	{
+		const auto* otherAABB = static_cast<const CAABBCollider*>(other);
+		return CalculateSphere_MTV(
+			m_world.Center, XMFLOAT3(m_world.Radius, m_world.Radius, m_world.Radius),
+			otherAABB->GetWorldAABB().Center, otherAABB->GetWorldAABB().Extents
+		);
+	}
+
+	case ColliderType::OBB:
+	{
+		const auto* otherOBB = static_cast<const COBBCollider*>(other);
+		return CalculateSphere_MTV(
+			m_world.Center, XMFLOAT3(m_world.Radius, m_world.Radius, m_world.Radius),
+			otherOBB->GetWorldOBB().Center, otherOBB->GetWorldOBB().Extents
+		);
+	}
+	}
+	return XMFLOAT3(0.0f, 0.0f, 0.0f);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 
@@ -64,6 +98,81 @@ bool CAABBCollider::Intersects(const CCollider* other) const
 			->GetWorldOBB().Intersects(m_world);
 	}
 	return false;
+}
+
+XMFLOAT3 CAABBCollider::GetCorrectionVector(const CCollider* other) const
+{
+	switch (other->GetType())
+	{
+	case ColliderType::Sphere:
+	{
+		const auto* otherSphere = static_cast<const CSphereCollider*>(other);
+		// Sphere와 AABB는 AABB 기준으로 계산
+		XMFLOAT3 mtv = CalculateSphere_MTV(
+			m_world.Center, m_world.Extents,
+			otherSphere->GetWorldSphere().Center, XMFLOAT3(otherSphere->GetWorldSphere().Radius, otherSphere->GetWorldSphere().Radius, otherSphere->GetWorldSphere().Radius)
+		);
+		// MTV를 반전 (this가 A, other가 B이므로)
+		return XMFLOAT3(-mtv.x, -mtv.y, -mtv.z);
+	}
+
+	case ColliderType::AABB:
+	{
+		const auto* otherAABB = static_cast<const CAABBCollider*>(other);
+		return CalculateAABB_MTV(
+			m_world.Center, m_world.Extents,
+			otherAABB->m_world.Center, otherAABB->m_world.Extents
+		);
+	}
+
+	case ColliderType::OBB:
+	{
+		const auto* otherOBB = static_cast<const COBBCollider*>(other);
+		// AABB를 OBB로 변환하여 계산 (Orientation은 단위 쿼터니언)
+		return CalculateOBB_MTV(
+			m_world.Center, m_world.Extents, XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f),
+			otherOBB->GetWorldOBB().Center, otherOBB->GetWorldOBB().Extents, otherOBB->GetWorldOBB().Orientation
+		);
+	}
+	}
+	return XMFLOAT3(0.0f, 0.0f, 0.0f);
+}
+
+XMFLOAT3 COBBCollider::GetCorrectionVector(const CCollider* other) const
+{
+	switch (other->GetType())
+	{
+	case ColliderType::Sphere:
+	{
+		const auto* otherSphere = static_cast<const CSphereCollider*>(other);
+		// OBB와 Sphere는 Sphere 기준으로 계산 후 반전
+		XMFLOAT3 mtv = CalculateSphere_MTV(
+			m_world.Center, m_world.Extents,
+			otherSphere->GetWorldSphere().Center, XMFLOAT3(otherSphere->GetWorldSphere().Radius, otherSphere->GetWorldSphere().Radius, otherSphere->GetWorldSphere().Radius)
+		);
+		return XMFLOAT3(-mtv.x, -mtv.y, -mtv.z);
+	}
+
+	case ColliderType::AABB:
+	{
+		const auto* otherAABB = static_cast<const CAABBCollider*>(other);
+		// AABB를 OBB로 변환하여 계산
+		return CalculateOBB_MTV(
+			m_world.Center, m_world.Extents, m_world.Orientation,
+			otherAABB->GetWorldAABB().Center, otherAABB->GetWorldAABB().Extents, XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+		);
+	}
+
+	case ColliderType::OBB:
+	{
+		const auto* otherOBB = static_cast<const COBBCollider*>(other);
+		return CalculateOBB_MTV(
+			m_world.Center, m_world.Extents, m_world.Orientation,
+			otherOBB->m_world.Center, otherOBB->m_world.Extents, otherOBB->m_world.Orientation
+		);
+	}
+	}
+	return XMFLOAT3(0.0f, 0.0f, 0.0f);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
