@@ -510,3 +510,40 @@ void ExportTerrainZFlip(const char* rawFile, const char* outFile) {
 
 	std::cout << "Export complete (Z-Flipped): " << outFile << "\n";
 }
+
+void FlipHeightmapZ(
+	const std::wstring& srcRawPath,
+	const std::wstring& dstRawPath,
+	uint32_t width,
+	uint32_t height)
+{
+	// 원본 HeightMap 로드
+	std::ifstream in(srcRawPath, std::ios::binary);
+	if (!in.is_open()) {
+		throw std::runtime_error("Failed to open source raw file");
+	}
+
+	std::vector<HEIGHTMAPDEPTH> heightMap(width * height);
+	in.read(reinterpret_cast<char*>(heightMap.data()), heightMap.size() * sizeof(HEIGHTMAPDEPTH));
+	in.close();
+
+	// Z축 반전된 HeightMap 생성
+	std::vector<HEIGHTMAPDEPTH> flippedHeightMap(width * height);
+	for (uint32_t z = 0; z < height; ++z) {
+		for (uint32_t x = 0; x < width; ++x) {
+			uint32_t srcIdx = z * width + x;
+			uint32_t dstIdx = (height - 1 - z) * width + x; // Z-Flip
+			flippedHeightMap[dstIdx] = heightMap[srcIdx];
+		}
+	}
+
+	// Z-Flip된 HeightMap 저장
+	std::ofstream out(dstRawPath, std::ios::binary);
+	if (!out.is_open()) {
+		throw std::runtime_error("Failed to open destination raw file");
+	}
+
+	out.write(reinterpret_cast<const char*>(flippedHeightMap.data()),
+		flippedHeightMap.size() * sizeof(HEIGHTMAPDEPTH));
+	out.close();
+}
