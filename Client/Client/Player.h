@@ -85,6 +85,9 @@ private:
 
 	CGun* m_pGun = nullptr ;
 
+public:
+	void SetHealthUIPostion(int nOutputSlot);
+private:
 	std::unique_ptr<CGaugeBar> m_pHealthGauge;
 
 	// Camera Offset

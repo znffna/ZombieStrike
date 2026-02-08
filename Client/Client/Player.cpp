@@ -360,6 +360,25 @@ void CPlayer::Reload()
 	m_fReloadTime = 0.0f;
 }
 
+void CPlayer::SetHealthUIPostion(int nOutputSlot)
+{
+	if (m_pHealthGauge == nullptr) return;
+
+	if (nOutputSlot == 0)
+	{
+		// 기본 위치
+		m_pHealthGauge->SetSize(-0.8f, 0.9f, 0.2f, 0.1f);
+		return;
+	}
+
+	float cx = 0.88f;
+	float cy = 0.3f - (nOutputSlot - 1) * 0.1f;
+	float fWidth = 0.12f;
+	float fHeight = 0.05f;
+	
+	m_pHealthGauge->SetSize(cx, cy, fWidth, fHeight);
+}
+
 void CPlayer::Rotate(float x, float y, float z)
 {
 	if (x != 0.0f)
