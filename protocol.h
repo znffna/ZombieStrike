@@ -406,6 +406,9 @@ struct pkt_cs_score_info {
 struct pkt_sc_score_info {
     PacketHeader header{sizeof(*this),PKT_TYPE::S_C_SCORE_INFO };
     SIZE2 stage_score;
+    SIZE2 total_zombies;   // - 현재 스테이지 총 좀비 수
+    SIZE2 killed_zombies;  // - 현재 스테이지 누적 킬 수
+    SIZE2 alive_zombies;   // - 현재 스테이지 남은 좀비 수
 };
 
 #pragma pack (pop)
