@@ -19,6 +19,12 @@ void CLoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 {
 	// Create Objects
 
+	// Loading Background
+	{
+		auto pBackground = RequestCreateObject(TypeTag<CSprite>(), L"Image/Loading.dds");
+		pBackground->SetSize(0.0f, 0.0f, 1.0f, 1.0f);
+	}
+
 	// Create a Quad for Loading Text
 	{
 		auto pObject = AddObject(std::make_unique<CGameObject>());
@@ -26,7 +32,7 @@ void CLoadingScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		pText->SetColor(D2D1::ColorF::White);
 		pText->SetFontSize(50.0f);
 		pText->SetText(L"Loading...");
-		pText->SetSize((float)WINDOW_WIDTH / 2, (float)WINDOW_HEIGHT / 2, WINDOW_WIDTH, 100.0f, true);
+		pText->SetSize((float)WINDOW_WIDTH / 2, (float)WINDOW_HEIGHT - 100.0f, WINDOW_WIDTH, 100.0f, true);
 
 		m_pTextObject = pObject;
 	}
