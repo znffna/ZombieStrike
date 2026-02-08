@@ -27,7 +27,7 @@ static constexpr float REPATH_FAIL_COOLDOWN = 0.75f; // // ZombieAI::Update - 경
 constexpr float deltaTime = 1.0f / 60.0f;
 
 constexpr float ZOMBIE_HEIGHT = 1.8f;   // 좀비 키(미터 단위 가정)
-constexpr float ZOMBIE_RADIUS = 0.35f;  // 어깨/몸통 반지름
+constexpr float ZOMBIE_RADIUS = 0.5f;  // 어깨/몸통 반지름
 
 constexpr float Z_ATTACK_RANGE = 1.2f;                // 월드 단위 (CELL_SIZE에 맞춰 조정 가능)
 constexpr float Z_ATTACK_COOLDOWN = 1.0f;             // 초

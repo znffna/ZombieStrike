@@ -105,6 +105,7 @@ static inline void normalize3(float& x, float& y, float& z)
     }
 }
 
+
 // Ray(ox,oy,oz; dx,dy,dz) vs Sphere(center cx,cy,cz; radius r)
 // - out_t : 가장 이른 교차 파라미터 t(원점에서 거리)
 // - 반환값 : 교차 여부

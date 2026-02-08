@@ -122,6 +122,7 @@ inline const char* ToString(ObjectType type) {
     default:     return "UNKNOWN";
     }
 }
+
 inline const char* ToString(GunType gun) {
     switch (gun) {
     case BULLET_PISTOL:  return "PISTOL";
@@ -222,6 +223,7 @@ struct BulletInfo {
     SIZE1 damage;        // 명중 시 데미지
     SIZE1 count;         // 발사 시 총알 개수 (샷건은 5~7)
 };
+
 constexpr BulletInfo BULLET_TABLE[] = {
 	 { 350.f, 0.15f, 25, 1 }, // BULLET_PISTOL
 	 { 850.f, 0.10f, 35, 1 }, // BULLET_RIFLE
@@ -236,7 +238,6 @@ struct Objectfixdata {          // 고정정보
     SIZE2 starthp;              // 체력
     GunType gun_type;           // 총 종류
 };
-
 
 struct Object {  	
     Vec3 position;              // 위치
@@ -253,7 +254,6 @@ struct Object {
     SIZE1 act_type;             // NONE, Player, ZMOVE, ATTACK, ...
     SIZE1 move_input;           // 이동 입력
 };
-
 
 struct PacketHeader {
     SIZE2 size;
