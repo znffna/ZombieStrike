@@ -1071,9 +1071,6 @@ void CGameFramework::BuildSceneMadeThread()
 
 			if (false == isWorked) break;
 
-			m_nRegisterMeshCount = CResourceManager::Instance().m_nRegisterMeshCount.load();
-			m_nRegisterMaterialCount = CResourceManager::Instance().m_nRegisterMaterialCount.load();
-
 			// GPU까지 끝났기 때문에 씬을 변경한다.
 			{
 				std::lock_guard<std::mutex> lock(m_BuiltSceneMutex);
@@ -1158,27 +1155,38 @@ void CGameFramework::HandleSceneBuildState()
 		break;
 
 	case ESceneBuildState::CPU_Completed:
-		// GPU 단계 대기 중
-		{
-			auto nUploadMeshCount = CResourceManager::Instance().m_nUploadMeshCount.load();
-			auto nUploadMaterialCount = CResourceManager::Instance().m_nUploadMaterialCount.load();
+	{
+		// ResourceManager에서 직접 현재 상태 확인
+		auto status = CResourceManager::Instance().GetResourceLoadStatus();
 
-			if (nUploadMeshCount >= m_nRegisterMeshCount && nUploadMaterialCount >= m_nRegisterMaterialCount)
-			{
-				m_SceneBuildState.store(
-					ESceneBuildState::All_Completed,
-					std::memory_order_release);
-				[[fallthrough]];
-			}
-			else break;
+		// 디버그 출력
+		{
+			std::wstring debug = L"[HandleSceneBuildState] Upload Progress:\n";
+			debug += L"  GameObject: " + std::to_wstring(status.nUploadedGameObjects) + L" / " + std::to_wstring(status.nRegisteredGameObjects) + L"\n";
+			debug += L"  Mesh: " + std::to_wstring(status.nUploadedMeshes) + L" / " + std::to_wstring(status.nRegisteredMeshes) + L"\n";
+			debug += L"  Material: " + std::to_wstring(status.nUploadedMaterials) + L" / " + std::to_wstring(status.nRegisteredMaterials) + L"\n";
+			debug += L"  Texture: " + std::to_wstring(status.nUploadedTextures) + L" / " + std::to_wstring(status.nRegisteredTextures) + L"\n";
+			debug += L"  Shader: " + std::to_wstring(status.nCreatedShaders) + L" / " + std::to_wstring(status.nRegisteredShaders) + L"\n";
+			OutputDebugString(debug.c_str());
 		}
+
+		// 모든 리소스가 업로드 완료되었는지 확인
+		if (status.IsAllUploaded())
+		{
+			OutputDebugString(L"[HandleSceneBuildState] All resources uploaded. Transitioning to All_Completed.\n");
+
+			m_SceneBuildState.store(
+				ESceneBuildState::All_Completed,
+				std::memory_order_release);
+			[[fallthrough]];
+		}
+		else break;
+	}
 	case ESceneBuildState::All_Completed:
 		{
-			std::wstring debug = L"[HandleSceneBuildState]" + m_BuiltScene->GetSceneName() + L" 빌드 완료.\n";
+			std::wstring debug = L"[HandleSceneBuildState] " + m_BuiltScene->GetSceneName() + L" 로드 완료.\n";
 			OutputDebugString(debug.data());
 		}
-		m_nPrevLoadedMeshCount += m_nRegisterMeshCount;
-		m_nPrevLoadedMaterialCount += m_nRegisterMaterialCount;
 
 		m_Scenes.push_back(std::move(m_BuiltScene));
 		ClearSceneRequest();
@@ -1194,7 +1202,7 @@ void CGameFramework::HandleSceneBuildState()
 
 void CGameFramework::CreateDebugTextObjects()
 {
-	int nDebugTextObjects = 10;
+	int nDebugTextObjects = 30;
 	m_DebugTextBlocks.reserve(nDebugTextObjects);
 	int FontSize = (int)(m_nWndClientHeight / 50.0f);
 	for (int i = 0; i < nDebugTextObjects; i++) {
@@ -1231,12 +1239,28 @@ void CGameFramework::UpdateDebugTextObjects()
 	auto sceneBuildState = m_SceneBuildState.load(std::memory_order_acquire);
 	m_DebugTextBlocks[index++]->SetText(L" Scene Build State :" + to_wstring(sceneBuildState));
 
+	if (sceneBuildState == ESceneBuildState::CPU_Completed)
+	{
+		auto status = CResourceManager::Instance().GetResourceLoadStatus();
+		float progress = status.GetProgress() * 100.0f;
+		m_DebugTextBlocks[index++]->SetText(L" Loading Progress: " + std::to_wstring((int)progress) + L"%");
+
+		m_DebugTextBlocks[index++]->SetText(
+			L"  GameObject: " + std::to_wstring(status.nUploadedGameObjects) + L" / " + std::to_wstring(status.nRegisteredGameObjects));
+		m_DebugTextBlocks[index++]->SetText(
+			L"  Mesh: " + std::to_wstring(status.nUploadedMeshes) + L" / " + std::to_wstring(status.nRegisteredMeshes));
+		m_DebugTextBlocks[index++]->SetText(
+			L"  Material: " + std::to_wstring(status.nUploadedMaterials) + L" / " + std::to_wstring(status.nRegisteredMaterials));
+		m_DebugTextBlocks[index++]->SetText(
+			L"  Texture: " + std::to_wstring(status.nUploadedTextures) + L" / " + std::to_wstring(status.nRegisteredTextures));
+		m_DebugTextBlocks[index++]->SetText(
+			L"  Shader: " + std::to_wstring(status.nCreatedShaders) + L" / " + std::to_wstring(status.nRegisteredShaders));
+	}
+
 	m_DebugTextBlocks[index++]->SetText(L" Bullets : " + std::to_wstring(gnCurrentBullets));
 	m_DebugTextBlocks[index++]->SetText(to_wstring(GetCurrentScene()->GetCameraInfo()));
 	m_DebugTextBlocks[index++]->SetText(to_wstring(GetCurrentScene()->GetPlayerInfo()));
-
 	m_DebugTextBlocks[index++]->SetText(L"Bone Matrix : " + std::to_wstring(CGlobalBoneTransformManager::Instance().GetLastAlloactedIndex()) + L" / " + std::to_wstring(CGlobalBoneTransformManager::Instance().GetMaxIndex()));
-
 	m_DebugTextBlocks[index++]->SetText(GetCurrentScene()->to_wstring());
 
 

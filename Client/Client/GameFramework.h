@@ -18,27 +18,6 @@
 
 #include "UILayer.h"
 
-struct CSceneLoadInfo
-{
-	ESceneBuildState buildstate;
-
-	UINT m_nMeshCount;
-	UINT m_nMaterialCount;
-
-	UINT m_nPrevMeshLoaded;
-	UINT m_nPrevMaterialLoaded;
-
-	UINT GetTotalResourceCount() const
-	{
-		return m_nMeshCount + m_nMaterialCount;
-	}
-
-	UINT GetPreviousLoadedCount() const
-	{
-		return m_nPrevMeshLoaded + m_nPrevMaterialLoaded;
-	}
-};
-
 struct CB_FRAMEWORK_INFO
 {
 	float					m_fCurrentTime;
@@ -194,24 +173,11 @@ public:
 			return;
 		}
 
-		// 새 요청 등록
 		m_PendingRequest = newReq;
 		m_RequestState.store(ESceneRequestState::Pending);
 	}
+	
 	int GetSceneSize() const { return static_cast<int>(m_Scenes.size()); }
-
-	CSceneLoadInfo GetSceneLoadInfo() const {
-		CSceneLoadInfo loadInfo{};
-		// CPU Info
-		loadInfo.buildstate = m_SceneBuildState.load();
-
-		// GPU Info
-		loadInfo.m_nMeshCount = m_nRegisterMeshCount;
-		loadInfo.m_nMaterialCount = m_nRegisterMaterialCount;
-		loadInfo.m_nPrevMeshLoaded = m_nPrevLoadedMeshCount;
-		loadInfo.m_nPrevMaterialLoaded = m_nPrevLoadedMaterialCount;
-		return loadInfo;
-	}
 
 private:
 	void ProcessSceneRequest()
@@ -297,6 +263,11 @@ private:
 	void UpdateSceneTransition();
 	void HandleSceneBuildState(); // Scene 생성상태 처리
 
+public:
+	ESceneBuildState GetSceneBuildState() const { return m_SceneBuildState.load(); }
+
+private:
+
 	// Scene
 	std::vector<std::unique_ptr<CScene>>					m_Scenes;
 	std::unique_ptr<CScene>									m_pLoadingScene;  // Loading Scene은 Stack이 비었을 경우에만 사용(이는, Render State인 Scene이 없을 때도 포함한다)
@@ -313,16 +284,6 @@ private:
 	std::unique_ptr<CScene> m_BuiltScene;
 	std::mutex m_BuiltSceneMutex;
 
-	// GPU 완료 확인을 위한	카운터
-	UINT m_nRegisterMeshCount = 0;
-	UINT m_nRegisterMaterialCount = 0;
-
-	// 이전 Scene까지 로드한 리소스 카운터
-	UINT m_nPrevLoadedMeshCount = 0;
-	UINT m_nPrevLoadedMaterialCount = 0;
-
-
-	// Scene Transition
 	std::atomic<ESceneRequestState>							 m_RequestState{ ESceneRequestState::Idle };
 	std::optional<SceneRequest>								 m_PendingRequest;
 

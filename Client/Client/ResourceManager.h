@@ -8,6 +8,76 @@ class CMaterial;
 class CTexture;
 class CShader;
 
+// ----------------------------------------
+// 리소스 로딩 현황 구조체
+// ----------------------------------------
+struct ResourceLoadStatus
+{
+	// GameObject
+	UINT nRegisteredGameObjects;
+	UINT nCollectedGameObjects;
+	UINT nUploadedGameObjects;
+
+	// Mesh
+	UINT nRegisteredMeshes;
+	UINT nCollectedMeshes;
+	UINT nUploadedMeshes;
+
+	// Material
+	UINT nRegisteredMaterials;
+	UINT nCollectedMaterials;
+	UINT nUploadedMaterials;
+
+	// Texture
+	UINT nRegisteredTextures;
+	UINT nCollectedTextures;
+	UINT nUploadedTextures;
+
+	// Shader
+	UINT nRegisteredShaders;
+	UINT nCollectedShaders;
+	UINT nCreatedShaders;
+
+	// 전체 등록된 작업 수
+	UINT GetTotalRegistered() const
+	{
+		return nRegisteredGameObjects + nRegisteredMeshes + nRegisteredMaterials + 
+		       nRegisteredTextures + nRegisteredShaders;
+	}
+
+	// 전체 Collect된 작업 수
+	UINT GetTotalCollected() const
+	{
+		return nCollectedGameObjects + nCollectedMeshes + nCollectedMaterials + 
+		       nCollectedTextures + nCollectedShaders;
+	}
+
+	// 전체 Upload 완료된 작업 수
+	UINT GetTotalUploaded() const
+	{
+		return nUploadedGameObjects + nUploadedMeshes + nUploadedMaterials + 
+		       nUploadedTextures + nCreatedShaders;
+	}
+
+	// 모든 리소스가 업로드 완료되었는지 확인
+	bool IsAllUploaded() const
+	{
+		return (nUploadedGameObjects >= nRegisteredGameObjects) &&
+		       (nUploadedMeshes >= nRegisteredMeshes) &&
+		       (nUploadedMaterials >= nRegisteredMaterials) &&
+		       (nUploadedTextures >= nRegisteredTextures) &&
+		       (nCreatedShaders >= nRegisteredShaders);
+	}
+
+	// 진행률 (0.0 ~ 1.0)
+	float GetProgress() const
+	{
+		UINT total = GetTotalRegistered();
+		if (total == 0) return 1.0f;
+		return static_cast<float>(GetTotalUploaded()) / static_cast<float>(total);
+	}
+};
+
 class CUploadContext
 {
 public:
@@ -181,12 +251,72 @@ public:
 	void ReleaseResources();
 
 private:
-	// CSCene에서 상속받는다. (또는 생성을 CGameFramework에서 하고 넘겨받는다.)
+	// CSCene에서 받아온다. (또는 원래는 CGameFramework에서 하고 넘겨받는다.)
 	ID3D12RootSignature* m_d3dGraphicRootSignature = nullptr;
 
 public:
 	// ----------------------------------------
-	// 서술자 힙 (Descriptor Heap) 관련
+	// 리소스 로딩 현황 조회
+	// ----------------------------------------
+	ResourceLoadStatus GetResourceLoadStatus() const
+	{
+		ResourceLoadStatus status{};
+
+		// GameObject
+		{
+			std::lock_guard<std::mutex> lock(m_RegisterGameObjectMutex);
+			status.nRegisteredGameObjects = static_cast<UINT>(m_GameObjectResourceRegisterList.size());
+			status.nCollectedGameObjects = static_cast<UINT>(m_GameObjectToProcessList.size());
+		}
+		status.nUploadedGameObjects = status.nCollectedGameObjects; // GameObject는 Process되면 즉시 Upload
+
+		// Mesh
+		status.nRegisteredMeshes = m_nRegisterMeshCount.load();
+		{
+			std::lock_guard<std::mutex> lock(m_UploadMutex);
+			status.nCollectedMeshes = static_cast<UINT>(m_MeshUploadList.size());
+		}
+		status.nUploadedMeshes = m_nUploadMeshCount.load();
+
+		// Material
+		status.nRegisteredMaterials = m_nRegisterMaterialCount.load();
+		{
+			std::lock_guard<std::mutex> lock(m_UploadMutex);
+			status.nCollectedMaterials = static_cast<UINT>(m_MaterialUploadList.size());
+		}
+		status.nUploadedMaterials = m_nUploadMaterialCount.load();
+
+		// Texture
+		status.nRegisteredTextures = m_nRegisterTextureCount.load();
+		{
+			std::lock_guard<std::mutex> lock(m_UploadMutex);
+			status.nCollectedTextures = static_cast<UINT>(m_TextureUploadList.size());
+		}
+		status.nUploadedTextures = m_nUploadTextureCount.load();
+
+		// Shader
+		{
+			std::lock_guard<std::mutex> lock(m_UploadMutex);
+			status.nRegisteredShaders = static_cast<UINT>(m_ShaderRegisterBuffer.size());
+			status.nCollectedShaders = static_cast<UINT>(m_ShaderToCreateList.size());
+			// Shader는 CreateList가 비면 모두 생성된 것
+			if (m_ShaderRegisterBuffer.empty() && m_ShaderToCreateList.empty())
+			{
+				status.nCreatedShaders = status.nRegisteredShaders;
+			}
+			else
+			{
+				// 등록된 것 - 아직 처리 안된 것 = 생성 완료된 것
+				status.nCreatedShaders = status.nRegisteredShaders - 
+				                         static_cast<UINT>(m_ShaderRegisterBuffer.size());
+			}
+		}
+
+		return status;
+	}
+
+	// ----------------------------------------
+	// 디스크립터 힙 (Descriptor Heap) 관리
 	// ----------------------------------------
 	void CreateDescriptorHeap(ID3D12Device* pd3dDevice);
 
@@ -215,7 +345,7 @@ private:
 
 public:
 	// ----------------------------------------
-	// 텍스쳐 정보를 저장
+	// 텍스처 리소스 관리
 	// ----------------------------------------
 	struct TextureInfo {
 		ComPtr<ID3D12Resource> texture;
@@ -241,7 +371,7 @@ private:
 
 public:
 	// ----------------------------------------
-	// 모델 정보를 저장
+	// 모델 리소스 관리
 	// ----------------------------------------
 	void LoadModelList(std::string filepath = "Model/ModelList.txt");
 	void LoadModelList(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommnadList, std::string filepath = "Model/ModelList.txt");
@@ -255,7 +385,7 @@ private:
 
 public:
 	// ----------------------------------------
-	// 메쉬 정보를 저장
+	// 메시 리소스 관리
 	// ----------------------------------------
 	void SetMesh(const std::string& name, std::shared_ptr<CMesh> pMesh);
 	std::shared_ptr<CMesh> GetMesh(const std::string& name);
@@ -265,7 +395,7 @@ private:
 
 public:
 	// ----------------------------------------
-	// 셰이더 정보를 저장
+	// 셰이더 리소스 관리
 	// ----------------------------------------
 	template <typename TShader>
 	std::shared_ptr<CShader> GetShader()
@@ -298,16 +428,14 @@ public:
 	}
 
 private:
-	std::unordered_map<std::type_index, std::shared_ptr<CShader>> ShaderInfos; // typeid(TShader).hash_code(), std::shared_ptr<CShader>
+	std::unordered_map<std::type_index, std::shared_ptr<CShader>> ShaderInfos;
 
 public:
 	void RegisterGameObjectResources(CGameObject* pGameObject);
 	void CollectGameObjectRequest(int maxcount);
 	void ProcessGameObjectUpload(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
-
-private:
-	std::mutex m_RegisterGameObjectMutex; 
+	mutable std::mutex m_RegisterGameObjectMutex;
 	std::queue<CGameObject*> m_GameObjectResourceRegisterList;
 	std::vector<CGameObject*> m_GameObjectToProcessList;
 
@@ -316,7 +444,7 @@ public:
 	// Register To Upload List
 	// ----------------------------------------
 
-	std::mutex m_UploadMutex; // Upload List에 대한 Mutex
+	mutable std::mutex m_UploadMutex;
 
 	void CollectRegister(int maxcount)
 	{
@@ -324,16 +452,15 @@ public:
 
 		std::lock_guard<std::mutex> lock(m_UploadMutex);
 
-		// Mesh Upload List 일부 추출
+		// Mesh Upload List 일부 수집
 		CollectMeshRegister(maxcount);
-		// Material Upload List 교체
+		// Material Upload List 전체
 		CollectMaterialRegister(maxcount);
-		// Shader Create List 교체
+		// Shader Create List 전체
 		CollectShaderRegister();
-		// Texture Upload List 교체
+		// Texture Upload List 전체
 		CollectTextureRegister(maxcount);
 	}
-
 
 	void ProcessRegistries(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 	{
@@ -342,11 +469,13 @@ public:
 		ProcessMeshUpload(pd3dDevice, pd3dCommandList);
 		ProcessMaterialUpload(pd3dDevice, pd3dCommandList);
 		ProcessShaderCreate(pd3dDevice, pd3dCommandList);
+		ProcessTextureUpload(pd3dDevice, pd3dCommandList);
 	}
 	void ReleaseUploadBuffers()
 	{
 		ReleaseMeshUploadBuffers();
 		ReleaseMaterialUploadBuffers();
+		ReleaseTextureUploadBuffers();
 	}
 
 	// ----------------------------------------

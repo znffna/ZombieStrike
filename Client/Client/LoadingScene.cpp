@@ -65,51 +65,54 @@ void CLoadingScene::Update(float fTimeElapsed)
 	m_fTimeElapsed += fTimeElapsed;
 
 	{
-		std::string LoadingText = "Loading";
-		for (int i = 0; i < static_cast<int>(m_fTimeElapsed) % 4; ++i)
-		{
-			LoadingText += ".";
-		}
+		std::wstring LoadingText = L"";
+		// ResourceManager에서 직접 현재 상태 가져오기
+		auto status = CResourceManager::Instance().GetResourceLoadStatus();
 
-		auto loadinfo = CGameFramework::Instance()->GetSceneLoadInfo();
 		// CPU Process 계산
-		float cpuratio{};
-		switch (loadinfo.buildstate)
+		auto buildState = CGameFramework::Instance()->GetSceneBuildState();
+
+		switch (buildState)
 		{
 		case ESceneBuildState::Idle:
-			cpuratio = 0.0f;
+			LoadingText = L"대기 중";
 			break;
+
 		case ESceneBuildState::Requested:
-			cpuratio = 20.0f;
+			LoadingText = L"씬 생성 준비 중";
 			break;
+
 		case ESceneBuildState::Building:
-			cpuratio = 50.0f;
+			LoadingText = L"씬 생성 중";
+			// 애니메이션 점 추가
+			for (int i = 0; i < static_cast<int>(m_fTimeElapsed) % 4; ++i)
+			{
+				LoadingText += L".";
+			}
 			break;
+
 		case ESceneBuildState::CPU_Completed:
-			cpuratio = 100.0f;
-			break;
-		default:
-			cpuratio = 100.0f;
-			break;
-		}
-
-		// GPU Process 계산
-		float gpuratio{};
-		auto prevloadedCount = loadinfo.GetPreviousLoadedCount();
-		auto totalCount = loadinfo.GetTotalResourceCount() - prevloadedCount;
-		auto currentLoad = CResourceManager::Instance().m_nUploadMeshCount.load() + CResourceManager::Instance().m_nUploadMaterialCount.load() - prevloadedCount;
-		gpuratio = (float)(currentLoad) / (float)(totalCount) * 100.0f;
-
-		if (totalCount == 0) {
-			LoadingText += "   0.0%";
-		}
-		else
 		{
-			// LoadingText += "   " + std::to_string(cpuratio * 0.5f + gpuratio * 0.5f) + "%";
-			LoadingText += "   " + std::format("{:.2f}", cpuratio * 0.5f + gpuratio * 0.5f) + "%";
+			// 리소스 업로드 진행률 계산
+			float gpuProgress = status.GetProgress() * 100.0f;
+			LoadingText = L"리소스 로딩 중 : " + std::format(L"{:.1f}", gpuProgress) + L"%";
+		}
+		break;
+
+		case ESceneBuildState::All_Completed:
+			LoadingText = L"로딩 완료!";
+			break;
+
+		case ESceneBuildState::Failed:
+			LoadingText = L"로딩 실패";
+			break;
+
+		default:
+			LoadingText = L"알 수 없는 상태";
+			break;
 		}
 
-		m_pTextObject->GetComponent<CTextComponent>()->SetText(::to_wstring(LoadingText));
+		m_pTextObject->GetComponent<CTextComponent>()->SetText(LoadingText);
 	}
 }
 
