@@ -71,4 +71,10 @@ public:
 
 	// Free Camera ÂüÁ¶¿ë
 	CGameObject* m_pFreeCamera;
+
+	// Score
+	int m_nScore = 0;
+	int m_nWave = 1;
+
+	CGameObject* m_pScoreInfo = nullptr;
 };

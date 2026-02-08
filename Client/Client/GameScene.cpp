@@ -132,6 +132,18 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	//		AddObject(pHealthObject);
 	//	}
 	//}
+
+	// Score Info
+	m_pScoreInfo = RequestCreateObject(TypeTag<CGameObject>());
+	m_pScoreInfo->SetName("ScoreInfo");
+	auto pTextComp = m_pScoreInfo->CreateComponent<CTextComponent>();
+	pTextComp->SetActive(true);
+	pTextComp->SetSize(0.0f, 0.0f, (float)WINDOW_WIDTH, (float)WINDOW_HEIGHT, false);
+	pTextComp->SetFont(L"Arial");
+	pTextComp->SetFontSize(WINDOW_HEIGHT / 35.0f);
+	pTextComp->SetBrush(D2D1::ColorF(D2D1::ColorF::Purple, 1.0f));
+	pTextComp->SetText(std::to_wstring(m_nScore));
+
 	
 	// Shader
 	m_pDepthRenderShader = std::make_shared<CDepthRenderShader>();
@@ -208,6 +220,15 @@ void CGameScene::Update(float deltaTime)
 	CScene::Update(deltaTime); // Collider check Æ÷ÇÔ
 
 	BuildFiredBullets();
+
+	if(m_pScoreInfo)
+	{
+		auto pTextComp = m_pScoreInfo->GetComponent<CTextComponent>();
+		if (pTextComp)
+		{
+			pTextComp->SetText(L"Score: " + std::to_wstring(m_nScore) + L"  Wave: " + std::to_wstring(m_nWave));
+		}
+	}
 }
 
 void CGameScene::UpdateLights()
