@@ -54,8 +54,6 @@ public:
 	// Object Render
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override;
 
-
-
 	//지형의 높이를 계산하는 함수이다(월드 좌표계). 높이 맵의 높이에 스케일의 y를 곱한 값이다. 
 	float GetHeight(float x, float z) {
 		return (m_pHeightMapImage->GetHeight(x / m_xmf3Scale.x, z / m_xmf3Scale.z) * m_xmf3Scale.y);
@@ -92,7 +90,5 @@ private:
 
 	BoundingBox m_TerrainBoundingBox; // 지형의 Bounding Box
 
-	void ExportTerrain(const char* rawFile, const char* outFile);
-	void CalculateNormal(std::vector<CTerrainVertex>& vertices);
 }; // CHeightMapTerrain
 

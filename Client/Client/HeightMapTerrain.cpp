@@ -356,15 +356,20 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 	CGameObject::Render(pd3dCommandList, pCamera, bDepthWrite);
 }
 
-void CHeightMapTerrain::CalculateNormal(std::vector<CTerrainVertex>& vertices) {
-	for (int z = 1; z < m_nLength - 1; ++z) {
-		for (int x = 1; x < m_nWidth - 1; ++x) {
-			int idx = z * m_nWidth + x;
+void CalculateNormal(std::vector<CTerrainVertex>& vertices) {
+	constexpr int WIDTH = 257;
+	constexpr int HEIGHT = 257;
+	constexpr float HEIGHT_SCALE = 50.0f;
+	constexpr float CELL_SIZE = 1.0f;
 
-			XMFLOAT3 left = vertices[z * m_nWidth + (x - 1)].m_xmf3Position;
-			XMFLOAT3 right = vertices[z * m_nWidth + (x + 1)].m_xmf3Position;
-			XMFLOAT3 down = vertices[(z - 1) * m_nWidth + x].m_xmf3Position;
-			XMFLOAT3 up = vertices[(z + 1) * m_nWidth + x].m_xmf3Position;
+	for (int z = 1; z < HEIGHT - 1; ++z) {
+		for (int x = 1; x < WIDTH - 1; ++x) {
+			int idx = z * WIDTH + x;
+
+			XMFLOAT3 left = vertices[z * WIDTH + (x - 1)].m_xmf3Position;
+			XMFLOAT3 right = vertices[z * WIDTH + (x + 1)].m_xmf3Position;
+			XMFLOAT3 down = vertices[(z - 1) * WIDTH + x].m_xmf3Position;
+			XMFLOAT3 up = vertices[(z + 1) * WIDTH + x].m_xmf3Position;
 
 			XMVECTOR dx = XMVectorSubtract(XMLoadFloat3(&right), XMLoadFloat3(&left));
 			XMVECTOR dz = XMVectorSubtract(XMLoadFloat3(&up), XMLoadFloat3(&down));
@@ -375,7 +380,10 @@ void CHeightMapTerrain::CalculateNormal(std::vector<CTerrainVertex>& vertices) {
 	}
 }
 
-void CHeightMapTerrain::ExportTerrain(const char* rawFile, const char* outFile) {
+void ExportTerrain(const char* rawFile, const char* outFile) {
+	constexpr int WIDTH = 257;
+	constexpr int HEIGHT = 257;
+	constexpr float HEIGHT_SCALE = 50.0f;
 	constexpr float CELL_SIZE = 1.0f;
 
 	std::ifstream in(rawFile, std::ios::binary);
@@ -384,15 +392,16 @@ void CHeightMapTerrain::ExportTerrain(const char* rawFile, const char* outFile) 
 		return;
 	}
 
-	std::vector<HEIGHTMAPDEPTH> heightMap(m_nWidth * m_nLength);
+	std::vector<HEIGHTMAPDEPTH> heightMap(WIDTH * HEIGHT);
 	in.read(reinterpret_cast<char*>(heightMap.data()), heightMap.size() * sizeof(HEIGHTMAPDEPTH));
 	in.close();
 
-	std::vector<CTerrainVertex> vertices(m_nWidth * m_nLength);
-	for (int z = 0; z < m_nLength; ++z) {
-		for (int x = 0; x < m_nWidth; ++x) {
-			int idx = z * m_nWidth + x;
-			float height = static_cast<float>(heightMap[idx]) / std::numeric_limits<HEIGHTMAPDEPTH>::max() * m_xmf3Scale.y;
+	std::vector<CTerrainVertex> vertices(WIDTH * HEIGHT);
+
+	for (int z = 0; z < HEIGHT; ++z) {
+		for (int x = 0; x < WIDTH; ++x) {
+			int idx = z * WIDTH + x;
+			float height = static_cast<float>(heightMap[idx]) / std::numeric_limits<HEIGHTMAPDEPTH>::max() * HEIGHT_SCALE;
 
 			vertices[idx].m_xmf3Position = XMFLOAT3(x * CELL_SIZE, height, z * CELL_SIZE);
 			vertices[idx].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // white
@@ -405,11 +414,11 @@ void CHeightMapTerrain::ExportTerrain(const char* rawFile, const char* outFile) 
 	CalculateNormal(vertices);
 
 	std::vector<unsigned int> indices;
-	for (int z = 0; z < m_nLength - 1; ++z) {
-		for (int x = 0; x < m_nWidth - 1; ++x) {
-			int topLeft = z * m_nWidth + x;
+	for (int z = 0; z < HEIGHT - 1; ++z) {
+		for (int x = 0; x < WIDTH - 1; ++x) {
+			int topLeft = z * WIDTH + x;
 			int topRight = topLeft + 1;
-			int bottomLeft = (z + 1) * m_nWidth + x;
+			int bottomLeft = (z + 1) * WIDTH + x;
 			int bottomRight = bottomLeft + 1;
 
 			indices.push_back(topLeft);
