@@ -35,6 +35,47 @@ void COnlineScene::Update(float deltaTime)
 
 	CGameScene::Update(deltaTime);
 
+	if (m_pScoreInfo)
+	{
+		auto pTextComp = m_pScoreInfo->GetComponent<CTextComponent>();
+		if (pTextComp)
+		{
+			// 웨이브 정보
+			std::wstring waveInfo = L"Wave: " + std::to_wstring(m_currentWave) + L"/" + std::to_wstring(m_totalWaves);
+
+			// 좀비 정보 (현재 웨이브)
+			std::wstring zombieInfo = L"  Zombies: " + std::to_wstring(m_waveKilledZombies) + L"/" + std::to_wstring(m_waveTotalZombies);
+
+			// 점수 정보
+			std::wstring scoreInfo = L"  Score: " + std::to_wstring(m_stageScore);
+
+			// 탄약 정보
+			std::wstring ammoInfo = L"  Ammo: " + std::to_wstring(m_ammoCur) + L"/" + std::to_wstring(m_ammoMax);
+			if (m_isReloading) {
+				ammoInfo += L" (Reloading...)";
+			}
+
+			// 체력 정보
+			std::wstring hpInfo = L"";
+			if (m_pPlayer) {
+				hpInfo = L"  HP: " + std::to_wstring(static_cast<int>(m_pPlayer->GetHealth()));
+			}
+
+			// 스테이지 정보
+			std::wstring stageInfo = L"  Stage: " + std::to_wstring(m_currentStage) + L"/" + std::to_wstring(m_totalStages);
+
+			// 전체 텍스트 조합
+			std::wstring fullText = waveInfo + zombieInfo + scoreInfo + ammoInfo + hpInfo + stageInfo;
+
+			// 클리어 상태 표시
+			if (m_stageCleared) {
+				fullText += L"\n*** STAGE CLEAR ***";
+			}
+
+			pTextComp->SetText(fullText);
+		}
+	}
+
 	// Network Client Update
 	if (NetworkingClient::Instance().IsRunning())
 	{
@@ -178,8 +219,8 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			// 플레이어 오브젝트 추가
 			//std::shared_ptr<CPlayer> pPlayer = GetPlayer(packet->skin_type); // GetPlayer(skin_type)로 바꿔야 함
 			//std::shared_ptr<CPlayer> pPlayer = GetPlayer(0); // GetPlayer(skin_type)로 바꿔야 함
-			auto pPlayer = RequestCreateObject(TypeTag<CPlayer>(), packet->skin_type);
 
+			auto pPlayer = RequestCreateObject(TypeTag<CPlayer>(), packet->skin_type);
 			pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
 			pPlayer->SetSID(packet->id);
 
@@ -188,6 +229,9 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 
 			m_mapGameObjects[packet->id] = pPlayer;
 			m_mapObjectTypes[packet->id] = ObjectType::PLAYER;
+
+			auto pGun = RequestCreateObject(TypeTag<CGun>(), packet->gun_type);
+			pPlayer->SetGun(pGun);
 
 			//int gun_type = packet->gun_type;
 			//std::shared_ptr<CGun> pGun = CGun::Create(nullptr, nullptr, nullptr, gun_type);
