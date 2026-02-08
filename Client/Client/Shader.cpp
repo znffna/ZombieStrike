@@ -2217,4 +2217,231 @@ void CTextureToViewportShader::Render(ID3D12GraphicsCommandList* pd3dCommandList
 	}
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+CMinimapShader::CMinimapShader()
+{
+	m_bAllowShadow = false;
+}
+
+CMinimapShader::~CMinimapShader()
+{
+}
+
+void CMinimapShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	CShader::CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+	BuildObjects(pd3dDevice, pd3dCommandList);
+}
+
+void CMinimapShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	m_nMinimapCount = 1;
+	m_nMinimapBufferWidth = WINDOW_WIDTH;
+	m_nMinimapBufferHeight = WINDOW_HEIGHT;
+
+	// 그림자 맵 연결용 Heap 생성
+	m_pDescriptorHeap = std::make_unique<CDescirptorHeap>();
+
+	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
+	::ZeroMemory(&d3dDescriptorHeapDesc, sizeof(D3D12_DESCRIPTOR_HEAP_DESC));
+	d3dDescriptorHeapDesc.NumDescriptors = m_nMinimapCount;
+	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	d3dDescriptorHeapDesc.NodeMask = 0;
+	HRESULT hResult = pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_pd3dRtvDescriptorHeap);
+
+
+	// 그림자 맵 Texture 생성(최대 조명갯수만큼 생성)
+	m_pMinimapTexture = std::make_shared<CTexture>(m_nMinimapCount, RESOURCE_TEXTURE2D_ARRAY, 1);
+
+	D3D12_CLEAR_VALUE d3dClearValue = { DXGI_FORMAT_R8G8B8A8_UNORM, { 1.0f, 1.0f, 1.0f, 1.0f } };
+	for (UINT i = 0; i < m_nMinimapCount; i++) m_pMinimapTexture->CreateTexture(pd3dDevice, pd3dCommandList, i, RESOURCE_TEXTURE2D, m_nMinimapBufferWidth, m_nMinimapBufferHeight, 1, 0, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON, &d3dClearValue);
+	for (UINT i = 0; i < m_nMinimapCount; i++) { std::wstring name = L"CMinimapShader::MinimapTexture(Resource) - " + std::to_wstring(i); m_pMinimapTexture->GetResource(i)->SetName(name.c_str()); }
+
+	// 그림자 맵을 렌더 타겟 뷰로 생성
+	D3D12_RENDER_TARGET_VIEW_DESC d3dRenderTargetViewDesc;
+	d3dRenderTargetViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+	d3dRenderTargetViewDesc.Texture2D.MipSlice = 0;
+	d3dRenderTargetViewDesc.Texture2D.PlaneSlice = 0;
+	d3dRenderTargetViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	for (UINT i = 0; i < m_nMinimapCount; i++)
+	{
+		ID3D12Resource* pd3dTextureResource = m_pMinimapTexture->GetResource(i);
+		pd3dDevice->CreateRenderTargetView(pd3dTextureResource, &d3dRenderTargetViewDesc, d3dRtvCPUDescriptorHandle);
+		m_pd3dRtvCPUDescriptorHandles[i] = d3dRtvCPUDescriptorHandle;
+		d3dRtvCPUDescriptorHandle.ptr += ::gnRtvDescriptorIncrementSize;
+	}
+
+	// 그림자 맵 사용시 사용할 DSV(Depth Stencil View) 담을 Heap 생성
+	d3dDescriptorHeapDesc.NumDescriptors = 1;
+	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	hResult = pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_pd3dDsvDescriptorHeap);
+
+	// 깊이 스텐실 버퍼 생성
+	D3D12_RESOURCE_DESC d3dResourceDesc;
+	d3dResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	d3dResourceDesc.Alignment = 0;
+	d3dResourceDesc.Width = m_nMinimapBufferWidth;
+	d3dResourceDesc.Height = m_nMinimapBufferHeight;
+	d3dResourceDesc.DepthOrArraySize = 1;
+	d3dResourceDesc.MipLevels = 1;
+	d3dResourceDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	d3dResourceDesc.SampleDesc.Count = 1;
+	d3dResourceDesc.SampleDesc.Quality = 0;
+	d3dResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	d3dResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	D3D12_HEAP_PROPERTIES d3dHeapProperties;
+	::ZeroMemory(&d3dHeapProperties, sizeof(D3D12_HEAP_PROPERTIES));
+	d3dHeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+	d3dHeapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	d3dHeapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	d3dHeapProperties.CreationNodeMask = 1;
+	d3dHeapProperties.VisibleNodeMask = 1;
+
+	d3dClearValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	d3dClearValue.DepthStencil.Depth = 1.0f;
+	d3dClearValue.DepthStencil.Stencil = 0;
+
+	pd3dDevice->CreateCommittedResource(&d3dHeapProperties, D3D12_HEAP_FLAG_NONE, &d3dResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &d3dClearValue, __uuidof(ID3D12Resource), (void**)&m_pd3dDepthBuffer);
+	m_pd3dDepthBuffer->SetName(L"CMinimapShader::DepthBuffer(DSV)");
+
+	// 깊이 스텐실 뷰 생성
+	D3D12_DEPTH_STENCIL_VIEW_DESC d3dDepthStencilViewDesc;
+	::ZeroMemory(&d3dDepthStencilViewDesc, sizeof(D3D12_DEPTH_STENCIL_VIEW_DESC));
+	d3dDepthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	d3dDepthStencilViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	d3dDepthStencilViewDesc.Flags = D3D12_DSV_FLAG_NONE;
+
+	m_d3dDsvDescriptorCPUHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	pd3dDevice->CreateDepthStencilView(m_pd3dDepthBuffer.Get(), &d3dDepthStencilViewDesc, m_d3dDsvDescriptorCPUHandle);
+
+	// 조명에 의한 렌더링 카메라 생성
+	m_ppMinimapCameras.resize(m_nMinimapCount);
+	for (int i = 0; i < m_nMinimapCount; i++)
+	{
+		m_ppMinimapCameras[i] = std::make_shared<CCamera>(nullptr);
+		m_ppMinimapCameras[i]->SetViewport(0, 0, m_nMinimapBufferWidth, m_nMinimapBufferHeight, 0.0f, 1.0f);
+		m_ppMinimapCameras[i]->SetScissorRect(0, 0, m_nMinimapBufferWidth, m_nMinimapBufferHeight);
+		m_ppMinimapCameras[i]->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	// 그림자 맵(리소스이자 텍스쳐)을 바인딩 할때 사용할 Heap 생성
+	//CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, m_pDepthFromLightTexture->GetTextures());
+	//CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture.get(), 0, ROOT_PARAMETER_DEPTH_WRITE);
+	//m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap->SetName(L"CDepthRenderShader::DescriptorHeap(CBV/SRV Heap)");
+	CResourceManager::Instance().CreateShaderResourceViews(pd3dDevice, m_pMinimapTexture.get(), 0, ROOT_PARAMETER_DEPTH_WRITE);
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+}
+
+void CMinimapShader::ReleaseObjects()
+{
+	for (int i = 0; i < m_nMinimapCount; i++)
+	{
+		if (m_ppMinimapCameras[i])
+		{
+			m_ppMinimapCameras[i]->ReleaseShaderVariables();
+			m_ppMinimapCameras[i].reset();
+		}
+	}
+	m_ppMinimapCameras.clear();
+
+	if (m_pMinimapTexture) m_pMinimapTexture.reset();
+	if (m_pd3dDepthBuffer) m_pd3dDepthBuffer.Reset();
+
+	if (m_pd3dRtvDescriptorHeap) m_pd3dRtvDescriptorHeap.Reset();
+	if (m_pd3dDsvDescriptorHeap) m_pd3dDsvDescriptorHeap.Reset();
+}
+
+void CMinimapShader::PrepareMinimap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene)
+{
+	if (!pScene) return;
+
+	auto pPlayer = pScene->GetPlayer();
+	XMFLOAT3 playerPos = pPlayer->GetPosition();
+	XMFLOAT3 playerLook = pPlayer->GetLookVector();
+	
+	// 카메라는 플레이어 위에서 아래를 내려다 봄
+	XMFLOAT3 CameraPosition = Vector3::Add(playerPos, XMFLOAT3(0.0f, 60.0f, 0.0f));
+	XMFLOAT3 CameraLookAt = playerPos;
+	
+	// 카메라의 Up 벡터는 플레이어가 바라보는 방향 (Y축 회전만 고려)
+	// Look 벡터의 Y 성분을 제거하고 정규화
+	XMFLOAT3 CameraUp = XMFLOAT3(playerLook.x, 0.0f, playerLook.z);
+	XMVECTOR vCameraUp = XMVector3Normalize(XMLoadFloat3(&CameraUp));
+
+	float fMaxExtent = 30.0f;
+	XMMATRIX xmmtxCameraView = XMMatrixLookAtLH(
+		XMLoadFloat3(&CameraPosition), 
+		XMLoadFloat3(&CameraLookAt), 
+		vCameraUp
+	);
+
+	float fOrthoLeft = -fMaxExtent;
+	float fOrthoRight = fMaxExtent;
+	float fOrthoBottom = -fMaxExtent;
+	float fOrthoTop = fMaxExtent;
+	float fNearPlaneDistance = 0.0f;
+	float fFarPlaneDistance = fMaxExtent * 4.0f;
+
+	XMMATRIX xmmtxProjection = XMMatrixOrthographicOffCenterLH(
+		fOrthoLeft, fOrthoRight, 
+		fOrthoBottom, fOrthoTop, 
+		fNearPlaneDistance, fFarPlaneDistance
+	);
+
+	int minimapIndex = 0;
+	m_ppMinimapCameras[minimapIndex]->SetPosition(CameraPosition);
+	XMStoreFloat4x4(&m_ppMinimapCameras[minimapIndex]->m_xmf4x4View, xmmtxCameraView);
+	XMStoreFloat4x4(&m_ppMinimapCameras[minimapIndex]->m_xmf4x4Projection, xmmtxProjection);
+	
+	::SynchronizeResourceTransition(
+		pd3dCommandList,
+		m_pMinimapTexture->GetResource(minimapIndex),
+		D3D12_RESOURCE_STATE_COMMON,
+		D3D12_RESOURCE_STATE_RENDER_TARGET
+	);
+
+	float clear[4] = { 1,1,1,1 };
+	pd3dCommandList->ClearRenderTargetView(m_pd3dRtvCPUDescriptorHandles[minimapIndex], clear, 0, nullptr);
+	pd3dCommandList->ClearDepthStencilView(m_d3dDsvDescriptorCPUHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	pd3dCommandList->OMSetRenderTargets(1, &m_pd3dRtvCPUDescriptorHandles[minimapIndex], TRUE, &m_d3dDsvDescriptorCPUHandle);
+
+	Render(pd3dCommandList, m_ppMinimapCameras[minimapIndex].get(), pScene);
+
+	::SynchronizeResourceTransition(
+		pd3dCommandList,
+		m_pMinimapTexture->GetResource(minimapIndex),
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATE_COMMON
+	);
+}
+
+void CMinimapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, CScene* pScene)
+{
+	if (!pScene) return;
+
+	CShader::OnPrepareRender(pd3dCommandList, 0, false);
+
+	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+	pCamera->UpdateShaderVariables(pd3dCommandList);
+
+	pScene->Render(pd3dCommandList, pCamera);
+}
+
+std::shared_ptr<CTexture> CMinimapShader::GetMinimapTexture()
+{
+	return m_pMinimapTexture;
+}
+
+ID3D12Resource* CMinimapShader::GetMinimapTextureResource(UINT nIndex)
+{
+	return(m_pMinimapTexture->GetResource(nIndex));
+}
 

@@ -56,6 +56,8 @@ void CSprite::SetSizeLT(float left, float top, float width, float height) {
 
 void CSprite::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite) {
 
+	if (bDepthWrite) return;
+
 	// Set Shader Variables
 	UpdateShaderVariables(pd3dCommandList); // GameObject Matrix Update
 

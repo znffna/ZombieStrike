@@ -11,6 +11,8 @@ CGaugeBar::~CGaugeBar()
 
 void CGaugeBar::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
 {
+	if (bDepthWrite) return;
+
 	CSprite::Render(pd3dCommandList, pCamera, bDepthWrite);
 
 	// Ratio만큼 줄어든 CSprite Render

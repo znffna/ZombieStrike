@@ -902,3 +902,10 @@ float4 PSShadowToViewport(VS_TEXTURED_OUTPUT input) : SV_Target
     
     return ((float4) (fDepthFromLight0));
 }
+
+float4 PSMinimapToViewport(VS_TEXTURED_OUTPUT input) : SV_Target
+{
+    float4 cColor = gtxtDepthTextures[0].SampleLevel(gssBorder, input.uv, 0);
+    
+    return (cColor);
+}
