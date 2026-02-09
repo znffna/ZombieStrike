@@ -337,6 +337,14 @@ void CPlayer::SetSkin(int nSkinType)
 //	//UpdateTransform();
 //}
 
+void CPlayer::SetAmmo(int AmmoCur, int AmmoMax)
+{
+	if (m_pGun) {
+		m_pGun->SetCurrentAmmo(AmmoCur);
+		m_pGun->SetMaxAmmo(AmmoMax);
+	}
+}
+
 bool CPlayer::Fire(FIRE_INFO* pFireInfo)
 { 
 	if (m_pGun) {

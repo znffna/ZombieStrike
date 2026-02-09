@@ -89,7 +89,6 @@ public:
 	}
 
 	void SetState(int Pose) {
-		
 		if (auto pAnim = GetComponent<CAnimationController>())
 		{
 			pAnim->SetBasePose(Pose);

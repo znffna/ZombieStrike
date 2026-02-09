@@ -134,15 +134,30 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	//}
 
 	// Score Info
-	m_pScoreInfo = RequestCreateObject(TypeTag<CGameObject>());
-	m_pScoreInfo->SetName("ScoreInfo");
-	auto pTextComp = m_pScoreInfo->CreateComponent<CTextComponent>();
-	pTextComp->SetActive(true);
-	pTextComp->SetSize(0.0f, 0.0f, (float)WINDOW_WIDTH, (float)WINDOW_HEIGHT, false);
-	pTextComp->SetFont(L"Arial");
-	pTextComp->SetFontSize(WINDOW_HEIGHT / 35.0f);
-	pTextComp->SetBrush(D2D1::ColorF(D2D1::ColorF::Purple, 1.0f));
-	pTextComp->SetText(std::to_wstring(m_nScore));
+	{
+		m_pScoreInfo = RequestCreateObject(TypeTag<CGameObject>());
+		m_pScoreInfo->SetName("ScoreInfo");
+		auto pTextComp = m_pScoreInfo->CreateComponent<CTextComponent>();
+		pTextComp->SetActive(true);
+		pTextComp->SetSize(0.0f, 0.0f, (float)WINDOW_WIDTH, (float)WINDOW_HEIGHT, false);
+		pTextComp->SetFont(L"Arial");
+		pTextComp->SetFontSize(WINDOW_HEIGHT / 35.0f);
+		pTextComp->SetBrush(D2D1::ColorF(D2D1::ColorF::Purple, 1.0f));
+		pTextComp->SetText(std::to_wstring(m_nScore));
+	}
+
+	// Ammo Info
+	{
+		m_pAmmoInfo = RequestCreateObject(TypeTag<CGameObject>());
+		m_pAmmoInfo->SetName("AmmoInfo");
+		auto pTextComp = m_pAmmoInfo->CreateComponent<CTextComponent>();
+		pTextComp->SetActive(true);
+		pTextComp->SetSize((float)WINDOW_WIDTH * 4 / 5, (float)WINDOW_HEIGHT * 9 / 10, (float)WINDOW_WIDTH / 5, (float)WINDOW_HEIGHT / 10, false);
+		pTextComp->SetFont(L"Arial");
+		pTextComp->SetFontSize(WINDOW_HEIGHT / 35.0f);
+		pTextComp->SetBrush(D2D1::ColorF(D2D1::ColorF::Purple, 1.0f));
+		pTextComp->SetText(L"");
+	}
 
 	
 	// Shader
@@ -227,6 +242,17 @@ void CGameScene::Update(float deltaTime)
 		if (pTextComp)
 		{
 			pTextComp->SetText(L"Score: " + std::to_wstring(m_nScore) + L"  Wave: " + std::to_wstring(m_nWave));
+		}
+	}
+
+	if (m_pAmmoInfo) {
+		auto pTextComp = m_pAmmoInfo->GetComponent<CTextComponent>();
+		if (pTextComp && m_pPlayer)
+		{
+			if (auto pGun = m_pPlayer->GetGun())
+			{
+				pTextComp->SetText(L"Ammo: " + std::to_wstring(pGun->GetCurrentAmmo()) + L" / " + std::to_wstring(pGun->GetMaxAmmo()));
+			}
 		}
 	}
 }

@@ -76,6 +76,27 @@ void COnlineScene::Update(float deltaTime)
 		}
 	}
 
+	if (m_pAmmoInfo)
+	{
+		auto pTextComp = m_pScoreInfo->GetComponent<CTextComponent>();
+		if (pTextComp)
+		{
+			// 탄약 정보
+			std::wstring ammoInfo = L"  Ammo: " + std::to_wstring(m_ammoCur) + L"/" + std::to_wstring(m_ammoMax);
+			if (m_isReloading) {
+				//ammoInfo += L" (Reloading...)";
+			}
+
+			// 스테이지 정보
+			std::wstring stageInfo = L"  Stage: " + std::to_wstring(m_currentStage) + L"/" + std::to_wstring(m_totalStages);
+
+			// 전체 텍스트 조합
+			std::wstring fullText = ammoInfo;
+
+			pTextComp->SetText(fullText);
+		}
+	}
+
 	// Network Client Update
 	if (NetworkingClient::Instance().IsRunning())
 	{
@@ -376,6 +397,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		m_isReloading = (p->reloading != 0);
 
 		// TODO: 여기서 UI 갱신(탄 수 표시/리로드 표시)
+		m_pPlayer->SetAmmo(m_ammoCur, m_ammoMax);
 		// 예) HUD->SetAmmo(m_ammoCur, m_ammoMax, m_isReloading);
 
 		break;

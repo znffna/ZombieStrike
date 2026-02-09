@@ -84,6 +84,11 @@ private:
 	int m_nCurrentAmmo = 30; // ÇöÀç Åº¾à ¼ö
 
 public:
+	void SetMaxAmmo(int nMaxAmmo) { 
+		m_nMaxAmmo = nMaxAmmo; 
+	}
+	void SetCurrentAmmo(int nCurrentAmmo) { m_nCurrentAmmo = nCurrentAmmo; }
 	int GetCurrentAmmo() const { return m_nCurrentAmmo; }
+	int GetMaxAmmo() const { return m_nMaxAmmo; }
 };
 

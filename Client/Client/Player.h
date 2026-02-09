@@ -65,6 +65,7 @@ public:
 	void SetGun(CGun* pGun) { m_pGun = pGun; }
 	CGun* GetGun() const { return m_pGun; }
 
+	void SetAmmo(int AmmoCur, int AmmoMax);
 	bool Fire(FIRE_INFO* pFireInfo);
 
 	// Reload

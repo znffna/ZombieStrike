@@ -81,4 +81,5 @@ public:
 	int m_nWave = 1;
 
 	CGameObject* m_pScoreInfo = nullptr;
+	CGameObject* m_pAmmoInfo = nullptr;
 };
