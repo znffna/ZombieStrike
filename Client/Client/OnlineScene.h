@@ -35,6 +35,8 @@ public:
 	void ProcessReadQueuePacket();
 	virtual void ProcessPacket(PacketHeader* recv_p); // Recv 내용 처리 (m_NetworkClient로 부터	호출됨)
 
+	void StageClear();
+
 	void SendPlayerState();
 	void SendFirePacket(const FIRE_INFO fireInfo);
 

@@ -107,13 +107,15 @@ class CGameScene;
 class CTitleScene;
 class COnlineScene;
 class CTestScene;
+class CVictoryScene;
 
 using SceneTypeTag = std::variant<
 	TypeTag<CLoadingScene>,
 	TypeTag<CGameScene>,
 	TypeTag<CTitleScene>,
 	TypeTag<COnlineScene>,
-	TypeTag<CTestScene>
+	TypeTag<CTestScene>,
+	TypeTag<CVictoryScene>
 >;
 
 struct CPushScene
@@ -125,9 +127,14 @@ struct CPopScene
 {
 };
 
+struct CPopAllScene
+{
+};
+
 using SceneRequest = std::variant<
 	CPushScene,
-	CPopScene
+	CPopScene,
+	CPopAllScene
 >;
 
 

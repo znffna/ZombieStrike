@@ -142,6 +142,9 @@ void COnlineScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARA
 		{
 			switch (wParam)
 			{
+			case VK_F4:
+				StageClear();
+				break;
 			case VK_F5:
 			case VK_F6:
 			case VK_F7:
@@ -456,7 +459,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		// timeLeft==0이면 Stage Clear(서버 권위 보조 트리거)
 		if (!m_stageCleared && m_timeLeftMs <= 0)
 		{
-			m_stageCleared = true;
+			StageClear();
 
 			// TODO: 여기서 클리어 UI / 씬 전환 / 입력 잠금
 			// 예) ShowStageClearUI();
@@ -496,9 +499,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		if (!m_stageCleared) {
 			const bool isLastWave = (m_currentWave >= m_totalWaves);
 			if (isLastWave && m_waveTotalZombies > 0 && m_waveAliveZombies <= 0) {
-				m_stageCleared = true;
-
-				// TODO: 클리어 UI / 씬 전환 / 입력 잠금
+				StageClear();
 			}
 		}
 
@@ -528,6 +529,13 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	default:
 		break;
 	}
+}
+
+void COnlineScene::StageClear()
+{
+	if (m_stageCleared) return;
+	m_stageCleared = true;
+	CGameFramework::Instance()->RequestSceneChange(CPushScene{ TypeTag<CVictoryScene>{} });
 }
 
 void COnlineScene::SendPlayerState()

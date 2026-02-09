@@ -15,6 +15,7 @@
 #include "OnlineScene.h"
 #include "TitleScene.h"
 #include "TestScene.h"
+#include "VictoryScene.h"
 
 #include "UILayer.h"
 
@@ -199,6 +200,15 @@ private:
 				{
 					// Pop Scene
 					PopScene();
+					ClearSceneRequest();
+				}
+				else if constexpr (std::is_same_v<T, CPopAllScene>)
+				{
+					// Pop All Scene
+					while (m_Scenes.size() > 1)
+					{
+						PopScene();
+					}
 					ClearSceneRequest();
 				}
 			}

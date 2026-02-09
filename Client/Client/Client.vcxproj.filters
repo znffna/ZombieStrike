@@ -170,6 +170,9 @@
     <ClInclude Include="BulletObject.h">
       <Filter>소스 파일\Game\GameObject</Filter>
     </ClInclude>
+    <ClInclude Include="VictoryScene.h">
+      <Filter>소스 파일\Game\Scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp">
@@ -288,6 +291,9 @@
     </ClCompile>
     <ClCompile Include="BulletObject.cpp">
       <Filter>소스 파일\Game\GameObject</Filter>
+    </ClCompile>
+    <ClCompile Include="VictoryScene.cpp">
+      <Filter>소스 파일\Game\Scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
