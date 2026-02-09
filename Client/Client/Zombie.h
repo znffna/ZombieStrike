@@ -88,6 +88,15 @@ public:
 			Died();
 	}
 
+	void SetState(int Pose) {
+		
+		if (auto pAnim = GetComponent<CAnimationController>())
+		{
+			pAnim->SetBasePose(Pose);
+			pAnim->SetUpperPose(Pose);
+		}
+	}
+
 
 	const XMFLOAT3& GetNetVelocity() const { return m_xmf3NetVelocity; }
 	int  GetNetActType() const { return m_nNetActType; }
