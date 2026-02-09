@@ -29,7 +29,7 @@ constexpr bool DEBUG_PRINT = false;
 // // [GLOBAL] - 리스폰 체력(기존 상수 재사용)
 static constexpr SIZE2 PLAYER_RESPAWN_HP = PLAYER_HP;      
 static constexpr int  PLAYER_RESPAWN_MS = 3000;        
-
+static constexpr int RELOAD_FIXED_MS = 2000;
 
 constexpr int ZOMBIE_SKIN_COUNT = 3; 
 static std::mt19937 g_rng{ std::random_device{}() }; 
@@ -98,10 +98,8 @@ static SIZE2 GetMaxAmmo(GunType gt) // 총 타입별 최대 탄 수
 static SIZE2 GetReloadMs(GunType gt)    // 총 타입별 리로드 시간(ms)
 {
     switch (gt) {
-    //case GunType::BULLET_PISTOL:  return 1200;
-    case GunType::BULLET_RIFLE:   return 1500;
-    //case GunType::BULLET_SHOTGUN: return 2000;
-    default:                      return 1500;
+    case GunType::BULLET_RIFLE:   return (SIZE2)RELOAD_FIXED_MS;
+    default:                      return (SIZE2)RELOAD_FIXED_MS;
     }
 }
 
@@ -560,12 +558,26 @@ public:
         GatherUserTargets(targets);
 
         // 1) 나에게: 이미 로딩 완료된 플레이어들만 ADD
+        int dbg_targets = (int)targets.size();            // // [SendSceneSnapshot] - DEBUG: targets 수
+        int dbg_player = 0;                               // // [SendSceneSnapshot] - DEBUG: PLAYER 후보 수
+        int dbg_loaded_player = 0;                        // // [SendSceneSnapshot] - DEBUG: 로딩 완료 PLAYER 수
+        int dbg_sent = 0;
+
         for (SESSION* pu : targets) {
             SESSION& u = *pu;
 
             if (u._id == _id) continue;
             if (u._obj_type != ObjectType::PLAYER) continue;
-            if (!u._is_loaded.load(std::memory_order_acquire)) continue;
+            ++dbg_player; // // [SendSceneSnapshot] - DEBUG: PLAYER 후보 카운트
+
+            if (!u._is_loaded.load(std::memory_order_acquire)) {
+                // // [SendSceneSnapshot] - DEBUG: 로딩 미완료로 스킵
+                std::cout << "[SNAP-ADD][SKIP-NOTLOADED] me=" << _id
+                    << " other=" << u._id << "\n";
+                continue;
+            }
+
+            ++dbg_loaded_player; // // [SendSceneSnapshot] - DEBUG: 로딩 완료 PLAYER 카운트
 
             pkt_sc_object_add add{};
             add.header.size = sizeof(add);
@@ -581,7 +593,23 @@ public:
             add.move_input = u._move_input;
 
             this->do_send(&add);
+
+            // // [SendSceneSnapshot] - DEBUG: 누굴 ADD로 보냈는지
+            std::cout << "[SNAP-ADD][SEND] me=" << _id
+                << " other=" << u._id
+                << " pos=(" << u._position.x << "," << u._position.y << "," << u._position.z << ")"
+                << " hp=" << u._hp
+                << " loaded=" << (u._is_loaded.load(std::memory_order_relaxed) ? 1 : 0)
+                << "\n";
         }
+
+        // // [SendSceneSnapshot] - DEBUG: 요약
+        std::cout << "[SNAP-ADD][SUMMARY] me=" << _id
+            << " targets=" << dbg_targets
+            << " playerCand=" << dbg_player
+            << " loadedPlayer=" << dbg_loaded_player
+            << " sent=" << dbg_sent
+            << "\n";
 
         // 2) 나에게: 기존 좀비들 ADD (스킨 테이블 일관성 유지)
         for (auto* zombie : g_zombies) {
@@ -632,12 +660,15 @@ public:
         GatherUserTargets(targets);
 
 
+        int sent = 0;
         for (SESSION* pu : targets) {
             SESSION& u = *pu;
             if (u._id == _id) continue;
-            if (!u._is_loaded.load(std::memory_order_acquire)) continue; // 로딩중에게는 보내지 않음
+            if (!u._is_loaded.load(std::memory_order_acquire)) continue;
             u.do_send(&me);
+            ++sent;
         }
+        std::cout << "[ADDME] from=" << _id << " toLoaded=" << sent << "\n";
     }
 
 	void process_packet(SIZE2* packet) {
@@ -946,6 +977,22 @@ public:
                 //            session.do_send(&rem);
                 //    }
                 }
+
+                {   // // [SESSION::process_packet] - DEBUG: 스케일/좌표계 검증
+                    static int s_dbg = 0;
+                    if ((++s_dbg % 120) == 0) { // 120발마다(대충)
+                        std::lock_guard<std::mutex> lock(zombiesMutex);
+                        if (!g_zombies.empty() && g_zombies[0]) {
+                            auto zp = g_zombies[0]->GetPosition();
+                            std::cout
+                                << "[HITDBG] bulletPos=(" << ox << "," << oy << "," << oz << ")"
+                                << " dir=(" << dx << "," << dy << "," << dz << ")"
+                                << " zombie0=(" << zp.x << "," << zp.y << "," << zp.z << ")"
+                                << "\n";
+                        }
+                    }
+                }
+
             }
             else {
                 //DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id << " miss");
@@ -999,6 +1046,7 @@ public:
             SendAmmoInfoToSelf(*this);
             break;
         }
+
         default:
             std::cout << "[WARN] Unknown PacketType: " << packet_type << "\n";
             break;
@@ -1137,41 +1185,48 @@ static void BroadcastPlayerFullUpdate(SIZEID victimId)
     u.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
     u.id = victimId;
 
-    //{   
-    //    std::lock_guard<std::mutex> lk(g_usersMutex);
-    //    auto it = g_users.find(victimId);
-    //    if (it == g_users.end()) return;
-    //    SESSION& v = it->second;
-
-    //    u.position = v._position;
-    //    u.velocity = v._velocity;
-    //    u.look = v._look;
-    //    u.pitch = v._pitch;
-    //    u.hp = v._hp;
-
-    //    u.gun_type = v._gun_type;
-    //    u.level = v._level;
-    //    u.score = v._score;
-    //    u.damage = v._damage;
-    //    u.act_type = v._act_type;
-    //    u.move_input = v._move_input;
-    //}
-
-    {   // // [BroadcastPlayerRespawnMinimal] - 리스폰 시 HP/Position만 채움
+    {   // // [BroadcastPlayerFullUpdate] - 피해/리스폰 시 0 덮어쓰기 방지: 전체 필드 채움
         std::lock_guard<std::mutex> lk(g_usersMutex);
         auto it = g_users.find(victimId);
         if (it == g_users.end()) return;
         SESSION& s = it->second;
 
         u.position = s._position;
+        u.velocity = s._velocity;
+        u.look = s._look;
+        u.pitch = s._pitch;
         u.hp = s._hp;
-        // look/pitch/velocity/act/move_input 등은 "건드리지 않음" (0으로 보내도 덮어쓰면 문제라 아예 설계가 필요)
-    }
 
+        u.gun_type = s._gun_type;
+        u.level = s._level;
+        u.score = s._score;
+        u.damage = s._damage;
+        u.act_type = s._act_type;
+        u.move_input = s._move_input;
+    }
 
     std::vector<SESSION*> targets;
     GatherUserTargets(targets);
     for (SESSION* ps : targets) ps->do_send(&u);
+}
+
+static void BroadcastPlayerHpOnly(SIZEID pid) // HP만 브로드캐스트(방향/상태 불변)
+{
+    pkt_sc_player_hp_only p{};
+    p.header.size = sizeof(p);
+    p.header.type = PKT_TYPE::S_C_PLAYER_HP_ONLY;
+    p.id = pid;
+
+    {
+        std::lock_guard<std::mutex> lk(g_usersMutex);
+        auto it = g_users.find(pid);
+        if (it == g_users.end()) return;
+        p.hp = it->second._hp;
+    }
+
+    std::vector<SESSION*> targets;
+    GatherUserTargets(targets);
+    for (SESSION* s : targets) s->do_send(&p);
 }
 
 
@@ -1204,6 +1259,56 @@ static void Server_OnPlayerDead(SIZEID pid) // 플레이어 죽음 처리 + 리�
     auto remain = std::chrono::duration_cast<std::chrono::milliseconds>(s._respawn_end_tp - std::chrono::steady_clock::now()).count();
     std::cout << "[RESPAWN-SET] pid=" << pid << " remain_ms=" << remain << "\n";
 }
+
+static void Server_TickReload()
+{
+    const auto now = std::chrono::steady_clock::now();
+
+    std::vector<SIZEID> done;
+    done.reserve(16);
+
+    {   // g_users 스캔은 락 안에서
+        std::lock_guard<std::mutex> lk(g_usersMutex);
+        for (auto& [id, s] : g_users) {
+            if (s._obj_type != ObjectType::PLAYER) continue;
+            if (!s._alive.load(std::memory_order_acquire)) continue;
+            if (!s._is_loaded.load(std::memory_order_acquire)) continue;
+
+            if (s._reloading &&
+                s._reload_end_tp != std::chrono::steady_clock::time_point{} &&
+                now >= s._reload_end_tp)
+            {
+                done.push_back(id);
+            }
+        }
+    }
+
+    // 완료 처리는 (가능하면) 개별로 다시 잠깐만 락
+    for (SIZEID pid : done) {
+        SESSION* ps = nullptr;
+
+        {
+            std::lock_guard<std::mutex> lk(g_usersMutex);
+            auto it = g_users.find(pid);
+            if (it == g_users.end()) continue;
+            ps = &it->second;
+
+            if (!ps->_reloading) continue; // 중복 방어
+
+            ps->_ammo_max = GetMaxAmmo(ps->_gun_type);
+            ps->_ammo_cur = ps->_ammo_max;
+            ps->_reloading = false;
+            ps->_reload_end_tp = std::chrono::steady_clock::time_point{};
+        }
+
+        // 락 밖에서 통지
+        if (ps) SendAmmoInfoToSelf(*ps);
+
+        // 디버그(원하면 끄기)
+        // std::cout << "[RELOAD-AUTO-DONE] pid=" << pid << "\n";
+    }
+}
+
 
 // 주기 체크(ZombieAIThread에서 매 프레임 호출)
 static void Server_TickRespawn() // 리스폰 타이밍 체크/처리
@@ -1248,7 +1353,7 @@ static void Server_TickRespawn() // 리스폰 타이밍 체크/처리
             s._respawn_end_tp = std::chrono::steady_clock::time_point{};
         }
 
-        BroadcastPlayerFullUpdate(pid); // 전체 동기화(위치/HP/상태)
+        BroadcastPlayerHpOnly(pid); // HP만
         std::cout << "[RESPAWN-DONE] pid=" << pid << "\n";
     }
 }
@@ -1592,7 +1697,7 @@ void ZombieAIThread() {
         //}
 
         Server_TickRespawn(); // 리스폰 주기 처리
-
+        Server_TickReload();
         {
             std::lock_guard<std::mutex> ulk(g_usersMutex); // 플레이어 스냅샷은 락 걸고 수집(데이터 레이스 방지)
             for (auto& [id, session] : g_users) {
@@ -1695,7 +1800,7 @@ void ZombieAIThread() {
 
                         // 3) 변경 브로드캐스트(HP-only 금지 → 풀 업데이트)
                         if (applied) {
-                            BroadcastPlayerFullUpdate(bestPid); // 피해자 상태 동기화
+                            BroadcastPlayerHpOnly(bestPid);
                         }
 
                         // 죽음이면 리스폰 예약(락 밖에서)
@@ -1845,7 +1950,7 @@ int main() {
     Server_StartWave(1);
     //SpawnZombies(MAX_ZOMBIE_COUNT);
 
-    SIZEID clientId = 0;
+    SIZEID clientId = 1;
     INT serverAddr_size = sizeof(SOCKADDR_IN);
 
     while (serverRunning) {

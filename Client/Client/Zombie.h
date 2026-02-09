@@ -101,13 +101,17 @@ public:
 	int  GetNetActType() const { return m_nNetActType; }
 	int  GetNetHP() const { return m_nNetHP; }
 
-
+	void PlayCrySfx();   // 울음소리 재생
+	void PlayBiteSfx();  // 무는소리 재생
 
 
 private:
 	std::vector<std::string> m_strModelName{ "PoliceZombie", "Yaku_J_Ignite", "Zombiegirl_W_Kurniawan"};
 	std::vector<std::string> m_strMeshBoneName{ "FuzZombie", "Yaku_zombie", "ZombieGirl_Body"};
 	int m_nSkinType = 0;
+
+	float m_fCrySfxCooldown = 0.0f;     //  울음소리 쿨타임
+	float m_fBiteSfxCooldown = 0.0f;    //  무는소리 쿨타임
 
 private:
 

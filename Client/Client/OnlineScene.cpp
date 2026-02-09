@@ -351,7 +351,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		{
 			CPlayer* pPlayer = (CPlayer*)obj;
 
-			pPlayer->SetHealth((float)updatePkt->hp);
+			//pPlayer->SetHealth((float)updatePkt->hp);
 
 			if (!isLocalPlayer)
 			{
@@ -369,6 +369,18 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		{
 			CZombieObject* pZombie = (CZombieObject*)obj;
 
+			// 좀비 act_type 변경 감지(사운드 1회 트리거)
+			const SIZEID zid = updatePkt->id;
+			const SIZE1  newAct = (SIZE1)updatePkt->act_type;
+
+			SIZE1 oldAct = 0xFF;
+			auto itPrev = m_prevZombieAct.find(zid);
+			if (itPrev != m_prevZombieAct.end()) oldAct = itPrev->second;
+
+			const bool actChanged = (oldAct != newAct);
+			if (actChanged) m_prevZombieAct[zid] = newAct;
+
+			// 애니 변경은 기존대로 계속 적용
 			switch (updatePkt->act_type)
 			{
 			case ActionType::ZMOVE:  pZombie->SetState((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_RUNNING); break;
@@ -377,6 +389,17 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			case ActionType::SCREAM: pZombie->SetState((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_SCREAM);  break;
 			case ActionType::HIT:    pZombie->SetState((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_HIT);     break;
 			default:                 pZombie->SetState((int)ZOMBIE_ANIMATION_POSE::ZOMBIE_IDLE);    break;
+			}
+
+			// 사운드는 "상태가 바뀌는 순간"에만 1회 재생
+			if (actChanged)
+			{
+				if (updatePkt->act_type == ActionType::ATTACK) {
+					pZombie->PlayBiteSfx(); // 좀비 무는소리
+				}
+				else if (updatePkt->act_type == ActionType::SCREAM) {
+					pZombie->PlayCrySfx();  // 좀비 우는소리
+				}
 			}
 		}
 		else
@@ -406,6 +429,8 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 	case S_C_OBJECT_REMOVE:
 	{
 		pkt_sc_object_remove* removePkt = reinterpret_cast<pkt_sc_object_remove*>(recv_p);
+
+		m_prevZombieAct.erase(removePkt->id);
 
 		auto it = m_mapGameObjects.find(removePkt->id);
 		if (it != m_mapGameObjects.end())
@@ -479,6 +504,26 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 
 		break;
 	}
+
+	case PKT_TYPE::S_C_PLAYER_HP_ONLY:
+	{
+		auto* p = reinterpret_cast<pkt_sc_player_hp_only*>(recv_p);
+
+		auto itObj = m_mapGameObjects.find(p->id);
+		if (itObj == m_mapGameObjects.end()) break;
+
+		auto itType = m_mapObjectTypes.find(p->id);
+		if (itType == m_mapObjectTypes.end()) break;
+
+		if (itType->second != ObjectType::PLAYER) break;
+
+		CPlayer* pl = static_cast<CPlayer*>(itObj->second);
+		pl->SetHealth((float)p->hp); // HP만 갱신
+
+		break;
+	}
+
+
 
 	default:
 		break;

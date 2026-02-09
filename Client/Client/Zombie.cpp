@@ -108,6 +108,10 @@ void CZombieObject::Initialize(int nSkinType)
 
 void CZombieObject::Update(float fTimeElapsed)
 {
+	// 좀비 사운드 쿨타임 감소
+	if (m_fCrySfxCooldown > 0.0f)  m_fCrySfxCooldown -= fTimeElapsed;
+	if (m_fBiteSfxCooldown > 0.0f) m_fBiteSfxCooldown -= fTimeElapsed;
+
 
 	CGameObject::Update(fTimeElapsed);
 
@@ -146,4 +150,27 @@ void CZombieObject::SetSkin(int nSkinType)
 
 	//auto pCollider = GetComponent<COBBCollider>();
 	//pCollider->SetCollider(FindFrame(m_strMeshBoneName[m_nSkinType])->GetMeshBound());
+}
+
+static constexpr float ZOMBIE_SFX_MIN_DIST = 2.0f;
+static constexpr float ZOMBIE_SFX_MAX_DIST = 40.0f;
+
+void CZombieObject::PlayCrySfx()
+{
+	// 울음소리(3D) 1회 재생
+	if (m_fCrySfxCooldown > 0.0f) return;
+	m_fCrySfxCooldown = 1.2f; // 너무 도배되지 않게(원하면 조절)
+
+	Sound::SetSoundVolume(0.35f);
+	Sound::Play3DSound("Sound/zombie_cry.wav", GetPosition(), ZOMBIE_SFX_MIN_DIST, ZOMBIE_SFX_MAX_DIST);
+}
+
+void CZombieObject::PlayBiteSfx()
+{
+	// 무는소리(3D) 1회 재생
+	if (m_fBiteSfxCooldown > 0.0f) return;
+	m_fBiteSfxCooldown = 0.4f; // 공격 연타 대비(원하면 조절)
+
+	Sound::SetSoundVolume(0.45f);
+	Sound::Play3DSound("Sound/zombie_bite.wav", GetPosition(), ZOMBIE_SFX_MIN_DIST, ZOMBIE_SFX_MAX_DIST);
 }

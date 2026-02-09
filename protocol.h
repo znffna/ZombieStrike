@@ -21,7 +21,7 @@ constexpr short MAX_ZOMBIE_COUNT = 30;  // 최대 좀비 수
 constexpr int W_WIDTH = 250;            // 맵의 크기 정의
 constexpr int W_HEIGHT = 250;
 
-constexpr int GUN_DAMAGE = 50;
+constexpr int GUN_DAMAGE = 200;
 
 
 
@@ -97,6 +97,8 @@ enum PKT_TYPE : SIZE1 {
 
     C_S_SCORE_INFO,
     S_C_SCORE_INFO,
+
+    S_C_PLAYER_HP_ONLY,
     // ...
 };
 
@@ -153,6 +155,8 @@ inline const char* ToString(PKT_TYPE type) {
     case S_C_STAGE_INFO:    return "S_C_STAGE_INFO";
     case C_S_SCORE_INFO:    return "C_S_SCORE_INFO";
     case S_C_SCORE_INFO:    return "S_C_SCORE_INFO";
+    case S_C_PLAYER_HP_ONLY:    return " S_C_PLAYER_HP_ONLY";
+
     default:                return "UNKNOWN_PACKET";
     }
 }
@@ -450,6 +454,14 @@ struct pkt_sc_score_info {
     SIZE2 wave_total_zombies;   // 웨이브 총량(중복이지만 UI 편의)
     SIZE2 wave_killed_zombies;  // 웨이브 킬
     SIZE2 wave_alive_zombies;   // 웨이브 남은 수
+};
+
+struct pkt_sc_player_hp_only
+{
+    PacketHeader header;
+    SIZEID id;
+    SIZE2  hp;
+
 };
 
 #pragma pack (pop)
