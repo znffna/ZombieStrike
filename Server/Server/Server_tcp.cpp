@@ -697,6 +697,9 @@ public:
             BroadcastAddMe();       // 다른 플레이어에게 나 add
 
             SendAmmoInfoToSelf(*this);
+
+            BroadcastScoreInfoToAll();
+            BroadcastStageInfoToAll(/*timeLeft=*/60000);
         }
         break;
 
@@ -1134,32 +1137,40 @@ static void BroadcastPlayerFullUpdate(SIZEID victimId)
     u.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
     u.id = victimId;
 
-    {   
+    //{   
+    //    std::lock_guard<std::mutex> lk(g_usersMutex);
+    //    auto it = g_users.find(victimId);
+    //    if (it == g_users.end()) return;
+    //    SESSION& v = it->second;
+
+    //    u.position = v._position;
+    //    u.velocity = v._velocity;
+    //    u.look = v._look;
+    //    u.pitch = v._pitch;
+    //    u.hp = v._hp;
+
+    //    u.gun_type = v._gun_type;
+    //    u.level = v._level;
+    //    u.score = v._score;
+    //    u.damage = v._damage;
+    //    u.act_type = v._act_type;
+    //    u.move_input = v._move_input;
+    //}
+
+    {   // // [BroadcastPlayerRespawnMinimal] - 리스폰 시 HP/Position만 채움
         std::lock_guard<std::mutex> lk(g_usersMutex);
         auto it = g_users.find(victimId);
         if (it == g_users.end()) return;
-        SESSION& v = it->second;
+        SESSION& s = it->second;
 
-        u.position = v._position;
-        u.velocity = v._velocity;
-        u.look = v._look;
-        u.pitch = v._pitch;
-        u.hp = v._hp;
-
-        u.gun_type = v._gun_type;
-        u.level = v._level;
-        u.score = v._score;
-        u.damage = v._damage;
-        u.act_type = v._act_type;
-        u.move_input = v._move_input;
+        u.position = s._position;
+        u.hp = s._hp;
+        // look/pitch/velocity/act/move_input 등은 "건드리지 않음" (0으로 보내도 덮어쓰면 문제라 아예 설계가 필요)
     }
+
 
     std::vector<SESSION*> targets;
-    {
-        std::lock_guard<std::mutex> lk(g_usersMutex);
-        targets.reserve(g_users.size());
-        for (auto& [id, s] : g_users) targets.push_back(&s);
-    }
+    GatherUserTargets(targets);
     for (SESSION* ps : targets) ps->do_send(&u);
 }
 
@@ -1187,8 +1198,8 @@ static void Server_OnPlayerDead(SIZEID pid) // 플레이어 죽음 처리 + 리�
         + std::chrono::milliseconds(PLAYER_RESPAWN_MS);
 
 
-    s._act_type = ActionType::DEATH;   // 상태를 죽음으로
-    s._velocity = { 0,0,0 };           // 정지
+    //s._act_type = ActionType::DEATH;   // 상태를 죽음으로
+    //s._velocity = { 0,0,0 };           // 정지
 
     auto remain = std::chrono::duration_cast<std::chrono::milliseconds>(s._respawn_end_tp - std::chrono::steady_clock::now()).count();
     std::cout << "[RESPAWN-SET] pid=" << pid << " remain_ms=" << remain << "\n";
@@ -1227,11 +1238,11 @@ static void Server_TickRespawn() // 리스폰 타이밍 체크/처리
             SESSION& s = it->second;
             if (!s._respawning) continue;
 
-            s._hp = PLAYER_RESPAWN_HP;                         // HP 복구
-            s._position = START_POSITIONS[s._spawn_index];     // 시작 위치로
-            s._velocity = { 0,0,0 };                           // 정지
-            s._act_type = ActionType::IDLE;                    // 기본 상태
-            s._move_input = 0;                                 // 입력 초기화
+            s._hp = PLAYER_RESPAWN_HP;                           // HP 복구
+            //s._position = START_POSITIONS[s._spawn_index];     // 시작 위치로
+            //s._velocity = { 0,0,0 };                           // 정지
+            //s._act_type = ActionType::IDLE;                    // 기본 상태
+            //s._move_input = 0;                                 // 입력 초기화
 
             s._respawning = false;                             // 리스폰 완료
             s._respawn_end_tp = std::chrono::steady_clock::time_point{};
