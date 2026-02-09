@@ -244,8 +244,17 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 			//std::shared_ptr<CPlayer> pPlayer = GetPlayer(packet->skin_type); // GetPlayer(skin_type)·Î ¹Ù²ã¾ß ÇÔ
 			//std::shared_ptr<CPlayer> pPlayer = GetPlayer(0); // GetPlayer(skin_type)·Î ¹Ù²ã¾ß ÇÔ
 
-			auto pPlayer = RequestCreateObject(TypeTag<CPlayer>(), packet->skin_type);
-			pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
+			auto pPlayer = SpawnPlayer(
+				XMFLOAT3{packet->startposition.x, packet->startposition.y, packet->startposition.z },
+				std::string(packet->name),
+				packet->skin_type,
+				packet->starthp,
+				packet->act_type,
+				packet->move_input,
+				m_pTerrain);
+
+			//auto pPlayer = RequestCreateObject(TypeTag<CPlayer>(), packet->skin_type);
+			//pPlayer->SetPosition(packet->startposition.x, packet->startposition.y, packet->startposition.z);
 			pPlayer->SetSID(packet->id);
 
 			pPlayer->SetSkin(packet->skin_type);
