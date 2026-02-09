@@ -69,6 +69,7 @@ public:
 
 	// Reload
 	bool m_bReload = false; // 총알 재장전 여부
+	float m_fReloadDuration = 2.0f; // 재장전 소요 시간
 	float m_fReloadTime = 0.0f;
 	void Reload();
 

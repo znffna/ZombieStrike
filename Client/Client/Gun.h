@@ -41,6 +41,15 @@ public:
 		if (m_nCurrentAmmo <= 0) {
 			return false; // 발사 실패
 		}
+
+		m_fCoolTime = m_fFireRate;
+		{
+			std::string debugOutput = "Fired! Current Ammo: " + std::to_string(m_nCurrentAmmo - 1) + "\n";
+			debugOutput += "m_fFireRate: " + std::to_string(m_fFireRate) + " seconds\n";
+			OutputDebugStringA(debugOutput.c_str());
+		}
+		m_nCurrentAmmo--; //일단 Reload 없이 총 발사 간격만 적용.
+
 		return true; // 발사 성공
 	}
 	

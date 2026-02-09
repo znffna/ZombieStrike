@@ -541,12 +541,15 @@ void COnlineScene::SendReloadStart()
 {
 	if (!m_pPlayer || !m_pPlayer->GetGun()) return;
 
+	m_pPlayer->Reload();
+
 	pkt_cs_reload pkt{};
 	pkt.header.size = sizeof(pkt);
 	pkt.header.type = PKT_TYPE::C_S_RELOAD;
 	pkt.gun_type = static_cast<GunType>(m_pPlayer->GetGun()->GetGunType());  // ÇöÀç ÃÑ
 
 	NetworkingClient::Instance().send_packet((char*)&pkt);
+
 }
 
 void COnlineScene::SendReloadFinish()

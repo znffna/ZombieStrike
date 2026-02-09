@@ -27,6 +27,8 @@ void CGun::Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dC
 	m_fReloadTime = 2.0f;
 
 	DeepCopyFromModel(CResourceManager::Instance().GetModelInfo(m_strGunName[m_nGunType]));
+
+
 }
 
 void CGun::Initialize(int nWeaponType)
@@ -35,19 +37,24 @@ void CGun::Initialize(int nWeaponType)
 
 	SetGunType(nWeaponType);
 
-	// Initialize Ammo
-	m_nCurrentAmmo = m_nMaxAmmo;
-	m_fFireRate = 0.5f;
-	m_fBulletRange = 100.0f;
-	m_fReloadTime = 2.0f;
-
 	DeepCopyFromModel(CResourceManager::Instance().GetModelInfo(m_strGunName[m_nGunType]));
+
+	auto pText = CreateComponent<CTextComponent>();
+	pText->SetActive(true);
+	pText->SetSize((float)WINDOW_WIDTH * 4 / 5, (float)WINDOW_HEIGHT * 9 / 10, (float)WINDOW_WIDTH / 5, (float)WINDOW_HEIGHT / 10, false);
+	pText->SetFont(L"Arial");
+	pText->SetFontSize(WINDOW_HEIGHT / 35.0f);
+	pText->SetBrush(D2D1::ColorF(D2D1::ColorF::Purple, 1.0f));
+	pText->SetText(L"");
 }
 
 
 void CGun::Update(float fTimeElapsed)
 {
 	m_fCoolTime -= fTimeElapsed;
+	if(m_fCoolTime < 0.0f) {
+		m_fCoolTime = 0.0f;
+	}
 }
 
 void CGun::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite)
@@ -67,10 +74,12 @@ void CGun::SetGunType(int type)
 		m_fBulletRange = 200.0f;
 		break;
 	case 1: // Shotgun
-		SetFireTime(1.2f); // 초당 12.5발
+		SetFireTime(12.5f); // 초당 12.5발
 		m_fBulletRange = 100.0f;
 		break;
 	}
+	m_nCurrentAmmo = m_nMaxAmmo;
+	m_fReloadTime = 2.0f;
 
 	auto pModel = CResourceManager::Instance().GetModelInfo(m_strGunName[m_nGunType]);
 	DeepCopyFromModel(pModel);
@@ -88,8 +97,7 @@ bool CGun::Fire(const XMFLOAT3& xmf3Direction, FIRE_INFO* pFireInfo)
 {
 	if (CanFire() == false) return false; // 총이 발사 가능한 상태가 아닐 경우
 
-	m_fCoolTime = m_fFireRate;
-	m_nCurrentAmmo--; //일단 Reload 없이 총 발사 간격만 적용.
+
 
 	XMFLOAT3 direction = xmf3Direction;
 	XMFLOAT3 position = FindFrame(m_strMuzzleName[m_nGunType])->GetPosition(); // 총구 위치

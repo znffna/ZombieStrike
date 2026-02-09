@@ -40,7 +40,6 @@ public:
 
 	virtual void ChangeMap(int nMapIndex);
 
-	bool m_bIschambered = false; // 총알 장전 여부
 	virtual bool Fire(CPlayer* pPlayer, FIRE_INFO* pFireInfo);
 
 	// Shader Variables

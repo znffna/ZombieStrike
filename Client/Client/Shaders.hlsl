@@ -610,16 +610,16 @@ void GSBulletDraw(point VS_BULLET_DRAW_OUTPUT input[1], inout TriangleStream<GS_
         // output.uv = float2(0.5f, 0.5f);
         // outputStream.Append(output);
         
-        output.type = input[0].type;
-        output.color = input[0].color;
-        for (int i = 0; i < 4; i++)
-        {
-            float3 positionW = mul(gf3Positions[i] * 0.5f, (float3x3) gmtxInvView) + input[0].position;
-            output.position = mul(mul(float4(positionW, 1.0f), gmtxView), gmtxProjection);
-            output.uv = gf2QuadUVs[i];
+        //output.type = input[0].type;
+        //output.color = input[0].color;
+        //for (int i = 0; i < 4; i++)
+        //{
+        //    float3 positionW = mul(gf3Positions[i] * 0.5f, (float3x3) gmtxInvView) + input[0].position;
+        //    output.position = mul(mul(float4(positionW, 1.0f), gmtxView), gmtxProjection);
+        //    output.uv = gf2QuadUVs[i];
 
-            outputStream.Append(output);
-        }
+        //    outputStream.Append(output);
+        //}
         
     }
     else if (input[0].type == BULLET_TYPE_TRAIL)
