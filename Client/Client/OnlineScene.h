@@ -42,6 +42,18 @@ public:
 
 	virtual bool Fire(CPlayer* pPlayer, FIRE_INFO* pFireInfo);
 	virtual bool Fire(CPlayer* pPlayer);
+	virtual bool Fire(CPlayer* pPlayer, XMFLOAT3 cameraPos, XMFLOAT3 cameraDir)
+	{
+		bool ret = false;
+		FIRE_INFO fireInfo;
+		fireInfo.xmf3Position = cameraPos;
+		fireInfo.xmf3Look = cameraDir;
+		fireInfo.fRange = pPlayer->GetGun()->GetRange();
+		fireInfo.fspeed = pPlayer->GetGun()->GetSpeed();
+		fireInfo.nBulletType = pPlayer->GetGun()->GetGunType();
+		ret = pPlayer->Fire(&fireInfo);
+		return false;
+	}
 
 	void SendReloadStart();		// 리로드 시작 패킷 전송 
 	void SendReloadFinish();	// 리로드 종료 패킷 전송 

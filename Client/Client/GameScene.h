@@ -41,6 +41,7 @@ public:
 	virtual void ChangeMap(int nMapIndex);
 
 	virtual bool Fire(CPlayer* pPlayer, FIRE_INFO* pFireInfo);
+	virtual bool Fire(CPlayer* pPlayer, XMFLOAT3 cameraPos, XMFLOAT3 cameraDir);
 
 	// Shader Variables
 	//void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) override;

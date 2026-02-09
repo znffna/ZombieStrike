@@ -453,6 +453,19 @@ bool CGameScene::Fire(CPlayer* pPlayer, FIRE_INFO* pFireInfo)
 	return ret;
 }
 
+bool CGameScene::Fire(CPlayer* pPlayer, XMFLOAT3 cameraPos, XMFLOAT3 cameraDir)
+{
+	bool ret = false;
+	FIRE_INFO fireInfo;
+	fireInfo.xmf3Position = cameraPos;
+	fireInfo.xmf3Look = cameraDir;
+	fireInfo.fRange = pPlayer->GetGun()->GetRange();
+	fireInfo.fspeed = pPlayer->GetGun()->GetSpeed();
+	fireInfo.nBulletType = pPlayer->GetGun()->GetGunType();
+	ret = pPlayer->Fire(&fireInfo);
+	return false;
+}
+
 CPlayer* CGameScene::SpawnPlayer(XMFLOAT3 xmf3Position, std::string name, int nSkinIndex, short starthp, char actType, char move_input, void* pTerrain)
 {
 	auto pPlayer = RequestCreateObject(TypeTag<CPlayer>(), nSkinIndex);

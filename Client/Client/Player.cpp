@@ -351,8 +351,16 @@ bool CPlayer::Fire(FIRE_INFO* pFireInfo)
 	if (m_pGun) {
 		UpdateTransform();
 		m_pGun->UpdateTransform(m_pGunSlot->GetWorldMatrix());
-		auto pCamera = GetComponent<CCamera>();
-		bool ret =  m_pGun->Fire(pCamera->GetPosition(), pCamera->GetLook(), pFireInfo);
+		bool ret = false;
+		if (pFireInfo == nullptr)
+		{
+			auto pCamera = GetComponent<CCamera>();
+			ret = m_pGun->Fire(pCamera->GetPosition(), pCamera->GetLook(), pFireInfo);
+		}
+		else {
+			ret = m_pGun->Fire(pFireInfo->xmf3Position, pFireInfo->xmf3Look, pFireInfo);
+		}
+		
 		if (ret) {
 			Sound::SetSoundVolume(0.3f);
 			Sound::PlaySound("Sound/gun_fire.wav");

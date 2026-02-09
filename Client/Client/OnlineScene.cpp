@@ -533,6 +533,22 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		break;
 	}
 
+	case S_C_SHOOT:
+	{
+		pkt_sc_shoot* packet = reinterpret_cast<pkt_sc_shoot*>(recv_p);
+		if(auto* pObject = m_mapGameObjects[packet->shooterId])
+		{
+			((CPlayer*)pObject)->GetGun()->Fire(
+				XMFLOAT3(packet->bulletPos[0], packet->bulletPos[1], packet->bulletPos[2]),
+				XMFLOAT3(packet->bulletDir[0], packet->bulletDir[1], packet->bulletDir[2]),
+				nullptr);
+		}
+		/*Fire((CPlayer*)m_mapGameObjects[packet->shooterId],
+			XMFLOAT3(packet->bulletPos[0], packet->bulletPos[1], packet->bulletPos[2]),
+			XMFLOAT3(packet->bulletDir[0], packet->bulletDir[1], packet->bulletDir[2]));*/
+		break;
+	}
+
 
 
 	default:
