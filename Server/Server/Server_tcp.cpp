@@ -560,12 +560,26 @@ public:
         GatherUserTargets(targets);
 
         // 1) 나에게: 이미 로딩 완료된 플레이어들만 ADD
+        int dbg_targets = (int)targets.size();            // // [SendSceneSnapshot] - DEBUG: targets 수
+        int dbg_player = 0;                               // // [SendSceneSnapshot] - DEBUG: PLAYER 후보 수
+        int dbg_loaded_player = 0;                        // // [SendSceneSnapshot] - DEBUG: 로딩 완료 PLAYER 수
+        int dbg_sent = 0;
+
         for (SESSION* pu : targets) {
             SESSION& u = *pu;
 
             if (u._id == _id) continue;
             if (u._obj_type != ObjectType::PLAYER) continue;
-            if (!u._is_loaded.load(std::memory_order_acquire)) continue;
+            ++dbg_player; // // [SendSceneSnapshot] - DEBUG: PLAYER 후보 카운트
+
+            if (!u._is_loaded.load(std::memory_order_acquire)) {
+                // // [SendSceneSnapshot] - DEBUG: 로딩 미완료로 스킵
+                std::cout << "[SNAP-ADD][SKIP-NOTLOADED] me=" << _id
+                    << " other=" << u._id << "\n";
+                continue;
+            }
+
+            ++dbg_loaded_player; // // [SendSceneSnapshot] - DEBUG: 로딩 완료 PLAYER 카운트
 
             pkt_sc_object_add add{};
             add.header.size = sizeof(add);
@@ -581,7 +595,23 @@ public:
             add.move_input = u._move_input;
 
             this->do_send(&add);
+
+            // // [SendSceneSnapshot] - DEBUG: 누굴 ADD로 보냈는지
+            std::cout << "[SNAP-ADD][SEND] me=" << _id
+                << " other=" << u._id
+                << " pos=(" << u._position.x << "," << u._position.y << "," << u._position.z << ")"
+                << " hp=" << u._hp
+                << " loaded=" << (u._is_loaded.load(std::memory_order_relaxed) ? 1 : 0)
+                << "\n";
         }
+
+        // // [SendSceneSnapshot] - DEBUG: 요약
+        std::cout << "[SNAP-ADD][SUMMARY] me=" << _id
+            << " targets=" << dbg_targets
+            << " playerCand=" << dbg_player
+            << " loadedPlayer=" << dbg_loaded_player
+            << " sent=" << dbg_sent
+            << "\n";
 
         // 2) 나에게: 기존 좀비들 ADD (스킨 테이블 일관성 유지)
         for (auto* zombie : g_zombies) {
@@ -632,12 +662,15 @@ public:
         GatherUserTargets(targets);
 
 
+        int sent = 0;
         for (SESSION* pu : targets) {
             SESSION& u = *pu;
             if (u._id == _id) continue;
-            if (!u._is_loaded.load(std::memory_order_acquire)) continue; // 로딩중에게는 보내지 않음
+            if (!u._is_loaded.load(std::memory_order_acquire)) continue;
             u.do_send(&me);
+            ++sent;
         }
+        std::cout << "[ADDME] from=" << _id << " toLoaded=" << sent << "\n";
     }
 
 	void process_packet(SIZE2* packet) {
