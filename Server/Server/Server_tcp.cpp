@@ -29,7 +29,7 @@ constexpr bool DEBUG_PRINT = false;
 // // [GLOBAL] - 리스폰 체력(기존 상수 재사용)
 static constexpr SIZE2 PLAYER_RESPAWN_HP = PLAYER_HP;      
 static constexpr int  PLAYER_RESPAWN_MS = 3000;        
-
+static constexpr int RELOAD_FIXED_MS = 2000;
 
 constexpr int ZOMBIE_SKIN_COUNT = 3; 
 static std::mt19937 g_rng{ std::random_device{}() }; 
@@ -87,10 +87,8 @@ struct Zombie {
 static SIZE2 GetMaxAmmo(GunType gt) // 총 타입별 최대 탄 수
 {
     switch (gt) {
-    //case GunType::BULLET_PISTOL:  return 12;
-    case GunType::BULLET_RIFLE:   return 3000;
-    //case GunType::BULLET_SHOTGUN: return 8;
-    default:                      return 3000;
+    case GunType::BULLET_RIFLE:   return 300;
+    default:                      return 300;
     }
 }
 
@@ -98,10 +96,8 @@ static SIZE2 GetMaxAmmo(GunType gt) // 총 타입별 최대 탄 수
 static SIZE2 GetReloadMs(GunType gt)    // 총 타입별 리로드 시간(ms)
 {
     switch (gt) {
-    //case GunType::BULLET_PISTOL:  return 1200;
-    case GunType::BULLET_RIFLE:   return 1500;
-    //case GunType::BULLET_SHOTGUN: return 2000;
-    default:                      return 1500;
+    case GunType::BULLET_RIFLE:   return (SIZE2)RELOAD_FIXED_MS;
+    default:                      return (SIZE2)RELOAD_FIXED_MS;
     }
 }
 
@@ -979,6 +975,22 @@ public:
                 //            session.do_send(&rem);
                 //    }
                 }
+
+                {   // // [SESSION::process_packet] - DEBUG: 스케일/좌표계 검증
+                    static int s_dbg = 0;
+                    if ((++s_dbg % 120) == 0) { // 120발마다(대충)
+                        std::lock_guard<std::mutex> lock(zombiesMutex);
+                        if (!g_zombies.empty() && g_zombies[0]) {
+                            auto zp = g_zombies[0]->GetPosition();
+                            std::cout
+                                << "[HITDBG] bulletPos=(" << ox << "," << oy << "," << oz << ")"
+                                << " dir=(" << dx << "," << dy << "," << dz << ")"
+                                << " zombie0=(" << zp.x << "," << zp.y << "," << zp.z << ")"
+                                << "\n";
+                        }
+                    }
+                }
+
             }
             else {
                 //DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id << " miss");
@@ -1245,6 +1257,56 @@ static void Server_OnPlayerDead(SIZEID pid) // 플레이어 죽음 처리 + 리�
     auto remain = std::chrono::duration_cast<std::chrono::milliseconds>(s._respawn_end_tp - std::chrono::steady_clock::now()).count();
     std::cout << "[RESPAWN-SET] pid=" << pid << " remain_ms=" << remain << "\n";
 }
+
+static void Server_TickReload()
+{
+    const auto now = std::chrono::steady_clock::now();
+
+    std::vector<SIZEID> done;
+    done.reserve(16);
+
+    {   // g_users 스캔은 락 안에서
+        std::lock_guard<std::mutex> lk(g_usersMutex);
+        for (auto& [id, s] : g_users) {
+            if (s._obj_type != ObjectType::PLAYER) continue;
+            if (!s._alive.load(std::memory_order_acquire)) continue;
+            if (!s._is_loaded.load(std::memory_order_acquire)) continue;
+
+            if (s._reloading &&
+                s._reload_end_tp != std::chrono::steady_clock::time_point{} &&
+                now >= s._reload_end_tp)
+            {
+                done.push_back(id);
+            }
+        }
+    }
+
+    // 완료 처리는 (가능하면) 개별로 다시 잠깐만 락
+    for (SIZEID pid : done) {
+        SESSION* ps = nullptr;
+
+        {
+            std::lock_guard<std::mutex> lk(g_usersMutex);
+            auto it = g_users.find(pid);
+            if (it == g_users.end()) continue;
+            ps = &it->second;
+
+            if (!ps->_reloading) continue; // 중복 방어
+
+            ps->_ammo_max = GetMaxAmmo(ps->_gun_type);
+            ps->_ammo_cur = ps->_ammo_max;
+            ps->_reloading = false;
+            ps->_reload_end_tp = std::chrono::steady_clock::time_point{};
+        }
+
+        // 락 밖에서 통지
+        if (ps) SendAmmoInfoToSelf(*ps);
+
+        // 디버그(원하면 끄기)
+        // std::cout << "[RELOAD-AUTO-DONE] pid=" << pid << "\n";
+    }
+}
+
 
 // 주기 체크(ZombieAIThread에서 매 프레임 호출)
 static void Server_TickRespawn() // 리스폰 타이밍 체크/처리
@@ -1633,7 +1695,7 @@ void ZombieAIThread() {
         //}
 
         Server_TickRespawn(); // 리스폰 주기 처리
-
+        Server_TickReload();
         {
             std::lock_guard<std::mutex> ulk(g_usersMutex); // 플레이어 스냅샷은 락 걸고 수집(데이터 레이스 방지)
             for (auto& [id, session] : g_users) {

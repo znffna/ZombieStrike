@@ -21,7 +21,7 @@ constexpr short MAX_ZOMBIE_COUNT = 30;  // 최대 좀비 수
 constexpr int W_WIDTH = 250;            // 맵의 크기 정의
 constexpr int W_HEIGHT = 250;
 
-constexpr int GUN_DAMAGE = 50;
+constexpr int GUN_DAMAGE = 200;
 
 
 
