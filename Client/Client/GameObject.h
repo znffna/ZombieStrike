@@ -283,7 +283,6 @@ protected:
 public:
 	// --------------------------------------------
 	// Shader Variables
-	// TODO : 사실상 Object 단위로 Shader Variable을 생성하는 것은 비효율적임
 	// --------------------------------------------
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
@@ -300,7 +299,6 @@ public:
 public:
 	// --------------------------------------------
 	// Skinning Tag
-	// TODO : Bone Tag를 Object가 다루는건 아닌거같음.
 	// --------------------------------------------
 	std::string m_strTag = "None"; // Object Tag (For Skinning)
 	std::string GetTag() const { return m_strTag; }

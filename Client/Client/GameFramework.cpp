@@ -1006,7 +1006,6 @@ LRESULT CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WP
 
 void CGameFramework::PopScene()
 {
-	// TODO : ¾À ÀüÈ¯ ½Ã ·Îµù ¾À Ã³¸®
 	if (!m_Scenes.empty())
 	{
 		m_Scenes.pop_back();

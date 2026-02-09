@@ -84,8 +84,6 @@ bool NetworkingClient::Connect()
         sizeof(serverAddr), NULL, NULL, NULL, NULL) == SOCKET_ERROR)
     {
         error_display("서버 연결 실패", WSAGetLastError());
-        // TODO : 오류가 발생하면 OnlineScene을 제외시키고 다시 Title로 가는 등의 로직 필요. 
-		// TODO : 즉, OnlineScene의 Initialize가 연결 이후로 가야함.
         return false;
     }
 

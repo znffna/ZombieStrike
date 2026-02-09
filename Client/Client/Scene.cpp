@@ -282,7 +282,6 @@ void CScene::ProcessPendingRequest()
 
 	for (auto& object : m_CreateQueue)
 	{
-		// TODO : Initialize 시점에 ID3D12 요소	전달 필요 또는 별도로 가져오는 Init 함수 필요
 		object->SetScene(this);
 		object->SetActive(true);
 

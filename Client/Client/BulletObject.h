@@ -14,9 +14,7 @@ struct FIRE_INFO {
 
 class CBulletParticleObject : public CGameObject
 {
-	// TODO : Bullet을 전부 관리하는 Object로 변경할 예정
-	// 현황 : GPU상에서 모든 Bullet을 파티클처럼 관리 하는 중(즉, 생성만 직접하고 소멸은 GPU에서 SO를 통해 출력시 discard하는 방식)
-	// 목표 : 사격 즉시 피격위치 확정 및 GPU에 파티클 출력.
+	// 로직 : 사격 즉시 피격위치 확정 및 GPU에 파티클 출력.
 	//      : 이떄 총알은 GPU상에서 전진되며, GPU에 파티클 생성시에 주어진 거리 비례 LifeTime을 소유.
 	//      : 즉, 총알이 날아가는 듯한 느낌만 주기 위함이며, 실제 피격효과로 인한 출력은 HitResult에 의해
 	//      : 별도 파티클 생성으로 이루어 진다.(즉, Trail과 혈흔 표현을 별도로 구현 예정)

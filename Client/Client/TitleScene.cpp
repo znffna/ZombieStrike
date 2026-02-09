@@ -95,7 +95,6 @@ void CTitleScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 				bool ret = NetworkingClient::Instance().Connect();
 				if (!ret)
 				{
-					//TODO : 해당 로직을 TitleScene에서 이미지를 띄우고 지우는 로직으로 변경할 예정
 					auto ip = StringToWString(NetworkingClient::Instance().LoadIPAddress());
 					std::wstring str = L" 서버에 연결할 수 없습니다. (" + ip + L")";
 					OutputDebugStringW(str.c_str());
@@ -127,7 +126,6 @@ void CTitleScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			{
 			case VK_ESCAPE:
 				// ESC 키를 눌러 프로그램 종료
-				// TODO : 해당 로직을 TitleScene에서 이미지를 띄우고 지우는 로직으로 변경할 예정
 				PostQuitMessage(0);
 				break;
 			default:

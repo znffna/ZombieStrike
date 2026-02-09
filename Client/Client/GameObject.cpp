@@ -228,7 +228,6 @@ void CGameObject::Update(float fTimeElapsed)
 	}
 
 	// Component Update 
-	// TODO : 순서좀 생각해야 될 듯?
 	for (auto& pComponent : m_pComponents)
 	{
 		pComponent->Update(fTimeElapsed);
@@ -375,7 +374,6 @@ BoundingBox CGameObject::GetMergedMeshBound(BoundingBox* pVolume)
 
 void CGameObject::UpdateLocalBoundingBox(const XMFLOAT4X4& pParentTransform)
 {
-	// TODO : m_pModelCollider의 LocalBoundingBox를 업데이트
 	// 이때 업데이트는 부모의 Inverse를 WorldMatrix에 적용해 오직 현 Object space를 기준으로 한 local 좌표로 얻는다.
 
 	for (auto& pChild : m_pChilds)
@@ -718,7 +716,6 @@ void CGameObject::LoadMaterialsFromFile(std::ifstream& File, std::shared_ptr<CSh
 		}
 		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
 		{
-			// TODO : 여기에선 순수 텍스처 이름만 읽어오고, 텍스처 로드는 나중에 수행하도록 변경 필요
 			pMaterial->LoadTextureFromFile(MATERIAL_ALBEDO_MAP, File);
 			// pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_ALBEDO_MAP, ROOT_PARAMETER_ALBEDO_TEXTURE, pMaterial->m_strTextureNames[0], (pMaterial->m_ppTextures[0]), pParent, File, pShader);
 		}
