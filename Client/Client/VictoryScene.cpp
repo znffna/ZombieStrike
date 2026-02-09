@@ -20,6 +20,9 @@ void CVictoryScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		auto pBackgroundObject = RequestCreateObject(TypeTag<CSprite>(), L"Image/Victory.dds");
 		pBackgroundObject->SetSize(0.0f, 0.0f, 1.0f, 1.0f);
 	}
+
+	Sound::StopMusic();
+	Sound::PlaySound("Sound/victory.mp3");
 }
 
 void CVictoryScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)

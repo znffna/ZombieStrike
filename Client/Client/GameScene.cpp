@@ -186,6 +186,8 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		auto pCamera = m_pPlayer->GetComponent<CCamera>();
 		SelectCamera(pCamera);
 	}
+
+	Sound::PlayMusic("Sound/bgmusic.mp3");
 }
 
 void CGameScene::CreateFreeCamera(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)

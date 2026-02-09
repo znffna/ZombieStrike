@@ -8,6 +8,7 @@ CTitleScene::CTitleScene()
 
 CTitleScene::~CTitleScene()
 {
+	Sound::StopMusic();
 }
 
 void CTitleScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
@@ -39,6 +40,8 @@ void CTitleScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 		m_pExitButton = pExitButton;
 	}
+
+	Sound::PlayMusic("Sound/title.mp3");
 }
 
 void CTitleScene::ReleaseObjects()
