@@ -87,7 +87,9 @@ struct Zombie {
 static SIZE2 GetMaxAmmo(GunType gt) // 총 타입별 최대 탄 수
 {
     switch (gt) {
+    //case GunType::BULLET_PISTOL:  return 12;
     case GunType::BULLET_RIFLE:   return 300;
+    //case GunType::BULLET_SHOTGUN: return 8;
     default:                      return 300;
     }
 }

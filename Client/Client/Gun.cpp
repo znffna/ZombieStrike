@@ -114,12 +114,14 @@ bool CGun::Fire(const XMFLOAT3& xmf3Direction, FIRE_INFO* pFireInfo)
 
 	((CBulletParticleObject*)bulletobjects[0])->AddFireInfo(fireInfo);
 
+#ifdef _DEBUG
 	{
 		std::string debug = "Gun Fire \n";
 		debug += "Position: " + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + "\n";
 		debug += "Direction: " + std::to_string(direction.x) + ", " + std::to_string(direction.y) + ", " + std::to_string(direction.z) + "\n";
 		OutputDebugStringA(debug.c_str());
 	}
+#endif
 
 	if (pFireInfo) {
 		*pFireInfo = fireInfo; // 발사 정보 전달
