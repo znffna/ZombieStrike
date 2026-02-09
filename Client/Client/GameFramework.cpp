@@ -823,6 +823,9 @@ void CGameFramework::ProcessInput(CScene* pScene)
 
 	pScene->SetCursor();
 
+	// 자체 커서 사용 예정
+	ShowCursor(NULL);
+
 	GetKeyboardState(pKeysBuffer);
 	if (nullptr != pScene) bProcessedByScene = pScene->ProcessKeyboardInput(pKeysBuffer, m_GameTimer.DeltaTime()) ? true : false;
 	
