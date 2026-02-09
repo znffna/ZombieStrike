@@ -78,7 +78,7 @@ void COnlineScene::Update(float deltaTime)
 
 	if (m_pAmmoInfo)
 	{
-		auto pTextComp = m_pScoreInfo->GetComponent<CTextComponent>();
+		auto pTextComp = m_pAmmoInfo->GetComponent<CTextComponent>();
 		if (pTextComp)
 		{
 			// Åº¾à Á¤º¸

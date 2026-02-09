@@ -155,10 +155,11 @@ void CPlayer::Update(float fTimeElapsed)
 	if(m_bReload)
 	{
 		m_fReloadTime += fTimeElapsed;
-		if (m_fReloadTime >= 1.0f) {
+		if (m_fReloadTime >= 2.0f) {
 			if (m_pGun) m_pGun->Reload();
 			m_fReloadTime = 0.0f;
 			SetState(PLAYER_ANIMATION_POSE::PLAYER_IDLE);
+			m_bReload = false;
 		}
 	}
 
@@ -364,9 +365,13 @@ bool CPlayer::Fire(FIRE_INFO* pFireInfo)
 
 void CPlayer::Reload()
 {
+	if (m_bReload) return; // 이미 재장전 중
+
 	SetUpperState(PLAYER_ANIMATION_POSE::RELOAD);
 	m_bReload = true;
 	m_fReloadTime = 0.0f;
+
+	Sound::PlaySound("Sound/reload.wav");
 }
 
 void CPlayer::SetHealthUIPostion(int nOutputSlot)
