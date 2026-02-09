@@ -999,6 +999,7 @@ public:
             SendAmmoInfoToSelf(*this);
             break;
         }
+
         default:
             std::cout << "[WARN] Unknown PacketType: " << packet_type << "\n";
             break;
@@ -1137,41 +1138,48 @@ static void BroadcastPlayerFullUpdate(SIZEID victimId)
     u.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
     u.id = victimId;
 
-    //{   
-    //    std::lock_guard<std::mutex> lk(g_usersMutex);
-    //    auto it = g_users.find(victimId);
-    //    if (it == g_users.end()) return;
-    //    SESSION& v = it->second;
-
-    //    u.position = v._position;
-    //    u.velocity = v._velocity;
-    //    u.look = v._look;
-    //    u.pitch = v._pitch;
-    //    u.hp = v._hp;
-
-    //    u.gun_type = v._gun_type;
-    //    u.level = v._level;
-    //    u.score = v._score;
-    //    u.damage = v._damage;
-    //    u.act_type = v._act_type;
-    //    u.move_input = v._move_input;
-    //}
-
-    {   // // [BroadcastPlayerRespawnMinimal] - 리스폰 시 HP/Position만 채움
+    {   // // [BroadcastPlayerFullUpdate] - 피해/리스폰 시 0 덮어쓰기 방지: 전체 필드 채움
         std::lock_guard<std::mutex> lk(g_usersMutex);
         auto it = g_users.find(victimId);
         if (it == g_users.end()) return;
         SESSION& s = it->second;
 
         u.position = s._position;
+        u.velocity = s._velocity;
+        u.look = s._look;
+        u.pitch = s._pitch;
         u.hp = s._hp;
-        // look/pitch/velocity/act/move_input 등은 "건드리지 않음" (0으로 보내도 덮어쓰면 문제라 아예 설계가 필요)
-    }
 
+        u.gun_type = s._gun_type;
+        u.level = s._level;
+        u.score = s._score;
+        u.damage = s._damage;
+        u.act_type = s._act_type;
+        u.move_input = s._move_input;
+    }
 
     std::vector<SESSION*> targets;
     GatherUserTargets(targets);
     for (SESSION* ps : targets) ps->do_send(&u);
+}
+
+static void BroadcastPlayerHpOnly(SIZEID pid) // HP만 브로드캐스트(방향/상태 불변)
+{
+    pkt_sc_player_hp_only p{};
+    p.header.size = sizeof(p);
+    p.header.type = PKT_TYPE::S_C_PLAYER_HP_ONLY;
+    p.id = pid;
+
+    {
+        std::lock_guard<std::mutex> lk(g_usersMutex);
+        auto it = g_users.find(pid);
+        if (it == g_users.end()) return;
+        p.hp = it->second._hp;
+    }
+
+    std::vector<SESSION*> targets;
+    GatherUserTargets(targets);
+    for (SESSION* s : targets) s->do_send(&p);
 }
 
 
@@ -1248,7 +1256,7 @@ static void Server_TickRespawn() // 리스폰 타이밍 체크/처리
             s._respawn_end_tp = std::chrono::steady_clock::time_point{};
         }
 
-        BroadcastPlayerFullUpdate(pid); // 전체 동기화(위치/HP/상태)
+        BroadcastPlayerHpOnly(pid); // HP만
         std::cout << "[RESPAWN-DONE] pid=" << pid << "\n";
     }
 }
@@ -1695,7 +1703,7 @@ void ZombieAIThread() {
 
                         // 3) 변경 브로드캐스트(HP-only 금지 → 풀 업데이트)
                         if (applied) {
-                            BroadcastPlayerFullUpdate(bestPid); // 피해자 상태 동기화
+                            BroadcastPlayerHpOnly(bestPid);
                         }
 
                         // 죽음이면 리스폰 예약(락 밖에서)
@@ -1845,7 +1853,7 @@ int main() {
     Server_StartWave(1);
     //SpawnZombies(MAX_ZOMBIE_COUNT);
 
-    SIZEID clientId = 0;
+    SIZEID clientId = 1;
     INT serverAddr_size = sizeof(SOCKADDR_IN);
 
     while (serverRunning) {

@@ -330,7 +330,7 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 		{
 			CPlayer* pPlayer = (CPlayer*)obj;
 
-			pPlayer->SetHealth((float)updatePkt->hp);
+			//pPlayer->SetHealth((float)updatePkt->hp);
 
 			if (!isLocalPlayer)
 			{
@@ -457,6 +457,26 @@ void COnlineScene::ProcessPacket(PacketHeader* recv_p)
 
 		break;
 	}
+
+	case PKT_TYPE::S_C_PLAYER_HP_ONLY:
+	{
+		auto* p = reinterpret_cast<pkt_sc_player_hp_only*>(recv_p);
+
+		auto itObj = m_mapGameObjects.find(p->id);
+		if (itObj == m_mapGameObjects.end()) break;
+
+		auto itType = m_mapObjectTypes.find(p->id);
+		if (itType == m_mapObjectTypes.end()) break;
+
+		if (itType->second != ObjectType::PLAYER) break;
+
+		CPlayer* pl = static_cast<CPlayer*>(itObj->second);
+		pl->SetHealth((float)p->hp); // HP¸¸ °»½Å
+
+		break;
+	}
+
+
 
 	default:
 		break;
