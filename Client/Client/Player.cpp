@@ -345,8 +345,8 @@ bool CPlayer::Fire(FIRE_INFO* pFireInfo)
 		auto pCamera = GetComponent<CCamera>();
 		bool ret =  m_pGun->Fire(pCamera->GetPosition(), pCamera->GetLook(), pFireInfo);
 		if (ret) {
-			Sound::PlaySound("Sound/gun_fire.wav");
 			Sound::SetSoundVolume(0.3f);
+			Sound::PlaySound("Sound/gun_fire.wav");
 			SetUpperState(PLAYER_ANIMATION_POSE::FIRE);
 		}
 		return ret;
@@ -356,6 +356,9 @@ bool CPlayer::Fire(FIRE_INFO* pFireInfo)
 
 void CPlayer::Reload()
 {
+	Sound::SetSoundVolume(0.3f);                
+	Sound::PlaySound("Sound/reload.wav");        
+
 	SetState(PLAYER_ANIMATION_POSE::RELOAD);
 	m_bReload = true;
 	m_fReloadTime = 0.0f;
