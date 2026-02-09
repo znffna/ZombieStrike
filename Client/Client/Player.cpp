@@ -356,7 +356,7 @@ bool CPlayer::Fire(FIRE_INFO* pFireInfo)
 
 void CPlayer::Reload()
 {
-	SetState(PLAYER_ANIMATION_POSE::RELOAD);
+	SetUpperState(PLAYER_ANIMATION_POSE::RELOAD);
 	m_bReload = true;
 	m_fReloadTime = 0.0f;
 }
