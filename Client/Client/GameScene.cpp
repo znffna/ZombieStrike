@@ -7,6 +7,7 @@
 #include "Sprite.h"
 #include "GaugeBar.h"
 #include "CollisionChecker.h"
+#include "GameFramework.h"
 
 CGameScene::CGameScene()
 {
@@ -14,6 +15,7 @@ CGameScene::CGameScene()
 
 CGameScene::~CGameScene()
 {
+	if (m_pHealthObject) m_pHealthObject->m_pTextBlock->SetActive(false);
 }
 
 void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dRootSignature)
@@ -125,8 +127,16 @@ void CGameScene::InitializeObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 			pHealthObject->AddMaterial(pHealthMaterial);
 			pHealthObject->SetName("Health");
 			
+			// Health Bar 크기 설정
+
 			float aspectRatio = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
 			pHealthObject->SetGauge(1.0f, -1.0f, -1.0f, 0.3f, 0.1f);
+
+			// Health Text 생성
+			pHealthObject->m_pTextBlock = CGameFramework::pGameFramework->GetUILayer()->GetNewTextBlock(2);
+			pHealthObject->m_pTextBlock->SetText(L"HP :");
+			pHealthObject->m_pTextBlock->SetActive(false);
+			m_pHealthObject = pHealthObject;
 
 			pPlayer->SetHealthObject(pHealthObject);
 			AddObject(pHealthObject);
@@ -222,6 +232,10 @@ void CGameScene::Update(float deltaTime)
 		m_bPrintObjectCount = false;
 	}
 
+	std::wstring strHealthText = L"HP : " + std::to_wstring((int)m_pPlayer->GetHealth()) + L" / " + std::to_wstring((int)m_pPlayer->GetMaxHealth());
+	m_pHealthObject->m_pTextBlock->SetText(strHealthText.data());
+
+
 	BuildFiredBullets();
 }
 
@@ -275,6 +289,19 @@ void CGameScene::BuildFiredBullets()
 			std::string debugOutput = "CGameScene::BuildFiredBullets() - Bullet Position: " + std::to_string(pBullet.xmf3Position.x) + ", " + std::to_string(pBullet.xmf3Position.y) + ", " + std::to_string(pBullet.xmf3Position.z) + "\n";
 			debugOutput += "Velocity: " + std::to_string(pBulletVertex.m_xmf3Velocity.x) + ", " + std::to_string(pBulletVertex.m_xmf3Velocity.y) + ", " + std::to_string(pBulletVertex.m_xmf3Velocity.z) + "\n";
 			debugOutput += "Impact Distance: " + std::to_string(pBullet.fRange) + "\n";
+			debugOutput += "Hit Object Type: ";
+			switch (pBulletVertex.m_nHitObjectType) {
+				case HIT_TYPE_NONE:
+					debugOutput += "None";
+					break;
+				case HIT_TYPE_ENVIRONMENT:
+					debugOutput += "Environment";
+					break;
+				case HIT_TYPE_ENEMY:
+					debugOutput += "Enemy";
+					break;
+			}
+			debugOutput += "\n";
 			
 			OutputDebugStringA(debugOutput.c_str());
 		}
@@ -286,6 +313,8 @@ void CGameScene::BuildFiredBullets()
 void CGameScene::OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	if(m_pBulletObject) m_pBulletObject->OnPostRender();
+
+	if (m_pHealthObject) m_pHealthObject->m_pTextBlock->SetActive(true);
 }
 
 bool CGameScene::ProcessMouseInput(float cxDelta, float cyDelta, float deltaTime)
@@ -312,11 +341,19 @@ bool CGameScene::ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaT
 	if (pKeysBuffer['A'] & 0xF0) dwDirection |= DIR_LEFT;
 	if (pKeysBuffer['D'] & 0xF0) dwDirection |= DIR_RIGHT;
 
-	if (dwDirection) {
-		if (m_pPlayer) {
-			m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
+	if (m_pPlayer) {
+		//m_pPlayer->SetMoveInput(dwDirection);
+		m_pPlayer->Move(dwDirection, 10.0f, deltaTime);
+
+		if (pKeysBuffer['R'] & 0xF0) {
+			if (auto pGun = m_pPlayer->GetGun())
+			{
+				m_pPlayer->Reload();
+			}
 		}
 	}
+
+	
 
 	return true;
 }

@@ -541,6 +541,23 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 		d3dDescriptorRanges.push_back(d3dDescriptorRange);
 	}
 
+	// Random Buffer
+	{
+		d3dDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		d3dDescriptorRange.NumDescriptors = 1;
+		d3dDescriptorRange.BaseShaderRegister = 30; //t30: gtxtRandomTexture
+		d3dDescriptorRange.RegisterSpace = 0;
+		d3dDescriptorRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		d3dDescriptorRanges.push_back(d3dDescriptorRange);
+
+		d3dDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		d3dDescriptorRange.NumDescriptors = 1;
+		d3dDescriptorRange.BaseShaderRegister = 31; //t31: gtxtRandomOnSphereTexture
+		d3dDescriptorRange.RegisterSpace = 0;
+		d3dDescriptorRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		d3dDescriptorRanges.push_back(d3dDescriptorRange);
+	}
+
 	// Root Parameter 
 	std::vector<D3D12_ROOT_PARAMETER> pd3dRootParameters(11); // 11 = Object ~ Light (5) + Texture(1) + Skybox(1) + Skinning(2) + Depth write(1) + ToLight(1)
 
@@ -591,7 +608,7 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	// Textures
 #ifdef _WITH_STANDARD_TEXTURE_MULTIPLE_PARAMETERS
 	// 추가될 파라미터 수 만큼 resize
-	pd3dRootParameters.resize(pd3dRootParameters.size() + 6);
+	pd3dRootParameters.resize(pd3dRootParameters.size() + 6 + 2);
 
 	pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
@@ -662,6 +679,16 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	pd3dRootParameters[ROOT_PARAMETER_TO_LIGHT].Descriptor.RegisterSpace = 0;
 	pd3dRootParameters[ROOT_PARAMETER_TO_LIGHT].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
+	// Random Buffer
+	pd3dRootParameters[ROOT_PARAMETER_RANDOMBUFFER].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[ROOT_PARAMETER_RANDOMBUFFER].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[ROOT_PARAMETER_RANDOMBUFFER].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
+	pd3dRootParameters[ROOT_PARAMETER_RANDOMBUFFER].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	pd3dRootParameters[ROOT_PARAMETER_RANDOM_SPHERE_BUFFER].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[ROOT_PARAMETER_RANDOM_SPHERE_BUFFER].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[ROOT_PARAMETER_RANDOM_SPHERE_BUFFER].DescriptorTable.pDescriptorRanges = &d3dDescriptorRanges[nDescriptorIndexCounter++];
+	pd3dRootParameters[ROOT_PARAMETER_RANDOM_SPHERE_BUFFER].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	// Static Sampler
 	std::vector<D3D12_STATIC_SAMPLER_DESC> pd3dStaticSamplerDescs(4);
@@ -743,6 +770,12 @@ ComPtr<ID3D12RootSignature> CScene::CreateGraphicsRootSignature(ID3D12Device* pd
 	ID3DBlob* pd3dSignatureBlob = NULL;
 	ID3DBlob* pd3dErrorBlob = NULL;
 	HRESULT hResult = D3D12SerializeRootSignature(&d3dRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &pd3dSignatureBlob, &pd3dErrorBlob);
+
+	if (FAILED(hResult))
+	{
+		if (pd3dErrorBlob) OutputDebugStringA((char*)pd3dErrorBlob->GetBufferPointer());
+		return (nullptr);
+	}
 
 	// Create Root Signature
 	hResult = pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)pd3dRootSignature.GetAddressOf());

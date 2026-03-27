@@ -23,7 +23,7 @@ public:
 
 	// Object Update
 	virtual void Update(float fTimeElapsed) override;
-	void UpdateUnderAnimation();
+	void UpdateLowerAnimation();
 	virtual void Move(DWORD dwDirection, float fDistance, float deltaTime) override;
 
 	// Object Render
@@ -39,11 +39,14 @@ public:
 	std::shared_ptr<CGun> GetGun() const { return m_pGun; }
 
 	bool Fire(FIRE_INFO* pFireInfo);
+
+	// Reload
+	bool m_bReload = false; // 총알 재장전 여부
+	float m_fReloadTime = 0.0f;
 	void Reload();
 
 	// UI
 	void SetHealthObject(const std::shared_ptr<CGaugeBar>& pHealthGauge) { m_pHealthGauge = pHealthGauge; }
-
 
 private:
 	std::vector<std::string> m_ModelName{ "Ch18_nonPBR", "Ch35_nonPBR" };
@@ -64,8 +67,18 @@ private:
 	int m_nSkinType = 0;
 
 	// Player State
+private:
 	float m_fHealth = 100.0f; // Player Health
 	float m_fMaxHealth = 100.0f; // Max Health
+	float m_fMoveSpeed = 10.0f; // Player Move Speed
+
+public:
+	void SetHealth(float fHealth) { m_fHealth = fHealth; }
+	float GetHealth() const { return m_fHealth; }
+	void SetMaxHealth(float fMaxHealth) { m_fMaxHealth = fMaxHealth; }
+	float GetMaxHealth() const { return m_fMaxHealth; }
+	void SetMoveSpeed(float fMoveSpeed) { m_fMoveSpeed = fMoveSpeed; }
+	float GetMoveSpeed() const { return m_fMoveSpeed; }
 
 	// Player Move Input
 private:

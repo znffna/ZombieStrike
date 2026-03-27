@@ -52,6 +52,13 @@
 
 #include "d3dx12.h"
 
+// DirectX 11
+#include <dxgi1_6.h>
+#include <d2d1_3.h>
+#include <d3d11on12.h>
+
+#include <dwrite.h>
+
 #ifdef _DEBUG
 #include <dxgidebug.h>
 #endif
@@ -70,11 +77,21 @@ using Microsoft::WRL::ComPtr;
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 
+#pragma comment(lib, "d3dcompiler.lib")
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "d2d1.lib")
+#pragma comment(lib, "dwrite.lib")
+#pragma comment(lib, "dxguid.lib")
+
 #pragma comment(lib, "dxguid.lib")
 
 // DirectXTK
 //#include <WICTextureLoader.h>
 //#include <DDSTextureLoader.h>
+
+// Direct UI
+#define _WITH_DIRECT_WRITE_UI
+
 
 // Global Variables
 #define _WITH_STANDARD_TEXTURE_MULTIPLE_PARAMETERS
@@ -122,6 +139,10 @@ using Microsoft::WRL::ComPtr;
 
 #define ROOT_PARAMETER_DEPTH_WRITE (ROOT_PARAMETER_SKINNED_BONE_TRANSFORM + 1) // 15 or 9
 #define ROOT_PARAMETER_TO_LIGHT (ROOT_PARAMETER_DEPTH_WRITE + 1) // 16 or 10
+
+#define ROOT_PARAMETER_RANDOMBUFFER (ROOT_PARAMETER_TO_LIGHT + 1) // 17 or 11
+#define ROOT_PARAMETER_RANDOM_SPHERE_BUFFER (ROOT_PARAMETER_RANDOMBUFFER + 1) // 18 or 12
+
 
 // GaneFramework
 extern bool g_bWindowActive; // 전역 또는 멤버 변수로 상태 저장

@@ -109,7 +109,18 @@ public:
 	virtual GAMEOBJECT_LAYER GetLayer() { return m_nLayer; }
 
 	void SetState(int state) {
-		if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->ChangeState(state);
+		if (m_pSkinnedAnimationController) {
+			if (m_pSkinnedAnimationController->ChangeState(state)) {
+				/*if (GetLayer() == LAYER_PLAYER) {
+					std::string debugString = std::to_string(GetServerID()) + " Player : Change Animation State to " + std::to_string(static_cast<int>(state)) + "\n";
+					OutputDebugStringA(debugString.c_str());
+				}*/
+			}
+		}
+	}
+	int GetUpperState() {
+		if (m_pSkinnedAnimationController) return m_pSkinnedAnimationController->GetUpperState();
+		return -1;
 	}
 
 	// 상속 관계
@@ -176,7 +187,21 @@ protected:
 	UINT m_nObjectID; // Object ID
 	UINT m_nObjectServerID; // Object Server ID
 	std::string m_strName;  // Object Name
-	std::string m_strTag = "Untagged"; // Object Tag (For Skinning)
+
+public:
+	std::string m_strTag = "None"; // Object Tag (For Skinning)
+	std::string GetTag() const { return m_strTag; }
+	
+	float GetBoneUpperWeight() const
+	{ 
+		if (m_strName == "mixamorig:Hips") return 0.55f;
+		else if (m_strName == "mixamorig:Spine") return 0.55f;
+		else if (m_strName == "mixamorig:Spine1") return 0.75f;
+		else if (m_strName == "mixamorig:Spine2") return 0.9f;
+		else if (m_strTag == "Upper") return 1.0f;
+		else return 0.0f;
+	}
+
 
 	std::shared_ptr<CMesh> m_pMesh; // Object Mesh
 
@@ -493,6 +518,7 @@ private:
 struct FIRE_INFO {
 	XMFLOAT3 xmf3Position;
 	XMFLOAT3 xmf3Look;
+	XMFLOAT3 xmf3MuzzlePosition; // 총구 위치(렌더링 파티클 점 생성시 사용)
 	int nBulletType = 0; // 총알 타입(0: 일반, 1: 산탄총 등)
 	float fRange = 0.0f;
 	float fspeed = 0.0f; // 총알 속도
@@ -527,6 +553,9 @@ public:
 private:
 	std::vector<FIRE_INFO> m_pFireInfos;
 
+	std::shared_ptr<CTexture> m_pRandowmValueTexture;
+	std::shared_ptr<CTexture> m_pRandowmValueOnSphereTexture;
+
 public:
 	void AddFireInfo(const FIRE_INFO& fireInfo) {
 		m_pFireInfos.push_back(fireInfo);
@@ -546,19 +575,61 @@ public:
 
 }; // CBulletParticleObject
 
-//class CUIObject : public CGameObject
-//{
-//public:
-//	CUIObject() {
-//		SetMesh(CResourceManager::GetInstance().GetMesh("UIMesh"));
-//	};
-//	virtual ~CUIObject() {};
-//	virtual GAMEOBJECT_LAYER GetLayer() override { return GAMEOBJECT_LAYER::LAYER_UI; }
-//	// Object Initialization
-//	virtual void Initialize(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-//	virtual std::string GetDefaultName() override { return "CUIObject"; }
-//	static std::shared_ptr<CUIObject> Create(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-//	// Object Render
-//	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, bool bDepthWrite = false) override {};
-//}; // CUIObject
+
+class TextBlock
+{
+public:
+	bool						    m_bActive = true;
+	std::wstring                    m_pstrText;
+	D2D1_RECT_F                     m_d2dLayoutRect;
+	ComPtr<IDWriteTextFormat> m_pdwFormat;
+	ComPtr<ID2D1SolidColorBrush> m_pd2dTextBrush;
+
+	void SetText(std::wstring pstrUIText) {
+		m_pstrText = pstrUIText;
+	}
+
+	void SetActive(bool bActive) {
+		m_bActive = bActive;
+	}
+};
+
+class TextBlock;
+
+class UILayer
+{
+public:
+	UILayer(UINT nFrames, UINT nTextBlocks, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight);
+
+	void StorePoolTextBlock(UINT nIndex, std::wstring* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush);
+	void UpdateTextOutputs(UINT nIndex, std::wstring* pstrUIText, D2D1_RECT_F* pd2dLayoutRect, ComPtr<IDWriteTextFormat> pdwFormat, ComPtr<ID2D1SolidColorBrush> pd2dTextBrush);
+	void Render(UINT nFrame);
+	void ReleaseResources();
+
+	std::shared_ptr<TextBlock> GetNewTextBlock(int nPoolIndex = 0);
+
+	ComPtr<ID2D1SolidColorBrush> CreateBrush(D2D1::ColorF d2dColor);
+	ComPtr<IDWriteTextFormat> CreateTextFormat(WCHAR* pszFontName, float fFontSize);
+
+public:
+	void InitializeDevice(ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets);
+
+	float                           m_fWidth = 0.0f;
+	float                           m_fHeight = 0.0f;
+
+	ComPtr<ID3D11DeviceContext> m_pd3d11DeviceContext;
+	ComPtr<ID3D11On12Device> m_pd3d11On12Device;
+	ComPtr<IDWriteFactory> m_pd2dWriteFactory;
+	ComPtr<ID2D1Factory3> m_pd2dFactory;
+	ComPtr<ID2D1Device2> m_pd2dDevice;
+	ComPtr<ID2D1DeviceContext2> m_pd2dDeviceContext ;
+
+	UINT             m_nRenderTargets = 0;
+	ID3D11Resource** m_ppd3d11WrappedRenderTargets = NULL;
+	ID2D1Bitmap1** m_ppd2dRenderTargets = NULL;
+
+	std::vector<std::shared_ptr<TextBlock>> m_pTextBlocks;
+	std::vector<std::shared_ptr<TextBlock>> m_pTextPools;
+};

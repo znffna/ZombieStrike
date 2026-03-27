@@ -38,6 +38,11 @@ public:
 // Animation Set마다 Track을 연결.
 // Track에선 실행 속도, 현재 시간, 그리고 가중치를 가지고 있음.
 // Track 모음은 AnimationController에서 관리.
+
+#define ANIMATION_MASK_UPPER 0x01
+#define ANIMATION_MASK_LOWER 0x02
+#define ANIMATION_MASK_FULL  ANIMATION_MASK_UPPER | ANIMATION_MASK_LOWER
+
 class CAnimationTrack
 {
 public:
@@ -46,6 +51,8 @@ public:
 
 public:
 	BOOL 							m_bEnable = true;
+	UINT 							m_nMaskFlag = ANIMATION_MASK_FULL; // 0x01 = Upper, 0x02 = Lower, 0x03 = Both Upper and Lower
+
 	float 							m_fSpeed = 1.0f;
 	float 							m_fPosition = -ANIMATION_CALLBACK_EPSILON;
 	float 							m_fWeight = 1.0f;
@@ -59,10 +66,13 @@ public:
 
 	std::shared_ptr<CAnimationCallbackHandler> m_pAnimationCallbackHandler;
 
+	bool CheckTag(const std::string& strTag) const;
+
 public:
 	void SetAnimationSet(int nAnimationSet) { m_nAnimationSet = nAnimationSet; }
 
 	void SetEnable(bool bEnable) { m_bEnable = bEnable; }
+	void SetMask(UINT nMaskFlag, bool bEnable) { bEnable ? m_nMaskFlag |= nMaskFlag : m_nMaskFlag &= ~nMaskFlag; (m_nMaskFlag)? SetEnable(true) : SetEnable(false); }
 	void SetSpeed(float fSpeed) { m_fSpeed = fSpeed; }
 	void SetWeight(float fWeight) { m_fWeight = fWeight; }
 
@@ -76,13 +86,16 @@ public:
 	void HandleCallback();;
 };
 
+
+
 // Animation Set과 Animation Track을 모아놓는 클래스
 class CAnimationController
 {
 public:
-	enum ANIMATION_STATE
+	enum ANIMATION_STATE // Number == Animation Track Index
 	{
-		// IDLE
+		/// Player Animation States
+		// IDLE(Aiming)
 		IDLE = 0,
 		// WALK
 		WALK_RIGHT,
@@ -97,7 +110,20 @@ public:
 		FIRE,
 		// Reload
 		RELOAD,
+		// Hitted
+		HITTED,
+
+		/// Zombie Animation States
+		ZOMBIE_IDLE = 0,
+		ZOMBIE_RUNNING,
+		ZOMBIE_ATTACK,
+		ZOMBIE_DEATH,
+		ZOMBIE_SCREAM,
+		ZOMBIE_HIT,
+		
 	};
+
+	void Print();
 
 	CAnimationController();
 	~CAnimationController();
@@ -108,7 +134,7 @@ public:
 public:
 	// State
 	ANIMATION_STATE state = IDLE;
-	ANIMATION_STATE beforeState = IDLE;
+	ANIMATION_STATE LowerState = IDLE; // Lower Body Animation State
 
 	// Animation 
 	float 							m_fTime = 0.0f;
@@ -129,7 +155,11 @@ public:
 
 	void SetTrackAnimationSet(int nAnimationTrack, int nAnimationSet) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].m_nAnimationSet = nAnimationSet; };
 
+private:
 	void SetTrackEnable(int nAnimationTrack, bool bEnable) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetEnable(bEnable); };
+	
+public:
+	void SetTrackMask(int nAnimationTrack, UINT nFlag, bool bEnable) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetMask(nFlag, bEnable); };
 	void SetTrackPosition(int nAnimationTrack, float fPosition) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetPosition(fPosition); };
 	void SetTrackSpeed(int nAnimationTrack, float fSpeed) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetSpeed(fSpeed); };
 	void SetTrackWeight(int nAnimationTrack, float fWeight) { if (!m_pAnimationTracks.empty()) m_pAnimationTracks[nAnimationTrack].SetWeight(fWeight); };
@@ -141,9 +171,11 @@ public:
 	void AdvanceTime(float fElapsedTime, CGameObject* pRootGameObject);
 	void ApplyPitchToSpine(CGameObject* pRootGameObject);
 
-	void ChangeState(int state) { ChangeState((ANIMATION_STATE)state); };
-	void ChangeState(ANIMATION_STATE state);
-	void ChangeState(ANIMATION_STATE state, float fPosition);
+	bool ChangeState(int state) { return ChangeState((ANIMATION_STATE)state); };
+	bool ChangeState(ANIMATION_STATE state);
+	bool ChangeState(ANIMATION_STATE state, float fPosition);
+	void SetLowerState(int state);
+	int GetUpperState() const { return static_cast<int>(state); }
 
 public:
 	bool m_bRootMotion = false;

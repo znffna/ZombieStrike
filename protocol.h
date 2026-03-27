@@ -16,14 +16,16 @@ constexpr int MAX_NAME_SIZE = 20;
 constexpr int MAX_USER = 5000;          // 서버의 최대 세션 수
 constexpr short MAX_PLAYER_COUNT = 3;   // 최대 플레이어 수
 
-constexpr short MAX_ZOMBIE_COUNT = 30;  // 최대 좀비 수
+constexpr short MAX_ZOMBIE_COUNT = 42;  // 최대 좀비 수
 
 constexpr int W_WIDTH = 250;            // 맵의 크기 정의
 constexpr int W_HEIGHT = 250;
 
-
-
-constexpr SIZE2 PLAYER_HP = 500;           // 플레이어 체력  
+constexpr SIZE2 PLAYER_HP = 500;            // 플레이어 체력  
+constexpr SIZE2 GUN_DAMAGE = 300;           // 총기 데미지 - 일단 2방에 죽나 tset용  
+constexpr SIZE2 ZOMBIE_HP = 500;            // 좀비 초기 체력
+constexpr float ZOMBIE_DAMAGE = 10;         // 좀비 초기 공격력 
+constexpr float Z_move_speed = 0.03f;       // 좀비 스피드
 
 enum ObjectType : SIZE1 {
     PLAYER = 1,
@@ -70,8 +72,10 @@ enum PKT_TYPE : SIZE1 {
 
     C_S_LOGIN = 1,
     C_S_UPDATE,
+
     C_S_SHOOT,
     C_S_HIT,
+    S_C_SHOOT,
 
     //S_C_LOGIN_OK = 14,
     //S_C_LOGIN_FAIL = 15,
@@ -128,6 +132,7 @@ inline const char* ToString(PKT_TYPE type) {
     case C_S_UPDATE:        return "C_S_UPDATE";
     case C_S_SHOOT:         return "C_S_SHOOT";
     case C_S_HIT:           return "C_S_HIT";
+    case S_C_SHOOT:         return "S_C_SHOOT";
     case S_C_OBJ_INFO:      return "S_C_OBJ_INFO";
     case S_C_OBJECT_ADD:    return "S_C_OBJECT_ADD";
     case S_C_OBJECT_UPDATE: return "S_C_OBJECT_UPDATE";
@@ -235,6 +240,7 @@ struct Object {
     SIZE2 score;                // 점수
     SIZE2 damage;               // 공격력
     SIZE1 act_type;             // NONE, Player, ZMOVE, ATTACK, ...
+    SIZE1 move_input;           // 이동 입력
 };
 
 
@@ -267,7 +273,7 @@ struct pkt_cs_update {
     SIZE2 score;                // 점수
     SIZE2 damage;               // 공격력
     SIZE1 act_type;             // NONE, Player, ZMOVE, ATTACK, ...
-	SIZE1 move_input;          // 이동 입력
+	SIZE1 move_input;           // 이동 입력
 };
 
 // 총알 발사 패킷
@@ -303,11 +309,21 @@ struct ZombieHit {
     SIZE2 hp;
     SIZE2 damage;
 };
+
 struct pkt_sc_hit_multi_result {
     PacketHeader header;
     uint8_t hitCount;
     ZombieHit hits[10];             // 최대 10마리 좀비 피격 처리
 };
+
+struct pkt_sc_shoot {
+    PacketHeader header{ sizeof(*this), PKT_TYPE::S_C_SHOOT }; 
+    SIZEID shooterId;      // 누가 쐈는지
+    GunType gun_type;      // 총 종류(이펙트/사운드)
+    float bulletPos[3];    // 발사 원점
+    float bulletDir[3];    // 정규화 방향
+};
+
 // 로그인 결과 패킷
 struct pkt_sc_obj_info {
     PacketHeader header{ sizeof(*this), PKT_TYPE::S_C_OBJ_INFO };
@@ -325,6 +341,7 @@ struct pkt_sc_obj_info {
     SIZE2 damage;               // 공격력
     GunType gun_type;           // 총 종류
     SIZE1 act_type;             // NONE, Player, ZMOVE, ATTACK, ...
+    SIZE1 move_input;           // 이동 입력
 };
 
 // --- Object 관리 패킷 ---
@@ -338,6 +355,7 @@ struct pkt_sc_object_add {
     SIZE2 starthp;              // 체력
     GunType gun_type;           // 총 종류
 	SIZE1 act_type;			    // NONE, Player, ZMOVE, ATTACK, ...
+    SIZE1 move_input;           // 이동 입력
 };
 
 // 객체 업데이트
@@ -355,6 +373,7 @@ struct pkt_sc_object_update {
     SIZE2 score;                // 점수
     SIZE2 damage;               // 공격력
     SIZE1 act_type;             // NONE, Player, ZMOVE, ATTACK, ...
+    SIZE1 move_input;           // 이동 입력
 };
 // 객체 삭제
 struct pkt_sc_object_remove {
@@ -376,6 +395,7 @@ struct pkt_sc_stage_info {
     SIZE2 totalStages;
     SIZE3 timeLeft;
 };
+
 // SCORE 정보
 struct pkt_cs_score_info {
     PacketHeader header{ sizeof(*this),PKT_TYPE::C_S_SCORE_INFO };
@@ -383,8 +403,11 @@ struct pkt_cs_score_info {
 };
 struct pkt_sc_score_info {
     PacketHeader header{sizeof(*this),PKT_TYPE::S_C_SCORE_INFO };
-    SIZE2 stage_score;
-};
+    SIZE2 stage_score;      // 스테이지 점수
+    SIZE2 total_spawned;;   // 스폰 좀비 수 
+    SIZE2 total_killed;     // 죽인 좀비 수
+    SIZE2 alive;            // 남아있는 좀비 수
+};  
 
 #pragma pack (pop)
 

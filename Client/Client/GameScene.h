@@ -29,7 +29,6 @@ public:
 	virtual void Update(float deltaTime) override;
 	virtual void UpdateLights() override;
 
-
 	virtual void OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList) override;
 	virtual bool ProcessMouseInput(float cxDelta, float cyDelta, float deltaTime) override;
 	virtual bool ProcessKeyboardInput(const UCHAR pKeysBuffer[256], float deltaTime) override;
@@ -75,4 +74,6 @@ public:
 	std::shared_ptr<CCamera> m_pFreeCamera;
 
 	bool m_bPrintObjectCount = false; // 디버그 출력용
+
+	std::shared_ptr<CSprite> m_pHealthObject;
 };

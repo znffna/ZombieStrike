@@ -113,6 +113,31 @@ std::vector<std::pair<int, int>> ZombieAI::AStar::FindPath(int startX, int start
             break;
         }
 
+
+        // 4방향 탐색으로 축소  //
+        //const int dirX[4] = { 1, -1,  0,  0 };   // // AStar::FindPath: 4-방향만
+        //const int dirZ[4] = { 0,  0,  1, -1 };   // // AStar::FindPath: 4-방향만
+        //for (int dir = 0; dir < 4; ++dir)       // // AStar::FindPath: 루프 8→4
+        //{
+        //    int nx = current->x + dirX[dir];
+        //    int nz = current->z + dirZ[dir];
+
+        //    if (nx < 0 || nx >= m_width || nz < 0 || nz >= m_height) continue;
+        //    if (m_map[nz][nx] != 0) continue;
+
+        //    // (삭제) 대각선 코너-컷 체크는 불필요  // // AStar::FindPath: 대각선 제거
+
+        //    int nextKey = nz * m_width + nx;
+        //    if (closedList.find(nextKey) != closedList.end()) continue;
+
+        //    Node* neighbor = new Node{ nx, nz };
+        //    float stepCost = 1.0f;                         // // AStar::FindPath: 4방향 단위비용
+        //    neighbor->gCost = current->gCost + stepCost;   // // A* 누적 gCost 갱신
+        //    neighbor->hCost = Heuristic(nx, nz, endX, endZ);
+        //    neighbor->parent = current;
+        //    openList.push(neighbor);
+        //}
+
         // 8방향 탐색
         const int dirX[8] = { 1, -1,  0,  0,  1,  1, -1, -1 };
         const int dirZ[8] = { 0,  0,  1, -1,  1, -1,  1, -1 };
@@ -162,7 +187,16 @@ ZombieAI::ZombieAI(const std::vector<std::vector<int>>& map, int id)
 {
     m_astar = std::make_unique<AStar>(map);
     //m_astar = new AStar(map);
+
+    // // ZombieAI: 개별 속도 랜덤 지정 (예: 80%~120%)
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dist(0.8f, 1.2f);
+
+    //m_speed = Z_move_speed * dist(gen);
+    m_speed = Z_move_speed;
 }
+ZombieAI::~ZombieAI() = default;
 
 void ZombieAI::SetPosition(float x, float z) {
     if (std::abs(m_x - x) > 0.01f || std::abs(m_z - z) > 0.01f)
@@ -218,6 +252,7 @@ Vec3  ZombieAI::FindClosestPlayer(const std::vector<Vec3>& playerPositions)
 
         if (distanceSq < minDistanceSq)
         {
+
             minDistanceSq = distanceSq;
             closestPlayer = playerPos;
         }
@@ -260,6 +295,57 @@ bool ZombieAI::IsAttacking() const
     return m_attack_left > 0.0f;
 }
 
+// // ZombieAI::TickAttackCooldown: 공격 쿨다운 감소
+void ZombieAI::TickAttackCooldown(float dt) {
+    if (m_attack_cd > 0.0f) {
+        m_attack_cd = std::max(0.0f, m_attack_cd - dt);    // // TickAttackCooldown: 타이머 감소
+    }
+}
+
+// // ZombieAI::TryMeleeHit: 범위 내 플레이어 1명 히트 판정(쿨다운 소모)
+int ZombieAI::TryMeleeHit(const std::vector<std::pair<SIZEID, Vec3>>& players, float dt) {
+    if (m_removed) return -1;                              // // TryMeleeHit: 제거된 개체 무시
+    if (IsDead())   return -1;                             // // TryMeleeHit: 사망 무시
+
+    // 상태에 따라 공격 불가 조건(스턴, 죽음연출, 강제정지 등)
+    if (m_stun_left > 0.0f || m_death_left > 0.0f) return -1;  // // TryMeleeHit: 제약 상태
+    // (일시정지 중에도 공격하지 않도록 한다면 아래 라인 유지)
+    if (m_pause_left > 0.0f) return -1;                       // // TryMeleeHit: 일시정지 중
+
+    // 쿨다운 갱신
+    TickAttackCooldown(dt);                                   // // TryMeleeHit: 쿨다운 감소
+    if (m_attack_cd > 0.0f) return -1;                        // // TryMeleeHit: 아직 쿨다운
+
+    // 가장 가까운 플레이어 탐색 + 사정거리 체크
+    SIZEID best_id = static_cast<SIZEID>(-1);
+    float best_dist2 = FLT_MAX;
+
+    for (const auto& [pid, ppos] : players) {
+        const float dx = ppos.x - m_x;
+        const float dz = ppos.z - m_z;
+        const float d2 = dx * dx + dz * dz;
+        if (d2 < best_dist2) {
+            best_dist2 = d2;
+            best_id = pid;
+        }
+    }
+
+    if (best_id == static_cast<SIZEID>(-1)) return -1;       // // TryMeleeHit: 플레이어 없음
+
+    const float range = Z_ATTACK_RANGE;
+    if (best_dist2 <= (range * range)) {
+        // 히트 성공: 공격 트리거 & 쿨다운 설정
+        TriggerPause(Z_PAUSE_TIME);                          // // TryMeleeHit: 근접 시 잠깐 멈춤(선택)
+        TriggerAttack(Z_ATTACK_ANIM_TIME);                   // // TryMeleeHit: 공격 모션 시작
+        m_attack_cd = Z_ATTACK_COOLDOWN;                     // // TryMeleeHit: 쿨다운 시작
+        m_dirty = true;                                      // // TryMeleeHit: 상태 변경 브로드캐스트 트리거
+        return static_cast<int>(best_id);                    // // TryMeleeHit: 맞은 플레이어 ID 반환
+    }
+
+    return -1;                                               // // TryMeleeHit: 사정거리 밖
+}
+
+
 // 근접 시 잠깐 멈춤
 void ZombieAI::TriggerPause(float dur)
 {
@@ -282,6 +368,12 @@ void ZombieAI::ApplyDamage(SIZE2 damage)
 
     // 피격 시 스턴 갱신(중첩 시 남은 시간이 더 짧으면 연장)
     m_stun_left = std::max(m_stun_left, ZOMBIE_HIT_STUN_SEC);
+
+    if (m_hp == 0) {
+        m_attack_left = 0.0f;                   // // ApplyDamage: 사망 즉시 행동 차단
+        m_pause_left = 0.0f;                    // // ApplyDamage: 사망 즉시 정지 해제
+        m_death_left = Z_DEATH_DESPAWN_SEC;     // // ApplyDamage: 죽음 연출 시작
+    }
 
     m_dirty = true;
 }
@@ -311,24 +403,47 @@ bool ZombieAI::IsRemoved() const noexcept {
     return m_removed;
 }
 
+bool ZombieAI::WasRemoveNotified() const noexcept {
+    return m_remove_notified;
+}
+void ZombieAI::MarkRemoveNotified() noexcept {
+    m_remove_notified = true;
+}
+
 void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime)
 {
     if (IsRemoved()) return;
 
+    // ----- 죽음 연출 타이머 처리 -----
+    if (IsDead()) {
+        if (m_death_left > 0.0f) {
+            m_death_left -= deltaTime;
+            if (m_death_left < 0.0f) m_death_left = 0.0f;
+            // 죽음 애니메이션 재생 중: 상태 브로드캐스트만
+            m_dirty = true;
+            return;                 // // Update: 이 프레임 이동/AI 중지
+        }
+        else {
+            // 연출 완료 → 제거 플래그
+            MarkRemoved();          // // Update: 타 스레드에서 제거 패킷 송출
+            m_dirty = true;
+            return;
+        }
+    }
+
     if (playerPositions.empty()) return;
 
-    if (m_attack_cd > 0.0f) { m_attack_cd -= deltaTime; if (m_attack_cd < 0.0f) m_attack_cd = 0.0f; }
-    if (m_attack_left > 0.0f) { m_attack_left -= deltaTime; if (m_attack_left < 0.0f) m_attack_left = 0.0f; }
-
-    //  일시정지(pause) 타이머/쿨다운 감소
-    if (m_pause_cd > 0.0f) { m_pause_cd -= deltaTime; if (m_pause_cd < 0.0f) m_pause_cd = 0.0f; }
-    if (m_pause_left > 0.0f) { m_pause_left -= deltaTime; if (m_pause_left < 0.0f) m_pause_left = 0.0f; }
+    //  공격(attack), 일시정지(pause) 타이머/쿨다운 감소
+    if (m_attack_cd     > 0.0f) { m_attack_cd = std::max(0.0f, m_attack_cd - deltaTime); }
+    if (m_attack_left   > 0.0f) { m_attack_left = std::max(0.0f, m_attack_left - deltaTime); }
+    if (m_pause_cd      > 0.0f) { m_pause_cd = std::max(0.0f, m_pause_cd - deltaTime); }
+    if (m_pause_left    > 0.0f) { m_pause_left = std::max(0.0f, m_pause_left - deltaTime); }
+    TickAttackCooldown(deltaTime);  // // Update: 공격 쿨다운 감소
 
 
     // 스턴 상태면 이동/경로탐색 모두 중지
     if (m_stun_left > 0.0f) {
-        m_stun_left -= deltaTime;
-        if (m_stun_left < 0.0f) m_stun_left = 0.0f;
+        m_stun_left = std::max(0.0f, m_stun_left - deltaTime);
 
         // 멈춤 처리: 이 프레임에선 아무 것도 하지 않음(위치/속도 유지)
         // 클라 동기화를 위해 Dirty 플래그만 유지
@@ -430,7 +545,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
     }
 
     Vec3 moveDir = toTarget.Normalize();
-    Vec3 nextPos = currentPos + moveDir * Z_move_speed;
+    Vec3 nextPos = currentPos + moveDir * m_speed;
 
     // [REPLACE] 4. 좀비↔좀비 분리력(Separation force) 계산
     Vec3 separation(0, 0, 0);
@@ -480,7 +595,7 @@ void ZombieAI::Update(const std::vector<Vec3>& playerPositions, const std::vecto
 
     // 6. 최종 이동 (공격 중 잠깐 정지 → 다시 추격)
     {
-        Vec3 finalMove = moveDir * Z_move_speed + wallPush + separation;
+        Vec3 finalMove = moveDir * m_speed + wallPush + separation;
 
         // 공격 중 이동량 배율 적용 (기본 0.0f → 완전 정지)
         if (IsAttacking()) {
@@ -532,11 +647,25 @@ Object ZombieAI::GetObjectinfo() const {
     info.level = 0;
     info.score = 0;
     info.damage = ZOMBIE_DAMAGE;
+
+    // --- 상태 플래그 산정 ---
+    const bool isDeadOrDying = (m_hp == 0) || (m_death_left > 0.0f);      // // GetObjectinfo: 사망 연출 포함
+    const bool isStunned = (m_stun_left > 0.0f);
+    const bool isAttacking = (m_attack_left > 0.0f);
+    const bool isPausing = (m_pause_left > 0.0f);
+
+    // --- act_type 결정 ---
     info.act_type =
-        (m_hp == 0) ? ActionType::DEAD :
-        (m_stun_left > 0.0f) ? ActionType::HIT :   // 스턴 표현은 HIT 재사용
-        ((m_attack_left > 0.0f) || (m_pause_left > 0.0f)) ? ActionType::ATTACK : // 일시정지 중에도 공격 준비 모션처럼 표시
-        ActionType::ZMOVE;
+        isDeadOrDying   ? ActionType::DEAD :
+        isStunned       ? ActionType::HIT :
+        isAttacking     ? ActionType::ATTACK :
+        isPausing       ? ActionType::ATTACK :   // 멈춤 연출을 ATTACK 루프에 맞춤
+        ActionType::ZMOVE;     // 기본 이동
+
+    // --- 속도/입력 결정 ---
+    const bool frozen = isDeadOrDying || isStunned || isAttacking || isPausing;
+    info.velocity = frozen ? Vec3(0, 0, 0) : (info.look * m_speed); // // GetObjectinfo: 상태별 속도
+    info.move_input = frozen ? 0 : 1;                                      // // GetObjectinfo: 클라 애니 전이 안정화
 
     return info;
 }
@@ -625,9 +754,18 @@ std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map)
 
     static std::random_device rd;
     static std::mt19937 gen(rd());
-    //    std::uniform_int_distribution<> distX(0, W - 1); // 전체 맵에서 시도
-    std::uniform_int_distribution<> distX(100, 150);   
-    std::uniform_int_distribution<> distZ(100, 150);
+
+    // std::uniform_int_distribution<> distX(0, W - 1); // 전체 맵에서 시도
+
+    //std::uniform_int_distribution<> distX(100, 130);   
+    //std::uniform_int_distribution<> distZ(100, 110);
+
+    std::uniform_int_distribution<> distX(150, 151);// 가로 좌 ->우 
+    std::uniform_int_distribution<> distZ(150, 151);
+
+
+    //std::uniform_int_distribution<> distX(150, 151);// 가로 좌 ->우 
+    //std::uniform_int_distribution<> distZ(100, 101);
 
     // 1차: 랜덤 시도
     const int MAX_ATTEMPTS = 1000; // 시도 횟수 
@@ -673,6 +811,40 @@ std::pair<int, int> GetRandomPlayerPosition(const std::vector<std::vector<int>>&
 }
 
 
+// 포인트 수(2~4)에 따라 가능한 한 균등하게 분배
+std::pair<int, int> GetSpawnPointByIndexN(
+    const std::vector<std::vector<int>>& /*map*/,
+    const std::vector<std::pair<int, int>>& points,
+    int spawn_index,
+    int total_spawns)
+{
+    // // GetSpawnPointByIndexN: 방어 코드 (포인트가 1개 이하거나 4개 초과면 0번 사용)
+    if (points.empty()) return { -1, -1 };
+    const int P = static_cast<int>(points.size());
+    if (P == 1) return points[0];
+
+    // 포인트 개수 제한(요구: 최대 4개)
+    const int MAX_POINTS = 4;
+    const int useP = std::min(P, MAX_POINTS);
+
+    // // GetSpawnPointByIndexN: 총 스폰 수를 useP로 가능한 한 균등 분할
+    // 각 포인트에 배정되는 기본 몫(base), 그리고 앞에서부터 remainder개 포인트에 +1 배정
+    const int base = total_spawns / useP;
+    const int remainder = total_spawns % useP;
+
+    // spawn_index가 어느 구간(bucket)에 속하는지 계산
+    int acc = 0;
+    for (int bucket = 0; bucket < useP; ++bucket) {
+        const int size_of_bucket = base + ((bucket < remainder) ? 1 : 0);
+        if (spawn_index < acc + size_of_bucket) {
+            return points[bucket];
+        }
+        acc += size_of_bucket;
+    }
+
+    // // GetSpawnPointByIndexN: 이론상 도달 X, 방어적 처리
+    return points[(useP - 1)];
+}
 
 // ======================== 맵 그려보는 용 ========================
 void PrintMap2(

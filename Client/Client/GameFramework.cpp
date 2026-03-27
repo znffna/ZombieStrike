@@ -87,6 +87,11 @@ void CGameFramework::OnDestroy()
 	// Shader 변수들을 해제한다.
 	ReleaseShaderVariables();
 
+#ifdef _WITH_DIRECT_WRITE_UI
+	if (m_pUILayer) m_pUILayer->ReleaseResources();
+	m_pUILayer.reset();
+#endif
+
 	// Fence Event 객체를 해제한다.
 	::CloseHandle(m_hFenceEvent);
 
@@ -431,6 +436,26 @@ void CGameFramework::ChangeSwapChainState()
 
 void CGameFramework::BuildObjects()
 {
+#ifdef _WITH_DIRECT_WRITE_UI
+	m_pUILayer = std::make_shared<UILayer>(m_nSwapChainBuffers, 3, m_pd3dDevice.Get(), m_pd3dCommandQueue.Get(), m_ppd3dSwapChainBackBuffers.data()->GetAddressOf(), m_nWndClientWidth, m_nWndClientHeight);
+
+	ComPtr<ID2D1SolidColorBrush> pd2dBrush = m_pUILayer->CreateBrush(D2D1::ColorF(D2D1::ColorF::Purple, 1.0f));
+	ComPtr<IDWriteTextFormat> pdwTextFormat = m_pUILayer->CreateTextFormat(L"궁서체", m_nWndClientHeight / 15.0f);
+	D2D1_RECT_F d2dRect = D2D1::RectF(0.0f, 0.0f, (float)m_nWndClientWidth, (float)m_nWndClientHeight);
+
+	m_pUILayer->StorePoolTextBlock(0, NULL, &d2dRect, pdwTextFormat.Get(), pd2dBrush.Get());
+
+	pd2dBrush = m_pUILayer->CreateBrush(D2D1::ColorF(D2D1::ColorF::BlueViolet, 1.0f));
+	pdwTextFormat = m_pUILayer->CreateTextFormat(L"Arial", m_nWndClientHeight / 35.0f);
+	d2dRect = D2D1::RectF(0.0f, m_nWndClientHeight - 45.0f, (float)300.0f, (float)m_nWndClientHeight);
+
+	m_pUILayer->StorePoolTextBlock(1, NULL, &d2dRect, pdwTextFormat.Get(), pd2dBrush.Get());
+
+	pd2dBrush = m_pUILayer->CreateBrush(D2D1::ColorF(D2D1::ColorF::Black, 1.0f));
+	pdwTextFormat = m_pUILayer->CreateTextFormat(L"Bahnschrift Condensed", m_nWndClientHeight / 25.0f);
+	m_pUILayer->StorePoolTextBlock(2, NULL, &d2dRect, pdwTextFormat.Get(), pd2dBrush.Get());
+#endif
+
 	m_pd3dCommandAllocator[m_nSwapChainBufferIndex]->Reset();
 	m_pd3dCommandList[m_nSwapChainBufferIndex]->Reset(m_pd3dCommandAllocator[m_nSwapChainBufferIndex].Get(), nullptr);
 
@@ -634,6 +659,10 @@ void CGameFramework::AdvanceFrame()
 	::SynchronizeResourceTransition(pd3dCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	::ExecuteCommandList(pd3dCommandList, m_pd3dCommandQueue.Get(), m_pd3dFence.Get(), ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
 	
+#ifdef _WITH_DIRECT_WRITE_UI
+	m_pUILayer->Render(m_nSwapChainBufferIndex);
+#endif
+
 	pCurrentScene->OnPostRender(nullptr);
 
 	// Swap Chain의 Back Buffer를 화면에 표시
@@ -646,7 +675,17 @@ void CGameFramework::AdvanceFrame()
 	// Time / FPS 출력
 	std::wstring time = L"Time: " + std::to_wstring(m_GameTimer.GameTime());
 	std::wstring fps = L"FPS: " + std::to_wstring(m_GameTimer.calculateAverageFPS());
+
+	std::string playerPostion = "Player Position: ";
 	std::wstring text = time + L" " + fps;
+
+	if (auto pPlayer = pCurrentScene->GetPlayer()) {
+		XMFLOAT3 playerPosition = pPlayer->GetPosition();
+		char move_input = pPlayer->GetMoveInput();
+		text += L"( " + std::to_wstring(playerPosition.x) + L", " + std::to_wstring(playerPosition.y) + L", " + std::to_wstring(playerPosition.z) + L")";
+		text += L"GetMoveInput( " + std::to_wstring(move_input & DIR_FORWARD? 1 : 0) + L", " + std::to_wstring(move_input & DIR_BACKWARD ? 1 : 0) + L", " + std::to_wstring(move_input & DIR_LEFT ? 1 : 0) + L", " + std::to_wstring(move_input & DIR_RIGHT ? 1 : 0) + L")";
+	}
+
 	::SetWindowText(m_hWnd, text.c_str());
 }
 
@@ -768,10 +807,8 @@ void CGameFramework::ProcessInput(CScene* pScene)
 
 	pScene->SetCursor();
 
-	if(GetKeyboardState(pKeysBuffer))
-	{
-		if (nullptr != pScene) bProcessedByScene = pScene->ProcessKeyboardInput(pKeysBuffer, m_GameTimer.DeltaTime()) ? true : false;
-	}
+	GetKeyboardState(pKeysBuffer);
+	if (nullptr != pScene) bProcessedByScene = pScene->ProcessKeyboardInput(pKeysBuffer, m_GameTimer.DeltaTime()) ? true : false;
 	
 	// 마우스 입력 처리
 	{
@@ -913,13 +950,13 @@ LRESULT CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WP
 	{
 		if (LOWORD(wParam) == WA_INACTIVE) 
 		{
-			m_GameTimer.Stop();
+			//m_GameTimer.Stop();
 			g_bWindowActive = false;
 			WindowCursor::SetCursorVisibility(true);
 		}
 		else 
 		{
-			m_GameTimer.Start();
+			//m_GameTimer.Start();
 			g_bWindowActive = true;
 			WindowCursor::SetCursorVisibility(false);
 		}

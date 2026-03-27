@@ -4,14 +4,13 @@
 #include <fstream>
 #include <string>
 #include <unordered_map>
+#include <memory>  
 #include "../../protocol.h"
 
 // 필수 정보 
 constexpr float my_gCost = 1.0f;             // 이동 비용
 constexpr float ZOMBIE_HALF_SIZE = 0.4f;     // 좀비 AABB 반 사이즈
-constexpr SIZE2 ZOMBIE_HP = 500;             // 좀비 초기 체력
-constexpr float ZOMBIE_DAMAGE = 10;          // 좀비 초기 체력
-constexpr float Z_move_speed = 0.03f;         // 좀비 
+
 
 constexpr float WORLD_WIDTH = 250.0f;
 constexpr float WORLD_HEIGHT = 250.0f;
@@ -27,7 +26,7 @@ constexpr float ZOMBIE_RADIUS = 0.35f;  // 어깨/몸통 반지름
 
 constexpr float Z_ATTACK_RANGE = 1.2f;          // 월드 단위 (CELL_SIZE에 맞춰 조정 가능)
 constexpr float Z_ATTACK_COOLDOWN = 1.0f;       // 초
-constexpr float Z_ATTACK_ANIM_TIME = 0.35f;     // 공격 모션 유지 시간(초)
+constexpr float Z_ATTACK_ANIM_TIME = 1.5f;     // 공격 모션 유지 시간(초)
 
 //  좀비-좀비 분리력 파라미터
 constexpr float Z_SEPARATION_RADIUS = 1.2f;     // 이 거리 안에 들어오면 서로 밀어냄
@@ -43,12 +42,17 @@ constexpr float Z_PAUSE_RANGE       = CELL_SIZE * 2.0f; // 플레이어와 이 거리 이
 constexpr float Z_PAUSE_TIME        = 0.40f;            // 멈추는 시간(초)
 constexpr float Z_PAUSE_COOLDOWN    = 1.20f;            // 다시 멈추기까지의 쿨다운(초)
 constexpr float Z_PAUSE_MOVE_SCALE  = 0.0f;             // 정지 중 이동량 배율(0=완전정지)
+
+constexpr float Z_DEATH_DESPAWN_SEC = 1.5f;             // 죽는 애니메이션 길이(예: 1.5초)
+
+
 class ZombieAI
 {
 public:
     class AStar;
 
     ZombieAI(const std::vector<std::vector<int>>& map, int id);
+    ~ZombieAI();
 
     void SetPosition(float x, float z);   // 위치 및 타겟 설정
     //void SetPlayerPosition(float x, float z);
@@ -60,17 +64,20 @@ public:
     void TriggerAttack(float animTime = Z_ATTACK_ANIM_TIME);
     bool IsAttacking() const;
 
-    //  길따라가기 일시정지(공격과 별개)
+    //근접 공격 판정& 타이머 갱신
+    int TryMeleeHit(const std::vector<std::pair<SIZEID, Vec3>>&players, float dt); // // ZombieAI::TryMeleeHit: 범위 내 플레이어 1명 히트 시 그 ID 반환, 없으면 -1
+    void TickAttackCooldown(float dt);
+
+
+    // ---[Pause]---
     void TriggerPause(float dur = Z_PAUSE_TIME);  // // ZombieAI::TriggerPause - 근접 시 잠깐 멈추기
     bool IsPausing() const;                       // // ZombieAI::IsPausing     - 현재 일시정지 여부
 
 
     // ---[Hit Stun]---
-    // 외부(서버 피격 처리)에서 스턴 부여
-    void SetStun(float seconds = ZOMBIE_HIT_STUN_SEC);
-    // 현재 스턴 상태 조회
-    bool IsStunned() const;
-
+    void SetStun(float seconds = ZOMBIE_HIT_STUN_SEC);  // 외부(서버 피격 처리)에서 스턴 부여
+    bool IsStunned() const;  // 현재 스턴 상태 조회
+     
     Vec3 FindClosestPlayer(const std::vector<Vec3>& playerPositions);
     void FindPath();                      // AI 동작
 
@@ -85,6 +92,10 @@ public:
     // 제거 상태 제어
     void MarkRemoved() noexcept;      // // ZombieAI::MarkRemoved - 사망 브로드캐스트 후 호출
     bool IsRemoved() const noexcept;  // // ZombieAI::IsRemoved - 업데이트/충돌 제외 판단
+
+    bool WasRemoveNotified() const noexcept;   // REMOVE 송신 여부
+    void MarkRemoveNotified() noexcept;        // REMOVE 보낼 때 세팅
+
 
     void Update(const std::vector<Vec3>& playerPositions, const std::vector<ZombieAI*>& allZombies, float deltaTime);
 
@@ -119,7 +130,9 @@ private:
     int m_id;
     float m_x, m_z;
     float m_targetX, m_targetZ;
-    SIZE2 m_hp;  
+    SIZE2 m_hp = ZOMBIE_HP;
+    float m_speed = Z_move_speed;
+
     std::vector<std::pair<int, int>> m_path;
 
     const std::vector<std::vector<int>>& m_map;
@@ -129,23 +142,31 @@ private:
 
     Vec3 GetNodeCenter(int x, int z) const;
 
-    // 공격 쿨다운 및 공격 애니 타이머(초)
-    float m_attack_cd = 0.0f;
+ 
+    float m_attack_cd = 0.0f;    // 공격 쿨다운 및 공격 애니 타이머(초)
     float m_attack_left = 0.0f;
 
     float m_pause_left = 0.0f;   // 남은 정지 시간
     float m_pause_cd = 0.0f;   // 정지 쿨다운
+   
+    float m_stun_left = 0.0f;  // 피격 스턴 남은 시간(초)
 
-    // 피격 스턴 남은 시간(초)
-    float m_stun_left = 0.0f;
+    float m_death_left = 0.0f;   // 죽음 연출 남은 시간
 
     // 사망 후 제거 브로드캐스트 중복 방지
     bool m_removed = false;           // // ZombieAI::m_removed - 제거된 개체는 true
+    bool m_remove_notified = false;   // // REMOVE 송신 플래그
+
 };
 
 // Util 함수
 std::vector<std::vector<int>> LoadMapBin(const std::string& filename);
 std::pair<int, int> GetRandomPosition(const std::vector<std::vector<int>>& map);
+std::pair<int, int> GetSpawnPointByIndexN(
+    const std::vector<std::vector<int>>& map,
+    const std::vector<std::pair<int, int>>& points,
+    int spawn_index,
+    int total_spawns);
 
 // 스폰 후보 타일이 반경 r 칸 내에 장애물이 없는지 확인
 bool IsAreaClear(const std::vector<std::vector<int>>&map, int x, int z, int radius = 4); // // IsAreaClear

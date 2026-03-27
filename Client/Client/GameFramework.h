@@ -73,6 +73,7 @@ public:
 	// Scene Management
 	void AddScene(std::string sceneName);
 	void PopScene();
+	std::shared_ptr<CScene> GetCurrentScene() { if(m_Scenes.size()) return m_Scenes.back(); }
 
 private:
 	bool isWorkd = true;
@@ -137,5 +138,9 @@ protected:
 	POINTF GetTexturePosition(int x, int y);
 	void RenderCursor(ID3D12GraphicsCommandList* pd3dCommandList);
 
+protected:
+	std::shared_ptr<UILayer> m_pUILayer; // UI Layer for DirectWrite
+public:
+	std::shared_ptr<UILayer> GetUILayer() { return m_pUILayer; }
 };
 

@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <queue>
 #include <print>
+#include <atomic>
 
 #include "../../protocol.h"
 #include "ZombieAI.h" 
@@ -46,6 +47,10 @@ struct Zombie {
     SIZE2 damage;               
     SIZE1 act_type;             
 };
+// ---- 전역 카운터 ----
+std::atomic<int> g_totalSpawnedZombies{ 0 };  // // Server_tcp.cpp: 총 스폰 수
+std::atomic<int> g_totalKilledZombies{ 0 };   // // Server_tcp.cpp: 제거 완료 수
+
 
 std::vector<ZombieAI*> g_zombies; // ZombieAI 객체를 서버가 관리
 // std::vector<std::unique_ptr<ZombieAI>> g_zombies;
@@ -103,7 +108,7 @@ static bool ray3_vs_capsule_y(
     float r,
     float& out_t)
 {
-    // 1) 원기둥(무한 높이 아님, 유한 높이) 구간과 레이 교차
+    //   1) 원기둥(무한 높이 아님, 유한 높이) 구간과 레이 교차
     //   평면투영(XZ)에서 원 반지름 r로 빗겨가는지 체크 후, 높이(y) 범위 교차인지 확인
     //   수학적으로: (o_perp + t d_perp - c_perp)^2 = r^2, 그리고 y(t) ∈ [y0, y1]
     const float vx = ox - cx;
@@ -208,6 +213,9 @@ static bool find_nearest_hit_zombie3D(float ox, float oy, float oz,
     return false;
 }
 
+
+
+
 bool serverRunning = true;
 short IN_g_player_n= 0;
 
@@ -265,7 +273,8 @@ public:
     SIZE1           _level;
     SIZE2           _score;
     SIZE2           _damage;               
-    SIZE1           _act_type;            
+    SIZE1           _act_type;      
+    SIZE1           _move_input;
 
     void do_recv() {
         DWORD flags = 0;
@@ -385,6 +394,7 @@ public:
 		packet.level = _level;
 		packet.score = _score;
 		packet.damage = _damage;
+        packet.move_input = _move_input;
 
         do_send(&packet);
     }
@@ -404,45 +414,34 @@ public:
         p_update.score = _score;
         p_update.damage = _damage;
         p_update.act_type = _act_type;
+        p_update.move_input = _move_input;
         do_send(&p_update);
     }
 
     // 총알 충돌 체크 및 데미지 적용
-    void check_bullet_collision(SIZEID shooter_id, const Vec3& origin, const Vec3& direction) {
-        constexpr float maxDistance = 100.0f;
-        constexpr float hitRadius = 1.0f;
-
-        Vec3 normDir = direction.Normalize();
-        Vec3 endPos = origin + normDir * maxDistance;
-
-        pkt_sc_hit_result hit_packet;
-        hit_packet.header.size = sizeof(hit_packet);
-        hit_packet.header.type = PKT_TYPE::S_C_HIT_RESULT;
-        hit_packet.shooterId = shooter_id;
-        for (auto& [id, session] : g_users)
-            session.do_send(&hit_packet);
-
-
-        // 좀비 충돌 체크
-        for (auto zombie : g_zombies) {
-            Vec3 toTarget = zombie->GetPosition() - origin;
-            float t = toTarget.Dot(normDir);
-            if (t < 0 || t > maxDistance) continue;
-
-            Vec3 closest = origin + normDir * t;
-            float distSqr = (closest - zombie->GetPosition()).LengthSquared();
-
-            if (distSqr <= hitRadius * hitRadius) {
-                zombie->ApplyDamage(10);
-
-				if (zombie->GetHP() <= 0) {
-					// 좀비가 죽었을 때 처리
-					// std::cout << "[Zombie] " << zombie->GetID() << " is dead.\n";
-					zombie->ClearDirty(); // 좀비 상태 초기화 , 여기서 하는게 좋은가?
-				}
-            }
-        }
-
+    //void check_bullet_collision(SIZEID shooter_id, const Vec3& origin, const Vec3& direction) {
+    //    constexpr float maxDistance = 100.0f;
+    //    constexpr float hitRadius = 1.0f;
+    //    Vec3 normDir = direction.Normalize();
+    //    Vec3 endPos = origin + normDir * maxDistance;
+    //    pkt_sc_hit_result hit_packet;
+    //    hit_packet.header.size = sizeof(hit_packet);
+    //    hit_packet.header.type = PKT_TYPE::S_C_HIT_RESULT;
+    //    hit_packet.shooterId = shooter_id;
+    //    for (auto& [id, session] : g_users)
+    //        session.do_send(&hit_packet);
+    //    // 좀비 충돌 체크
+    //    for (auto zombie : g_zombies) {
+    //        Vec3 toTarget = zombie->GetPosition() - origin;
+    //        float t = toTarget.Dot(normDir);
+    //        if (t < 0 || t > maxDistance) continue;
+    //        Vec3 closest = origin + normDir * t;
+    //        float distSqr = (closest - zombie->GetPosition()).LengthSquared();
+    //        if (distSqr <= hitRadius * hitRadius) {
+    //            zombie->ApplyDamage(GUN_DAMAGE); // // check_bullet_collision: 데미지만 적용
+    //            // 죽음 연출 및 제거 패킷은 ZombieAIThread() 경로에서만 처리
+    //        }
+    //    }
         // 플레이어 충돌 체크
      //for (auto& [id, session] : g_users) {
      //    if (id == shooter_id) continue;
@@ -457,7 +456,8 @@ public:
      //        session.send_object_update();
      //    }
      //}
-    }
+    //}
+
 
 	void process_packet(SIZE2* packet) {
 
@@ -476,16 +476,17 @@ public:
             _skin_type  = loginPacket->skin_type;
             _name       = loginPacket->name;
             _position   = START_POSITIONS[IN_g_player_n % 3];
-            _velocity  = { 0.0f,0.0f, 0.0f };
-            _look      = { 0.0f,0.0f, 0.0f };
+            _velocity   = { 0.0f,0.0f, 0.0f };
+            _look       = { 0.0f,0.0f, 0.0f };
             _pitch      = 0.0f;
             _hp         = PLAYER_HP;
 			_gun_type   = GunType::BULLET_PISTOL; // 총 종류
             _level      = 1;
             _score      = 0;
-            _damage     = 0;
+            _damage     = GUN_DAMAGE;
 			_act_type   = ActionType::NONE;
-            
+            _move_input = 0;
+
             IN_g_player_n++;
 			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _name << "\n");
 			DEBUG_LOG("[process_packet][RECV][" << (int)_id << "] C_S_LOGIN: " << _skin_type << "\n");
@@ -523,6 +524,16 @@ public:
 				}
 			}
 
+            {
+                pkt_sc_score_info st{};
+                st.header.size = sizeof(st);
+                st.header.type = PKT_TYPE::S_C_SCORE_INFO;
+                st.total_spawned = g_totalSpawnedZombies.load(std::memory_order_relaxed);
+                st.total_killed = g_totalKilledZombies.load(std::memory_order_relaxed);
+                st.alive = st.total_spawned - st.total_killed;
+                this->do_send(&st);
+            }
+
             // [C_S_LOGIN] 기존 좀비 스냅샷은 "신규 접속자(나)"에게만 유니캐스트
             pkt_sc_object_add packet;
             for (auto zombie : g_zombies) {
@@ -558,6 +569,7 @@ public:
             _damage = updatePacket->damage;
             _gun_type = updatePacket->gun_type;
             _act_type = updatePacket->act_type;
+            _move_input = updatePacket->move_input;
 
             // 로그
             //std::cout << "[process_packet][RECV][" << (int)_id << "] C_S_UPDATE: " << _name << "\n";
@@ -579,6 +591,7 @@ public:
 			u_move_p.score = _score;
 			u_move_p.damage = _damage;
 			u_move_p.act_type = _act_type;
+			u_move_p.move_input = _move_input;
 
             for (auto& [id, session] : g_users) {
                 if (id != _id)
@@ -642,6 +655,22 @@ public:
             float dy = p->bulletDir[1];
             float dz = p->bulletDir[2];
 
+            // [SESSION::process_packet] 변경: 발사 브로드캐스트(S_C_SHOOT) 
+            {
+                pkt_sc_shoot b{};
+                b.header.size = sizeof(b);
+                b.header.type = PKT_TYPE::S_C_SHOOT;
+                b.shooterId = _id;
+                b.gun_type = _gun_type;            // 서버 관점에서 신뢰 가능한 총기 타입
+                b.bulletPos[0] = ox; b.bulletPos[1] = oy; b.bulletPos[2] = oz;
+                b.bulletDir[0] = dx; b.bulletDir[1] = dy; b.bulletDir[2] = dz;
+
+                for (auto& [id, session] : g_users) {
+                    if (id == _id) continue;         // 사수에게는 재전송 불필요
+                    session.do_send(&b);
+                }
+            }
+
             constexpr float MAX_RANGE = 60.0f; // 임시 사거리
 
             int   hit_zid = -1;
@@ -652,7 +681,7 @@ public:
                     << " hit_zid=" << hit_zid << " t=" << hit_t);
 
                 // !! 데미지 + 브로드캐스트
-                constexpr SIZE2 DAMAGE = 10;   // 임시 고정 대미지(총기별 테이블은 이후에 연결)
+                constexpr SIZE2 DAMAGE = GUN_DAMAGE;   // 임시 고정 대미지(총기별 테이블은 이후에 연결)
 
                 SIZE2 hp_after = 0;
                 {
@@ -676,35 +705,37 @@ public:
                 resp.zombieHp = hp_after;
                 for (auto& [id, session] : g_users) session.do_send(&resp);
 
-                // [추가] HP가 0이면 즉시 제거 패킷 (중복 방지: MarkRemoved)
-                if (hp_after == 0) {
-                    ZombieAI* hitZ = nullptr;
-                    {
-                        std::lock_guard<std::mutex> lock(zombiesMutex);
-                        for (auto* z : g_zombies) {
-                            if (z && z->GetID() == hit_zid) { hitZ = z; break; }
-                        }
-                    }
-                    if (hitZ && !hitZ->IsRemoved()) {
-                        hitZ->MarkRemoved(); // // ZombieAI::MarkRemoved - 서버 틱/충돌 제외
+                //  HP==0이어도 즉시 REMOVE 금지
+                //  → 죽음 연출은 ZombieAI::Update()의 m_death_left가 0이 될 때까지 유지
+                //  → 최종 REMOVE 송출은 ZombieAIThread()에서 IsRemoved()==true 시점 단일 경로 처리
 
-                        pkt_sc_object_remove rem{};
-                        rem.header.size = sizeof(rem);
-                        rem.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
-                        rem.id = hit_zid;
+                //  HP가 0이면 즉시 제거 패킷 (중복 방지: MarkRemoved)
+                //if (hp_after == 0) {
+                //    ZombieAI* hitZ = nullptr;
+                //    {
+                //        std::lock_guard<std::mutex> lock(zombiesMutex);
+                //        for (auto* z : g_zombies) {
+                //            if (z && z->GetID() == hit_zid) { hitZ = z; break; }
+                //        }
+                //    }
+                //    if (hitZ && !hitZ->IsRemoved()) {
+                //        hitZ->MarkRemoved(); // // ZombieAI::MarkRemoved - 서버 틱/충돌 제외
 
-                        for (auto& [id, session] : g_users)
-                            session.do_send(&rem);
-                    }
-                }
+                //        pkt_sc_object_remove rem{};
+                //        rem.header.size = sizeof(rem);
+                //        rem.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
+                //        rem.id = hit_zid;
+
+                //        for (auto& [id, session] : g_users)
+                //            session.do_send(&rem);
+                //    }
+                //}
             }
             else {
                 DEBUG_LOG("[HIT-TEST/3D] shooter=" << _id << " miss");
             }
             break;
         }
-
-
 
 
         default:
@@ -715,8 +746,32 @@ public:
 
 };
 
+// ---- 브로드캐스트 함수 ----
+static inline void BroadcastSCORE() {
+    static int last_spawned = -1;
+    static int last_killed = -1;
 
+    const int spawned = g_totalSpawnedZombies.load(std::memory_order_relaxed);
+    const int killed = g_totalKilledZombies.load(std::memory_order_relaxed);
 
+    if (spawned == last_spawned && killed == last_killed) return; // 변화 없으면 전송 안 함
+    last_spawned = spawned;
+    last_killed = killed;
+
+    pkt_sc_score_info st{};
+    st.header.size = sizeof(st);
+    st.header.type = PKT_TYPE::S_C_SCORE_INFO;
+    st.total_spawned = spawned;
+    st.total_killed = killed;
+    st.alive = spawned - killed;
+
+    std::cout << "[STATS][BCAST] spawned=" << st.total_spawned
+        << " killed=" << st.total_killed
+        << " alive=" << st.alive
+        << " recipients=" << g_users.size() << "\n";
+
+    for (auto& [id, session] : g_users) session.do_send(&st);
+}
 
 
 void CALLBACK g_send_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over, DWORD flag)
@@ -740,15 +795,48 @@ void CALLBACK g_recv_callback(DWORD err, DWORD num_bytes, LPWSAOVERLAPPED p_over
 
 auto lastTick = std::chrono::steady_clock::now();
 
+// 요구했던 두 포인트 + 예시 포인트 1~2개 더 (원하는 만큼 2~4개만 채워서 사용)
+std::vector<std::pair<int, int>> spawnPoints = {
+    {150, 180},  // 포인트 A
+    {150, 100},  // 포인트 B
+    {100, 180},  // 포인트 C (원하면 활성화)
+    // {400, 420},  // 포인트 D (원하면 활성화)
+};
+
+
+// // SpawnZombies: N등분 스폰 적용 (GetSpawnPointByIndexN)
 void SpawnZombies(int count) {
+    // // SpawnZombies: 방어 코드 – 스폰 포인트 미설정 시 기본 포인트 두 개로 세팅
+    if (spawnPoints.empty()) {                                 
+        spawnPoints = { {150,180}, {150,100} };                
+    }
+
     for (int i = 0; i < count; ++i) {
-        auto [x, z] = GetRandomPosition(g_map);
+        // // SpawnZombies: 균등 분할로 i번째 스폰 좌표 선택
+        auto [sx, sz] = GetSpawnPointByIndexN(g_map, spawnPoints, i, count);  
+
+        // // SpawnZombies: 좌표계 선택
+        // 프로젝트가 '셀 인덱스' 좌표를 SetPosition에 기대하면 아래 1줄 사용:
+        float zx = static_cast<float>(sx);                          
+        float zz = static_cast<float>(sz);                         
+
+        // 월드 좌표(CELL_SIZE 배수)를 SetPosition에 기대한다면 위 2줄 대신 아래 2줄 사용:
+        // float zx = static_cast<float>(sx) * CELL_SIZE;          
+        // float zz = static_cast<float>(sz) * CELL_SIZE;           
+
         ZombieAI* zombie = new ZombieAI(g_map, 10000 + i);
-        zombie->SetPosition((float)x, (float)z);
+        zombie->SetPosition(zx, zz);                                
         zombie->SetHP(ZOMBIE_HP);
         g_zombies.push_back(zombie);
 
-        // 좀비 정보를 모든 플레이어에게 전송
+        g_totalSpawnedZombies.fetch_add(1, std::memory_order_relaxed);   // // SpawnZombies: 스폰 수 증가
+
+
+        // // SpawnZombies: 생성 즉시 대상 지정/경로 탐색을 원하면 필요 시 활성화
+        // zombie->SetTargetPosition(player_x, player_z);          
+        // zombie->FindPath();                                      
+
+        // 좀비 정보를 모든 플레이어에게 전송 (기존 유지)
         pkt_sc_object_add p;
         p.header.size = sizeof(p);
         p.header.type = PKT_TYPE::S_C_OBJECT_ADD;
@@ -763,6 +851,8 @@ void SpawnZombies(int count) {
         for (auto& [id, session] : g_users)
             session.do_send(&p);
     }
+
+    BroadcastSCORE();
 }
 
 
@@ -773,36 +863,87 @@ void ZombieAIThread() {
         lastTick = now;
         float deltaTime = dt.count();  // 초 단위
 
+        // 플레이어 스냅샷: ID와 위치 동시 수집
         std::vector<Vec3> playerPositions;
+        std::vector<std::pair<SIZEID, Vec3>> playerList;  // // (참고) ID 포함 스냅샷
         for (auto& [id, session] : g_users) {
-            if (session._obj_type == ObjectType::PLAYER)
+            if (session._obj_type == ObjectType::PLAYER) {
                 playerPositions.push_back(session._position);
+                playerList.emplace_back(id, session._position);
+            }
         }
 
+        // 업데이트 & 네트워크 송출
         for (auto& zombie : g_zombies) {
-            zombie->Update(playerPositions, g_zombies, deltaTime);
-            // ZombieAIThread - 제거 플래그면 완전 스킵
-            if (zombie->IsRemoved()) continue;
-
-            zombie->Update(playerPositions, g_zombies, deltaTime);
-
-            if (zombie->IsDirty()) {
-                // 프레임 경합 방어: DEAD 상태면 업데이트 대신 제거 패킷
-                if (zombie->IsDead()) {
-                    zombie->MarkRemoved();
-
+            // // [ZombieAIThread] 제거 조건: IsRemoved() && IsDirty()일 때 '딱 1회' REMOVE 송출
+            if (zombie->IsRemoved()) {
+                if (!zombie->WasRemoveNotified()) {
                     pkt_sc_object_remove rem{};
                     rem.header.size = sizeof(rem);
                     rem.header.type = PKT_TYPE::S_C_OBJECT_REMOVE;
                     rem.id = zombie->GetID();
+
+                    // std::cout << "[REMOVE][SEND-A] zid=" << rem.id << " (begin-of-frame)\n"; // DEBUG
+
                     for (auto& [id, session] : g_users) session.do_send(&rem);
 
-                    zombie->ClearDirty();
-                    continue;
+                    zombie->MarkRemoveNotified();   // REMOVE 보냄
                 }
+                zombie->ClearDirty();               // 제거 상태는 UPDATE 송출 금지
+                continue;                           // 제거 대상 업데이트 금지
+            }
 
-                // 일반 업데이트 브로드캐스트
+            // // 일반 업데이트
+            zombie->Update(playerPositions, g_zombies, deltaTime);
+
+            // 근접공격 판정 & 플레이어 HP 감소 (Update 직후, 다른 송출보다 먼저)
+            // ZombieAIThread: 가까운 플레이어 1명에게 ZOMBIE_DAMAGE 적용하고 브로드캐스트
+            {
+                int hitPid = zombie->TryMeleeHit(playerList, deltaTime);              // // ZombieAIThread: 근접공격 판정
+                if (hitPid >= 0) {
+                    auto it = g_users.find(static_cast<SIZEID>(hitPid));
+                    if (it != g_users.end()) {
+                        SESSION& target = it->second;
+                        const SIZE2 prev_hp = target._hp;
+                        target._hp = (std::max)(static_cast<SIZE2>(0),
+                            static_cast<SIZE2>(target._hp - static_cast<SIZE2>(ZOMBIE_DAMAGE))); // // ZombieAIThread: HP 감소
+                        target._act_type = ActionType::HIT;     // // ZombieAIThread: 피격 애니 유도
+                        target._move_input = 0;                 // // ZombieAIThread: 경직 표현(선택)
+
+                        // [DEBUG]
+                        // std::cout << "[MELEE][HIT] zid=" << zombie->GetID()
+                        //           << " -> pid=" << hitPid
+                        //           << " hp: " << prev_hp << " -> " << target._hp << "\n";
+
+                        // 피격된 플레이어 상태 브로드캐스트
+                        pkt_sc_object_update pu{};
+                        pu.header.size = sizeof(pu);
+                        pu.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
+                        pu.id = hitPid;
+                        pu.position = target._position;
+                        pu.velocity = target._velocity;
+                        pu.look = target._look;
+                        pu.pitch = target._pitch;
+                        pu.hp = target._hp;
+                        pu.gun_type = target._gun_type;
+                        pu.level = target._level;
+                        pu.score = target._score;
+                        pu.damage = target._damage;
+                        pu.act_type = target._act_type;   // HIT
+                        pu.move_input = target._move_input;
+
+                        for (auto& [id, session] : g_users) session.do_send(&pu);      // // ZombieAIThread: 브로드캐스트
+
+                        // (선택) 플레이어 HP가 0이면 별도 사망 처리 패킷/로직 추가 가능
+                        // if (target._hp == 0) { ... }
+                    }
+                }
+            }
+
+            // ZombieAIThread: 상태 변경 시 스냅샷 송출 (DEAD/HIT/ATTACK/ZMOVE 포함)
+            if (zombie->IsDirty()) {
                 Object info = zombie->GetObjectinfo();
+
                 pkt_sc_object_update p{};
                 p.header.size = sizeof(p);
                 p.header.type = PKT_TYPE::S_C_OBJECT_UPDATE;
@@ -816,10 +957,39 @@ void ZombieAIThread() {
                 p.level = info.level;
                 p.score = info.score;
                 p.damage = info.damage;
-                p.act_type = info.act_type;
+                p.act_type = info.act_type;    // DEAD/HIT/ATTACK/ZMOVE 반영
+                p.move_input = info.move_input;
 
                 for (auto& [id, session] : g_users) session.do_send(&p);
+
                 zombie->ClearDirty();
+            }
+        }
+
+        // // 틱 끝에서 실제 삭제: IsRemoved() && !IsDirty() 개체 정리
+        {
+            int removedCount = 0;
+
+            auto it = std::remove_if(g_zombies.begin(), g_zombies.end(),
+                [&](ZombieAI* z) {
+                    if (z == nullptr) return true;  // // ZombieAIThread: 방어
+
+                    if (z->IsRemoved() && !z->IsDirty()) {
+                        if (z->WasRemoveNotified()) {     // // ZombieAIThread:  REMOVE 송신 확인
+                            delete z;                      // // ZombieAIThread: 실제 메모리 해제
+                            ++removedCount;
+                            return true;                   // // ZombieAIThread: 컨테이너에서 제거
+                        }
+                        // // ZombieAIThread: REMOVE 미통지면 남겨두고 다음 틱 재확인
+                    }
+                    return false;
+                });
+
+            g_zombies.erase(it, g_zombies.end());
+
+            if (removedCount > 0) {
+                g_totalKilledZombies.fetch_add(removedCount, std::memory_order_relaxed);
+                BroadcastSCORE();  
             }
         }
 
@@ -875,6 +1045,7 @@ int main() {
 
     std::thread(serverControl).detach();
     std::thread(ZombieAIThread).detach();
+
     SpawnZombies(MAX_ZOMBIE_COUNT);
 
     SIZEID clientId = 0;
@@ -886,6 +1057,11 @@ int main() {
             std::cout << "Accept failed\n";
             continue;
         }
+
+
+        int flag = 1;
+        setsockopt(c_socket, IPPROTO_TCP, TCP_NODELAY,
+            reinterpret_cast<const char*>(&flag), sizeof(flag));
 
         g_users.try_emplace(clientId, clientId, c_socket);
         clientId++;

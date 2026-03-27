@@ -981,7 +981,7 @@ D3D12_DEPTH_STENCIL_DESC CBulletShader::CreateDepthStencilState(int nPipelineSta
 D3D12_INPUT_LAYOUT_DESC CBulletShader::CreateInputLayout(int nPipelineState)
 {
 	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
-	UINT nInputElementDescs = 5;
+	UINT nInputElementDescs = 6;
 	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
 	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
@@ -989,6 +989,7 @@ D3D12_INPUT_LAYOUT_DESC CBulletShader::CreateInputLayout(int nPipelineState)
 	pd3dInputElementDescs[2] = { "VELOCITY", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 	pd3dInputElementDescs[3] = { "LIFETIME", 0, DXGI_FORMAT_R32_FLOAT, 0, 36, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 	pd3dInputElementDescs[4] = { "TYPE", 0, DXGI_FORMAT_R32_SINT, 0, 40, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[5] = { "TARGET", 0, DXGI_FORMAT_R32_SINT, 0, 44, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
 	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
 	d3dInputLayoutDesc.NumElements = nInputElementDescs;
@@ -1003,13 +1004,14 @@ D3D12_STREAM_OUTPUT_DESC CBulletShader::CreateStreamOuputState(int nPipelineStat
 
 	if (nPipelineState == 0)
 	{
-		UINT nStreamOutputDecls = 5;
+		UINT nStreamOutputDecls = 6;
 		D3D12_SO_DECLARATION_ENTRY* pd3dStreamOutputDecls = new D3D12_SO_DECLARATION_ENTRY[nStreamOutputDecls];
 		pd3dStreamOutputDecls[0] = { 0, "POSITION", 0, 0, 3, 0 };
 		pd3dStreamOutputDecls[1] = { 0, "LASTPOSITION", 0, 0, 3, 0 };
 		pd3dStreamOutputDecls[2] = { 0, "VELOCITY", 0, 0, 3, 0 };
 		pd3dStreamOutputDecls[3] = { 0, "LIFETIME", 0, 0, 1, 0 };
 		pd3dStreamOutputDecls[4] = { 0, "TYPE", 0, 0, 1, 0 };
+		pd3dStreamOutputDecls[5] = { 0, "TARGET", 0, 0, 1, 0 };
 
 		UINT* pBufferStrides = new UINT[1];
 		pBufferStrides[0] = sizeof(CBulletVertex);
