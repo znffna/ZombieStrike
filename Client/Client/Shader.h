@@ -11,7 +11,7 @@
 class CCamera;
 class CScene;
 class CTexture;
-class CDescirptorHeap;
+class CDescriptorHeap;
 
 class CShader
 {
@@ -86,7 +86,7 @@ protected:
 	ComPtr<ID3DBlob> m_pd3dGeometryShaderBlob;
 
 protected:
-	std::unique_ptr<CDescirptorHeap> m_pDescriptorHeap;
+	std::unique_ptr<CDescriptorHeap> m_pDescriptorHeap;
 
 	void CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews);
 	void CreateShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex);
@@ -218,7 +218,7 @@ public:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-class CDescirptorHeap;
+class CDescriptorHeap;
 
 class CBulletShader : public CBillboardShader
 {
@@ -245,7 +245,7 @@ public:
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature) override;
 
 private:
-	std::shared_ptr<CDescirptorHeap> m_pd3dCbvSrvDescriptorHeap = NULL;
+	std::shared_ptr<CDescriptorHeap> m_pd3dCbvSrvDescriptorHeap = NULL;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

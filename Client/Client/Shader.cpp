@@ -1218,7 +1218,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	m_nDepthbufferHeight = WINDOW_HEIGHT * 4;
 
 	// 그림자 맵 연결용 Heap 생성
-	m_pDescriptorHeap = std::make_unique<CDescirptorHeap>();
+	m_pDescriptorHeap = std::make_unique<CDescriptorHeap>();
 
 	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
 	::ZeroMemory(&d3dDescriptorHeapDesc, sizeof(D3D12_DESCRIPTOR_HEAP_DESC));
@@ -2243,7 +2243,7 @@ void CMinimapShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 	m_nMinimapBufferHeight = WINDOW_HEIGHT;
 
 	// 그림자 맵 연결용 Heap 생성
-	m_pDescriptorHeap = std::make_unique<CDescirptorHeap>();
+	m_pDescriptorHeap = std::make_unique<CDescriptorHeap>();
 
 	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
 	::ZeroMemory(&d3dDescriptorHeapDesc, sizeof(D3D12_DESCRIPTOR_HEAP_DESC));

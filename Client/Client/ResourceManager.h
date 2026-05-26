@@ -173,10 +173,10 @@ private:
 
 };
 
-class CDescirptorHeap
+class CDescriptorHeap
 {
 public:
-	CDescirptorHeap()
+	CDescriptorHeap()
 	{
 		m_d3dSrvCPUDescriptorStartHandle.ptr = NULL;
 		m_d3dSrvGPUDescriptorStartHandle.ptr = NULL;
@@ -187,7 +187,7 @@ public:
 		m_d3dSrvCPUDescriptorNextHandle.ptr = NULL;
 		m_d3dSrvGPUDescriptorNextHandle.ptr = NULL;
 	};
-	virtual ~CDescirptorHeap()
+	virtual ~CDescriptorHeap()
 	{
 		if (m_pd3dCbvSrvDescriptorHeap) m_pd3dCbvSrvDescriptorHeap.Reset();
 	};
@@ -341,7 +341,7 @@ public:
 	void PrepareRender(ID3D12GraphicsCommandList* pd3dCommnadList);
 
 private:
-	std::unique_ptr<CDescirptorHeap> m_pDescriptorHeap;
+	std::unique_ptr<CDescriptorHeap> m_pDescriptorHeap;
 
 public:
 	// ----------------------------------------

@@ -75,7 +75,7 @@ void CResourceManager::CreateCbvSrvDescriptorHeaps(ID3D12Device * pd3dDevice, in
 	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	d3dDescriptorHeapDesc.NodeMask = 0;
 
-	m_pDescriptorHeap = std::make_unique<CDescirptorHeap>();
+	m_pDescriptorHeap = std::make_unique<CDescriptorHeap>();
 
 	pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap);
 
