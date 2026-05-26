@@ -352,7 +352,7 @@ bool CPlayer::Fire(FIRE_INFO* pFireInfo)
 		UpdateTransform();
 		m_pGun->UpdateTransform(m_pGunSlot->GetWorldMatrix());
 		bool ret = false;
-		if (pFireInfo == nullptr)
+		if (pFireInfo == nullptr || Vector3::IsZero(pFireInfo->xmf3Look))
 		{
 			auto pCamera = GetComponent<CCamera>();
 			ret = m_pGun->Fire(pCamera->GetPosition(), pCamera->GetLook(), pFireInfo);
